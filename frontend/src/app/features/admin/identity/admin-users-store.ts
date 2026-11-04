@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
-import { STALE_WRITE_MESSAGE, safeMessage } from '@core/errors/safe-errors';
+import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { ViewScope } from '@shared/browser/view-scope';
 import { endpointTable } from '@shared/ui/table-model';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
@@ -55,7 +55,8 @@ export class AdminUsersStore {
   readonly loadingUsers = computed(
     () => this.typing() || this.table.refreshing() || this.access.loading(),
   );
-  readonly actionError = this.access.actionError;
+  /** 頁面上的寫入（排序、列上的刪除與從 AD 更新）與存取目錄共用，失敗都顯示在頁首的 Notice。 */
+  readonly writing = this.access.writing;
   readonly toast = this.access.toast;
   /** 使用者列表沒有資料時讀取失敗由表格狀態顯示（附重試），頁首只提示已有資料時的失敗。 */
   readonly error = computed(
@@ -95,7 +96,7 @@ export class AdminUsersStore {
   }
   /** 送出的版本已過期：由頁面的 Notice 說明，顯示中的使用者重讀成最新。 */
   stale() {
-    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.writing.fail(STALE_WRITE_MESSAGE);
     this.changed();
   }
   /** 授權已改變：重新讀取目錄、顯示中的使用者、帳號待辦與此帳號的授權。 */
@@ -104,7 +105,7 @@ export class AdminUsersStore {
     this.changed();
   }
   /** 正在寫入順序；期間不能再拖，避免第二次移動以舊的位置計算。 */
-  readonly ordering = signal(false);
+  readonly ordering = computed(() => this.writing.pendingFor('order'));
   /** 未搜尋時本頁是整份名單連續的一段，可以先在本頁換序；搜尋時只能等重讀。 */
   readonly reorderable = computed(() => !this.query() && !this.typing());
   /**
@@ -115,29 +116,18 @@ export class AdminUsersStore {
     const page = this.users();
     if (!page || this.ordering()) return;
     if (this.reorderable()) this.users.set(reordered(page, id, position));
-    this.ordering.set(true);
-    try {
-      await this.api.moveUser(id, position);
-    } catch (error) {
-      this.users.set(page);
-      this.actionError.set(safeMessage(error));
-    } finally {
-      this.ordering.set(false);
-      this.table.reload();
-    }
+    const outcome = await this.writing.run(() => this.api.moveUser(id, position), {
+      key: 'order',
+    });
+    if (!outcome.ok && !outcome.error) return;
+    if (!outcome.ok) this.users.set(page);
+    this.table.reload();
   }
   /** 清除所有人的順序，回到依姓名、帳號排列。 */
   async resetOrder() {
-    this.ordering.set(true);
-    try {
-      await this.api.resetUserOrder();
-      this.toast.success('已清除使用者順序', '出勤紀錄等列表改回依姓名排列。');
-    } catch (error) {
-      this.actionError.set(safeMessage(error));
-    } finally {
-      this.ordering.set(false);
-      this.table.reload();
-    }
+    const outcome = await this.writing.run(() => this.api.resetUserOrder(), { key: 'order' });
+    if (outcome.ok) this.toast.success('已清除使用者順序', '出勤紀錄等列表改回依姓名排列。');
+    if (outcome.ok || outcome.error) this.table.reload();
   }
   roleNames(ids: string[]) {
     return this.access.roleNames(ids);

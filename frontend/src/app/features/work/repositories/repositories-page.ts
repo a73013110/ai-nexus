@@ -14,6 +14,7 @@ import { apiResource } from '@core/api/api-resource';
 import type { RepositoryStatusDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -69,8 +70,8 @@ import { routeOf } from '@core/api/catalog';
               [attr.aria-pressed]="detail.repository.pinned"
               [attr.aria-label]="detail.repository.pinned ? '取消釘選' : '釘選到列表上方'"
               [title]="detail.repository.pinned ? '取消釘選' : '釘選到列表上方'"
-              [pending]="working() === 'pin'"
-              [disabled]="working() === 'disconnect'"
+              [pending]="working.pendingFor('pin')"
+              [disabled]="working.pendingFor('disconnect')"
               (click)="togglePin()"
             >
               <nx-icon name="pin" />
@@ -93,7 +94,7 @@ import { routeOf } from '@core/api/catalog';
             label="Gitea 連線"
             [heading]="{ title: status()!.login || 'Gitea', detail: status()!.baseUrl }"
             [items]="accountActions"
-            [busy]="working() === 'disconnect'"
+            [busy]="working.pendingFor('disconnect')"
             (action)="account($event)"
           />
         }
@@ -145,7 +146,6 @@ export class RepositoriesPage {
   readonly store = inject(RepositoryStore);
   private readonly session = inject(WorkspaceSession);
   private readonly api = inject(RepositoriesApi);
-  private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly confirm = viewChild.required(ConfirmDialog);
@@ -161,15 +161,16 @@ export class RepositoriesPage {
   readonly status = computed<RepositoryStatusDto | null>(() => this.statusRead.value() ?? null);
   readonly statusLoading = this.statusRead.loading;
   readonly reconnecting = signal(false);
-  /** 進行中的寫入：釘選（樂觀更新，按鈕轉圈擋重複切換）或中斷連線（帳號選單鈕轉圈）。 */
-  readonly working = signal<'pin' | 'disconnect' | null>(null);
-  readonly busy = computed(() => this.working() !== null);
+  /** 進行中的動作：釘選（樂觀更新，按鈕轉圈擋重複切換）、中斷連線（帳號選單鈕轉圈）或開啟舊的 review 連結。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   /** 使用者看得到的重讀（重試）。 */
   readonly refreshing = computed(() => this.statusRead.refreshing() || this.store.refreshing());
-  private readonly actionError = signal('');
   readonly error = computed(
     () =>
-      this.actionError() || this.statusRead.error() || (this.store.key() ? this.store.error() : ''),
+      this.working.error() ||
+      this.statusRead.error() ||
+      (this.store.key() ? this.store.error() : ''),
   );
   readonly initial = computed(() => (this.status()?.login ?? 'G').slice(0, 1).toUpperCase());
   readonly title = computed(() => {
@@ -223,7 +224,7 @@ export class RepositoriesPage {
   }
 
   reload() {
-    this.actionError.set('');
+    this.working.error.set('');
     this.statusRead.reload();
     this.store.reload();
   }
@@ -246,55 +247,37 @@ export class RepositoriesPage {
       confirm: '中斷連線',
       danger: true,
     });
-    if (!confirmed || this.busy()) return;
-    const valid = this.scope.guard();
-    this.working.set('disconnect');
-    try {
-      await this.api.disconnect();
-      if (!valid()) return;
-      this.statusRead.value.update((status) =>
-        status ? { ...status, connected: false, login: null } : status,
-      );
-      void this.router.navigate([routeOf('repositories')]);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    if (!confirmed) return;
+    const outcome = await this.working.run(() => this.api.disconnect(), { key: 'disconnect' });
+    if (!outcome.ok) return;
+    this.statusRead.value.update((status) =>
+      status ? { ...status, connected: false, login: null } : status,
+    );
+    void this.router.navigate([routeOf('repositories')]);
   }
 
   async togglePin() {
     const key = this.store.key(),
       pinned = this.store.detail()?.repository.pinned;
     if (!key || this.busy()) return;
-    const valid = this.scope.guard();
-    this.working.set('pin');
+    // 樂觀更新：先換圖示，失敗再換回來。
     this.store.setPinned(!pinned);
-    try {
-      if (pinned) await this.api.unpin(key);
-      else await this.api.pin(key);
-      if (valid())
-        this.toast.show({ title: pinned ? '已取消釘選' : '已釘選到列表上方', duration: 2400 });
-    } catch (error) {
-      if (!valid()) return;
-      this.store.setPinned(!!pinned);
-      this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const outcome = await this.working.run(
+      () => (pinned ? this.api.unpin(key) : this.api.pin(key)),
+      { key: 'pin' },
+    );
+    if (outcome.ok)
+      this.toast.show({ title: pinned ? '已取消釘選' : '已釘選到列表上方', duration: 2400 });
+    else if (outcome.error) this.store.setPinned(!!pinned);
   }
 
+  /** 舊連結只帶 review id（`?review=`）：查出所屬的程式碼庫後換成完整網址。 */
   private async openReview(id: string) {
-    const valid = this.scope.guard();
-    try {
-      const detail = await this.api.review(id);
-      if (!valid()) return;
-      const [owner, name] = detail.review.repository.split('/');
-      await this.router.navigate([routeOf('repositories'), owner, name, 'reviews', id], {
-        replaceUrl: true,
-      });
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    }
+    const outcome = await this.working.run(() => this.api.review(id), { key: 'review' });
+    if (!outcome.ok) return;
+    const [owner, name] = outcome.value.review.repository.split('/');
+    await this.router.navigate([routeOf('repositories'), owner, name, 'reviews', id], {
+      replaceUrl: true,
+    });
   }
 }

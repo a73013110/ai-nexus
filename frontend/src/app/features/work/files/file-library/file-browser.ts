@@ -77,11 +77,11 @@ function usagePage(kind: string) {
             aria-haspopup="menu"
             [attr.aria-label]="'檔案操作：' + item.file.fileName"
             [attr.aria-expanded]="menu.isOpenFor(trigger)"
-            [attr.aria-busy]="working() === item.file.id || null"
-            [attr.aria-disabled]="working() === item.file.id || null"
-            (click)="working() === item.file.id || open(item, trigger)"
+            [attr.aria-busy]="working()(item.file.id) || null"
+            [attr.aria-disabled]="working()(item.file.id) || null"
+            (click)="working()(item.file.id) || open(item, trigger)"
           >
-            <nx-icon [name]="working() === item.file.id ? 'loading' : 'more'" />
+            <nx-icon [name]="working()(item.file.id) ? 'loading' : 'more'" />
           </button>
         </div>
       </article>
@@ -92,7 +92,8 @@ export class FileBrowser {
   readonly items = input.required<readonly LibraryFileDto[]>();
   readonly knowledge = input(false);
   /** 動作進行中的檔案 id（例如刪除）：只有那張卡片的選單鈕轉圈並擋下再次開啟。 */
-  readonly working = input<string | null>(null);
+  /** 這張卡片的動作送出中（例：刪除）：選單鈕轉圈並暫停開啟。 */
+  readonly working = input<(id: string) => boolean>(() => false);
   readonly addKnowledge = output<LibraryFileDto>();
   readonly rename = output<LibraryFileDto>();
   readonly remove = output<LibraryFileDto>();

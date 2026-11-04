@@ -182,7 +182,14 @@ function setup({ render = false, users = usersPeople(), capped = false } = {}) {
     providers: [
       { provide: IdentityApi, useValue: api },
       { provide: AdminUsersStore, useValue: usersStore },
-      { provide: ViewScope, useValue: { later: (work: () => void) => work(), cancel: vi.fn() } },
+      {
+        provide: ViewScope,
+        useValue: {
+          guard: () => () => true,
+          later: (work: () => void) => work(),
+          cancel: vi.fn(),
+        },
+      },
       {
         provide: WorkspaceSession,
         useValue: { auth: { generation }, load: vi.fn(async () => true), has: () => true },
@@ -426,7 +433,7 @@ describe('DirectoryImportDialog', () => {
     store.toggle(named('王可蘿'), true);
     await dialog.preview();
     expect(dialog.step()).toBe('select');
-    expect(dialog.error()).not.toBe('');
+    expect(dialog.working.error()).not.toBe('');
     expect(dialog.busy()).toBe(false);
   });
 });

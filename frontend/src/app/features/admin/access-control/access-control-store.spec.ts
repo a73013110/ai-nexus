@@ -6,6 +6,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { publicErrorHints } from '@core/errors/public-error-catalog';
 import { AccessControlApi } from './access-control-api';
 import { AccessControlStore } from './access-control-store';
+import { ViewScope } from '@shared/browser/view-scope';
 
 const catalog = {
   roles: [{ id: 'member', name: '成員' }],
@@ -24,6 +25,7 @@ function setup(features = ['access-control.roles']) {
   };
   TestBed.configureTestingModule({
     providers: [
+      { provide: ViewScope, useValue: { guard: () => () => true } },
       AccessControlStore,
       { provide: AccessControlApi, useValue: api },
       { provide: WorkspaceSession, useValue: session },

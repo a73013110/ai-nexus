@@ -18,6 +18,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { ShareDto, SharedContentDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { MarkdownView } from '@shared/markdown/markdown-view';
@@ -68,7 +69,6 @@ export class SharedPage {
   private readonly reader = inject(ReaderOverlay);
   private readonly api = inject(SharingApi);
   readonly session = inject(WorkspaceSession);
-  private readonly scope = inject(ViewScope);
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
@@ -119,7 +119,15 @@ export class SharedPage {
   );
   readonly shareActions = computed<MenuAction[]>(() =>
     this.content()?.share.isOwner
-      ? [{ id: 'revoke', label: '撤銷分享', icon: 'stop', danger: true, disabled: this.busy() }]
+      ? [
+          {
+            id: 'revoke',
+            label: '撤銷分享',
+            icon: 'stop',
+            danger: true,
+            disabled: this.revoking.pending(),
+          },
+        ]
       : [],
   );
   /** 集合的導覽，或已開啟分享的導覽（依其內容與目前檢視者決定）。 */
@@ -140,10 +148,9 @@ export class SharedPage {
     });
   });
   /** 撤銷進行中：分享選單鈕轉圈。 */
-  readonly busy = signal(false);
-  private readonly actionError = signal('');
+  readonly revoking = action();
   readonly error = computed(
-    () => this.actionError() || this.contentRead.error() || this.listRead.error(),
+    () => this.revoking.error() || this.contentRead.error() || this.listRead.error(),
   );
   constructor() {
     // 閱讀器的覆蓋層絕不會繼續顯示本頁已不再顯示的分享。
@@ -156,7 +163,7 @@ export class SharedPage {
     });
   }
   load() {
-    this.actionError.set('');
+    this.revoking.error.set('');
     this.contentRead.reload();
     this.listRead.reload();
   }
@@ -178,7 +185,7 @@ export class SharedPage {
   }
   private async revoke(share: ShareDto) {
     if (
-      this.busy() ||
+      this.revoking.pending() ||
       !(await this.confirm().ask({
         title: '撤銷分享',
         message: '指定收件者將立即無法再閱讀或下載附件。原始對話與成果保留。',
@@ -187,19 +194,10 @@ export class SharedPage {
       }))
     )
       return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    try {
-      await this.api.revoke(share.id);
-      if (valid()) {
-        this.contentRead.value.set(undefined);
-        this.listRead.reload();
-        await this.router.navigate([routeOf('sharing')], { queryParams: { sent: this.sent() } });
-      }
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+    const outcome = await this.revoking.run(() => this.api.revoke(share.id));
+    if (!outcome.ok) return;
+    this.contentRead.value.set(undefined);
+    this.listRead.reload();
+    await this.router.navigate([routeOf('sharing')], { queryParams: { sent: this.sent() } });
   }
 }

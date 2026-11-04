@@ -13,7 +13,6 @@ import {
 import { GripVertical } from 'lucide';
 import { catalogFeature } from '@core/api/catalog';
 import type { NavigationItemDto, NavigationOrderItem } from '@core/api/schema';
-import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { featureIcon, type NavigationKind } from '@core/layout/navigation-tree';
 import { ThemeService } from '@core/preferences/theme-service';
 import { edgeScrollSpeed, flipRows, layoutBox, settleMotion } from '@shared/browser/reorder-motion';
@@ -110,9 +109,10 @@ export class NavigationEditor {
     label,
     icon,
   }));
-  readonly saving = signal(false);
+  /** 寫入中（刪除或移動）：期間不再接受其他寫入。 */
+  readonly saving = this.store.writing.pending;
   /** 刪除中的節點：確認後選單已關閉，由該列的操作鈕轉圈；其他列照常可操作選單（寫入仍由 `saving` 擋）。 */
-  readonly deleting = signal<string | null>(null);
+  readonly deleting = (id: string) => this.store.writing.pendingFor(id);
   readonly dragging = signal<string | null>(null);
   /** 拖曳中的暫定位置（只改畫面）；放手才送出。 */
   private readonly draft = signal<Placement | null>(null);
@@ -352,22 +352,16 @@ export class NavigationEditor {
       danger: true,
     });
     if (!confirmed) return;
-    this.saving.set(true);
-    this.deleting.set(row.item.id);
-    this.store.actionError.set('');
-    try {
-      await this.api.deleteNavigationItem(row.item.id, row.item.rowVersion);
+    const outcome = await this.store.writing.run(
+      () => this.api.deleteNavigationItem(row.item.id, row.item.rowVersion),
+      { key: row.item.id },
+    );
+    if (outcome.ok) {
       this.store.replace(this.store.items().filter((item) => item.id !== row.item.id));
       this.announcement.set(`已刪除${label}：${row.name}`);
       this.store.toast.success(`已刪除${label}`, '側欄選單已更新。');
       this.store.changed();
-    } catch (error) {
-      if (isStaleWrite(error)) this.store.stale();
-      else this.store.actionError.set(safeMessage(error));
-    } finally {
-      this.saving.set(false);
-      this.deleting.set(null);
-    }
+    } else if (outcome.stale) this.store.stale();
   }
 
   // ── 寫入位置 ──
@@ -397,18 +391,15 @@ export class NavigationEditor {
         ? `${row.name}：${moved.path || '最上層'}第 ${moved.index + 1} 個，共 ${moved.count} 個`
         : '',
     );
-    this.store.actionError.set('');
-    this.saving.set(true);
-    try {
-      await this.api.orderNavigationItems({ items: writes });
-      this.store.changed();
-    } catch (error) {
+    const outcome = await this.store.writing.run(
+      () => this.api.orderNavigationItems({ items: writes }),
+      { key: 'order' },
+    );
+    if (outcome.ok) this.store.changed();
+    else if (outcome.error) {
       this.flip(() => this.store.replace(before));
-      this.store.actionError.set(safeMessage(error));
       this.announcement.set('無法儲存位置，已還原');
       if (refocus) this.handle(row.item.id)?.focus();
-    } finally {
-      this.saving.set(false);
     }
   }
 

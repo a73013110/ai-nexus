@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
 import { ApiError } from '@core/errors/safe-errors';
 import { AccessControlApi } from '../access-control-api';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -58,6 +59,7 @@ function setup() {
   };
   TestBed.configureTestingModule({
     providers: [
+      { provide: ViewScope, useValue: { guard: () => () => true } },
       { provide: AccessControlApi, useValue: api },
       { provide: AccessControlStore, useValue: store },
       { provide: WorkspaceSession, useValue: {} },
@@ -120,7 +122,7 @@ describe('AccessEditorDialog', () => {
     await dialog.save(new Event('submit'));
     expect(store.stale).toHaveBeenCalled();
     expect(store.saved).not.toHaveBeenCalled();
-    expect(dialog.editorError()).toBe('');
+    expect(dialog.saving.error()).toBe('');
     expect(dialog.editor.dirty()).toBe(false);
   });
 
@@ -137,7 +139,7 @@ describe('AccessEditorDialog', () => {
     const { dialog, store } = setup();
     dialog.open('role');
     await dialog.save(new Event('submit'));
-    expect(dialog.editorError()).toBe('請輸入識別碼與名稱。');
+    expect(dialog.saving.error()).toBe('請輸入識別碼與名稱。');
     expect(store.saved).not.toHaveBeenCalled();
   });
 
@@ -196,7 +198,7 @@ describe('AccessEditorDialog', () => {
     expect(dialog.editor.current()!.defaultName).toBe('對話');
     dialog.update('name', ' ');
     await dialog.save(new Event('submit'));
-    expect(dialog.editorError()).toBe('');
+    expect(dialog.saving.error()).toBe('');
     expect(api.feature).toHaveBeenLastCalledWith('chat', expect.objectContaining({ name: null }));
     dialog.open('feature', feature as AdminFeatureDto);
     dialog.update('name', '對話');
@@ -225,7 +227,7 @@ describe('AccessEditorDialog', () => {
     dialog.update('storage', 'abc');
     await dialog.save(new Event('submit'));
     expect(dialog.groupSection()).toBe('settings');
-    expect(dialog.editorError()).not.toBe('');
+    expect(dialog.saving.error()).not.toBe('');
     expect(api.group).not.toHaveBeenCalled();
     dialog.update('storage', '2');
     await dialog.save(new Event('submit'));

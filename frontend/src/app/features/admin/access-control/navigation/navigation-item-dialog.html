@@ -3,7 +3,7 @@
   #itemDialog
   class="platform-dialog navigation-item-dialog"
   [size]="editor.current()?.draft?.kind === 'link' ? 'lg' : 'md'"
-  [busy]="saving()"
+  [busy]="saving.pending()"
   (cancel)="cancel($event)"
 >
   @if (editor.current(); as e) {
@@ -16,8 +16,8 @@
         [tour]="tour()"
       />
       <div #body class="dialog-body">
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (saving.error()) {
+          <nx-notice tone="danger" [message]="saving.error()" />
         }
         <div class="form-sections">
           <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
@@ -44,7 +44,7 @@
                   appearance="segment"
                   [options]="kinds"
                   [value]="e.draft.kind"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (valueChange)="update('kind', $any($event))"
                 />
                 <label class="form-field-short navigation-parent"
@@ -54,7 +54,7 @@
                     noun="分群"
                     [nodes]="parents()"
                     [value]="e.draft.parentId"
-                    [disabled]="saving()"
+                    [disabled]="saving.pending()"
                     (valueChange)="update('parentId', $event)"
                 /></label>
               }
@@ -66,7 +66,7 @@
                     [searchable]="true"
                     [options]="pages()"
                     [value]="e.draft.featureId"
-                    [disabled]="saving()"
+                    [disabled]="saving.pending()"
                     (valueChange)="update('featureId', $event)"
                 /></label>
               } @else {
@@ -81,7 +81,7 @@
                     [attr.aria-invalid]="fieldError()?.field === 'name' ? true : null"
                     [attr.aria-describedby]="fieldError()?.field === 'name' ? id + '-error' : null"
                     [value]="e.draft.name"
-                    [readOnly]="saving()"
+                    [readOnly]="saving.pending()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
               }
@@ -106,7 +106,7 @@
                       id + '-url-hint' + (fieldError()?.field === 'url' ? ' ' + id + '-error' : '')
                     "
                     [value]="e.draft.url"
-                    [readOnly]="saving()"
+                    [readOnly]="saving.pending()"
                     (input)="update('url', $any($event.target).value)"
                 /></label>
                 @if (fieldError()?.field === 'url') {
@@ -121,7 +121,7 @@
                   label="在新分頁開啟"
                   description="取消勾選則在目前分頁離開本站。"
                   [checked]="e.draft.openInNewTab"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (checkedChange)="update('openInNewTab', $event)"
                 />
               }
@@ -132,7 +132,7 @@
                     [searchable]="true"
                     [options]="icons"
                     [value]="e.draft.icon"
-                    [disabled]="saving()"
+                    [disabled]="saving.pending()"
                     (valueChange)="update('icon', $event)"
                 /></label>
                 <p class="form-note">
@@ -162,7 +162,7 @@
                   label="可見群組"
                   [groups]="audiences()"
                   [selected]="e.draft.audienceGroupIds"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (selectedChange)="update('audienceGroupIds', $event)"
                 />
               </div>
@@ -175,20 +175,20 @@
           <button
             type="button"
             class="secondary-button"
-            [attr.aria-disabled]="saving() || null"
+            [attr.aria-disabled]="saving.pending() || null"
             (click)="requestClose()"
           >
             取消
           </button>
-          <button nxPending type="submit" class="primary-button" [pending]="saving()">
-            {{ saving() ? '建立中…' : '建立' + label(e.draft.kind) }}
+          <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
+            {{ saving.pending() ? '建立中…' : '建立' + label(e.draft.kind) }}
           </button>
         </footer>
       } @else {
         <nx-dialog-save-bar
           [label]="'儲存' + label(e.draft.kind)"
           [dirty]="editor.dirty()"
-          [saving]="saving()"
+          [saving]="saving.pending()"
           (revert)="revert()"
         />
       }

@@ -12,7 +12,7 @@ import { ACTION_SKIPPED, action, type ActionOutcome } from '@shared/browser/acti
 import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
-import { errorCode } from '../attendance-presentation';
+import { errorCode } from '@core/errors/safe-errors';
 import { punchTable } from '../punches/punch-table';
 
 /** 新增持有期間；要接手的那一段的版本由 `assign` 在使用者確認後才帶上。 */
@@ -82,8 +82,10 @@ export class AttendanceCardsStore {
   readonly busy = computed(
     () => this.writing.pending() || this.cardsRefreshing() || this.assignmentsRefreshing(),
   );
-  /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `busy` 停用。 */
-  readonly working = this.writing.key;
+  /** 抽屜裡按下的那一項（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `busy` 停用。 */
+  working(key: string) {
+    return this.writing.pendingFor(key);
+  }
 
   reloadCards() {
     this.cardsRead.reload();
@@ -106,7 +108,7 @@ export class AttendanceCardsStore {
       '已儲存備註',
     );
   }
-  /** 切換是否在出勤紀錄顯示；開關旁轉圈（`working` 為 `hidden:<id>`），備註照舊送回。 */
+  /** 切換是否在出勤紀錄顯示；開關旁轉圈（`working('hidden:<id>')`），備註照舊送回。 */
   setHidden(card: CardDto, hidden: boolean) {
     return this.write(
       () =>
@@ -193,7 +195,7 @@ export class AttendanceCardsStore {
     key = '',
   ): Promise<ActionOutcome<T>> {
     if (this.busy()) return ACTION_SKIPPED;
-    return this.settle(await this.writing.run(run, key), done);
+    return this.settle(await this.writing.run(run, { key }), done);
   }
 
   private settle<T>(outcome: ActionOutcome<T>, done: string | ((value: T) => string)) {

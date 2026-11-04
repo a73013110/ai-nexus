@@ -31,7 +31,6 @@ import {
   ATTENDANCE_DAY_TYPE,
   MONTH,
   attendanceProblem,
-  errorCode,
   isWeekend,
   monthBounds,
   monthLabel,
@@ -67,11 +66,10 @@ const calendarQueryOptions: QueryStateOptions<CalendarQuery> = {
 const MISSING =
   '未建立：公文系統沒有這一天，不能在這裡新增。出勤判定時，週末當放假，平日無法判定。';
 
-/** 讀取結果；公文系統不可用時不是空月份（空清單會被當成整月上班），而是帶著原因的失敗。 */
+/** 讀取結果；公文系統不可用時不是空月份（空清單會被當成整月上班），而是帶著原因的失敗（`attendanceProblem`）。 */
 interface MonthRead {
   month: string;
-  days: CalendarDayDto[] | null;
-  problem: string;
+  days: CalendarDayDto[];
 }
 
 /** 月曆格子的資料；清單與月曆都從同一份 `days` 衍生。 */
@@ -125,21 +123,16 @@ export class AttendanceCalendarPage {
     params: () => this.month(),
     loader: async (month, signal): Promise<MonthRead> => {
       const { from, to } = monthBounds(month);
-      try {
-        return { month, days: await this.api.calendarDays(from, to, signal), problem: '' };
-      } catch (error) {
-        // GD 的 503 有固定原因，轉成說明；其他失敗（含取消）照一般讀取處理。
-        if (errorCode(error).startsWith('attendance_gd_'))
-          return { month, days: null, problem: attendanceProblem(error) };
-        throw error;
-      }
+      return { month, days: await this.api.calendarDays(from, to, signal) };
     },
+    // GD 的 503 有固定原因，轉成說明。
+    message: attendanceProblem,
   });
   /** 換月或首次讀取：這個月還沒有資料，格子畫骨架。 */
   readonly loading = this.read.loading;
   /** 使用者感覺得到的讀取（含換月與重試）；已有內容時淡化。 */
   readonly refreshing = this.read.refreshing;
-  readonly readError = computed(() => this.read.error() || this.loaded()?.problem || '');
+  readonly readError = this.read.error;
   /** 目前月份的讀取結果；換月時舊月份不會短暫顯示在新標題下。 */
   readonly loaded = computed(() => {
     const value = this.read.value();
@@ -168,7 +161,7 @@ export class AttendanceCalendarPage {
   /** 整個月逐日的值；讀不到（載入中、失敗）時是空的，不會把整月標成「未建立」。 */
   readonly days = computed(() => {
     const loaded = this.loaded();
-    if (!loaded?.days) return [];
+    if (!loaded) return [];
     const byDate = new Map(loaded.days.map((day) => [day.date, day]));
     const { from, to } = monthBounds(loaded.month);
     const editable = this.editable();
@@ -198,7 +191,7 @@ export class AttendanceCalendarPage {
     })),
   );
   readonly offDays = computed(
-    () => this.loaded()?.days?.filter((day) => day.morningOff || day.afternoonOff).length ?? 0,
+    () => this.loaded()?.days.filter((day) => day.morningOff || day.afternoonOff).length ?? 0,
   );
   private readonly dialog = viewChild.required(CalendarDayDialog);
 
@@ -228,7 +221,7 @@ export class AttendanceCalendarPage {
   /** 伺服器回傳修改後的值，直接換進目前月份，不必重讀整個月。 */
   saved(day: CalendarDayDto) {
     this.read.value.update((current) =>
-      current?.days
+      current
         ? { ...current, days: current.days.map((item) => (item.date === day.date ? day : item)) }
         : current,
     );

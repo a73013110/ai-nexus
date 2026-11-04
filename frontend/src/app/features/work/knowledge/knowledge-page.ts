@@ -30,6 +30,7 @@ import type {
   LibraryFileDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Icon } from '@shared/ui/icon';
@@ -93,7 +94,6 @@ export class KnowledgePage {
   readonly routeOf = routeOf;
   private readonly api = inject(KnowledgeApi);
   private readonly uploads = inject(FilesApi);
-  private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
   readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((part) => part.get('id'))), {
@@ -136,11 +136,15 @@ export class KnowledgePage {
     () => this.collectionsRead.refreshing() || this.documentsRead.refreshing(),
   );
   /** 移除或重新索引中的知識庫與文件：只有那一列的選單鈕轉圈。 */
-  readonly working = signal<ReadonlySet<string>>(new Set());
-  private readonly actionError = signal('');
+  readonly working = action({ concurrent: true });
+  readonly uploading = action();
+  readonly searching = action();
+  readonly saving = action();
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
+      this.uploading.error() ||
+      this.searching.error() ||
       this.collectionsRead.error() ||
       this.policyRead.error() ||
       this.documentsRead.error(),
@@ -155,17 +159,13 @@ export class KnowledgePage {
   readonly gallery = computed(() =>
     filterResources(this.collections(), this.ownership(), this.term()),
   );
-  readonly uploading = signal(false);
   // 篩選、查詢與其結果，都屬於畫面上的那個集合。
   readonly filter = linkedSignal(() => (this.id(), ''));
   readonly query = linkedSignal(() => (this.id(), ''));
   readonly result = linkedSignal<KnowledgeSearchDto | null>(() => (this.id(), null));
-  readonly searching = signal(false);
   readonly editorName = signal('');
   readonly editorDescription = signal('');
   readonly editorId = signal<string | null>(null);
-  readonly editorError = signal('');
-  readonly saving = signal(false);
   private readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly textEditor = viewChild.required(TextSourceEditor);
@@ -209,59 +209,43 @@ export class KnowledgePage {
   }
   /** 重新讀取集合與已開啟集合的文件。 */
   load() {
-    this.actionError.set('');
+    for (const write of [this.working, this.uploading, this.searching]) write.error.set('');
     this.collectionsRead.reload();
     this.documentsRead.reload();
   }
   async addLibrary(file: LibraryFileDto) {
-    const collection = this.id(),
-      valid = this.scope.guard();
-    if (!collection || this.uploading() || !this.current()?.resource.canEdit) return;
-    this.uploading.set(true);
-    this.actionError.set('');
-    try {
-      this.jobToasts.trackDocument(await this.api.add(collection, file.file.id));
-      if (valid()) {
-        this.toast.success('已從檔案庫加入來源，索引會在背景建立');
-        this.load();
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.uploading.set(false);
-    }
+    const collection = this.id();
+    if (!collection || !this.current()?.resource.canEdit) return;
+    const outcome = await this.uploading.run(async () =>
+      // 索引在背景建立：已離開頁面也照樣通知。
+      this.jobToasts.trackDocument(await this.api.add(collection, file.file.id)),
+    );
+    if (!outcome.ok) return;
+    this.toast.success('已從檔案庫加入來源，索引會在背景建立');
+    this.load();
   }
   openEditor(edit = false) {
     const current = edit ? this.current() : null;
     this.editorId.set(current?.resource.id || null);
     this.editorName.set(current?.resource.name || '');
     this.editorDescription.set(current?.description || '');
-    this.editorError.set('');
+    this.saving.error.set('');
     this.editorDialog().nativeElement.showModal();
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.saving()) return;
-    const valid = this.scope.guard();
-    this.saving.set(true);
-    this.editorError.set('');
-    try {
-      const id = this.editorId();
-      if (id) await this.api.update(id, this.editorName(), this.editorDescription());
-      else {
-        const created = await this.api.create(this.editorName(), this.editorDescription());
-        if (valid()) void this.router.navigate([routeOf('knowledge'), created.resource.id]);
-      }
-      if (valid()) {
-        this.editorDialog().nativeElement.close();
-        this.toast.success('知識庫已儲存');
-        this.load();
-      }
-    } catch (error) {
-      if (valid()) this.editorError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+    const id = this.editorId();
+    const outcome = await this.saving.run(() =>
+      id
+        ? this.api.update(id, this.editorName(), this.editorDescription())
+        : this.api.create(this.editorName(), this.editorDescription()),
+    );
+    if (!outcome.ok) return;
+    if (!id && outcome.value)
+      void this.router.navigate([routeOf('knowledge'), outcome.value.resource.id]);
+    this.editorDialog().nativeElement.close();
+    this.toast.success('知識庫已儲存');
+    this.load();
   }
   action(id: string) {
     const current = this.current();
@@ -276,124 +260,88 @@ export class KnowledgePage {
   }
   async upload(files: FileList | File[]) {
     const collection = this.id(),
-      valid = this.scope.guard(),
       policy = this.policy();
-    if (this.uploading() || !collection || !policy || !this.current()?.resource.canEdit) return;
+    if (this.uploading.pending() || !collection || !policy || !this.current()?.resource.canEdit)
+      return;
     const candidates = Array.from(files);
     if (candidates.length > 10) {
-      this.actionError.set('每批最多上傳十份文件。');
+      this.uploading.fail('每批最多上傳十份文件。');
       return;
     }
     if (candidates.some((file) => !acceptsFile(policy, file))) {
-      this.actionError.set(
+      this.uploading.fail(
         `支援 ${policy.extensions.slice(0, 8).join('、')}，每份最多 ${policy.maxFileBytes / 1048576} MB。`,
       );
       return;
     }
-    this.uploading.set(true);
-    this.actionError.set('');
-    const controller = new AbortController();
     // 與檔案庫、專案相同：一則提示從「正在上傳」換成完成；失敗或離開則撤回。
     const progress = 'knowledge-upload';
-    let done = false;
-    try {
+    const outcome = await this.uploading.run(async ({ alive, signal }) => {
       for (const file of candidates) {
-        if (!valid()) return;
+        if (!alive()) return;
         this.toast.show({
           id: progress,
           tone: 'info',
           title: '正在上傳 ' + file.name,
           duration: 0,
         });
-        const uploaded = await this.uploads.upload(file, controller.signal);
-        if (!valid()) return;
+        const uploaded = await this.uploads.upload(file, signal);
+        if (!alive()) return;
         this.jobToasts.trackDocument(await this.api.add(collection, uploaded.id));
-        if (valid() && this.id() === collection) this.documentsRead.reload();
+        if (alive() && this.id() === collection) this.documentsRead.reload();
       }
-      if (valid()) {
-        this.toast.show({
-          id: progress,
-          tone: 'success',
-          title: '文件已上傳',
-          description: '文字辨識與索引會在背景繼續處理。',
-        });
-        done = true;
-        this.collectionsRead.reload();
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (!done) this.toast.dismiss(progress);
-      if (valid()) this.uploading.set(false);
+    });
+    if (!outcome.ok) {
+      this.toast.dismiss(progress);
+      return;
     }
+    this.toast.show({
+      id: progress,
+      tone: 'success',
+      title: '文件已上傳',
+      description: '文字辨識與索引會在背景繼續處理。',
+    });
+    this.collectionsRead.reload();
   }
   async search(event: Event) {
     event.preventDefault();
     const collection = this.id();
-    if (this.searching() || !this.query().trim() || !collection) return;
-    const valid = this.scope.guard();
-    this.searching.set(true);
-    this.actionError.set('');
-    try {
-      const result = await this.api.search(this.query(), [collection]);
-      if (valid() && this.id() === collection) this.result.set(result);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.searching.set(false);
-    }
+    if (!this.query().trim() || !collection) return;
+    const outcome = await this.searching.run(() => this.api.search(this.query(), [collection]), {
+      current: () => this.id() === collection,
+    });
+    if (outcome.ok) this.result.set(outcome.value);
   }
   /** 確認後移除來源或整個集合；原始檔案仍保留在檔案庫中。 */
   private async remove(id: string, name: string, collection = false) {
-    const valid = this.scope.guard();
     if (
       !(await this.confirm().ask({
         title: collection ? '移除知識庫' : '移除文件',
         message: `將移除「${name}」${collection ? '與其中所有文件' : ''}的來源與索引。原檔仍保留在檔案庫；已生成的對話文字會保留，來源引用連結將失效。`,
         confirm: '移除來源',
         danger: true,
-      })) ||
-      !valid()
+      }))
     )
       return;
-    this.actionError.set('');
-    this.track(id, true);
-    try {
-      await (collection ? this.api.removeCollection(id) : this.api.remove(id));
-      if (!valid()) return;
-      this.toast.success('已移除來源');
-      if (collection) void this.router.navigate([routeOf('knowledge')]);
-      this.load();
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      this.track(id, false);
-    }
-  }
-  private track(id: string, active: boolean) {
-    this.working.update((ids) => {
-      const next = new Set(ids);
-      if (active) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+    const outcome = await this.working.run(
+      () => (collection ? this.api.removeCollection(id) : this.api.remove(id)),
+      { key: id },
+    );
+    if (!outcome.ok) return;
+    this.toast.success('已移除來源');
+    if (collection) void this.router.navigate([routeOf('knowledge')]);
+    this.load();
   }
   private async reindex(document: DocumentDto) {
-    const valid = this.scope.guard();
-    this.actionError.set('');
-    this.track(document.id, true);
-    try {
-      this.jobToasts.trackDocument(await this.api.reindex(document.id));
-      if (valid()) {
-        this.toast.success('已安排重新索引，既有完成頁面會沿用');
-        this.documentsRead.reload();
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      this.track(document.id, false);
-    }
+    const outcome = await this.working.run(
+      async () => this.jobToasts.trackDocument(await this.api.reindex(document.id)),
+      { key: document.id },
+    );
+    if (!outcome.ok) return;
+    this.toast.success('已安排重新索引，既有完成頁面會沿用');
+    this.documentsRead.reload();
   }
+
   actions(document: DocumentDto): MenuAction[] {
     const busy = documentBusy(document.status);
     return [

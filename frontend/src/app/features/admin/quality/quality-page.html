@@ -11,16 +11,16 @@
       <button
         nxPending
         class="primary-button quality-run"
-        [pending]="working() === 'run'"
-        [disabled]="busy() && working() !== 'run'"
+        [pending]="working.pendingFor('run')"
+        [disabled]="busy() && !working.pendingFor('run')"
         (click)="openRun()"
       >
-        <nx-icon name="play" />{{ working() === 'run' ? '準備中…' : '開始比較' }}
+        <nx-icon name="play" />{{ working.pendingFor('run') ? '準備中…' : '開始比較' }}
       </button>
       <nx-action-menu
         class="quality-set-menu"
         label="評測集操作"
-        [busy]="working() === 'delete'"
+        [busy]="working.pendingFor('delete')"
         [items]="setActions()"
         (action)="setAction($event)"
       />
@@ -122,21 +122,27 @@
                 <button
                   nxPending
                   class="quiet-button"
-                  [pending]="working() === 'control'"
-                  [disabled]="(busy() && working() !== 'control') || view.run.job.cancelRequested"
+                  [pending]="working.pendingFor('control')"
+                  [disabled]="
+                    (busy() && !working.pendingFor('control')) || view.run.job.cancelRequested
+                  "
                   (click)="control(false)"
                 >
-                  {{ working() === 'control' ? '停止中…' : '停止評測' }}
+                  {{ working.pendingFor('control') ? '停止中…' : '停止評測' }}
                 </button>
               } @else if (view.run.job.status === 'failed' || view.run.job.status === 'cancelled') {
                 <button
                   nxPending
                   class="quiet-button"
-                  [pending]="working() === 'control'"
-                  [disabled]="(busy() && working() !== 'control') || view.run.job.attempt >= 6"
+                  [pending]="working.pendingFor('control')"
+                  [disabled]="
+                    (busy() && !working.pendingFor('control')) || view.run.job.attempt >= 6
+                  "
                   (click)="control(true)"
                 >
-                  <nx-icon name="repeat" />{{ working() === 'control' ? '重試中…' : '接續重試' }}
+                  <nx-icon name="repeat" />{{
+                    working.pendingFor('control') ? '重試中…' : '接續重試'
+                  }}
                 </button>
               }
             }

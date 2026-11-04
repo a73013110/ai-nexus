@@ -14,6 +14,7 @@ import { apiResource } from '@core/api/api-resource';
 import type { RepositoryEntryDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatBytes } from '@shared/browser/format';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
 import { Icon } from '@shared/ui/icon';
@@ -91,10 +92,10 @@ const chatLimit = 20;
               nxPending
               type="button"
               class="quiet-button"
-              [pending]="busy()"
+              [pending]="chatting.pending()"
               (click)="chat([file.path])"
             >
-              <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
+              <nx-icon name="chat" />{{ chatting.pending() ? '整理中…' : '帶入對話' }}
             </button>
           }
         </nx-repository-file>
@@ -179,17 +180,22 @@ const chatLimit = 20;
           ><strong>{{ picked().size }}</strong> / {{ limit }} 個檔案</span
         >
         <span class="names">{{ pickedNames() }}</span>
-        <button type="button" class="quiet-button" [disabled]="busy()" (click)="picked.set(empty)">
+        <button
+          type="button"
+          class="quiet-button"
+          [disabled]="chatting.pending()"
+          (click)="picked.set(empty)"
+        >
           清除
         </button>
         <button
           nxPending
           type="button"
           class="primary-button"
-          [pending]="busy()"
+          [pending]="chatting.pending()"
           (click)="chat([...picked()])"
         >
-          <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
+          <nx-icon name="chat" />{{ chatting.pending() ? '整理中…' : '帶入對話' }}
         </button>
       </div>
     }
@@ -199,7 +205,6 @@ export class RepositoryCode {
   readonly store = inject(RepositoryStore);
   private readonly api = inject(RepositoriesApi);
   private readonly session = inject(WorkspaceSession);
-  private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap, { requireSync: true });
   readonly importer = viewChild.required(RepositoryImportDialog);
@@ -260,11 +265,12 @@ export class RepositoryCode {
     () =>
       [...this.picked()].map(baseName).slice(0, 3).join('、') + (this.picked().size > 3 ? '…' : ''),
   );
-  readonly busy = signal(false);
-  private readonly actionError = signal('');
+  readonly chatting = action();
   readonly error = computed(
     () =>
-      this.actionError() || (this.filePath() ? this.fileRead.error() : this.treeRead.error()) || '',
+      this.chatting.error() ||
+      (this.filePath() ? this.fileRead.error() : this.treeRead.error()) ||
+      '',
   );
 
   constructor() {
@@ -288,28 +294,22 @@ export class RepositoryCode {
     });
   }
   retry() {
-    this.actionError.set('');
+    this.chatting.error.set('');
     if (this.filePath()) this.fileRead.reload();
     else this.treeRead.reload();
   }
   async chat(paths: string[]) {
     const commit = this.store.commit();
-    if (!paths.length || !commit || this.busy()) return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.actionError.set('');
-    try {
-      const result = await this.store.chat({ commit, paths, issue: null, pull: null }, valid);
-      if (result?.skipped.length)
-        this.toast.show({
-          tone: 'warning',
-          title: `${result.skipped.length} 個檔案沒有帶入`,
-          description: '非文字或超過大小上限的檔案會略過：' + result.skipped.slice(0, 3).join('、'),
-        });
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+    if (!paths.length || !commit || this.chatting.pending()) return;
+    const outcome = await this.chatting.run(({ alive }) =>
+      this.store.chat({ commit, paths, issue: null, pull: null }, alive),
+    );
+    const skipped = outcome.ok ? (outcome.value?.skipped ?? []) : [];
+    if (skipped.length)
+      this.toast.show({
+        tone: 'warning',
+        title: `${skipped.length} 個檔案沒有帶入`,
+        description: '非文字或超過大小上限的檔案會略過：' + skipped.slice(0, 3).join('、'),
+      });
   }
 }

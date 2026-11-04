@@ -5,12 +5,10 @@ import {
   inject,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import type { AdminUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
 import { formatBytes, formatNumber } from '@shared/browser/format';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -147,59 +145,53 @@ export class AdminUsersTab {
     ];
   }
   /** 從選單發起、正在送出的使用者（從 AD 更新、刪除）；只有那一列的選單鈕轉圈。 */
-  readonly acting = signal<string | null>(null);
+  readonly acting = (id: string) => this.store.writing.pendingFor(id);
   async userAction(action: string, user: AdminUserDto) {
     if (action === 'sync') await this.sync(user);
     if (action === 'test') this.testDialog().open(user);
-    if (action === 'delete') {
-      if (
-        !(await this.confirmation().ask({
-          title: '刪除使用者：' + user.displayName,
-          message:
-            '此使用者將無法登入，既有工作階段會失效。對話、附件、用量與稽核仍會保留，登入帳號也會保留，避免他人接管。',
-          confirm: '刪除使用者',
-          danger: true,
-        }))
-      )
-        return;
-      this.acting.set(user.id);
-      this.store.actionError.set('');
-      try {
-        await this.api.deleteUser(user.id, user.profileVersion);
-        this.store.changed(true);
-        this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
-      } catch (error) {
-        if (isStaleWrite(error)) this.store.stale();
-        else this.store.actionError.set(safeMessage(error));
-      } finally {
-        this.acting.set(null);
-      }
-    }
+    if (action === 'delete') await this.remove(user);
+  }
+  private async remove(user: AdminUserDto) {
+    if (
+      !(await this.confirmation().ask({
+        title: '刪除使用者：' + user.displayName,
+        message:
+          '此使用者將無法登入，既有工作階段會失效。對話、附件、用量與稽核仍會保留，登入帳號也會保留，避免他人接管。',
+        confirm: '刪除使用者',
+        danger: true,
+      }))
+    )
+      return;
+    const outcome = await this.store.writing.run(
+      () => this.api.deleteUser(user.id, user.profileVersion),
+      { key: user.id },
+    );
+    if (outcome.ok) {
+      this.store.changed(true);
+      this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
+    } else if (outcome.stale) this.store.stale();
   }
   /** 單人「從 AD 更新」直接執行，結果以 toast 告知；AD 找不到或已停用時用警告語氣並說明不會自動停用。 */
   private async sync(user: AdminUserDto) {
-    this.acting.set(user.id);
-    try {
-      const [item] = (await this.api.syncDirectoryUsers([user.id])).items;
-      this.store.changed();
-      if (!item) return;
-      if (writesUser(item))
-        this.store.toast.success(
-          '已從 AD 更新：' + user.displayName,
-          item.changes.map(describeChange).join('；'),
-        );
-      else if (item.outcome === 'unchanged' && !outcomeNote(item))
-        this.store.toast.info(user.displayName + ' 已與 AD 一致');
-      else
-        this.store.toast.show({
-          tone: 'warning',
-          title: user.displayName + '：' + outcomeLabel(item.outcome),
-          description: outcomeNote(item) || undefined,
-        });
-    } catch (error) {
-      this.store.actionError.set(safeMessage(error));
-    } finally {
-      this.acting.set(null);
-    }
+    const outcome = await this.store.writing.run(() => this.api.syncDirectoryUsers([user.id]), {
+      key: user.id,
+    });
+    if (!outcome.ok) return;
+    this.store.changed();
+    const [item] = outcome.value.items;
+    if (!item) return;
+    if (writesUser(item))
+      this.store.toast.success(
+        '已從 AD 更新：' + user.displayName,
+        item.changes.map(describeChange).join('；'),
+      );
+    else if (item.outcome === 'unchanged' && !outcomeNote(item))
+      this.store.toast.info(user.displayName + ' 已與 AD 一致');
+    else
+      this.store.toast.show({
+        tone: 'warning',
+        title: user.displayName + '：' + outcomeLabel(item.outcome),
+        description: outcomeNote(item) || undefined,
+      });
   }
 }

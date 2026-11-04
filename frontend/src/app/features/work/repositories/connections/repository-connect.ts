@@ -8,6 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import type { RepositoryStatusDto } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
@@ -73,8 +74,8 @@ import { RepositoriesApi } from '../repositories-api';
             [value]="token()"
             (input)="token.set($any($event.target).value)"
           />
-          @if (error()) {
-            <nx-notice [message]="error()" />
+          @if (connecting.error()) {
+            <nx-notice [message]="connecting.error()" />
           }
           <div class="actions">
             @if (reconnecting()) {
@@ -86,10 +87,10 @@ import { RepositoriesApi } from '../repositories-api';
               nxPending
               type="submit"
               class="primary-button"
-              [pending]="busy()"
+              [pending]="connecting.pending()"
               [disabled]="!token().trim()"
             >
-              {{ busy() ? '驗證中…' : reconnecting() ? '更新授權' : '連線 Gitea' }}
+              {{ connecting.pending() ? '驗證中…' : reconnecting() ? '更新授權' : '連線 Gitea' }}
             </button>
           </div>
         </form>
@@ -103,28 +104,17 @@ export class RepositoryConnect {
   readonly connected = output<RepositoryStatusDto>();
   readonly cancelled = output<void>();
   private readonly api = inject(RepositoriesApi);
-  private readonly scope = inject(ViewScope);
   readonly token = signal('');
-  readonly busy = signal(false);
-  readonly error = signal('');
+  readonly connecting = action();
   constructor() {
     inject(DestroyRef).onDestroy(() => this.token.set(''));
   }
   async connect(event: Event) {
     event.preventDefault();
     const token = this.token().trim();
-    if (this.busy() || !token) return;
-    const valid = this.scope.guard();
+    if (this.connecting.pending() || !token) return;
     this.token.set('');
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const status = await this.api.connect(token);
-      if (valid()) this.connected.emit(status);
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+    const outcome = await this.connecting.run(() => this.api.connect(token));
+    if (outcome.ok) this.connected.emit(outcome.value);
   }
 }

@@ -3,7 +3,7 @@
   size="lg"
   #dialog
   class="platform-dialog price-dialog"
-  [busy]="saving()"
+  [busy]="saving.pending()"
   (cancel)="cancel($event)"
 >
   <form class="dialog-form" (submit)="save($event)">
@@ -15,8 +15,8 @@
     />
     @if (editor.current(); as e) {
       <div class="dialog-body">
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (saving.error()) {
+          <nx-notice tone="danger" [message]="saving.error()" />
         }
         <div class="form-sections">
           <section
@@ -150,8 +150,8 @@
       <nx-dialog-save-bar
         label="新增價格版本"
         [dirty]="dirty()"
-        [saving]="saving()"
-        [disabled]="!canSave() && !saving()"
+        [saving]="saving.pending()"
+        [disabled]="!canSave() && !saving.pending()"
         (revert)="revert()"
       />
     }

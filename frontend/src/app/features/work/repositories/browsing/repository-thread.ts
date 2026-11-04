@@ -4,7 +4,6 @@ import {
   computed,
   inject,
   input,
-  signal,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -12,6 +11,7 @@ import { apiResource } from '@core/api/api-resource';
 import type { RepositoryCommentDto, RepositoryIssueDto, RepositoryPullDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatDate, nameInitial, relativeTime } from '@shared/browser/format';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Icon } from '@shared/ui/icon';
@@ -93,10 +93,10 @@ interface Thread {
               nxPending
               type="button"
               class="quiet-button"
-              [pending]="busy()"
+              [pending]="chatting.pending()"
               (click)="chat()"
             >
-              <nx-icon name="chat" />{{ busy() ? '整理中…' : '帶入對話' }}
+              <nx-icon name="chat" />{{ chatting.pending() ? '整理中…' : '帶入對話' }}
             </button>
           }
           <a class="quiet-button" [href]="thread.item.url" target="_blank" rel="noopener noreferrer"
@@ -156,7 +156,6 @@ export class RepositoryThread {
   readonly store = inject(RepositoryStore);
   private readonly api = inject(RepositoriesApi);
   private readonly session = inject(WorkspaceSession);
-  private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required(RepositoryReviewDialog);
   private readonly read = apiResource({
     feature: 'repositories',
@@ -207,17 +206,16 @@ export class RepositoryThread {
       : { icon: 'issue-closed', label: '已關閉', tone: 'closed' };
   });
   readonly canChat = computed(() => this.session.has('chat'));
-  readonly busy = signal(false);
+  readonly chatting = action();
   /** 使用者看得到的重讀（重試）。 */
   readonly refreshing = this.read.refreshing;
-  private readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.read.error());
+  readonly error = computed(() => this.chatting.error() || this.read.error());
   readonly date = formatDate;
   readonly when = relativeTime;
 
   initial = (name: string) => nameInitial(name, '?').toUpperCase();
   reload() {
-    this.actionError.set('');
+    this.chatting.error.set('');
     this.read.reload();
   }
   ask(purpose: 'review' | 'summary') {
@@ -233,24 +231,17 @@ export class RepositoryThread {
   }
   async chat() {
     const thread = this.thread();
-    if (!thread || this.busy()) return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.actionError.set('');
-    try {
-      await this.store.chat(
+    if (!thread || this.chatting.pending()) return;
+    await this.chatting.run(({ alive }) =>
+      this.store.chat(
         {
           commit: null,
           paths: null,
           issue: thread.pull ? null : thread.item.number,
           pull: thread.pull ? thread.item.number : null,
         },
-        valid,
-      );
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+        alive,
+      ),
+    );
   }
 }

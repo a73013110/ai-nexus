@@ -88,6 +88,10 @@ export class ApiError extends Error {
   }
 }
 /** 送出的版本已過期（期間有人改過）：手上的草稿再送也一樣被拒，要先重讀。 */
+/** 錯誤的代碼（例：依代碼分流 `ActionOutcome.cause`）；不是 API 錯誤時為空字串。 */
+export function errorCode(error: unknown): string {
+  return error instanceof ApiError ? error.code : '';
+}
 export function isStaleWrite(error: unknown): boolean {
   return error instanceof ApiError && error.code === 'admin_write_conflict';
 }

@@ -30,10 +30,10 @@
             nxPending
             type="button"
             class="icon-button"
-            [attr.aria-label]="working() === 'download' ? '下載中…' : '下載指標報告'"
+            [attr.aria-label]="working.pendingFor('download') ? '下載中…' : '下載指標報告'"
             title="下載指標報告"
-            [pending]="working() === 'download'"
-            [disabled]="(busy() && working() !== 'download') || !report()"
+            [pending]="working.pendingFor('download')"
+            [disabled]="(busy() && !working.pendingFor('download')) || !report()"
             (click)="download()"
           >
             <nx-icon name="download" />
@@ -45,22 +45,22 @@
               <button
                 nxPending
                 class="quiet-button"
-                [pending]="working() === 'cancel'"
-                [disabled]="busy() && working() !== 'cancel'"
+                [pending]="working.pendingFor('cancel')"
+                [disabled]="busy() && !working.pendingFor('cancel')"
                 (click)="control('cancel')"
               >
-                {{ working() === 'cancel' ? '取消中…' : '取消評測' }}
+                {{ working.pendingFor('cancel') ? '取消中…' : '取消評測' }}
               </button>
             }
             @if (report.run.job.status === 'failed' || report.run.job.status === 'cancelled') {
               <button
                 nxPending
                 class="quiet-button"
-                [pending]="working() === 'retry'"
-                [disabled]="busy() && working() !== 'retry'"
+                [pending]="working.pendingFor('retry')"
+                [disabled]="busy() && !working.pendingFor('retry')"
                 (click)="control('retry')"
               >
-                <nx-icon name="repeat" />{{ working() === 'retry' ? '續跑中…' : '續跑評測' }}
+                <nx-icon name="repeat" />{{ working.pendingFor('retry') ? '續跑中…' : '續跑評測' }}
               </button>
             }
           </nx-job-progress>
@@ -230,10 +230,12 @@
             nxPending
             type="submit"
             class="primary-button retrieval-start"
-            [pending]="working() === 'start'"
-            [disabled]="(busy() && working() !== 'start') || form.invalid || !selected().length"
+            [pending]="working.pendingFor('start')"
+            [disabled]="
+              (busy() && !working.pendingFor('start')) || form.invalid || !selected().length
+            "
           >
-            <nx-icon name="play" />{{ working() === 'start' ? '排入中…' : '開始四模式評測' }}
+            <nx-icon name="play" />{{ working.pendingFor('start') ? '排入中…' : '開始四模式評測' }}
           </button>
         </div>
       </form>

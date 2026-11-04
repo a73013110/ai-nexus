@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { NavigationItemDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
 import { ApiError } from '@core/errors/safe-errors';
 import { publicErrorHints } from '@core/errors/public-error-catalog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -54,6 +55,7 @@ function setup() {
   };
   TestBed.configureTestingModule({
     providers: [
+      { provide: ViewScope, useValue: { guard: () => () => true } },
       { provide: AccessControlApi, useValue: api },
       { provide: NavigationStore, useValue: store },
       {
@@ -157,7 +159,7 @@ describe('NavigationItemDialog', () => {
       icon: null,
       audienceGroupIds: ['administrators'],
     });
-    expect(dialog.error()).toContain(publicErrorHints['navigation_link_host_not_allowed']);
+    expect(dialog.saving.error()).toContain(publicErrorHints['navigation_link_host_not_allowed']);
     expect(dialog.editor.current()!.draft.url).toBe('https://other.example.com/');
     expect(store.changed).not.toHaveBeenCalled();
   });
@@ -193,7 +195,7 @@ describe('NavigationItemDialog', () => {
     await dialog.save(new Event('submit'));
     expect(store.stale).toHaveBeenCalled();
     expect(store.changed).not.toHaveBeenCalled();
-    expect(dialog.error()).toBe('');
+    expect(dialog.saving.error()).toBe('');
     expect(dialog.editor.dirty()).toBe(false);
   });
 

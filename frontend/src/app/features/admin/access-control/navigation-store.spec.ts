@@ -6,6 +6,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { AccessControlApi } from './access-control-api';
 import { AccessControlStore } from './access-control-store';
 import { NavigationStore } from './navigation-store';
+import { ViewScope } from '@shared/browser/view-scope';
 
 const items = [
   {
@@ -65,6 +66,7 @@ function setup() {
   };
   TestBed.configureTestingModule({
     providers: [
+      { provide: ViewScope, useValue: { guard: () => () => true } },
       AccessControlStore,
       NavigationStore,
       { provide: AccessControlApi, useValue: api },

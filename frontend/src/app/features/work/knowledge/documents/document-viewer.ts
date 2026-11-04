@@ -28,6 +28,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { TextHighlight } from '@shared/ui/text-highlight';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { hotkey } from '@shared/browser/hotkeys';
 import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
@@ -131,9 +132,13 @@ export class DocumentViewer {
   private readonly narrow = mediaQuery(below('tablet'));
   readonly loading = signal(true);
   readonly rendering = signal(false);
-  readonly error = signal('');
+  /** 讀取與顯示文件的失敗；動作（重新處理、讀取辨識文字）的失敗在 `working.error`。 */
+  private readonly loadError = signal('');
+  readonly error = computed(() => this.working.error() || this.loadError());
   readonly renderError = signal('');
-  readonly busy = signal(false);
+  /** 重新處理、停止或讀取辨識文字；換文件時放棄。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly pdfPages = signal(0);
   private readonly pdfRevision = signal(0);
   private readonly viewportWidth = signal(800);
@@ -411,7 +416,8 @@ export class DocumentViewer {
     this.rawImage.set(false);
     this.mode.set('original');
     this.imageLoading.set(false);
-    this.error.set('');
+    this.working.reset();
+    this.loadError.set('');
     this.renderError.set('');
     this.document.set(null);
     this.pages.set([]);
@@ -469,7 +475,7 @@ export class DocumentViewer {
           valid,
         );
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.loadError.set(this.scope.message(error));
     } finally {
       if (valid()) this.loading.set(false);
     }
@@ -571,7 +577,7 @@ export class DocumentViewer {
             this.pdf = null;
             this.document.set(null);
             this.pages.set([]);
-            this.error.set(this.scope.message(error));
+            this.loadError.set(this.scope.message(error));
           });
       },
       30000,
@@ -596,7 +602,7 @@ export class DocumentViewer {
       if (documentBusy(info.status))
         this.scope.later(() => void this.refresh(id, valid), 2500, 'reader-poll');
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.loadError.set(this.scope.message(error));
     }
   }
   private async render(canvas: HTMLCanvasElement, number: number, zoom: number, available: number) {
@@ -659,25 +665,27 @@ export class DocumentViewer {
       { injector: this.injector },
     );
   }
+  /**
+   * 還是同一次開啟的文件。動作結束後 `refresh` 會繼續輪詢處理進度，換了文件（`load`）就要停，
+   * 所以不能只靠送出中的取消。
+   */
+  private sameDocument() {
+    const version = this.version;
+    return () => version === this.version;
+  }
   async setMode(mode: string) {
     this.mode.set(mode);
-    if (this.target().scope || mode !== 'text' || !this.rawImage() || this.busy()) return;
-    const version = this.version,
-      guard = this.scope.guard(),
-      valid = () => guard() && version === this.version;
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const info = await this.api.readAttachment(this.target().id, this.controller?.signal);
-      if (!valid()) return;
-      this.rawImage.set(false);
-      this.document.set(info);
-      await this.refresh(info.id, valid);
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+    if (this.target().scope || mode !== 'text' || !this.rawImage()) return;
+    await this.working.run(
+      async ({ alive }) => {
+        const info = await this.api.readAttachment(this.target().id, this.controller?.signal);
+        if (!alive()) return;
+        this.rawImage.set(false);
+        this.document.set(info);
+        await this.refresh(info.id, alive);
+      },
+      { current: this.sameDocument() },
+    );
   }
   imageLoaded(event: Event) {
     const image = event.target as HTMLImageElement;
@@ -689,22 +697,18 @@ export class DocumentViewer {
     this.renderError.set('原始圖片無法顯示，請重新開啟或下載原檔。');
   }
   async control(retry: boolean) {
-    const job = this.job();
-    if (!job || this.busy()) return;
-    const valid = this.scope.guard(),
-      id = this.document()?.id;
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const value = await this.jobToasts.control(job.id, retry);
-      if (valid() && this.document()?.id === id) {
+    const job = this.job(),
+      id = this.document()?.id,
+      sameDocument = this.sameDocument();
+    if (!job || !id) return;
+    await this.working.run(
+      async ({ alive }) => {
+        const value = await this.jobToasts.control(job.id, retry);
+        if (!alive()) return;
         this.job.set(value);
-        await this.refresh(id!, valid);
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+        await this.refresh(id, alive);
+      },
+      { current: () => sameDocument() && this.document()?.id === id },
+    );
   }
 }

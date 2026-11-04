@@ -18,6 +18,7 @@ import type { PromptTemplateDto } from '@core/api/schema';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
 import { PendingButton } from '@shared/ui/pending-button';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { PromptsApi } from './prompts-api';
@@ -34,7 +35,7 @@ import { promptLibraryTour } from './prompt-library-tour';
     size="lg"
     #dialog
     class="platform-dialog library-dialog"
-    [busy]="busy()"
+    [busy]="saving.pending()"
   >
     <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" [tour]="tour()" />
     <div class="dialog-body dialog-body-flush library-layout">
@@ -73,7 +74,7 @@ import { promptLibraryTour } from './prompt-library-tour';
               nxPending
               type="button"
               class="icon-button template-delete"
-              [pending]="deleting().has(prompt.id)"
+              [pending]="deleting.pendingFor(prompt.id)"
               [attr.aria-label]="'刪除範本：' + prompt.title"
               (click)="remove(prompt.id)"
             >
@@ -108,10 +109,10 @@ import { promptLibraryTour } from './prompt-library-tour';
             nxPending
             type="submit"
             class="primary-button"
-            [pending]="busy()"
+            [pending]="saving.pending()"
             [disabled]="fields().invalid()"
           >
-            {{ busy() ? '儲存中…' : '儲存範本' }}
+            {{ saving.pending() ? '儲存中…' : '儲存範本' }}
           </button>
         </div>
       </form>
@@ -120,7 +121,6 @@ import { promptLibraryTour } from './prompt-library-tour';
 })
 export class PromptLibraryDialog {
   private readonly api = inject(PromptsApi);
-  private readonly scope = inject(ViewScope);
   private readonly session = inject(WorkspaceSession);
   readonly draft = input('');
   readonly used = output<string>();
@@ -138,11 +138,12 @@ export class PromptLibraryDialog {
   );
   /** 骨架列的寬度（%）。 */
   protected readonly skeleton = [82, 64, 74];
-  readonly busy = signal(false);
+  readonly saving = action();
   /** 刪除中的範本：只擋那一列的刪除鈕，其他列照常可用。 */
-  readonly deleting = signal<ReadonlySet<string>>(new Set());
-  private readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.promptsRead.error());
+  readonly deleting = action({ concurrent: true });
+  readonly error = computed(
+    () => this.saving.error() || this.deleting.error() || this.promptsRead.error(),
+  );
   readonly editingId = signal<string | null>(null);
   readonly tour = computed(() =>
     promptLibraryTour({ editing: this.editingId() !== null, testing: this.session.testing() }),
@@ -154,13 +155,14 @@ export class PromptLibraryDialog {
     required(schema.content);
     maxLength(schema.content, 12000);
     // 儲存中欄位唯讀（不停用，焦點留在原處）。
-    readonly(schema.title, () => this.busy());
-    readonly(schema.content, () => this.busy());
+    readonly(schema.title, () => this.saving.pending());
+    readonly(schema.content, () => this.saving.pending());
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private readonly titleField = viewChild<ElementRef<HTMLInputElement>>('titleField');
   open() {
-    this.actionError.set('');
+    this.saving.error.set('');
+    this.deleting.error.set('');
     this.edit(null);
     this.dialog()?.nativeElement.showModal();
     this.opened.update((value) => value + 1);
@@ -180,38 +182,18 @@ export class PromptLibraryDialog {
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.busy() || this.fields().invalid()) return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.actionError.set('');
-    try {
-      await this.api.savePrompt(this.editingId(), this.model().title, this.model().content);
-      if (!valid()) return;
-      this.promptsRead.reload();
-      this.edit(null);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      this.busy.set(false);
-    }
+    if (this.fields().invalid()) return;
+    const outcome = await this.saving.run(() =>
+      this.api.savePrompt(this.editingId(), this.model().title, this.model().content),
+    );
+    if (!outcome.ok) return;
+    this.promptsRead.reload();
+    this.edit(null);
   }
   async remove(id: string) {
-    if (this.deleting().has(id)) return;
-    const valid = this.scope.guard();
-    this.deleting.update((ids) => new Set(ids).add(id));
-    try {
-      await this.api.deletePrompt(id);
-      if (!valid()) return;
-      this.promptsRead.value.update((prompts) => prompts?.filter((prompt) => prompt.id !== id));
-      if (this.editingId() === id) this.edit(null);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      this.deleting.update((ids) => {
-        const next = new Set(ids);
-        next.delete(id);
-        return next;
-      });
-    }
+    const outcome = await this.deleting.run(() => this.api.deletePrompt(id), { key: id });
+    if (!outcome.ok) return;
+    this.promptsRead.value.update((prompts) => prompts?.filter((prompt) => prompt.id !== id));
+    if (this.editingId() === id) this.edit(null);
   }
 }

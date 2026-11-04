@@ -16,6 +16,7 @@ import {
 import type { DirectoryUserDto, ResourceAclDto } from '@core/api/schema';
 import { CollaborationApi, type SharedResourceKind } from './collaboration-api';
 import { directorySearch } from './directory-search';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Icon } from '@shared/ui/icon';
@@ -51,7 +52,13 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './resource-sharing.scss',
-  template: `<dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving()">
+  template: `<dialog
+    nxCompactDialog
+    size="md"
+    #dialog
+    class="platform-dialog"
+    [busy]="saving.pending()"
+  >
     <nx-dialog-header
       heading="存取權限"
       [detail]="name()"
@@ -127,7 +134,7 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
                   label="可檢視的群組"
                   [groups]="groupChoices()"
                   [selected]="groupIds()"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (selectedChange)="groupIds.set($event)"
                 />
               </div>
@@ -141,8 +148,8 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
       <button
         type="button"
         class="secondary-button"
-        [attr.aria-disabled]="saving() || null"
-        (click)="saving() || dialog.close()"
+        [attr.aria-disabled]="saving.pending() || null"
+        (click)="saving.pending() || dialog.close()"
       >
         取消
       </button>
@@ -150,11 +157,11 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
         nxPending
         type="button"
         class="primary-button sharing-save"
-        [pending]="saving()"
+        [pending]="saving.pending()"
         [disabled]="loading()"
         (click)="save()"
       >
-        {{ saving() ? '儲存中…' : '儲存權限' }}
+        {{ saving.pending() ? '儲存中…' : '儲存權限' }}
       </button>
     </footer>
   </dialog>`,
@@ -166,7 +173,6 @@ export class ResourceSharing {
   readonly allowGroups = input(true);
   readonly saved = output<void>();
   private readonly api = inject(CollaborationApi);
-  private readonly scope = inject(ViewScope);
   private readonly session = inject(WorkspaceSession);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   /** 每次開啟都會讀取目前的權限；編輯在儲存前只留在本地。 */
@@ -197,10 +203,11 @@ export class ResourceSharing {
   readonly people = directorySearch(() => this.members().map((item) => item.userId));
   protected readonly initial = nameInitial;
   readonly id = uniqueId('nx-resource-sharing');
-  readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
+  readonly error = computed(
+    () => this.saving.error() || this.aclRead.error() || this.people.error(),
+  );
   readonly loading = this.aclRead.loading;
-  readonly saving = signal(false);
+  readonly saving = action();
   readonly roles = [
     { value: 'viewer', label: '可檢視' },
     { value: 'editor', label: '可編輯' },
@@ -220,7 +227,7 @@ export class ResourceSharing {
   });
   open() {
     this.dialog().nativeElement.showModal();
-    this.saveError.set('');
+    this.saving.error.set('');
     this.people.clear();
     this.opened.update((value) => value + 1);
   }
@@ -241,25 +248,19 @@ export class ResourceSharing {
     );
   }
   async save() {
-    if (this.saving() || this.loading()) return;
-    const valid = this.scope.guard(),
-      kind = this.kind(),
+    if (this.saving.pending() || this.loading()) return;
+    const kind = this.kind(),
       id = this.resourceId();
-    this.saving.set(true);
-    this.saveError.set('');
-    try {
-      await this.api.saveAccess(kind, id, {
-        members: this.members().map((item) => ({ userId: item.userId, role: item.role })),
-        groupIds: this.groupIds(),
-      });
-      if (valid() && this.kind() === kind && this.resourceId() === id) {
-        this.dialog().nativeElement.close();
-        this.saved.emit();
-      }
-    } catch (error) {
-      if (valid()) this.saveError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+    const outcome = await this.saving.run(
+      () =>
+        this.api.saveAccess(kind, id, {
+          members: this.members().map((item) => ({ userId: item.userId, role: item.role })),
+          groupIds: this.groupIds(),
+        }),
+      { current: () => this.kind() === kind && this.resourceId() === id },
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.saved.emit();
   }
 }

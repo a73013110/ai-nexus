@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { VerificationCodeDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
@@ -40,8 +40,8 @@ import { VerificationCodeField } from './verification-code-field';
         <p class="form-note">
           驗證碼與帳號安全通知會寄到這裡。新地址要輸入寄到該信箱的驗證碼才會生效；變更後其他裝置上的登入會登出。
         </p>
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (working.error()) {
+          <nx-notice tone="danger" [message]="working.error()" />
         }
         <label
           >信箱<input
@@ -61,11 +61,11 @@ import { VerificationCodeField } from './verification-code-field';
               nxPending
               type="button"
               class="secondary-button"
-              [pending]="working() === 'resend'"
-              [disabled]="working() === 'confirm'"
+              [pending]="working.pendingFor('resend')"
+              [disabled]="working.pendingFor('confirm')"
               (click)="send('resend')"
             >
-              {{ working() === 'resend' ? '寄送中…' : '重新寄送' }}
+              {{ working.pendingFor('resend') ? '寄送中…' : '重新寄送' }}
             </button>
             <button type="button" class="secondary-button" [disabled]="busy()" (click)="edit()">
               改用其他地址
@@ -87,15 +87,15 @@ import { VerificationCodeField } from './verification-code-field';
           nxPending
           type="submit"
           class="primary-button"
-          [pending]="working() === 'send' || working() === 'confirm'"
-          [disabled]="working() === 'resend' || (!busy() && !ready())"
+          [pending]="working.pendingFor('send') || working.pendingFor('confirm')"
+          [disabled]="working.pendingFor('resend') || (!busy() && !ready())"
         >
           {{
             challenge()
-              ? working() === 'confirm'
+              ? working.pendingFor('confirm')
                 ? '驗證中…'
                 : '驗證並儲存'
-              : working() === 'send'
+              : working.pendingFor('send')
                 ? '寄送中…'
                 : '寄送驗證碼'
           }}
@@ -116,10 +116,9 @@ export class EmailDialog {
   readonly email = signal('');
   readonly code = signal('');
   readonly challenge = signal<VerificationCodeDto | null>(null);
-  /** 進行中的動作：第一次寄送、重新寄送或驗證；只讓按下的那顆轉。 */
-  readonly working = signal<'' | 'send' | 'resend' | 'confirm'>('');
-  readonly busy = computed(() => this.working() !== '');
-  readonly error = signal('');
+  /** 第一次寄送（`send`）、重新寄送（`resend`）或驗證（`confirm`）：只讓按下的那顆轉。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly ready = computed(() =>
     this.challenge() ? this.code().length === 6 : this.email().trim().length > 0,
   );
@@ -132,25 +131,23 @@ export class EmailDialog {
       this.email.set(security?.email && !security.emailVerifiedAt ? security.email : '');
       this.code.set('');
       this.challenge.set(null);
-      this.error.set('');
+      this.working.error.set('');
     });
   }
 
   edit() {
     this.challenge.set(null);
     this.code.set('');
-    this.error.set('');
+    this.working.error.set('');
   }
 
-  async send(action: 'send' | 'resend' = 'send') {
-    if (this.busy()) return;
-    await this.busyWhile(action, async () => {
-      const challenge = await this.store.requestEmail(this.email().trim());
-      if (challenge) {
-        this.challenge.set(challenge);
-        this.code.set('');
-      }
+  async send(key: 'send' | 'resend' = 'send') {
+    const outcome = await this.working.run(() => this.store.requestEmail(this.email().trim()), {
+      key,
     });
+    if (!outcome.ok || !outcome.value) return;
+    this.challenge.set(outcome.value);
+    this.code.set('');
   }
 
   async submit(event: Event) {
@@ -158,18 +155,8 @@ export class EmailDialog {
     if (this.busy() || !this.ready()) return;
     const challenge = this.challenge();
     if (!challenge) return this.send();
-    await this.busyWhile('confirm', () => this.store.confirmEmail(challenge.id, this.code()));
-  }
-
-  private async busyWhile(action: 'send' | 'resend' | 'confirm', work: () => Promise<void>) {
-    this.working.set(action);
-    this.error.set('');
-    try {
-      await work();
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.working.set('');
-    }
+    await this.working.run(() => this.store.confirmEmail(challenge.id, this.code()), {
+      key: 'confirm',
+    });
   }
 }

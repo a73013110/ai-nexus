@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { DirectoryUserDto, ShareDto } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { Select } from '@shared/ui/select';
@@ -52,7 +53,13 @@ export function shareLink(id: string, base = document.baseURI) {
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './share-dialog.scss',
-  template: `<dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="busy()">
+  template: `<dialog
+    nxCompactDialog
+    size="md"
+    #dialog
+    class="platform-dialog"
+    [busy]="creating.pending()"
+  >
     <nx-dialog-header heading="建立唯讀分享" [detail]="name()" closeLabel="關閉分享視窗" />
     <div class="dialog-body">
       @if (error()) {
@@ -89,7 +96,7 @@ export function shareLink(id: string, base = document.baseURI) {
                 placeholder="輸入至少兩個字，搜尋公司帳號"
                 emptyText="沒有符合且未加入的帳號。"
                 [search]="people"
-                [disabled]="busy() || full()"
+                [disabled]="creating.pending() || full()"
                 (picked)="add($event)"
               />
               @if (recipients().length) {
@@ -100,7 +107,7 @@ export function shareLink(id: string, base = document.baseURI) {
                       class="form-chip"
                       [attr.aria-label]="'移除收件者 ' + user.displayName"
                       [title]="user.account"
-                      [disabled]="busy()"
+                      [disabled]="creating.pending()"
                       (click)="remove(user.id)"
                     >
                       <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span
@@ -121,7 +128,7 @@ export function shareLink(id: string, base = document.baseURI) {
                   label="分享有效期限"
                   [options]="durations"
                   [value]="hours()"
-                  [disabled]="busy()"
+                  [disabled]="creating.pending()"
                   (valueChange)="hours.set($event)"
               /></label>
               @if (kind() === 'conversation') {
@@ -129,7 +136,7 @@ export function shareLink(id: string, base = document.baseURI) {
                   label="包含此分支的附件"
                   description="收件者可下載；到期或撤銷後停止存取。"
                   [checked]="includeAttachments()"
-                  [disabled]="busy()"
+                  [disabled]="creating.pending()"
                   (checkedChange)="includeAttachments.set($event)"
                 />
               }
@@ -146,8 +153,8 @@ export function shareLink(id: string, base = document.baseURI) {
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="busy() || null"
-          (click)="busy() || dialog.close()"
+          [attr.aria-disabled]="creating.pending() || null"
+          (click)="creating.pending() || dialog.close()"
         >
           取消
         </button>
@@ -155,11 +162,11 @@ export function shareLink(id: string, base = document.baseURI) {
           nxPending
           type="button"
           class="primary-button"
-          [pending]="busy()"
+          [pending]="creating.pending()"
           [disabled]="!recipients().length"
           (click)="create()"
         >
-          {{ busy() ? '建立中…' : '建立分享' }}
+          {{ creating.pending() ? '建立中…' : '建立分享' }}
         </button>
       </footer>
     }
@@ -182,12 +189,10 @@ export class ShareDialog {
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);
-  readonly busy = signal(false);
-  private readonly createError = signal('');
-  readonly error = computed(() => this.createError() || this.people.error());
+  readonly creating = action();
+  readonly error = computed(() => this.creating.error() || this.people.error());
   readonly copy = inject(CopyFeedback);
   private readonly api = inject(SharingApi);
-  private readonly scope = inject(ViewScope);
   /** 開啟當下的來源；建立期間宿主可能換成別的對話或成果，送出與結果都以此為準。 */
   private context?: { kind: ShareKind; id: string; version: number | null };
   readonly durations = [
@@ -197,10 +202,10 @@ export class ShareDialog {
     { value: '720', label: '30 天' },
   ];
   open() {
-    if (this.busy()) return;
+    if (this.creating.pending()) return;
     this.context = { kind: this.kind(), id: this.sourceId(), version: this.version() };
     this.created.set(null);
-    this.createError.set('');
+    this.creating.error.set('');
     this.recipients.set([]);
     this.people.clear();
     this.includeAttachments.set(false);
@@ -217,27 +222,21 @@ export class ShareDialog {
     this.recipients.update((all) => all.filter((item) => item.id !== id));
   }
   async create() {
-    if (this.busy() || !this.recipients().length || !this.context) return;
-    const context = this.context,
-      alive = this.scope.guard();
-    // busy 期間 open() 不會換掉 context，只需確認宿主仍指向同一個來源。
-    const valid = () => alive() && context.id === this.sourceId();
-    this.busy.set(true);
-    this.createError.set('');
-    try {
-      const value = await this.api.create({
-        kind: context.kind,
-        sourceId: context.id,
-        recipientIds: this.recipients().map((item) => item.id),
-        hours: Number(this.hours()),
-        includeAttachments: this.includeAttachments(),
-        artifactVersion: context.version,
-      });
-      if (valid()) this.created.set(value);
-    } catch (failure) {
-      if (valid()) this.createError.set(this.scope.message(failure));
-    } finally {
-      if (alive()) this.busy.set(false);
-    }
+    if (this.creating.pending() || !this.recipients().length || !this.context) return;
+    const context = this.context;
+    // 建立期間 open() 不會換掉 context，只需確認宿主仍指向同一個來源。
+    const outcome = await this.creating.run(
+      () =>
+        this.api.create({
+          kind: context.kind,
+          sourceId: context.id,
+          recipientIds: this.recipients().map((item) => item.id),
+          hours: Number(this.hours()),
+          includeAttachments: this.includeAttachments(),
+          artifactVersion: context.version,
+        }),
+      { current: () => context.id === this.sourceId() },
+    );
+    if (outcome.ok) this.created.set(outcome.value);
   }
 }

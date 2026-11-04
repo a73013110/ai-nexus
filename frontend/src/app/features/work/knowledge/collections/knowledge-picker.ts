@@ -90,10 +90,10 @@ import { routeOf } from '@core/api/catalog';
               (collection.resource.isOwner ? '' : ' · 已共用')
             "
             [checked]="selection.ids().includes(collection.resource.id)"
-            [pending]="selection.toggling() === collection.resource.id"
+            [pending]="selection.isToggling(collection.resource.id)"
             [disabled]="
               disabled() ||
-              (selection.saving() && selection.toggling() !== collection.resource.id) ||
+              (selection.saving() && !selection.isToggling(collection.resource.id)) ||
               selection.loadFailed() ||
               (selection.ids().length >= 3 && !selection.ids().includes(collection.resource.id))
             "

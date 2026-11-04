@@ -15,6 +15,7 @@ import {
   computed,
 } from '@angular/core';
 import type { DocumentDto } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { KnowledgeApi } from '../knowledge-api';
@@ -36,7 +37,7 @@ const MAX_TEXT = 64000;
       #dialog
       class="platform-dialog"
       aria-label="純文字來源編輯器"
-      [busy]="busy()"
+      [busy]="saving.pending()"
       (cancel)="cancel($event)"
     >
       <form class="dialog-form" (submit)="save($event)">
@@ -55,7 +56,7 @@ const MAX_TEXT = 64000;
                 nxField
                 required
                 maxlength="120"
-                [readOnly]="busy()"
+                [readOnly]="saving.pending()"
                 [value]="title()"
                 (input)="title.set($any($event.target).value)"
             /></label>
@@ -65,7 +66,7 @@ const MAX_TEXT = 64000;
                 required
                 rows="15"
                 [maxLength]="maxText"
-                [readOnly]="busy()"
+                [readOnly]="saving.pending()"
                 [value]="text()"
                 placeholder="將文字貼在這裡…"
                 (input)="text.set($any($event.target).value)"
@@ -83,7 +84,7 @@ const MAX_TEXT = 64000;
           <button
             type="button"
             class="secondary-button"
-            [attr.aria-disabled]="busy() || null"
+            [attr.aria-disabled]="saving.pending() || null"
             (click)="close()"
           >
             取消
@@ -91,10 +92,10 @@ const MAX_TEXT = 64000;
           <button
             nxPending
             class="primary-button"
-            [pending]="busy()"
+            [pending]="saving.pending()"
             [disabled]="loading() || !title().trim() || !text().trim()"
           >
-            {{ busy() ? '儲存中…' : '儲存並建立索引' }}
+            {{ saving.pending() ? '儲存中…' : '儲存並建立索引' }}
           </button>
         </footer>
       </form>
@@ -123,7 +124,6 @@ const MAX_TEXT = 64000;
 export class TextSourceEditor {
   private readonly api = inject(KnowledgeApi);
   private readonly jobToasts = inject(JobToasts);
-  private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly saved = output<DocumentDto>();
@@ -150,11 +150,10 @@ export class TextSourceEditor {
     JSON.stringify([this.source()?.title ?? '', this.source()?.text ?? '']),
   );
   readonly loading = this.sourceRead.loading;
-  readonly busy = signal(false);
-  readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.sourceRead.error());
+  readonly saving = action();
+  readonly error = computed(() => this.saving.error() || this.sourceRead.error());
   open(collection: string, document?: DocumentDto) {
-    this.saveError.set('');
+    this.saving.error.set('');
     this.editing.set({ collection, documentId: document?.id || '' });
     this.dialog().nativeElement.showModal();
   }
@@ -163,10 +162,10 @@ export class TextSourceEditor {
   }
   cancel(event: Event) {
     event.preventDefault();
-    if (!this.busy()) void this.close();
+    if (!this.saving.pending()) void this.close();
   }
   async close() {
-    if (this.busy()) return;
+    if (this.saving.pending()) return;
     if (
       this.signature() !== this.initial() &&
       (this.title() || this.text()) &&
@@ -178,27 +177,29 @@ export class TextSourceEditor {
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.busy() || this.loading() || !this.title().trim() || !this.text().trim()) return;
-    const valid = this.scope.guard(),
-      editing = this.editing(),
-      source = this.source(),
-      current = () => valid() && editing === this.editing();
+    if (this.saving.pending() || this.loading() || !this.title().trim() || !this.text().trim())
+      return;
+    const editing = this.editing(),
+      source = this.source();
     if (!editing) return;
-    this.busy.set(true);
-    this.saveError.set('');
-    try {
-      const result = editing.documentId
-        ? await this.api.updateText(editing.documentId, this.title(), this.text(), source!.version)
-        : await this.api.createText(editing.collection, this.title(), this.text());
-      this.jobToasts.trackDocument(result);
-      if (current()) {
-        this.dialog().nativeElement.close();
-        this.saved.emit(result);
-      }
-    } catch (error) {
-      if (current()) this.saveError.set(this.scope.message(error));
-    } finally {
-      if (current()) this.busy.set(false);
-    }
+    const outcome = await this.saving.run(
+      async () => {
+        const result = editing.documentId
+          ? await this.api.updateText(
+              editing.documentId,
+              this.title(),
+              this.text(),
+              source!.version,
+            )
+          : await this.api.createText(editing.collection, this.title(), this.text());
+        // 索引在背景建立：對話框已關閉或換了文件也照樣通知。
+        this.jobToasts.trackDocument(result);
+        return result;
+      },
+      { current: () => editing === this.editing() },
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.saved.emit(outcome.value);
   }
 }

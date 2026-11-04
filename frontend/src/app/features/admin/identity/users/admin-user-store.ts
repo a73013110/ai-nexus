@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
-import { writeFailureMessage } from '@core/errors/safe-errors';
+import { ACTION_SKIPPED, action, type ActionOutcome } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { ToastService } from '@shared/ui/toast-service';
@@ -27,6 +27,9 @@ type Keyed<T> = readonly [string | undefined, T];
 export type UserTab = 'account' | 'roles' | 'models' | 'usage' | 'conversations';
 /** 會編輯某些內容的分頁；各自獨立儲存。 */
 export type UserSettingsTab = Exclude<UserTab, 'conversations'>;
+const SETTINGS_TABS: readonly UserSettingsTab[] = ['account', 'roles', 'models', 'usage'];
+type AccountAction = 'rebind' | 'unbind' | 'status';
+const ACCOUNT_ACTIONS: readonly AccountAction[] = ['rebind', 'unbind', 'status'];
 
 /**
  * 單一使用者在檢視器中的管理狀態：已儲存的帳號、每個分頁的草稿，以及它們背後的讀取。
@@ -49,10 +52,11 @@ export class AdminUserStore {
     source: this.key,
     computation: () => 'account',
   });
-  readonly saving = linkedSignal<string | undefined, UserSettingsTab | null>({
-    source: this.key,
-    computation: () => null,
-  });
+  /** 分頁儲存（`key` 是分頁）與帳號動作（`rebind`、`unbind`、`status`）共用，一次一件。 */
+  private readonly writing = action();
+  readonly saving = computed(
+    () => SETTINGS_TABS.find((tab) => this.writing.pendingFor(tab)) ?? null,
+  );
   readonly errors = linkedSignal<string | undefined, Partial<Record<UserSettingsTab, string>>>({
     source: this.key,
     computation: () => ({}),
@@ -60,10 +64,9 @@ export class AdminUserStore {
   /**
    * 立即生效的帳號動作（改綁、解除 AD 綁定、啟用或停用）送出中；不經帳號表單的儲存，錯誤顯示在帳號分頁。
    */
-  readonly acting = linkedSignal<string | undefined, 'rebind' | 'unbind' | 'status' | null>({
-    source: this.key,
-    computation: () => null,
-  });
+  readonly acting = computed(
+    () => ACCOUNT_ACTIONS.find((key) => this.writing.pendingFor(key)) ?? null,
+  );
   /**
    * 分頁儲存中、帳號動作送出中，或寫入後重讀中時，欄位唯讀：重讀回來前手上的版本還是舊的，
    * 再送一筆只會版本衝突。還沒有詳情時用列表的資料與版本，不必等。
@@ -204,7 +207,7 @@ export class AdminUserStore {
       mail = this.emailChanged();
     return this.save(
       'account',
-      async (id, valid) => {
+      async (id, alive) => {
         let version = this.profileVersion();
         if (account) {
           const enabled = this.current()?.enabled ?? true;
@@ -214,7 +217,7 @@ export class AdminUserStore {
           );
           // 成功的帳號寫入一定把版本加一；後送的端點要帶加過的版本，不必為此多讀一次。
           version += 1;
-          if (valid())
+          if (alive())
             this.savedAccount.set({
               ...draft,
               password: '',
@@ -223,7 +226,7 @@ export class AdminUserStore {
         }
         if (mail) {
           await this.api.email(id, email || null, version);
-          if (valid()) this.savedEmail.set(email);
+          if (alive()) this.savedEmail.set(email);
         }
       },
       () =>
@@ -268,7 +271,7 @@ export class AdminUserStore {
         return bytes;
       },
       (bytes) => {
-        this.savedStorage.set(storageLimitGb(bytes as number | null));
+        this.savedStorage.set(storageLimitGb(bytes));
         this.overviewRead.reload();
         this.toast.success('個人容量上限已更新');
         this.admin.readUsers();
@@ -311,35 +314,21 @@ export class AdminUserStore {
   }
   /** 成功回傳 true，呼叫端據此清空輸入；失敗訊息放在帳號分頁。 */
   private async act(
-    action: 'rebind' | 'unbind' | 'status',
+    kind: AccountAction,
     work: (id: string) => Promise<unknown>,
     title: string,
     description: string,
   ) {
-    const key = this.key(),
-      id = this.user()?.id,
-      alive = this.scope.guard(),
-      valid = () => alive() && this.key() === key;
-    if (!id || this.locked()) return false;
-    this.acting.set(action);
-    this.errors.update((errors) => ({ ...errors, account: '' }));
-    try {
-      await work(id);
-      if (valid()) this.changed(title, description);
-      return valid();
-    } catch (error) {
-      if (valid()) this.failed('account', error);
-      return false;
-    } finally {
-      if (valid()) this.acting.set(null);
-    }
+    const outcome = await this.write(kind, 'account', (id) => work(id));
+    if (outcome.ok) this.changed(title, description);
+    return outcome.ok;
   }
   /**
    * 失敗訊息放在分頁。帳號與角色帶版本：版本可能已過期，帳號分頁也可能先送的端點已成功升版，
    * 所以一律重讀；內容沒變的草稿會留著，換上新版本就能再送。
    */
-  private failed(tab: UserSettingsTab, error: unknown) {
-    this.errors.update((errors) => ({ ...errors, [tab]: writeFailureMessage(error) }));
+  private failed(tab: UserSettingsTab, message: string) {
+    this.errors.update((errors) => ({ ...errors, [tab]: message }));
     if (tab === 'account' || tab === 'roles') {
       this.overviewRead.reload();
       this.admin.readUsers();
@@ -350,25 +339,29 @@ export class AdminUserStore {
     this.overviewRead.reload();
     this.admin.saved(title, description);
   }
-  private async save(
+  private async save<T>(
     tab: UserSettingsTab,
-    work: (id: string, valid: () => boolean) => Promise<unknown>,
-    done: (result: unknown) => void,
+    work: (id: string, alive: () => boolean) => Promise<T>,
+    done: (result: T) => void,
   ) {
-    const key = this.key(),
-      id = this.user()?.id,
-      alive = this.scope.guard(),
-      valid = () => alive() && this.key() === key;
-    if (!id || this.locked()) return;
-    this.saving.set(tab);
+    const outcome = await this.write(tab, tab, work);
+    if (outcome.ok) done(outcome.value);
+  }
+  /** 寫入這位使用者；換了使用者（新的 `key`）才回來的結果與失敗都丟掉。失敗訊息放在 `tab`。 */
+  private async write<T>(
+    key: UserSettingsTab | AccountAction,
+    tab: UserSettingsTab,
+    work: (id: string, alive: () => boolean) => Promise<T>,
+  ): Promise<ActionOutcome<T>> {
+    const visit = this.key(),
+      id = this.user()?.id;
+    if (!id || this.locked()) return ACTION_SKIPPED;
     this.errors.update((errors) => ({ ...errors, [tab]: '' }));
-    try {
-      const result = await work(id, valid);
-      if (valid()) done(result);
-    } catch (error) {
-      if (valid()) this.failed(tab, error);
-    } finally {
-      if (valid()) this.saving.set(null);
-    }
+    const outcome = await this.writing.run(({ alive }) => work(id, alive), {
+      key,
+      current: () => this.key() === visit,
+    });
+    if (!outcome.ok && outcome.error) this.failed(tab, outcome.error);
+    return outcome;
   }
 }

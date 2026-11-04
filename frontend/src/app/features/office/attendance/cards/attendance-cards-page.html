@@ -149,7 +149,7 @@
       drawer-actions
       label="卡片操作"
       [items]="cardActions()"
-      [busy]="store.working() === 'card:' + card.id"
+      [busy]="store.working('card:' + card.id)"
       (action)="cardAction(card, $event)"
     />
   }
@@ -254,7 +254,7 @@
           description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
           [checked]="!card.hiddenFromRecords"
           [disabled]="!store.canMaintain()"
-          [pending]="store.working() === 'hidden:' + card.id"
+          [pending]="store.working('hidden:' + card.id)"
           (checkedChange)="setVisible(card, $event)"
         />
       </section>
@@ -312,7 +312,7 @@
                       class="cards-history-menu"
                       [label]="entry.holder + '的持有期間操作'"
                       [items]="entry.actions"
-                      [busy]="store.working() === 'assignment:' + entry.item.id"
+                      [busy]="store.working('assignment:' + entry.item.id)"
                       (action)="entryAction(entry.item, $event)"
                     />
                   }

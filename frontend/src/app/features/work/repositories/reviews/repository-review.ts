@@ -15,6 +15,7 @@ import type { RepositoryReviewDetailDto, RepositoryReviewDto } from '@core/api/s
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ClientValidationError } from '@core/errors/safe-errors';
 import { formatDate, formatModelDisplayName, formatNumber } from '@shared/browser/format';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -78,22 +79,28 @@ const commentLimit = 20_000;
               nxPending
               type="button"
               class="quiet-button"
-              [pending]="working() === 'stop'"
-              [disabled]="(busy() && working() !== 'stop') || d.review.job.cancelRequested"
+              [pending]="controlling.pendingFor('stop')"
+              [disabled]="
+                (controlling.pending() && !controlling.pendingFor('stop')) ||
+                d.review.job.cancelRequested
+              "
               (click)="changeJob(false)"
             >
-              {{ working() === 'stop' ? '停止中…' : '停止' }}
+              {{ controlling.pendingFor('stop') ? '停止中…' : '停止' }}
             </button>
           } @else if (d.review.job.status === 'failed' || d.review.job.status === 'cancelled') {
             <button
               nxPending
               type="button"
               class="quiet-button"
-              [pending]="working() === 'retry'"
-              [disabled]="(busy() && working() !== 'retry') || d.review.job.attempt >= 6"
+              [pending]="controlling.pendingFor('retry')"
+              [disabled]="
+                (controlling.pending() && !controlling.pendingFor('retry')) ||
+                d.review.job.attempt >= 6
+              "
               (click)="changeJob(true)"
             >
-              {{ working() === 'retry' ? '重試中…' : '沿用已完成的分析重試' }}
+              {{ controlling.pendingFor('retry') ? '重試中…' : '沿用已完成的分析重試' }}
             </button>
           }
         </nx-job-progress>
@@ -190,7 +197,7 @@ const commentLimit = 20_000;
         <span class="skeleton head-skeleton"></span><span class="skeleton body-skeleton"></span>
       </div>
     }
-    <dialog nxCompactDialog size="lg" #comment class="platform-dialog" [busy]="posting()">
+    <dialog nxCompactDialog size="lg" #comment class="platform-dialog" [busy]="posting.pending()">
       <form class="dialog-form" (submit)="post($event)">
         <nx-dialog-header [heading]="'貼到 Pull Request #' + detail()?.review?.pullRequest" />
         <div class="dialog-body">
@@ -202,32 +209,32 @@ const commentLimit = 20_000;
               nxField
               rows="14"
               [maxLength]="limit"
-              [readOnly]="posting()"
+              [readOnly]="posting.pending()"
               [value]="draft()"
               (input)="draft.set($any($event.target).value)"
             ></textarea>
           </label>
           <p class="form-note count">{{ number(draft().length) }} / {{ number(limit) }}</p>
-          @if (commentError()) {
-            <nx-notice tone="danger" [message]="commentError()" />
+          @if (posting.error()) {
+            <nx-notice tone="danger" [message]="posting.error()" />
           }
         </div>
         <footer class="dialog-foot">
           <button
             type="button"
             class="secondary-button"
-            [attr.aria-disabled]="posting() || null"
-            (click)="posting() || comment.close()"
+            [attr.aria-disabled]="posting.pending() || null"
+            (click)="posting.pending() || comment.close()"
           >
             取消
           </button>
           <button
             nxPending
             class="primary-button"
-            [pending]="posting()"
+            [pending]="posting.pending()"
             [disabled]="!draft().trim()"
           >
-            {{ posting() ? '留言中…' : '留言' }}
+            {{ posting.pending() ? '留言中…' : '留言' }}
           </button>
         </footer>
       </form>
@@ -240,7 +247,6 @@ export class RepositoryReview {
   readonly store = inject(RepositoryStore);
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(RepositoriesApi);
-  private readonly scopeGuard = inject(ViewScope);
   private readonly jobs = inject(JobToasts);
   private readonly toast = inject(ToastService);
   private readonly commentDialog = viewChild.required<ElementRef<HTMLDialogElement>>('comment');
@@ -268,16 +274,13 @@ export class RepositoryReview {
     () => this.detail()?.sections.filter((item) => item.binary).length ?? 0,
   );
   readonly expanded = signal<ReadonlySet<number>>(new Set());
-  /** 停止或重試工作進行中：按下的那顆按鈕轉圈。 */
-  readonly working = signal<'stop' | 'retry' | null>(null);
-  readonly busy = computed(() => this.working() !== null);
+  /** 停止或重試工作；`key` 是按下的那顆按鈕，只有它轉圈。 */
+  readonly controlling = action();
   /** 使用者看得到的重讀（重試）；工作進行中的輪詢不算。 */
   readonly refreshing = this.read.refreshing;
-  private readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.read.error());
+  readonly error = computed(() => this.controlling.error() || this.read.error());
   readonly draft = signal('');
-  readonly posting = signal(false);
-  readonly commentError = signal('');
+  readonly posting = action();
   readonly limit = commentLimit;
   readonly purpose = purposeName;
   readonly scope = reviewScope;
@@ -294,7 +297,7 @@ export class RepositoryReview {
       : this.store.link('commits', review.commit);
   }
   reload() {
-    this.actionError.set('');
+    this.controlling.error.set('');
     this.read.reload();
   }
   toggle(ordinal: number, open: boolean) {
@@ -307,46 +310,35 @@ export class RepositoryReview {
   }
   async changeJob(retry: boolean) {
     const id = this.detail()?.review.id;
-    if (!id || this.busy()) return;
-    const valid = this.scopeGuard.guard();
-    this.working.set(retry ? 'retry' : 'stop');
-    this.actionError.set('');
-    try {
-      const job = await this.api.reviewJob(id, retry);
-      if (retry) this.jobs.track(job);
-      if (valid()) this.read.reload();
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scopeGuard.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    if (!id) return;
+    const outcome = await this.controlling.run(
+      async () => {
+        const job = await this.api.reviewJob(id, retry);
+        // 重試的工作在背景進行：已離開頁面也照樣追蹤。
+        if (retry) this.jobs.track(job);
+      },
+      { key: retry ? 'retry' : 'stop' },
+    );
+    if (outcome.ok) this.read.reload();
   }
   openComment() {
     const detail = this.detail();
     if (!detail?.report) return;
     const header = `> **AI ${purposeName(detail.review.purpose)}**（${formatModelDisplayName(detail.review)}）— 僅供參考，仍需人工確認。\n\n`;
     this.draft.set((header + detail.report.output).slice(0, commentLimit));
-    this.commentError.set('');
+    this.posting.error.set('');
     this.commentDialog().nativeElement.showModal();
   }
   async post(event: Event) {
     event.preventDefault();
     const id = this.detail()?.review.id,
       body = this.draft().trim();
-    if (!id || !body || this.posting()) return;
-    const valid = this.scopeGuard.guard();
-    this.posting.set(true);
-    this.commentError.set('');
-    try {
-      const review = await this.api.comment(id, body);
-      if (!valid()) return;
-      this.read.value.update((current) => (current ? { ...current, review } : current));
-      this.commentDialog().nativeElement.close();
-      this.toast.success('已貼到 Pull Request');
-    } catch (error) {
-      if (valid()) this.commentError.set(this.scopeGuard.message(error));
-    } finally {
-      if (valid()) this.posting.set(false);
-    }
+    if (!id || !body) return;
+    const outcome = await this.posting.run(() => this.api.comment(id, body));
+    if (!outcome.ok) return;
+    const review = outcome.value;
+    this.read.value.update((current) => (current ? { ...current, review } : current));
+    this.commentDialog().nativeElement.close();
+    this.toast.success('已貼到 Pull Request');
   }
 }

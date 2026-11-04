@@ -16,6 +16,7 @@ import {
 import { RouterLink } from '@angular/router';
 import type { CollectionDto, LibraryFileDto } from '@core/api/schema';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -33,7 +34,7 @@ import { routeOf } from '@core/api/catalog';
     #dialog
     class="platform-dialog"
     aria-label="加入知識庫"
-    [busy]="saving()"
+    [busy]="saving.pending()"
   >
     <nx-dialog-header heading="加入知識庫" closeLabel="關閉加入知識庫" />
     <div class="dialog-body">
@@ -51,7 +52,7 @@ import { routeOf } from '@core/api/catalog';
           label="目標知識庫"
           [options]="choices()"
           [loading]="loading()"
-          [disabled]="saving()"
+          [disabled]="saving.pending()"
           [value]="selected()"
           (valueChange)="selected.set($event)"
         />
@@ -69,8 +70,8 @@ import { routeOf } from '@core/api/catalog';
       <button
         type="button"
         class="secondary-button"
-        [attr.aria-disabled]="saving() || null"
-        (click)="saving() || dialog.close()"
+        [attr.aria-disabled]="saving.pending() || null"
+        (click)="saving.pending() || dialog.close()"
       >
         取消
       </button>
@@ -79,11 +80,11 @@ import { routeOf } from '@core/api/catalog';
           nxPending
           type="button"
           class="primary-button"
-          [pending]="saving()"
+          [pending]="saving.pending()"
           [disabled]="!selected()"
           (click)="save()"
         >
-          {{ saving() ? '加入中…' : '加入並建立索引' }}
+          {{ saving.pending() ? '加入中…' : '加入並建立索引' }}
         </button>
       }
     </footer>
@@ -93,7 +94,6 @@ export class AddToKnowledge {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   private readonly api = inject(KnowledgeApi);
-  private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly file = signal<LibraryFileDto | null>(null);
   /** 每次開啟都會重新讀取集合；第一次開啟前不讀取任何東西。 */
@@ -107,10 +107,9 @@ export class AddToKnowledge {
     () => this.collections().find((value) => value.resource.canEdit)?.resource.id || '',
   );
   readonly loading = this.collectionsRead.refreshing;
-  readonly saving = signal(false);
-  readonly saveError = signal('');
+  readonly saving = action();
   readonly readError = this.collectionsRead.error;
-  readonly error = computed(() => this.saveError() || this.collectionsRead.error());
+  readonly error = computed(() => this.saving.error() || this.collectionsRead.error());
   readonly added = output<void>();
   readonly choices = computed(() =>
     this.collections()
@@ -123,26 +122,16 @@ export class AddToKnowledge {
   );
   open(file: LibraryFileDto) {
     this.file.set(file);
-    this.saveError.set('');
+    this.saving.error.set('');
     this.opened.update((value) => value + 1);
     this.dialog().nativeElement.showModal();
   }
   async save() {
     const file = this.file();
-    if (!file || this.saving() || !this.selected()) return;
-    const valid = this.scope.guard();
-    this.saving.set(true);
-    this.saveError.set('');
-    try {
-      await this.api.add(this.selected(), file.file.id);
-      if (valid()) {
-        this.dialog().nativeElement.close();
-        this.added.emit();
-      }
-    } catch (error) {
-      if (valid()) this.saveError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+    if (!file || this.saving.pending() || !this.selected()) return;
+    const outcome = await this.saving.run(() => this.api.add(this.selected(), file.file.id));
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.added.emit();
   }
 }

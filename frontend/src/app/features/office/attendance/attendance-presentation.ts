@@ -135,8 +135,6 @@ export function attendanceProblem(error: unknown): string {
     );
   return safeMessage(error);
 }
-/** 錯誤的代碼；不是 API 錯誤時為空字串。 */
-export const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : '');
 
 /**
  * 規則說明裡一種日型的時間（後端 `AttendanceRules` 提供設定值，這裡只排版）：「08:30–18:00」「上班＋9.5 小時」。

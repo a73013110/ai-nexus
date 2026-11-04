@@ -2,9 +2,8 @@ import { DestroyRef, Injectable, computed, inject, linkedSignal, signal } from '
 import { apiResource } from '@core/api/api-resource';
 import type { UserSettingsDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
 import { UserSettingsService, defaultSettings } from '@core/preferences/user-settings';
-import { ViewScope } from '@shared/browser/view-scope';
+import { action } from '@shared/browser/action';
 
 /**
  * 個人設定的草稿，由 `SettingsPage` 提供、各分頁注入同一份。修改立即預覽在整個工作區
@@ -15,7 +14,6 @@ import { ViewScope } from '@shared/browser/view-scope';
 export class SettingsStore {
   readonly session = inject(WorkspaceSession);
   private readonly service = inject(UserSettingsService);
-  private readonly scope = inject(ViewScope);
   /** 設定與帳號一起重新讀取，絕不沿用其他裝置的快取。 */
   private readonly read = apiResource({
     freshAccount: true,
@@ -34,9 +32,9 @@ export class SettingsStore {
   readonly loading = this.read.loading;
   /** 「重新載入」的重讀（含首次讀取），給重試鈕轉圈與內容淡化。 */
   readonly refreshing = this.read.refreshing;
-  readonly saving = signal(false);
-  private readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.read.error());
+  private readonly writing = action();
+  readonly saving = this.writing.pending;
+  readonly error = computed(() => this.writing.error() || this.read.error());
   /** 上一次儲存的結果，顯示在儲存列；再次修改時清掉。 */
   readonly notice = signal('');
   readonly changed = computed(() => JSON.stringify(this.draft()) !== JSON.stringify(this.saved()));
@@ -46,7 +44,7 @@ export class SettingsStore {
   }
 
   reload() {
-    this.saveError.set('');
+    this.writing.error.set('');
     this.read.reload();
     this.version.update((value) => value + 1);
   }
@@ -69,19 +67,10 @@ export class SettingsStore {
   }
 
   async save() {
-    const current = this.scope.guard();
-    this.saving.set(true);
-    this.saveError.set('');
-    try {
-      const value = await this.service.save(this.draft());
-      if (!current()) return;
-      this.saved.set(structuredClone(value));
-      this.notice.set('已儲存，此帳號的其他裝置也會套用。');
-    } catch (error) {
-      if (current()) this.saveError.set(safeMessage(error));
-    } finally {
-      if (current()) this.saving.set(false);
-    }
+    const outcome = await this.writing.run(() => this.service.save(this.draft()));
+    if (!outcome.ok) return;
+    this.saved.set(structuredClone(outcome.value));
+    this.notice.set('已儲存，此帳號的其他裝置也會套用。');
   }
 
   private edit(change: (current: UserSettingsDto) => UserSettingsDto) {

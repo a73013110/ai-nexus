@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { GdFormDetailDto, GdPerson } from '@core/api/schema';
-import { ViewScope } from '@shared/browser/view-scope';
+import { apiResource } from '@core/api/api-resource';
 import { ApprovalTimeline } from '@shared/ui/approval-timeline';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { CopyValue } from '@shared/ui/copy-value';
@@ -55,15 +55,8 @@ interface SidePerson {
     StatusBadge,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  providers: [ViewScope],
   styleUrl: './gd-form-dialog.scss',
-  template: `<dialog
-    nxCompactDialog
-    #formDialog
-    class="platform-dialog gd-form-dialog"
-    size="lg"
-    (close)="closed()"
-  >
+  template: `<dialog nxCompactDialog #formDialog class="platform-dialog gd-form-dialog" size="lg">
     <nx-dialog-header
       [heading]="heading()"
       [icon]="travel() ? 'location' : 'calendar'"
@@ -201,14 +194,22 @@ interface SidePerson {
 })
 export class GdFormDialog {
   private readonly api = inject(AttendanceApi);
-  private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('formDialog');
-  private controller?: AbortController;
   readonly desNo = signal('');
   readonly focus = signal<string | null>(null);
-  readonly form = signal<GdFormDetailDto | null>(null);
-  readonly loading = signal(false);
-  readonly error = signal('');
+  /** 每次開啟都是新的請求（同一張單再開也重讀）；關閉時不清，退場動畫期間內容不會閃成空白。 */
+  private readonly opened = signal<{ desNo: string } | undefined>(undefined);
+  private readonly formRead = apiResource({
+    params: () => this.opened(),
+    loader: ({ desNo }, signal) => this.api.form(desNo, signal),
+    message: attendanceProblem,
+  });
+  readonly loading = this.formRead.loading;
+  readonly error = this.formRead.error;
+  /** 讀取中不顯示上一張單（新請求期間 apiResource 保留舊值）。 */
+  readonly form = computed<GdFormDetailDto | null>(() =>
+    this.loading() ? null : (this.formRead.value() ?? null),
+  );
   readonly travel = computed(() => this.form()?.travel ?? null);
   readonly heading = computed(() => {
     const form = this.form();
@@ -239,33 +240,8 @@ export class GdFormDialog {
   open(desNo: string, date: string | null = null) {
     this.desNo.set(desNo);
     this.focus.set(date);
-    this.form.set(null);
-    this.error.set('');
+    this.opened.set({ desNo });
     this.dialog().nativeElement.showModal();
-    void this.load(desNo);
-  }
-
-  private async load(desNo: string) {
-    this.controller?.abort();
-    const controller = (this.controller = new AbortController());
-    const alive = this.scope.guard();
-    const current = () => alive() && this.controller === controller;
-    this.loading.set(true);
-    try {
-      const form = await this.api.form(desNo, controller.signal);
-      if (current()) this.form.set(form);
-    } catch (error) {
-      if (current() && !controller.signal.aborted) this.error.set(attendanceProblem(error));
-    } finally {
-      if (current()) this.loading.set(false);
-    }
-  }
-
-  /** 關閉時停止還在進行的讀取；內容留到下次開啟才換掉，退場動畫期間不會閃成空白。 */
-  closed() {
-    this.controller?.abort();
-    this.controller = undefined;
-    this.loading.set(false);
   }
 }
 

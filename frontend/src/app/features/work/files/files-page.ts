@@ -10,12 +10,12 @@ import {
   computed,
   effect,
   inject,
-  signal,
   untracked,
   viewChild,
 } from '@angular/core';
 import type { AttachmentPolicyDto, LibraryFileDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FileDrop } from '@shared/browser/file-drop';
 import { formatBytes } from '@shared/browser/format';
@@ -61,19 +61,22 @@ export class FilesPage {
   readonly store = inject(FileLibraryStore);
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(FilesApi);
-  private readonly scope = inject(ViewScope);
   readonly knowledge = viewChild.required(AddToKnowledge);
   private readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
   private readonly gallery = viewChild.required<ElementRef<HTMLElement>>('gallery');
   private readonly policyRead = apiResource({ loader: () => this.api.policy() });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
-  readonly uploading = signal(false);
-  /** 刪除中的檔案：只有那張卡片的選單鈕轉圈，其他卡片照常可操作。 */
-  readonly deleting = signal<string | null>(null);
-  readonly actionError = signal('');
+  readonly uploading = action();
+  /** 刪除檔案（`key` 是檔案 id）：只有那張卡片的選單鈕轉圈，其他卡片照常可操作。 */
+  readonly deleting = action();
+  readonly isDeleting = (id: string) => this.deleting.pendingFor(id);
   readonly error = computed(
-    () => this.actionError() || this.policyRead.error() || this.store.error(),
+    () =>
+      this.uploading.error() ||
+      this.deleting.error() ||
+      this.policyRead.error() ||
+      this.store.error(),
   );
   private readonly toast = inject(ToastService);
   readonly tour = computed(() => filesTour({ knowledge: this.session.has('knowledge') }));
@@ -90,10 +93,9 @@ export class FilesPage {
     { value: 'projects', label: '專案文件' },
     { value: 'library', label: '尚未引用' },
   ];
-  private controller?: AbortController;
   constructor() {
     this.store.load();
-    inject(DestroyRef).onDestroy(() => this.controller?.abort());
+    inject(DestroyRef).onDestroy(() => this.uploading.cancel());
     // 分頁在格線下方：換頁或換條件後捲回格線開頭，否則畫面會停在新一頁的最後幾張。背景重讀不改 revision。
     effect(() => {
       if (!this.store.table.revision()) return;
@@ -104,7 +106,8 @@ export class FilesPage {
     });
   }
   reload() {
-    this.actionError.set('');
+    this.uploading.error.set('');
+    this.deleting.error.set('');
     this.policyRead.reload();
     this.store.load();
   }
@@ -115,87 +118,66 @@ export class FilesPage {
   async upload(files: FileList | File[]) {
     const candidates = Array.from(files),
       policy = this.policy();
-    if (this.uploading() || !policy || !candidates.length) return;
+    if (this.uploading.pending() || !policy || !candidates.length) return;
     if (
       candidates.length > 10 ||
       candidates.some((file) => !file.size || !acceptsFile(policy, file))
     ) {
-      this.actionError.set(
+      this.uploading.fail(
         `每批最多十份檔案，每份最多 ${formatBytes(policy.maxFileBytes)}。支援 ${policy.extensions.join('、')}。`,
       );
       return;
     }
-    const valid = this.scope.guard();
-    this.controller = new AbortController();
-    this.uploading.set(true);
-    this.actionError.set('');
     // 一則提示從第一個檔案追蹤到完成；失敗時撤回它。
     const progress = 'library-upload';
-    let saved = 0,
-      done = false;
-    try {
+    let saved = 0;
+    const outcome = await this.uploading.run(async ({ alive, signal }) => {
       for (const file of candidates) {
-        if (!valid()) return;
+        if (!alive()) return;
         this.toast.show({
           id: progress,
           tone: 'info',
           title: '正在保存 ' + file.name,
           duration: 0,
         });
-        const uploaded = await this.api.upload(file, this.controller.signal);
-        if (!valid()) return;
+        const uploaded = await this.api.upload(file, signal);
+        if (!alive()) return;
         await this.api.retainFile(uploaded.id);
         saved++;
       }
+    });
+    if (outcome.ok)
       this.toast.show({
         id: progress,
         title: `${saved} 份檔案已保存`,
         description: '可預覽、再次加入對話，或指定加入知識庫。',
       });
-      done = true;
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (!done) this.toast.dismiss(progress);
-      if (valid()) {
-        this.uploading.set(false);
-        this.store.load();
-      }
-    }
+    else this.toast.dismiss(progress);
+    // 中途失敗時已保存的那幾份也要出現在列表。
+    if (outcome.ok || outcome.error) this.store.load();
   }
   async remove(item: LibraryFileDto) {
-    if (this.deleting() || !item.canDelete) return;
-    const valid = this.scope.guard();
+    if (this.deleting.pending() || !item.canDelete) return;
     if (
       !(await this.confirm().ask({
         title: '刪除檔案',
         message: `將永久刪除「${item.file.fileName}」與其私人閱讀文字。`,
         confirm: '刪除檔案',
         danger: true,
-      })) ||
-      !valid()
+      }))
     )
       return;
-    this.deleting.set(item.file.id);
-    this.actionError.set('');
-    try {
-      await this.api.removeFile(item.file.id);
-      if (valid()) {
-        this.toast.success('檔案已刪除');
-        // 刪掉本頁最後一張就回上一頁；換頁本身會重讀。
-        if (this.store.items().length === 1 && this.store.table.pageIndex())
-          this.store.table.turn(-1);
-        else this.store.load();
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.deleting.set(null);
-    }
+    const outcome = await this.deleting.run(() => this.api.removeFile(item.file.id), {
+      key: item.file.id,
+    });
+    if (!outcome.ok) return;
+    this.toast.success('檔案已刪除');
+    // 刪掉本頁最後一張就回上一頁；換頁本身會重讀。
+    if (this.store.items().length === 1 && this.store.table.pageIndex()) this.store.table.turn(-1);
+    else this.store.load();
   }
   rename(item: LibraryFileDto) {
-    if (this.deleting() === item.file.id) return;
-    const valid = this.scope.guard();
+    if (this.isDeleting(item.file.id)) return;
     this.names().open({
       title: '重新命名檔案',
       value: item.file.fileName,
@@ -203,10 +185,8 @@ export class FilesPage {
       description: '副檔名須保留。既有分享與知識庫來源保留當時的名稱。',
       save: async (name) => {
         await this.api.renameFile(item.file.id, name, item.file.fileName);
-        if (valid()) {
-          this.toast.success('檔案名稱已更新');
-          this.store.load();
-        }
+        this.toast.success('檔案名稱已更新');
+        this.store.load();
       },
     });
   }

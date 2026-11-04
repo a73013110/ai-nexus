@@ -8,8 +8,8 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitCandidateDto, UnitDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
-import { ViewScope } from '@shared/browser/view-scope';
+import { apiResource } from '@core/api/api-resource';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
@@ -35,7 +35,7 @@ const UNASSIGNED = '尚未分派部門';
     #memberDialog
     class="platform-dialog"
     size="lg"
-    [busy]="saving()"
+    [busy]="saving.pending()"
     (cancel)="cancel($event)"
   >
     @if (unit(); as u) {
@@ -44,7 +44,7 @@ const UNASSIGNED = '尚未分派部門';
         @if (error()) {
           <nx-notice tone="danger" [message]="error()">
             @if (!candidates()) {
-              <button notice-actions type="button" (click)="load()">重新載入</button>
+              <button notice-actions type="button" (click)="reload()">重新載入</button>
             }
           </nx-notice>
         }
@@ -54,7 +54,7 @@ const UNASSIGNED = '尚未分派部門';
           [people]="people()"
           [selected]="selected()"
           [loading]="!candidates() && !error()"
-          [disabled]="saving()"
+          [disabled]="saving.pending()"
           (selectedChange)="selected.set($event)"
         />
       </div>
@@ -63,7 +63,7 @@ const UNASSIGNED = '尚未分派部門';
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="saving() || null"
+          [attr.aria-disabled]="saving.pending() || null"
           (click)="close()"
         >
           取消
@@ -72,11 +72,11 @@ const UNASSIGNED = '尚未分派部門';
           nxPending
           type="button"
           class="primary-button"
-          [pending]="saving()"
-          [disabled]="!saving() && !selected().length"
+          [pending]="saving.pending()"
+          [disabled]="!saving.pending() && !selected().length"
           (click)="save()"
         >
-          {{ saving() ? '加入中…' : '加入 ' + selected().length + ' 人' }}
+          {{ saving.pending() ? '加入中…' : '加入 ' + selected().length + ' 人' }}
         </button>
       </footer>
     }
@@ -85,13 +85,20 @@ const UNASSIGNED = '尚未分派部門';
 export class MemberDialog {
   private readonly api = inject(OrganizationApi);
   private readonly store = inject(OrganizationStore);
-  private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('memberDialog');
   readonly unit = signal<UnitDto | null>(null);
-  readonly candidates = signal<UnitCandidateDto[] | null>(null);
+  /** 每次開啟都重讀：名單與主要所屬可能在別的單位剛改過。 */
+  private readonly opened = signal(0);
+  private readonly candidatesRead = apiResource({
+    params: () => this.opened() || undefined,
+    loader: () => this.api.candidates(),
+  });
+  readonly candidates = computed<UnitCandidateDto[] | null>(
+    () => this.candidatesRead.value() ?? null,
+  );
   readonly selected = signal<string[]>([]);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saving = action();
+  readonly error = computed(() => this.saving.error() || this.candidatesRead.error());
   /** 依主要所屬分組：尚未分派的在前，其餘依單位樹的順序；同組依帳號（伺服器已排好）。 */
   readonly people = computed<BrowsePerson[]>(() => {
     const members = new Set((this.store.members() ?? []).map((member) => member.userId));
@@ -113,23 +120,15 @@ export class MemberDialog {
   open(unit: UnitDto) {
     this.unit.set(unit);
     this.selected.set([]);
+    this.saving.error.set('');
+    this.opened.update((value) => value + 1);
     this.dialog().nativeElement.showModal();
-    void this.load();
   }
-  /** 每次開啟都重讀：名單與主要所屬可能在別的單位剛改過。 */
-  async load() {
-    const alive = this.scope.guard();
-    this.candidates.set(null);
-    this.error.set('');
-    try {
-      const candidates = await this.api.candidates();
-      if (alive()) this.candidates.set(candidates);
-    } catch (error) {
-      if (alive()) this.error.set(safeMessage(error));
-    }
+  reload() {
+    this.candidatesRead.reload();
   }
   close() {
-    if (!this.saving()) this.dialog().nativeElement.close();
+    if (!this.saving.pending()) this.dialog().nativeElement.close();
   }
   cancel(event: Event) {
     event.preventDefault();
@@ -139,30 +138,22 @@ export class MemberDialog {
   async save() {
     const unit = this.unit();
     const ids = this.selected();
-    if (!unit || !ids.length || this.saving()) return;
-    const alive = this.scope.guard();
-    this.saving.set(true);
-    this.error.set('');
+    if (!unit || !ids.length) return;
     let added = 0;
-    try {
-      // 逐一加入：每人一筆稽核（快照是此人的全部所屬），與修改成員相同；中途失敗就停，已加入的保留。
+    // 逐一加入：每人一筆稽核（快照是此人的全部所屬），與修改成員相同；中途失敗就停，已加入的保留。
+    const outcome = await this.saving.run(async () => {
       for (const id of ids) {
         await this.api.saveMember(unit.id, id, { isPrimary: false, isManager: false });
         added++;
       }
-      if (!alive()) return;
+    });
+    if (added && (outcome.ok || outcome.error)) this.store.membersChanged();
+    if (outcome.ok) {
       this.dialog().nativeElement.close();
       this.store.toast.success(`已將 ${added} 人加入「${unit.name}」`);
-    } catch (error) {
-      if (!alive()) return;
+    } else if (outcome.error) {
       this.selected.set(ids.slice(added));
-      const message = safeMessage(error);
-      this.error.set(added ? `已加入 ${added} 人，其餘未加入：${message}` : message);
-    } finally {
-      if (alive()) {
-        this.saving.set(false);
-        if (added) this.store.membersChanged();
-      }
+      if (added) this.saving.fail(`已加入 ${added} 人，其餘未加入：${outcome.error}`);
     }
   }
 }

@@ -11,6 +11,7 @@ import {
 import { Router } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceApi } from '@core/api/workspace-api';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -66,7 +67,7 @@ const purposes = {
       gap: var(--p-space-2);
     }
   `,
-  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving()">
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving.pending()">
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header heading="交給 AI 初檢" />
       <div class="dialog-body">
@@ -88,7 +89,7 @@ const purposes = {
             [options]="choices()"
             [value]="model()"
             [loading]="modelsLoading()"
-            [disabled]="saving()"
+            [disabled]="saving.pending()"
             (valueChange)="model.set($event)"
           />
         }
@@ -100,7 +101,7 @@ const purposes = {
             nxField
             rows="2"
             maxlength="2000"
-            [readOnly]="saving()"
+            [readOnly]="saving.pending()"
             [value]="note()"
             placeholder="例如：只看權限判斷，或確認金額計算"
             (input)="note.set($any($event.target).value)"
@@ -115,18 +116,18 @@ const purposes = {
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="saving() || null"
-          (click)="saving() || dialog.close()"
+          [attr.aria-disabled]="saving.pending() || null"
+          (click)="saving.pending() || dialog.close()"
         >
           取消
         </button>
         <button
           nxPending
           class="primary-button"
-          [pending]="saving()"
+          [pending]="saving.pending()"
           [disabled]="modelsLoading() || !model()"
         >
-          {{ saving() ? '安排中…' : '開始' }}
+          {{ saving.pending() ? '安排中…' : '開始' }}
         </button>
       </footer>
     </form>
@@ -136,7 +137,6 @@ export class RepositoryReviewDialog {
   private readonly api = inject(RepositoriesApi);
   private readonly workspaceApi = inject(WorkspaceApi);
   private readonly store = inject(RepositoryStore);
-  private readonly scope = inject(ViewScope);
   private readonly jobs = inject(JobToasts);
   private readonly router = inject(Router);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -170,9 +170,8 @@ export class RepositoryReviewDialog {
     return models?.policy.defaultModelId || models?.models[0]?.id || '';
   });
   readonly note = signal('');
-  readonly saving = signal(false);
-  private readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.modelsRead.error());
+  readonly saving = action();
+  readonly error = computed(() => this.saving.error() || this.modelsRead.error());
   /** 每次開啟一個 key，因此重試的送出不會啟動同一個審查兩次。 */
   private key = '';
 
@@ -180,7 +179,7 @@ export class RepositoryReviewDialog {
     this.target.set(target);
     this.purpose.set(target.purpose ?? 'review');
     this.note.set('');
-    this.saveError.set('');
+    this.saving.error.set('');
     this.key = crypto.randomUUID();
     this.opened.update((count) => count + 1);
     this.dialog().nativeElement.showModal();
@@ -189,11 +188,8 @@ export class RepositoryReviewDialog {
     event.preventDefault();
     const target = this.target(),
       repository = this.store.key();
-    if (!target || !repository || this.saving() || !this.model()) return;
-    const valid = this.scope.guard();
-    this.saving.set(true);
-    this.saveError.set('');
-    try {
+    if (!target || !repository || this.saving.pending() || !this.model()) return;
+    const outcome = await this.saving.run(async () => {
       const review = await this.api.createReview(repository, {
         commit: target.commit,
         baseCommit: target.baseCommit,
@@ -203,14 +199,12 @@ export class RepositoryReviewDialog {
         purpose: this.purpose(),
         idempotencyKey: this.key,
       });
+      // 已離開頁面也要追蹤：工作在背景完成時仍會通知。
       this.jobs.track(review.job);
-      if (!valid()) return;
-      this.dialog().nativeElement.close();
-      void this.router.navigate(this.store.link('reviews', review.id));
-    } catch (error) {
-      if (valid()) this.saveError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+      return review;
+    });
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    void this.router.navigate(this.store.link('reviews', outcome.value.id));
   }
 }

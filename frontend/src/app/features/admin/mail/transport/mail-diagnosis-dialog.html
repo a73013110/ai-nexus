@@ -4,7 +4,7 @@
   class="platform-dialog"
   aria-label="郵件連線診斷"
   [size]="result() ? 'lg' : 'md'"
-  [busy]="busy()"
+  [busy]="diagnosing.pending()"
 >
   <form class="dialog-form" (submit)="run($event)">
     <nx-dialog-header heading="郵件連線診斷" closeLabel="關閉連線診斷" />
@@ -23,11 +23,11 @@
           autocomplete="email"
           placeholder="空白時以寄件地址檢查"
           [value]="to()"
-          [readOnly]="busy()"
+          [readOnly]="diagnosing.pending()"
           (input)="to.set($any($event.target).value)"
       /></label>
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
+      @if (diagnosing.error()) {
+        <nx-notice tone="danger" [message]="diagnosing.error()" />
       }
       @if (view(); as current) {
         <nx-notice [tone]="current.verdict.tone" [message]="current.verdict.message" />
@@ -35,8 +35,8 @@
         <ol
           class="diagnosis-steps"
           aria-label="診斷步驟"
-          [class.is-refreshing]="busy()"
-          [attr.aria-busy]="busy() || null"
+          [class.is-refreshing]="diagnosing.pending()"
+          [attr.aria-busy]="diagnosing.pending() || null"
         >
           @for (item of current.steps; track item.step.id) {
             <li [attr.data-status]="item.step.status">
@@ -112,13 +112,13 @@
       <button
         type="button"
         class="secondary-button"
-        [attr.aria-disabled]="busy() || null"
-        (click)="busy() || dialog.close()"
+        [attr.aria-disabled]="diagnosing.pending() || null"
+        (click)="diagnosing.pending() || dialog.close()"
       >
         關閉
       </button>
-      <button nxPending class="primary-button" [pending]="busy()">
-        {{ busy() ? '診斷中…' : result() ? '再診斷一次' : '開始診斷' }}
+      <button nxPending class="primary-button" [pending]="diagnosing.pending()">
+        {{ diagnosing.pending() ? '診斷中…' : result() ? '再診斷一次' : '開始診斷' }}
       </button>
     </footer>
   </form>

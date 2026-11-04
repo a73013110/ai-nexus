@@ -20,7 +20,8 @@ import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
-import { attendanceProblem, errorCode, weekday } from '../attendance-presentation';
+import { errorCode } from '@core/errors/safe-errors';
+import { attendanceProblem, weekday } from '../attendance-presentation';
 import { CALENDAR_DAY_TOUR } from '../attendance-tour';
 import { HOLIDAY_KINDS, HolidayGlyph, holidayKind, type HolidayKind } from './holiday-glyph';
 

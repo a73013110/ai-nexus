@@ -8,7 +8,8 @@ import type {
   ReauthenticationRequest,
 } from '@core/api/schema';
 import { AuthService } from '@core/auth/auth-service';
-import { ApiError, safeMessage } from '@core/errors/safe-errors';
+import { ApiError } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { ToastService } from '@shared/ui/toast-service';
 import { AccountSecurityApi } from './account-security-api';
 
@@ -41,8 +42,8 @@ export class AccountSecurityStore {
   readonly loading = this.read.loading;
   readonly error = this.read.error;
   readonly dialog = signal<SecurityDialog | null>(null);
-  /** 停用本地登入送出中（確認身分之後才開始算）。 */
-  readonly disabling = signal(false);
+  /** 停用本地登入（確認身分之後才開始算）；失敗以提示告知，不留在頁面。 */
+  readonly disabling = action();
   /** 唯讀（測試身分）時不顯示任何變更按鈕。 */
   readonly editable = computed(() => !!this.security() && !this.security()!.readOnly);
   private after: (() => void) | null = null;
@@ -97,36 +98,37 @@ export class AccountSecurityStore {
 
   disableLocalLogin() {
     this.stepUp(async () => {
-      this.disabling.set(true);
-      try {
-        const changed = await this.guard(null, () => this.api.disableLocalLogin());
-        if (!changed) return;
-        this.apply(changed);
-        if (!changed.signedOut) this.toast.success('已停用本地登入');
-      } catch (error) {
-        this.toast.show({
-          tone: 'danger',
-          title: '無法停用本地登入',
-          description: safeMessage(error),
-        });
-      } finally {
-        this.disabling.set(false);
+      const outcome = await this.disabling.run(() =>
+        this.guard(null, () => this.api.disableLocalLogin()),
+      );
+      if (!outcome.ok) {
+        if (outcome.error)
+          this.toast.show({
+            tone: 'danger',
+            title: '無法停用本地登入',
+            description: outcome.error,
+          });
+        return;
       }
+      // 沒有結果：步升已過期，確認身分後會重做。
+      if (!outcome.value) return;
+      this.apply(outcome.value);
+      if (!outcome.value.signedOut) this.toast.success('已停用本地登入');
     });
   }
 
   /** 步升在這段期間過期時，回到「確認身分」並在成功後重做。 */
   private async guard<T>(
     dialog: SecurityDialog | null,
-    action: () => Promise<T>,
+    work: () => Promise<T>,
   ): Promise<T | undefined> {
     try {
-      return await action();
+      return await work();
     } catch (error) {
       if (!(error instanceof ApiError) || error.code !== 'reauthentication_required') throw error;
       const security = this.security();
       if (security) this.security.set({ ...security, reauthenticationRequired: true });
-      this.after = dialog ? () => this.dialog.set(dialog) : () => void action();
+      this.after = dialog ? () => this.dialog.set(dialog) : () => void work();
       this.dialog.set('reauthenticate');
       return undefined;
     }

@@ -53,10 +53,10 @@ import { AccountSecurityStore } from '../security/account-security-store';
               nxPending
               type="button"
               class="secondary-button"
-              [pending]="store.disabling()"
+              [pending]="store.disabling.pending()"
               (click)="disable()"
             >
-              {{ store.disabling() ? '停用中…' : '停用' }}
+              {{ store.disabling.pending() ? '停用中…' : '停用' }}
             </button>
           }
         </nx-setting-row>

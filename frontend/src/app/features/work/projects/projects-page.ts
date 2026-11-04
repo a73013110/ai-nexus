@@ -27,6 +27,7 @@ import type {
   ProjectDto,
   ProjectTemplateDto,
 } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FileDrop } from '@shared/browser/file-drop';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -90,7 +91,6 @@ export class ProjectsPage {
   private readonly artifacts = inject(ArtifactsApi);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly scope = inject(ViewScope);
   readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
@@ -149,10 +149,9 @@ export class ProjectsPage {
     const project = this.current();
     return !!project?.resource.canEdit && !project.isArchived;
   });
-  private readonly actionError = signal('');
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
       this.projectsRead.error() ||
       this.policyRead.error() ||
       this.currentRead.error() ||
@@ -162,8 +161,8 @@ export class ProjectsPage {
    * 進行中的動作（`save`、`start:<範本 id>`、`archive`、`delete`、`upload`、`remove:<id>`）：
    * 按下的那顆按鈕轉圈，其他寫入等它完成。
    */
-  readonly working = signal<string | null>(null);
-  readonly busy = computed(() => this.working() !== null);
+  readonly working = action();
+  readonly busy = this.working.pending;
   /** 使用者看得到的重讀（重試、寫入後重讀）；處理中文件的輪詢不算。 */
   readonly refreshing = computed(
     () =>
@@ -236,29 +235,17 @@ export class ProjectsPage {
   readonly instructions = signal('');
   readonly templateText = signal('');
   private editingId: string | null = null;
-  // 列表與 /:id 共用同一個元件，切換專案時元件不會銷毀，ViewScope.guard() 擋不住前一個專案晚到的寫入結果；
-  // 因此以路由世代補上導覽邊界，換路由時一併中止上傳並解除 busy。
-  private revision = 0;
-  private controller?: AbortController;
   constructor() {
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
-      ++this.revision;
-      this.controller?.abort();
-      this.working.set(null);
-      this.actionError.set('');
-    });
-    inject(DestroyRef).onDestroy(() => this.controller?.abort());
-  }
-  private guard() {
-    const revision = this.revision,
-      valid = this.scope.guard();
-    return () => valid() && revision === this.revision;
+    // 列表與 /:id 共用同一個元件，切換專案時元件不會銷毀，ViewScope 擋不住前一個專案晚到的寫入結果；
+    // 換路由就放棄送出中的動作（中止上傳）並解除 busy。
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => this.working.reset());
+    inject(DestroyRef).onDestroy(() => this.working.cancel('upload'));
   }
   private refresh() {
     this.detailRead.reload();
   }
   reload() {
-    this.actionError.set('');
+    this.working.error.set('');
     this.projectsRead.reload();
     this.currentRead.reload();
     this.detailRead.reload();
@@ -295,97 +282,82 @@ export class ProjectsPage {
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
-    const valid = this.guard();
-    this.working.set('save');
-    this.actionError.set('');
-    try {
-      if (this.kind() === 'project') {
-        const value = await this.api.save(
-          this.editingId,
+    if (this.kind() === 'project') await this.saveProject();
+    else await this.saveTemplate();
+  }
+  private async saveProject() {
+    const editingId = this.editingId,
+      current = this.current();
+    const outcome = await this.working.run(
+      () =>
+        this.api.save(
+          editingId,
           this.name(),
           this.description(),
           this.instructions(),
-          this.editingId ? (this.current()?.version ?? 1) : 1,
-          this.editingId ? (this.current()?.isArchived ?? false) : false,
-        );
-        if (!valid()) return;
-        this.dialog().nativeElement.close();
-        this.toast.success('專案設定已儲存');
-        this.working.set(null);
-        if (!this.editingId) {
-          // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
-          this.projectsRead.reload();
-          await this.router.navigate([routeOf('projects'), value.resource.id]);
-          return;
-        }
-        this.currentRead.value.set(value);
-        this.projectsRead.reload();
-      } else {
-        const id = this.current()?.resource.id;
-        if (!id) return;
-        await this.api.saveTemplate(id, this.editingId, this.name(), this.templateText());
-        if (!valid()) return;
-        this.dialog().nativeElement.close();
-        this.refresh();
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+          editingId ? (current?.version ?? 1) : 1,
+          editingId ? (current?.isArchived ?? false) : false,
+        ),
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    const value = outcome.value;
+    this.dialog().nativeElement.close();
+    this.toast.success('專案設定已儲存');
+    // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
+    this.projectsRead.reload();
+    if (editingId) this.currentRead.value.set(value);
+    else await this.router.navigate([routeOf('projects'), value.resource.id]);
+  }
+  private async saveTemplate() {
+    const id = this.current()?.resource.id;
+    if (!id) return;
+    const outcome = await this.working.run(
+      () => this.api.saveTemplate(id, this.editingId, this.name(), this.templateText()),
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.refresh();
   }
   async start(templateId?: string) {
-    const current = this.current(),
-      valid = this.guard();
-    if (!current || this.busy()) return;
-    this.working.set('start:' + (templateId ?? ''));
-    this.actionError.set('');
-    try {
-      const value = await this.api.start(current.resource.id, templateId);
-      if (valid()) {
-        this.transfer.put(value.conversation.id, value.prompt);
-        await this.router.navigate([routeOf('chat'), value.conversation.id]);
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const current = this.current();
+    if (!current) return;
+    const outcome = await this.working.run(() => this.api.start(current.resource.id, templateId), {
+      key: 'start:' + (templateId ?? ''),
+    });
+    if (!outcome.ok) return;
+    this.transfer.put(outcome.value.conversation.id, outcome.value.prompt);
+    await this.router.navigate([routeOf('chat'), outcome.value.conversation.id]);
   }
   async archive() {
-    const current = this.current(),
-      valid = this.guard();
-    if (!current || this.busy()) return;
-    this.working.set('archive');
-    try {
-      const value = await this.api.save(
-        current.resource.id,
-        current.resource.name,
-        current.description,
-        current.instructions,
-        current.version,
-        !current.isArchived,
-      );
-      if (valid()) {
-        this.currentRead.value.set(value);
-        this.projectsRead.value.update((all) =>
-          all?.map((item) => (item.resource.id === value.resource.id ? value : item)),
-        );
-        this.toast.success(
-          value.isArchived ? '專案已封存' : '專案已還原',
-          value.isArchived ? '文件仍可閱讀。' : undefined,
-        );
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const current = this.current();
+    if (!current) return;
+    const outcome = await this.working.run(
+      () =>
+        this.api.save(
+          current.resource.id,
+          current.resource.name,
+          current.description,
+          current.instructions,
+          current.version,
+          !current.isArchived,
+        ),
+      { key: 'archive' },
+    );
+    if (!outcome.ok) return;
+    const value = outcome.value;
+    this.currentRead.value.set(value);
+    this.projectsRead.value.update((all) =>
+      all?.map((item) => (item.resource.id === value.resource.id ? value : item)),
+    );
+    this.toast.success(
+      value.isArchived ? '專案已封存' : '專案已還原',
+      value.isArchived ? '文件仍可閱讀。' : undefined,
+    );
   }
   async removeProject() {
-    const current = this.current(),
-      valid = this.guard();
+    const current = this.current();
     if (!current?.resource.isOwner || this.busy()) return;
     if (
       !(await this.confirm().ask({
@@ -395,24 +367,19 @@ export class ProjectsPage {
         confirm: '刪除專案',
         danger: true,
       })) ||
-      !valid()
+      // 確認期間換到另一個專案就不刪。
+      this.current()?.resource.id !== current.resource.id
     )
       return;
-    this.working.set('delete');
-    this.actionError.set('');
-    try {
-      await this.api.remove(current.resource.id);
-      if (!valid()) return;
-      this.projectsRead.value.update((all) =>
-        all?.filter((item) => item.resource.id !== current.resource.id),
-      );
-      this.projectsRead.reload();
-      await this.router.navigate([routeOf('projects')]);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const outcome = await this.working.run(() => this.api.remove(current.resource.id), {
+      key: 'delete',
+    });
+    if (!outcome.ok) return;
+    this.projectsRead.value.update((all) =>
+      all?.filter((item) => item.resource.id !== current.resource.id),
+    );
+    this.projectsRead.reload();
+    await this.router.navigate([routeOf('projects')]);
   }
   chooseFiles(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -421,55 +388,51 @@ export class ProjectsPage {
   }
   async upload(files: File[]) {
     const current = this.current(),
-      policy = this.policyRead.value(),
-      valid = this.guard();
+      policy = this.policyRead.value();
     if (!current || !current.resource.canEdit || current.isArchived || this.busy() || !policy)
       return;
     if (files.length > 4 || files.some((file) => !acceptsFile(policy, file))) {
-      this.actionError.set('每批最多 4 份文件，單檔需符合平台格式與容量限制。');
+      this.working.fail('每批最多 4 份文件，單檔需符合平台格式與容量限制。');
       return;
     }
-    this.working.set('upload');
-    this.actionError.set('');
-    const controller = (this.controller = new AbortController());
     // 一則提示隨批次從上傳進行到完成；其他情況則撤回它。
     const progress = 'project-upload';
-    let done = false;
-    try {
-      for (const file of files) {
-        this.toast.show({
-          id: progress,
-          tone: 'info',
-          title: '正在上傳 ' + file.name,
-          duration: 0,
-        });
-        const uploaded = await this.attachments.upload(file, controller.signal);
-        if (!valid()) return;
-        try {
-          await this.api.addFile(current.resource.id, uploaded.id);
-        } catch (error) {
-          await this.attachments.removeAttachment(uploaded.id).catch(() => undefined);
-          throw error;
+    const outcome = await this.working.run(
+      async ({ alive, signal }) => {
+        for (const file of files) {
+          this.toast.show({
+            id: progress,
+            tone: 'info',
+            title: '正在上傳 ' + file.name,
+            duration: 0,
+          });
+          const uploaded = await this.attachments.upload(file, signal);
+          if (!alive()) return;
+          try {
+            await this.api.addFile(current.resource.id, uploaded.id);
+          } catch (error) {
+            // 沒加進專案的附件不留著佔空間。
+            await this.attachments.removeAttachment(uploaded.id).catch(() => undefined);
+            throw error;
+          }
+          if (!alive()) return;
         }
-        if (!valid()) return;
-      }
-      this.toast.show({
-        id: progress,
-        title: '文件已上傳',
-        description: '辨識進度可直接開啟文件查看。',
-      });
-      done = true;
-      this.refresh();
-    } catch (error) {
-      if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (!done) this.toast.dismiss(progress);
-      if (valid()) this.working.set(null);
+      },
+      { key: 'upload' },
+    );
+    if (!outcome.ok) {
+      this.toast.dismiss(progress);
+      return;
     }
+    this.toast.show({
+      id: progress,
+      title: '文件已上傳',
+      description: '辨識進度可直接開啟文件查看。',
+    });
+    this.refresh();
   }
   async remove(kind: 'file' | 'template', id: string) {
-    const current = this.current(),
-      valid = this.guard();
+    const current = this.current();
     if (
       !current ||
       this.busy() ||
@@ -481,15 +444,13 @@ export class ProjectsPage {
       }))
     )
       return;
-    this.working.set('remove:' + id);
-    try {
-      if (kind === 'file') await this.knowledge.remove(id);
-      else await this.api.removeTemplate(current.resource.id, id);
-      if (valid()) this.refresh();
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const outcome = await this.working.run(
+      () =>
+        kind === 'file'
+          ? this.knowledge.remove(id)
+          : this.api.removeTemplate(current.resource.id, id),
+      { key: 'remove:' + id },
+    );
+    if (outcome.ok) this.refresh();
   }
 }

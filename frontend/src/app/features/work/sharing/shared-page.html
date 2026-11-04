@@ -16,7 +16,7 @@
         class="share-menu"
         label="分享操作"
         [items]="shareActions()"
-        [busy]="busy()"
+        [busy]="revoking.pending()"
         (action)="shareAction($event)"
       />
     }

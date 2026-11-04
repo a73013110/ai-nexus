@@ -6,7 +6,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
@@ -25,7 +25,7 @@ import { UserRoleFields } from './user-role-fields';
   imports: [CompactDialog, DialogHeader, Notice, PendingButton, UserAccountFields, UserRoleFields],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving()">
+    <dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving.pending()">
       <form class="dialog-form" (submit)="save($event)">
         <nx-dialog-header
           heading="新增使用者"
@@ -34,18 +34,18 @@ import { UserRoleFields } from './user-role-fields';
         />
         @if (opened()) {
           <div class="dialog-body">
-            @if (error()) {
-              <nx-notice tone="danger" [message]="error()" />
+            @if (saving.error()) {
+              <nx-notice tone="danger" [message]="saving.error()" />
             }
             <div class="form-sections">
               <nx-user-account-fields
                 [value]="account()"
-                [disabled]="saving()"
+                [disabled]="saving.pending()"
                 (valueChange)="account.set($event)"
               />
               <nx-user-role-fields
                 [roleIds]="roleIds()"
-                [disabled]="saving()"
+                [disabled]="saving.pending()"
                 (roleIdsChange)="roleIds.set($event)"
               />
             </div>
@@ -54,13 +54,13 @@ import { UserRoleFields } from './user-role-fields';
             <button
               type="button"
               class="secondary-button"
-              [attr.aria-disabled]="saving() || null"
-              (click)="saving() || dialog.close()"
+              [attr.aria-disabled]="saving.pending() || null"
+              (click)="saving.pending() || dialog.close()"
             >
               取消
             </button>
-            <button nxPending type="submit" class="primary-button" [pending]="saving()">
-              {{ saving() ? '建立中…' : '建立使用者' }}
+            <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
+              {{ saving.pending() ? '建立中…' : '建立使用者' }}
             </button>
           </footer>
         }
@@ -76,28 +76,21 @@ export class AdminUserCreateDialog {
   readonly opened = signal(false);
   readonly account = signal(userAccountDraft());
   readonly roleIds = signal(['member']);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saving = action();
   open() {
     this.account.set(userAccountDraft());
     this.roleIds.set(['member']);
-    this.error.set('');
+    this.saving.error.set('');
     this.opened.set(true);
     this.dialog().nativeElement.showModal();
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      await this.api.createUser(userAccountRequest(this.account(), this.roleIds()));
-      this.dialog().nativeElement.close();
-      this.store.saved('已建立使用者', '從列表開啟使用者可調整 AI 模型與附件容量。');
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.saving.set(false);
-    }
+    const outcome = await this.saving.run(() =>
+      this.api.createUser(userAccountRequest(this.account(), this.roleIds())),
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.store.saved('已建立使用者', '從列表開啟使用者可調整 AI 模型與附件容量。');
   }
 }

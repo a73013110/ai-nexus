@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { MailDiagnosisDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { formatDate } from '@shared/browser/format';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { CopyValue } from '@shared/ui/copy-value';
@@ -52,8 +52,7 @@ export class MailDiagnosisDialog {
   /** 頁首顯示的伺服器（主機:埠（Security）），讓人確認診斷的是哪一台。 */
   readonly server = input('');
   readonly to = signal('');
-  readonly busy = signal(false);
-  readonly error = signal('');
+  readonly diagnosing = action();
   readonly result = signal<MailDiagnosisDto | null>(null);
   readonly view = computed(() => {
     const result = this.result();
@@ -78,21 +77,13 @@ export class MailDiagnosisDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   open() {
-    this.error.set('');
+    this.diagnosing.error.set('');
     this.result.set(null);
     this.dialog().nativeElement.showModal();
   }
   async run(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      this.result.set(await this.api.diagnose(this.to().trim()));
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.busy.set(false);
-    }
+    const outcome = await this.diagnosing.run(() => this.api.diagnose(this.to().trim()));
+    if (outcome.ok) this.result.set(outcome.value);
   }
 }

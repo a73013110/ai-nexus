@@ -10,8 +10,9 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitImportPreviewDto, UnitImportResultDto } from '@core/api/schema';
-import { ApiError, safeMessage } from '@core/errors/safe-errors';
-import { ViewScope } from '@shared/browser/view-scope';
+import { apiResource } from '@core/api/api-resource';
+import { errorCode } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { ChoiceGroups } from '@shared/ui/choice-groups';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -43,7 +44,7 @@ import {
     #importDialog
     class="platform-dialog"
     size="lg"
-    [busy]="applying()"
+    [busy]="applying.pending()"
     (cancel)="cancel($event)"
   >
     <nx-dialog-header
@@ -60,7 +61,7 @@ import {
             nxPending
             type="button"
             [pending]="loading()"
-            [disabled]="applying()"
+            [disabled]="applying.pending()"
             (click)="refresh()"
           >
             {{ loading() ? '預覽中…' : '重新預覽' }}
@@ -120,7 +121,7 @@ import {
               [stacked]="true"
               [groups]="choices()"
               [selected]="selected()"
-              [disabled]="applying()"
+              [disabled]="applying.pending()"
               (selectedChange)="selected.set($event)"
             />
           </section>
@@ -155,7 +156,7 @@ import {
       <button
         type="button"
         class="secondary-button"
-        [attr.aria-disabled]="applying() || null"
+        [attr.aria-disabled]="applying.pending() || null"
         (click)="close()"
       >
         取消
@@ -164,11 +165,11 @@ import {
         nxPending
         type="button"
         class="primary-button unit-import-apply"
-        [pending]="applying()"
-        [disabled]="!canApply() && !applying()"
+        [pending]="applying.pending()"
+        [disabled]="!canApply() && !applying.pending()"
         (click)="apply()"
       >
-        {{ applying() ? '匯入中…' : '套用 ' + selected().length + ' 個部門' }}
+        {{ applying.pending() ? '匯入中…' : '套用 ' + selected().length + ' 個部門' }}
       </button>
     </footer>
   </dialog>`,
@@ -222,12 +223,17 @@ import {
 })
 export class UnitImportDialog {
   private readonly api = inject(OrganizationApi);
-  private readonly scope = inject(ViewScope);
   /** 套用成功；頁面據此重新載入並提示摘要。 */
   readonly applied = output<UnitImportResultDto>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('importDialog');
   readonly issueText = issueLabel;
-  readonly preview = signal<UnitImportPreviewDto | null>(null);
+  /** 每次開啟都重新預覽：公文系統的部門可能剛改過。 */
+  private readonly opened = signal(0);
+  private readonly previewRead = apiResource({
+    params: () => this.opened() || undefined,
+    loader: () => this.api.previewImport(),
+  });
+  readonly preview = computed<UnitImportPreviewDto | null>(() => this.previewRead.value() ?? null);
   readonly departments = computed(() => {
     const preview = this.preview();
     return preview ? importDepartments(preview) : [];
@@ -239,10 +245,10 @@ export class UnitImportDialog {
       .filter((item) => !item.reenables)
       .map((item) => item.id),
   );
-  readonly loading = signal(false);
-  readonly applying = signal(false);
-  readonly error = signal('');
-  readonly busy = computed(() => this.loading() || this.applying());
+  readonly loading = this.previewRead.refreshing;
+  readonly applying = action();
+  readonly error = computed(() => this.applying.error() || this.previewRead.error());
+  readonly busy = computed(() => this.loading() || this.applying.pending());
   /** 骨架列的寬度（%）：先是摘要，再是逐筆變動。 */
   protected readonly skeleton = [60, 100, 100, 100, 100];
   readonly counts = computed(() => {
@@ -261,59 +267,39 @@ export class UnitImportDialog {
   });
 
   open() {
-    this.preview.set(null);
-    this.error.set('');
+    this.applying.error.set('');
+    this.opened.update((value) => value + 1);
     this.dialog().nativeElement.showModal();
-    void this.refresh();
   }
   close() {
-    if (!this.applying()) this.dialog().nativeElement.close();
+    if (!this.applying.pending()) this.dialog().nativeElement.close();
   }
   cancel(event: Event) {
     event.preventDefault();
     this.close();
   }
 
-  async refresh() {
+  refresh() {
     if (this.busy()) return;
-    const alive = this.scope.guard();
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      const preview = await this.api.previewImport();
-      if (alive()) this.preview.set(preview);
-    } catch (error) {
-      if (!alive()) return;
-      this.preview.set(null);
-      this.error.set(safeMessage(error));
-    } finally {
-      if (alive()) this.loading.set(false);
-    }
+    this.applying.error.set('');
+    this.previewRead.reload();
   }
 
   async apply() {
     const preview = this.preview();
     if (!preview || !this.canApply()) return;
-    const alive = this.scope.guard();
-    this.applying.set(true);
-    this.error.set('');
-    try {
-      const chosen = new Set(this.selected());
-      const excluded = this.departments()
-        .filter((item) => !chosen.has(item.id))
-        .map((item) => Number(item.id));
-      const result = await this.api.applyImport(preview.fingerprint, excluded);
-      if (!alive()) return;
+    const chosen = new Set(this.selected());
+    const excluded = this.departments()
+      .filter((item) => !chosen.has(item.id))
+      .map((item) => Number(item.id));
+    const outcome = await this.applying.run(() =>
+      this.api.applyImport(preview.fingerprint, excluded),
+    );
+    if (outcome.ok) {
       this.dialog().nativeElement.close();
-      this.applied.emit(result);
-    } catch (error) {
-      if (!alive()) return;
+      this.applied.emit(outcome.value);
+    } else if (errorCode(outcome.cause) === 'organization_import_stale')
       // 預覽過期：舊的清單已不代表會套用的內容，清掉它，請使用者重新預覽。
-      if (error instanceof ApiError && error.code === 'organization_import_stale')
-        this.preview.set(null);
-      this.error.set(safeMessage(error));
-    } finally {
-      if (alive()) this.applying.set(false);
-    }
+      this.previewRead.value.set(undefined);
   }
 }

@@ -128,7 +128,7 @@ describe('notification store', () => {
     const { store, api, settle } = setup();
     await settle();
     api.read.mockRejectedValueOnce(new Error('offline'));
-    await expect(store.read(store.items()[0])).rejects.toThrow();
+    expect(await store.read(store.items()[0])).toBe(false);
     expect(store.unread()).toBe(1);
     expect(store.error()).not.toBe('');
   });

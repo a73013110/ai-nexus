@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import type { NotificationDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { WorkspaceLayout } from '@core/layout/workspace-layout';
+import { action } from '@shared/browser/action';
 import type { NavigationBadgeMap } from '@core/layout/navigation-badges';
 import { notificationFeature, notificationUrl } from './notification-target';
 import { NotificationsApi } from './notifications-api';
@@ -24,9 +25,10 @@ export class NotificationStore {
   readonly loading = signal(false);
   /** 「載入更早的通知」進行中；只讓那顆按鈕轉，列表不淡化。 */
   readonly loadingMore = signal(false);
-  /** 進行中的寫入：`read:<id>`、`dismiss:<id>` 或 `all`，只讓按下的那顆轉。 */
-  readonly working = signal<ReadonlySet<string>>(new Set());
-  readonly error = signal('');
+  /** 寫入：`read:<id>`、`dismiss:<id>` 或 `all`，只讓按下的那顆轉；換帳號後回來的結果丟掉。 */
+  private readonly writing = action({ concurrent: true, guard: () => this.guard() });
+  private readonly readError = signal('');
+  readonly error = computed(() => this.writing.error() || this.readError());
   readonly opened = signal(false);
   readonly unreadOnly = signal(false);
   /** 通知中心的分頁：伺服器收件匣，或此分頁的提示歷史。 */
@@ -74,8 +76,8 @@ export class NotificationStore {
         this.view.set('inbox');
         this.loading.set(false);
         this.loadingMore.set(false);
-        this.working.set(new Set());
-        this.error.set('');
+        this.readError.set('');
+        this.writing.error.set('');
         this.seen.clear();
         this.primed = false;
         this.latest = 0;
@@ -151,9 +153,9 @@ export class NotificationStore {
       );
       this.unread.set(page.unread);
       if (!preserve) this.hasMore.set(page.hasMore);
-      this.error.set('');
+      this.readError.set('');
     } catch (error) {
-      if (valid() && !isCancellation(error)) this.error.set(safeMessage(error));
+      if (valid() && !isCancellation(error)) this.readError.set(safeMessage(error));
     } finally {
       // 較新的讀取會中止這次並接手；兩個旗標都由最後那次清掉，不會卡在讀取中。
       if (valid()) {
@@ -184,45 +186,34 @@ export class NotificationStore {
   readConversation(id: string) {
     for (const item of this.items())
       if (item.target.kind === 'conversation' && item.target.id === id && !item.readAt)
-        void this.read(item).catch(() => {});
+        void this.read(item);
   }
   /** 這個寫入（`read:<id>`、`dismiss:<id>`、`all`）正在進行。 */
   isWorking(key: string) {
-    return this.working().has(key);
+    return this.writing.pendingFor(key);
   }
+  /** 標為已讀；成功回傳 true。失敗原因放在 `error`，列表維持原狀。 */
   async read(item: NotificationDto) {
-    const current = this.guard(),
-      key = `read:${item.id}`;
-    this.mark(key, true);
-    try {
-      await this.api.read(item.id);
-      if (!current()) return;
-      const unread = this.items().some((row) => row.id === item.id && !row.readAt);
-      const readAt = new Date().toISOString();
-      this.items.update((rows) =>
-        rows
-          .map((row) => (row.id === item.id ? { ...row, readAt } : row))
-          .filter((row) => !this.unreadOnly() || !row.readAt),
-      );
-      if (unread) this.unread.update((value) => Math.max(0, value - 1));
-    } catch (error) {
-      if (current()) this.error.set(safeMessage(error));
-      throw error;
-    } finally {
-      if (current()) this.mark(key, false);
-    }
+    const outcome = await this.writing.run(() => this.api.read(item.id), {
+      key: `read:${item.id}`,
+    });
+    if (!outcome.ok) return false;
+    const unread = this.items().some((row) => row.id === item.id && !row.readAt);
+    const readAt = new Date().toISOString();
+    this.items.update((rows) =>
+      rows
+        .map((row) => (row.id === item.id ? { ...row, readAt } : row))
+        .filter((row) => !this.unreadOnly() || !row.readAt),
+    );
+    if (unread) this.unread.update((value) => Math.max(0, value - 1));
+    return true;
   }
   async activate(item: NotificationDto) {
     const destination = notificationUrl(item.target, item.version);
-    if (!destination) return;
-    const current = this.guard();
-    try {
-      await this.read(item);
-      if (!current()) return;
-      this.close();
-      this.layout.closeMobile();
-      await this.router.navigateByUrl(destination);
-    } catch {}
+    if (!destination || !(await this.read(item))) return;
+    this.close();
+    this.layout.closeMobile();
+    await this.router.navigateByUrl(destination);
   }
   async readAll() {
     const through = this.items()[0]?.createdAt;
@@ -234,24 +225,13 @@ export class NotificationStore {
   }
   /** 寫入成功就重讀最新一頁，未讀數以伺服器為準；按鈕轉到重讀結束，結果才不會晚一拍出現。 */
   private async write(key: string, request: () => Promise<unknown>) {
-    const current = this.guard();
-    this.mark(key, true);
-    try {
-      await request();
-      if (current()) await this.refresh();
-    } catch (error) {
-      if (current()) this.error.set(safeMessage(error));
-    } finally {
-      if (current()) this.mark(key, false);
-    }
-  }
-  private mark(key: string, on: boolean) {
-    this.working.update((keys) => {
-      const next = new Set(keys);
-      if (on) next.add(key);
-      else next.delete(key);
-      return next;
-    });
+    await this.writing.run(
+      async ({ alive }) => {
+        await request();
+        if (alive()) await this.refresh();
+      },
+      { key },
+    );
   }
   private browserNotify(item: NotificationDto) {
     if (

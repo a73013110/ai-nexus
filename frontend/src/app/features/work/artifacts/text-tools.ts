@@ -7,6 +7,7 @@ import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   afterRenderEffect,
+  computed,
   Component,
   DestroyRef,
   ElementRef,
@@ -18,6 +19,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { Icon } from '@shared/ui/icon';
@@ -52,7 +54,7 @@ import { routeOf } from '@core/api/catalog';
     #surface="nxCompactDialog"
     #dialog
     class="platform-dialog text-tools-dialog"
-    [busy]="saving()"
+    [busy]="saving.pending()"
     (cancel)="cancel($event)"
   >
     <nx-dialog-header
@@ -92,7 +94,7 @@ import { routeOf } from '@core/api/catalog';
                 aria-label="成果名稱"
                 maxlength="120"
                 required
-                [readOnly]="saving()"
+                [readOnly]="saving.pending()"
                 [value]="title()"
                 (input)="title.set($any($event.target).value)" /></label
             ><nx-markdown-editor
@@ -100,24 +102,24 @@ import { routeOf } from '@core/api/catalog';
               [(content)]="result"
               [(mode)]="editorView"
               [showModeSwitch]="false"
-              [disabled]="saving()"
+              [disabled]="saving.pending()"
             />
           </div>
           <footer class="dialog-foot">
             <button
               type="button"
               class="secondary-button"
-              [attr.aria-disabled]="saving() || null"
+              [attr.aria-disabled]="saving.pending() || null"
               (click)="close()"
             >
               取消</button
             ><button
               nxPending
               class="primary-button"
-              [pending]="saving()"
+              [pending]="saving.pending()"
               [disabled]="!title().trim() || !result().trim()"
             >
-              {{ saving() ? '儲存中…' : '儲存並開啟' }}
+              {{ saving.pending() ? '儲存中…' : '儲存並開啟' }}
             </button>
           </footer>
         </form>
@@ -139,11 +141,11 @@ import { routeOf } from '@core/api/catalog';
                 appearance="segment"
                 [value]="language()"
                 [options]="languages"
-                [disabled]="busy()"
+                [disabled]="generating.pending()"
                 (valueChange)="language.set($event)"
               />
             }
-            @if (busy()) {
+            @if (generating.pending()) {
               <p class="upload-status" role="status">
                 <nx-inference-signal [active]="true" />模型正在處理選取段落…<button
                   class="quiet-button"
@@ -154,8 +156,12 @@ import { routeOf } from '@core/api/catalog';
               </p>
             }
             @if (result()) {
-              <nx-markdown-editor label="段落處理結果" [(content)]="result" [disabled]="busy()" />
-            } @else if (!busy()) {
+              <nx-markdown-editor
+                label="段落處理結果"
+                [(content)]="result"
+                [disabled]="generating.pending()"
+              />
+            } @else if (!generating.pending()) {
               <p class="form-note text-tools-placeholder">選擇語言或開始處理，結果會顯示在這裡。</p>
             }
             @if (truncated()) {
@@ -165,7 +171,11 @@ import { routeOf } from '@core/api/catalog';
             }
           </div>
           <footer class="dialog-foot">
-            <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
+            <button
+              class="secondary-button"
+              [disabled]="generating.pending() || saving.pending()"
+              (click)="generate()"
+            >
               {{ result() ? '重新處理' : '開始處理' }}
             </button>
             @if (result()) {
@@ -188,7 +198,6 @@ import { routeOf } from '@core/api/catalog';
 export class TextTools {
   private readonly api = inject(ArtifactsApi);
   private readonly router = inject(Router);
-  private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   readonly copy = inject(CopyFeedback);
   readonly formatNumber = formatNumber;
@@ -212,9 +221,10 @@ export class TextTools {
   readonly title = signal('工作成果');
   readonly language = signal('English');
   readonly truncated = signal(false);
-  readonly busy = signal(false);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  /** 產生段落處理結果；換內容、停止或關閉時取消。 */
+  readonly generating = action();
+  readonly saving = action();
+  readonly error = computed(() => this.generating.error() || this.saving.error());
   readonly labels: Record<string, string> = Object.fromEntries(
     TEXT_ACTIONS.map((action) => [action.value, `${action.label}段落`]),
   );
@@ -225,19 +235,18 @@ export class TextTools {
     { value: '日本語', label: '日文' },
     { value: '简体中文', label: '簡體中文' },
   ];
-  private controller?: AbortController;
   private sourceMessage: string | null = null;
   constructor() {
     afterRenderEffect(() => {
       if (this.surface().opened() && this.mode() === 'save')
         this.dialog().nativeElement.querySelector<HTMLElement>('[autofocus]')?.focus();
     });
-    inject(DestroyRef).onDestroy(() => this.controller?.abort());
+    inject(DestroyRef).onDestroy(() => this.generating.cancel());
   }
   open(text: string, action: string, message: string | null = null) {
-    this.controller?.abort();
-    this.busy.set(false);
-    this.error.set('');
+    this.generating.cancel();
+    this.generating.error.set('');
+    this.saving.error.set('');
     this.source.set(text);
     this.result.set(action === 'save' ? text : '');
     this.mode.set(action);
@@ -256,68 +265,39 @@ export class TextTools {
     if (action !== 'save' && action !== 'translate') void this.generate();
   }
   async generate() {
-    if (this.busy()) return;
-    const valid = this.scope.guard(),
-      controller = (this.controller = new AbortController());
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const value = await this.api.transform(
-        this.source(),
-        this.mode(),
-        this.modelId(),
-        this.language(),
-        controller.signal,
-      );
-      if (valid() && this.controller === controller) {
-        this.result.set(value.text);
-        this.truncated.set(value.truncated);
-      }
-    } catch (error) {
-      if (valid() && !controller.signal.aborted) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid() && this.controller === controller) this.busy.set(false);
-    }
+    this.saving.error.set('');
+    const outcome = await this.generating.run(({ signal }) =>
+      this.api.transform(this.source(), this.mode(), this.modelId(), this.language(), signal),
+    );
+    if (!outcome.ok) return;
+    this.result.set(outcome.value.text);
+    this.truncated.set(outcome.value.truncated);
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.saving()) return;
-    const valid = this.scope.guard();
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const artifact = await this.api.create(
-        this.title(),
-        this.result(),
-        this.sourceMessage,
-        this.projectId(),
-      );
-      if (valid()) {
-        this.dialog().nativeElement.close();
-        this.created.emit();
-        await this.router.navigate([routeOf('artifacts'), artifact.resource.id]);
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+    this.generating.error.set('');
+    const outcome = await this.saving.run(() =>
+      this.api.create(this.title(), this.result(), this.sourceMessage, this.projectId()),
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.created.emit();
+    await this.router.navigate([routeOf('artifacts'), outcome.value.resource.id]);
   }
   stop() {
-    this.controller?.abort();
-    this.busy.set(false);
+    this.generating.cancel();
   }
   replaceAndClose() {
     this.replace.emit(this.result());
     this.close();
   }
   close() {
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     this.stop();
     this.dialog().nativeElement.close();
   }
   cancel(event: Event) {
-    if (this.saving()) event.preventDefault();
+    if (this.saving.pending()) event.preventDefault();
     else this.stop();
   }
 }

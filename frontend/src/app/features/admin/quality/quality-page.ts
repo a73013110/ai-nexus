@@ -34,6 +34,7 @@ import type {
   ModelDto,
   ModelPolicyDto,
 } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import {
   formatDate,
@@ -132,7 +133,6 @@ export class QualityPage {
   private readonly jobToasts = inject(JobToasts);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly scope = inject(ViewScope);
   readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
@@ -200,13 +200,12 @@ export class QualityPage {
       this.currentRead.refreshing() ||
       this.runsRead.refreshing(),
   );
-  readonly busy = signal(false);
-  /** 由哪個控制項觸發的寫入：只有它轉圈，其他寫入仍由 `busy` 擋下。 */
-  readonly working = signal<'run' | 'control' | 'delete' | null>(null);
-  readonly actionError = signal('');
+  /** 寫入與準備：`key` 是觸發的控制項（`run`、`control`、`delete`、`save`、`import`），只有它轉圈，其他寫入由 `busy` 擋下。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
       this.setsRead.error() ||
       this.feedbackRead.error() ||
       this.currentRead.error() ||
@@ -296,22 +295,14 @@ export class QualityPage {
   editing() {
     return this.editingId !== null;
   }
-  /**
-   * 導覽不受 busy 鎖住：在 /quality 與 /quality/:id 之間切換時頁面元件被重用，
-   * 進行中的寫入不能把結果套到另一個評測集，所以換路由就作廢舊的 guard 並解除 busy。
-   */
-  private revision = 0;
   private reviewTarget = { c: 0, v: 0, run: '' };
   constructor() {
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
-      ++this.revision;
-      this.busy.set(false);
-      this.working.set(null);
-      this.actionError.set('');
-    });
+    // 導覽不受 busy 鎖住：在 /quality 與 /quality/:id 之間切換時頁面元件被重用，
+    // 進行中的寫入不能把結果套到另一個評測集，所以換路由就放棄它並解除 busy。
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => this.working.reset());
   }
   reload() {
-    this.actionError.set('');
+    this.working.error.set('');
     this.setsRead.reload();
     this.feedbackRead.reload();
     this.currentRead.reload();
@@ -325,14 +316,8 @@ export class QualityPage {
     else if (action === 'access') void this.sharing()?.open();
     else if (action === 'delete') void this.removeSet();
   }
-  private guard() {
-    const generation = this.revision,
-      alive = this.scope.guard();
-    return () => alive() && generation === this.revision;
-  }
   async removeSet() {
-    const current = this.current(),
-      valid = this.guard();
+    const current = this.current();
     if (!current?.resource.isOwner || this.busy()) return;
     if (
       !(await this.confirm().ask({
@@ -342,26 +327,20 @@ export class QualityPage {
         confirm: '刪除評測集',
         danger: true,
       })) ||
-      !valid()
+      // 確認期間換到另一個評測集就不刪。
+      this.current()?.resource.id !== current.resource.id
     )
       return;
-    this.busy.set(true);
-    this.working.set('delete');
-    this.actionError.set('');
-    try {
-      await this.api.remove(current.resource.id);
-      if (!valid()) return;
-      // 頁面在 /quality 與 /quality/:id 之間保持掛載，所以列表在這裡移除它。
-      this.setsRead.value.update((all) =>
-        all?.filter((item) => item.resource.id !== current.resource.id),
-      );
-      this.setsRead.reload();
-      await this.router.navigate([routeOf('quality')]);
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    } finally {
-      if (valid()) this.settle();
-    }
+    const outcome = await this.working.run(() => this.api.remove(current.resource.id), {
+      key: 'delete',
+    });
+    if (!outcome.ok) return;
+    // 頁面在 /quality 與 /quality/:id 之間保持掛載，所以列表在這裡移除它。
+    this.setsRead.value.update((all) =>
+      all?.filter((item) => item.resource.id !== current.resource.id),
+    );
+    this.setsRead.reload();
+    await this.router.navigate([routeOf('quality')]);
   }
   selectRun(id: string) {
     if (id === this.runId()) this.detailRead.reload();
@@ -374,7 +353,7 @@ export class QualityPage {
     this.name.set(value?.resource.name ?? '');
     this.description.set(value?.description ?? '');
     this.cases.set(value ? structuredClone(value.cases) : [blankCase()]);
-    this.actionError.set('');
+    this.working.error.set('');
     this.dialog().nativeElement.showModal();
   }
   updateCase(
@@ -428,51 +407,47 @@ export class QualityPage {
       file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const valid = this.guard();
-    try {
-      if (file.size > 1400000) throw new ClientValidationError('evaluationFileSize');
-      let data: unknown;
-      try {
-        data = JSON.parse(await file.text());
-      } catch {
-        throw new ClientValidationError('evaluationFormat');
-      }
-      if (!valid()) return;
-      if (!isEvaluationExport(data)) throw new ClientValidationError('evaluationFormat');
-      this.openSet();
-      this.name.set(data.name);
-      this.description.set(data.description);
-      this.cases.set(data.cases);
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    }
+    const outcome = await this.working.run(
+      async () => {
+        if (file.size > 1400000) throw new ClientValidationError('evaluationFileSize');
+        let data: unknown;
+        try {
+          data = JSON.parse(await file.text());
+        } catch {
+          throw new ClientValidationError('evaluationFormat');
+        }
+        if (!isEvaluationExport(data)) throw new ClientValidationError('evaluationFormat');
+        return data;
+      },
+      { key: 'import' },
+    );
+    if (!outcome.ok) return;
+    this.openSet();
+    this.name.set(outcome.value.name);
+    this.description.set(outcome.value.description);
+    this.cases.set(outcome.value.cases);
   }
   async openRun() {
-    if (this.busy()) return;
-    const valid = this.guard();
-    this.busy.set(true);
-    this.working.set('run');
-    this.actionError.set('');
-    try {
-      const catalog = await this.workspaceApi.models();
-      if (!valid()) return;
-      if (!catalog.providerAvailable || !catalog.models.length)
-        throw new ApiError(
-          503,
-          'model_unavailable',
-          undefined,
-          issueInMessage(catalog.notice) ?? undefined,
-        );
-      this.models.set(catalog.models);
-      this.policy.set(catalog.policy);
-      this.variants.set([this.blankVariant(0)]);
-      this.form.set('run');
-      this.dialog().nativeElement.showModal();
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    } finally {
-      if (valid()) this.settle();
-    }
+    const outcome = await this.working.run(
+      async () => {
+        const catalog = await this.workspaceApi.models();
+        if (!catalog.providerAvailable || !catalog.models.length)
+          throw new ApiError(
+            503,
+            'model_unavailable',
+            undefined,
+            issueInMessage(catalog.notice) ?? undefined,
+          );
+        return catalog;
+      },
+      { key: 'run' },
+    );
+    if (!outcome.ok) return;
+    this.models.set(outcome.value.models);
+    this.policy.set(outcome.value.policy);
+    this.variants.set([this.blankVariant(0)]);
+    this.form.set('run');
+    this.dialog().nativeElement.showModal();
   }
   /** 第 index 個方案的預設值：依序命名 A、B、C，模型用政策預設或清單第一個。 */
   private blankVariant(index: number): VariantForm {
@@ -500,55 +475,66 @@ export class QualityPage {
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
-    const valid = this.guard(),
-      current = this.current();
-    this.busy.set(true);
-    this.actionError.set('');
-    try {
-      if (this.form() === 'set') {
-        const value = await this.api.save(
+    const current = this.current();
+    if (this.form() === 'set') await this.saveSet(current);
+    else if (this.form() === 'run' && current) await this.startRun(current);
+    else if (this.form() === 'review') await this.saveReview(this.reviewTarget);
+  }
+  private async saveSet(current: EvaluationSetDto | null) {
+    const outcome = await this.working.run(
+      () =>
+        this.api.save(
           this.editingId,
           this.name(),
           this.description(),
           this.cases(),
           current?.version ?? 1,
-        );
-        if (!valid()) return;
-        this.dialog().nativeElement.close();
-        this.currentRead.value.set(value);
-        this.setsRead.value.update((items) => [
-          value,
-          ...(items ?? []).filter((item) => item.resource.id !== value.resource.id),
-        ]);
-        await this.router.navigate([routeOf('quality'), value.resource.id]);
-        this.toast.success('題庫已儲存');
-      } else if (this.form() === 'run' && current) {
+        ),
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    const value = outcome.value;
+    this.dialog().nativeElement.close();
+    this.currentRead.value.set(value);
+    this.setsRead.value.update((items) => [
+      value,
+      ...(items ?? []).filter((item) => item.resource.id !== value.resource.id),
+    ]);
+    await this.router.navigate([routeOf('quality'), value.resource.id]);
+    this.toast.success('題庫已儲存');
+  }
+  private async startRun(current: EvaluationSetDto) {
+    const outcome = await this.working.run(
+      async () => {
         const run = await this.api.run(current.resource.id, this.variants());
+        // 評測在背景進行：已離開頁面也照樣追蹤。
         this.jobToasts.track(run.job);
-        if (!valid()) return;
-        this.dialog().nativeElement.close();
-        this.runsRead.value.update((read) => read && { ...read, rows: [run, ...read.rows] });
-        this.selectRun(run.id);
-      } else if (this.form() === 'review') {
-        const target = this.reviewTarget;
-        await this.api.review(
+        return run;
+      },
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    const run = outcome.value;
+    this.dialog().nativeElement.close();
+    this.runsRead.value.update((read) => read && { ...read, rows: [run, ...read.rows] });
+    this.selectRun(run.id);
+  }
+  private async saveReview(target: { c: number; v: number; run: string }) {
+    const outcome = await this.working.run(
+      () =>
+        this.api.review(
           target.run,
           target.c,
           target.v,
           this.score() ? Number(this.score()) : null,
           this.reviewNote(),
-        );
-        if (!valid()) return;
-        this.dialog().nativeElement.close();
-        this.selectRun(target.run);
-        this.toast.success('人工評分已儲存');
-      }
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+        ),
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.selectRun(target.run);
+    this.toast.success('人工評分已儲存');
   }
   openReview(result: EvaluationResultDto) {
     const detail = this.detail();
@@ -565,23 +551,12 @@ export class QualityPage {
     );
   }
   async control(retry: boolean) {
-    const detail = this.detail(),
-      valid = this.guard();
-    if (!detail?.run.canControl || this.busy()) return;
-    this.busy.set(true);
-    this.working.set('control');
-    try {
-      await this.jobToasts.control(detail.run.job.id, retry);
-      if (valid()) this.selectRun(detail.run.id);
-    } catch (failure) {
-      if (valid()) this.actionError.set(this.scope.message(failure));
-    } finally {
-      if (valid()) this.settle();
-    }
-  }
-  private settle() {
-    this.busy.set(false);
-    this.working.set(null);
+    const detail = this.detail();
+    if (!detail?.run.canControl) return;
+    const outcome = await this.working.run(() => this.jobToasts.control(detail.run.job.id, retry), {
+      key: 'control',
+    });
+    if (outcome.ok) this.selectRun(detail.run.id);
   }
   readonly date = formatDate;
 }

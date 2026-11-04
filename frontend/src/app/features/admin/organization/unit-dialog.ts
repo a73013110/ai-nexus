@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { UnitDto } from '@core/api/schema';
-import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
@@ -73,15 +73,15 @@ const sameDraft = (a: Draft, b: Draft) =>
       #unitDialog
       class="platform-dialog"
       size="md"
-      [busy]="saving()"
+      [busy]="saving.pending()"
       (cancel)="cancel($event)"
     >
       @if (editor.current(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header [heading]="e.title" closeLabel="關閉單位編輯" [tour]="tour()" />
           <div class="dialog-body">
-            @if (error()) {
-              <nx-notice tone="danger" [message]="error()" />
+            @if (saving.error()) {
+              <nx-notice tone="danger" [message]="saving.error()" />
             }
             @if (imported()) {
               <nx-notice
@@ -107,7 +107,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       [attr.aria-invalid]="nameError() ? true : null"
                       [attr.aria-describedby]="nameError() ? id + '-error' : null"
                       [value]="e.draft.name"
-                      [readOnly]="saving()"
+                      [readOnly]="saving.pending()"
                       (input)="update('name', name.value)"
                   /></label>
                   @if (nameError()) {
@@ -120,7 +120,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       noun="單位"
                       [nodes]="parents()"
                       [value]="e.draft.parentId"
-                      [disabled]="saving()"
+                      [disabled]="saving.pending()"
                       (valueChange)="update('parentId', $event)"
                   /></label>
                 </div>
@@ -149,7 +149,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                       label="首長單位的層級"
                       [options]="headRanks()"
                       [value]="e.draft.headRank"
-                      [disabled]="saving() || !!headBlocked()"
+                      [disabled]="saving.pending() || !!headBlocked()"
                       (valueChange)="update('headRank', $event)"
                   /></label>
                   @if (headBlocked(); as reason) {
@@ -167,7 +167,7 @@ const sameDraft = (a: Draft, b: Draft) =>
                     label="啟用"
                     description="停用後保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。"
                     [checked]="e.draft.enabled"
-                    [disabled]="saving()"
+                    [disabled]="saving.pending()"
                     (checkedChange)="update('enabled', $event)"
                   />
                 </div>
@@ -179,20 +179,20 @@ const sameDraft = (a: Draft, b: Draft) =>
               <button
                 type="button"
                 class="secondary-button"
-                [attr.aria-disabled]="saving() || null"
+                [attr.aria-disabled]="saving.pending() || null"
                 (click)="requestClose()"
               >
                 取消
               </button>
-              <button nxPending type="submit" class="primary-button" [pending]="saving()">
-                {{ saving() ? '建立中…' : '建立單位' }}
+              <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
+                {{ saving.pending() ? '建立中…' : '建立單位' }}
               </button>
             </footer>
           } @else {
             <nx-dialog-save-bar
               label="儲存單位"
               [dirty]="editor.dirty()"
-              [saving]="saving()"
+              [saving]="saving.pending()"
               (revert)="revert()"
             />
           }
@@ -209,8 +209,8 @@ export class UnitDialog {
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('name');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly editor = new DraftEditor<Draft, Target>(sameDraft);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  /** 建立或儲存；失敗訊息顯示在對話框內（版本過期則關閉後由頁面說明）。 */
+  readonly saving = action();
   readonly nameError = signal('');
   readonly imported = computed(() => !!this.editor.current()?.imported);
   readonly tour = computed(() =>
@@ -286,7 +286,7 @@ export class UnitDialog {
     });
   }
   private show(target: Target, draft: Draft) {
-    this.error.set('');
+    this.saving.error.set('');
     this.nameError.set('');
     this.editor.open(target, draft);
     this.dialog().nativeElement.showModal();
@@ -297,7 +297,7 @@ export class UnitDialog {
   }
   revert() {
     this.editor.revert();
-    this.error.set('');
+    this.saving.error.set('');
     this.nameError.set('');
   }
   cancel(event: Event) {
@@ -305,7 +305,7 @@ export class UnitDialog {
     void this.requestClose();
   }
   async requestClose() {
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     const editor = this.editor.current();
     const message = editor?.id
       ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
@@ -317,7 +317,7 @@ export class UnitDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor.current();
-    if (!editor || this.saving() || (editor.id && !this.editor.dirty())) return;
+    if (!editor || this.saving.pending() || (editor.id && !this.editor.dirty())) return;
     const draft = editor.draft;
     const name = draft.name.trim();
     if (!name || name.length > 120) {
@@ -331,25 +331,22 @@ export class UnitDialog {
       enabled: draft.enabled,
       headRank: draft.headRank ? Number(draft.headRank) : null,
     };
-    this.saving.set(true);
-    this.error.set('');
-    try {
+    const outcome = await this.saving.run(async () => {
       if (editor.id)
         await this.api.updateUnit(editor.id, { ...body, rowVersion: editor.rowVersion });
       else this.store.select(await this.api.createUnit(body));
+    });
+    if (outcome.ok) {
       this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.toast.success(editor.id ? '已儲存' : `已新增「${name}」`);
       this.store.changed();
-    } catch (error) {
-      if (isStaleWrite(error)) {
-        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.editor.markSaved();
-        this.dialog().nativeElement.close();
-        this.store.stale();
-      } else this.error.set(safeMessage(error));
-    } finally {
-      this.saving.set(false);
+    } else if (outcome.stale) {
+      // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明（對話框不留訊息）。
+      this.saving.reset();
+      this.editor.markSaved();
+      this.dialog().nativeElement.close();
+      this.store.stale();
     }
   }
 }

@@ -29,6 +29,8 @@ export interface ApiResourceOptions<T, P> {
   params?: () => P | undefined;
   /** 請求改變或檢視被銷毀時，`signal` 會中止請求。 */
   loader: (params: P, signal: AbortSignal) => Promise<T>;
+  /** 失敗轉成畫面文字，預設 `safeMessage`；功能有固定原因要說明時傳入（例：出勤的 `attendanceProblem`）。 */
+  message?: (error: unknown) => string;
   /** 距離下次重新讀取的毫秒數；`null` 代表停止。分頁隱藏時會等到可見才讀。 */
   poll?: (value: T | undefined) => number | null;
 }
@@ -106,7 +108,7 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
   });
   const error = computed(() => {
     const failure = ref.error();
-    return !failure || isCancellation(failure) ? '' : safeMessage(failure);
+    return !failure || isCancellation(failure) ? '' : (options.message ?? safeMessage)(failure);
   });
   const loading = computed(() => ref.status() === 'loading');
   // 目前在途的重讀是否由輪詢發起；使用者的 reload() 會清掉它，讓同一次讀取改為看得見。

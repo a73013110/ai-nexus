@@ -132,7 +132,7 @@ describe('AttendanceCardsStore', () => {
     const { store, api, toast, settle } = setup();
     await settle();
     const saving = store.setHidden({ ...card, note: '訪客' }, true);
-    expect(store.working()).toBe('hidden:c1');
+    expect(store.working('hidden:c1')).toBe(true);
     expect((await saving).ok).toBe(true);
     expect(api.updateCard).toHaveBeenCalledWith('c1', {
       hiddenFromRecords: true,
@@ -140,7 +140,7 @@ describe('AttendanceCardsStore', () => {
       rowVersion: card.rowVersion,
     });
     expect(toast.success).toHaveBeenCalledWith('卡號 0012345 已在出勤紀錄隱藏');
-    expect(store.working()).toBe('');
+    expect(store.working('hidden:c1')).toBe(false);
     // 重讀完才能再寫：重讀前畫面上的版本是舊的。
     expect(store.busy()).toBe(true);
     await settle();

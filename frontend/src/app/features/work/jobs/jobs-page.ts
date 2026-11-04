@@ -13,6 +13,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { JobDto } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate, relativeTime } from '@shared/browser/format';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -118,21 +119,21 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
                 nxPending
                 type="button"
                 class="quiet-button job-control"
-                [pending]="busy().has(job.id)"
-                [disabled]="job.cancelRequested && !busy().has(job.id)"
+                [pending]="controlling.pendingFor(job.id)"
+                [disabled]="job.cancelRequested && !controlling.pendingFor(job.id)"
                 (click)="act(job, false)"
               >
-                <nx-icon name="stop" />{{ busy().has(job.id) ? '停止中…' : '停止處理' }}
+                <nx-icon name="stop" />{{ controlling.pendingFor(job.id) ? '停止中…' : '停止處理' }}
               </button>
             } @else if (canRetry(job)) {
               <button
                 nxPending
                 type="button"
                 class="quiet-button job-control"
-                [pending]="busy().has(job.id)"
+                [pending]="controlling.pendingFor(job.id)"
                 (click)="act(job, true)"
               >
-                <nx-icon name="repeat" />{{ busy().has(job.id) ? '重試中…' : '重試' }}
+                <nx-icon name="repeat" />{{ controlling.pendingFor(job.id) ? '重試中…' : '重試' }}
               </button>
             }
           </div>
@@ -159,7 +160,6 @@ export class JobsPage {
   /** 範本裡的連結由功能目錄取得網址。 */
   readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
-  private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
@@ -176,10 +176,10 @@ export class JobsPage {
     poll: () => 3000,
   });
   readonly filter = signal(this.target() ? 'all' : 'active');
-  private readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.jobs.error());
+  readonly error = computed(() => this.controlling.error() || this.jobs.error());
   /** 送出停止或重試中的任務：只有那張卡片的按鈕轉圈，其他卡片照常可操作。 */
-  readonly busy = signal<ReadonlySet<string>>(new Set());
+  /** 停止或重試；不同工作可以同時送出，只有按下的那一列轉圈。 */
+  readonly controlling = action({ concurrent: true });
   readonly filterOptions = [
     { value: 'active', label: '處理中' },
     { value: 'all', label: '全部' },
@@ -229,30 +229,16 @@ export class JobsPage {
     return needsAttention(job.status) && job.attempt < 6;
   }
   reload() {
-    this.actionError.set('');
+    this.controlling.error.set('');
     this.jobs.reload();
   }
   async act(job: JobDto, retry: boolean) {
-    if (this.busy().has(job.id)) return;
-    const valid = this.scope.guard();
-    this.busy.update((ids) => new Set(ids).add(job.id));
-    this.actionError.set('');
-    try {
-      const value = await this.jobToasts.control(job.id, retry);
-      if (valid())
-        this.jobs.value.update((items) =>
-          items?.map((item) => (item.id === value.id ? value : item)),
-        );
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid())
-        this.busy.update((ids) => {
-          const next = new Set(ids);
-          next.delete(job.id);
-          return next;
-        });
-    }
+    const outcome = await this.controlling.run(() => this.jobToasts.control(job.id, retry), {
+      key: job.id,
+    });
+    if (!outcome.ok) return;
+    const value = outcome.value;
+    this.jobs.value.update((items) => items?.map((item) => (item.id === value.id ? value : item)));
   }
   readonly kind = jobKindName;
   readonly icon = jobKindIcon;

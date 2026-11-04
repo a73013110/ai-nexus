@@ -21,7 +21,7 @@
           type="button"
           class="quiet-button mail-auto-retry"
           [attr.aria-pressed]="current.autoRetry"
-          [pending]="savingSettings()"
+          [pending]="savingSettings.pending()"
           [title]="
             current.autoRetry
               ? '暫時性失敗會在 1、5、15、30、60 分鐘後自動再寄，最多 ' +
@@ -76,12 +76,12 @@
         />
       }
     }
-    @if (settingsError()) {
+    @if (savingSettings.error()) {
       <nx-notice
         tone="danger"
-        [message]="settingsError()"
+        [message]="savingSettings.error()"
         [dismissible]="true"
-        (dismissed)="settingsError.set('')"
+        (dismissed)="savingSettings.error.set('')"
       />
     }
     @if (notice()) {
@@ -252,8 +252,8 @@
         >
       } @else if (detail(); as view) {
         <section aria-label="郵件寄送資訊">
-          @if (actionError()) {
-            <nx-notice tone="danger" [message]="actionError()" />
+          @if (detailAction.error()) {
+            <nx-notice tone="danger" [message]="detailAction.error()" />
           }
           @if (session.has('mail.messages.resend')) {
             @if (view.detail.message.status === 'queued') {
@@ -262,10 +262,12 @@
                   nxPending
                   type="button"
                   class="secondary-button mail-retry"
-                  [pending]="retrying()"
+                  [pending]="detailAction.pendingFor('retry')"
                   (click)="retry()"
                 >
-                  <nx-icon name="play" />{{ retrying() ? '排入中…' : '立即重試' }}
+                  <nx-icon name="play" />{{
+                    detailAction.pendingFor('retry') ? '排入中…' : '立即重試'
+                  }}
                 </button>
                 <p class="form-note">不等下次嘗試時間，現在就寄這一封；暫停寄送中也會一併恢復。</p>
               </div>
@@ -275,10 +277,12 @@
                   nxPending
                   type="button"
                   class="secondary-button mail-resend"
-                  [pending]="resending()"
+                  [pending]="detailAction.pendingFor('resend')"
                   (click)="resend()"
                 >
-                  <nx-icon name="repeat" />{{ resending() ? '重寄中…' : '重寄' }}
+                  <nx-icon name="repeat" />{{
+                    detailAction.pendingFor('resend') ? '重寄中…' : '重寄'
+                  }}
                 </button>
                 <p class="form-note">以原內容建立一封新信，原紀錄不變。</p>
               </div>

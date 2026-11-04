@@ -12,6 +12,7 @@ import {
 import type { PriceDto, PriceRequest, PriceTargetDto } from '@core/api/schema';
 import { formatDate, formatModelDisplayName, parseDateTimeInput } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
@@ -76,7 +77,6 @@ export class PriceVersionDialog {
   readonly targets = input<PriceTargetDto[]>([]);
   readonly saved = output<void>();
   private readonly api = inject(BillingApi);
-  private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly picker = viewChild(DateTimePicker);
@@ -87,8 +87,7 @@ export class PriceVersionDialog {
   readonly editor = new DraftEditor<PriceRequest, { seed: PriceSeed }>(samePrice);
   /** 生效時間另存：留白是「立即」，不屬於從起點複製的欄位，填了就算有變更。 */
   readonly effective = signal('');
-  readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saving = action();
   readonly dirty = computed(() => !!this.effective() || this.editor.dirty());
   readonly detail = computed(() => {
     const seed = this.editor.current()?.seed;
@@ -109,7 +108,7 @@ export class PriceVersionDialog {
   });
   readonly canSave = computed(
     () =>
-      !this.saving() &&
+      !this.saving.pending() &&
       this.dirty() &&
       !!this.editor.current()?.draft.modelId.trim() &&
       !this.rateError() &&
@@ -149,7 +148,7 @@ export class PriceVersionDialog {
     this.editor.open({ seed }, draft);
     this.effective.set('');
     this.resetPicker();
-    this.error.set('');
+    this.saving.error.set('');
     this.dialog().nativeElement.showModal();
   }
   field<K extends keyof PriceRequest>(key: K, value: PriceRequest[K]) {
@@ -173,12 +172,12 @@ export class PriceVersionDialog {
     this.editor.revert();
     this.effective.set('');
     this.resetPicker();
-    this.error.set('');
+    this.saving.error.set('');
   }
   /** Escape、關閉鈕與抽屜的滑動都會到這裡；未儲存的變更會先確認。 */
   async cancel(event: Event) {
     event.preventDefault();
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     if (
       !this.dirty() ||
       (await this.confirmation().discard('這個價格版本尚未儲存，關閉後會捨棄填寫的內容。'))
@@ -189,30 +188,23 @@ export class PriceVersionDialog {
     event.preventDefault();
     const draft = this.editor.current()?.draft;
     if (!draft || !this.canSave()) return;
-    const valid = this.scope.guard();
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const effectiveAt = (
-        this.effective() ? parseDateTimeInput(this.effective()) : new Date()
-      ).toISOString();
-      await this.api.addPrice({
+    const effectiveAt = (
+      this.effective() ? parseDateTimeInput(this.effective()) : new Date()
+    ).toISOString();
+    const outcome = await this.saving.run(() =>
+      this.api.addPrice({
         ...draft,
         modelId: draft.modelId.trim(),
         note: draft.note.trim(),
         effectiveAt,
-      });
-      if (!valid()) return;
-      this.editor.markSaved();
-      this.effective.set('');
-      this.dialog().nativeElement.close();
-      this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
-      this.saved.emit();
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
-    }
+      }),
+    );
+    if (!outcome.ok) return;
+    this.editor.markSaved();
+    this.effective.set('');
+    this.dialog().nativeElement.close();
+    this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
+    this.saved.emit();
   }
   /** 供應商的模型與工具，依顯示名稱排列：已設定的目標與已定價的。 */
   private choicesFor(provider: string) {

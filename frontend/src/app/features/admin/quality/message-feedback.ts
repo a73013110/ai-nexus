@@ -12,6 +12,7 @@ import {
   linkedSignal,
 } from '@angular/core';
 import type { MessageDto } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -33,8 +34,8 @@ import { QualityApi } from './quality-api';
         [class.feedback-active]="rating() === 1"
         [attr.aria-pressed]="rating() === 1"
         aria-label="回答有幫助"
-        [pending]="working() === 'up'"
-        [disabled]="busy() && working() !== 'up'"
+        [pending]="saving.pendingFor('up')"
+        [disabled]="busy() && !saving.pendingFor('up')"
         (click)="rate(1)"
       >
         <nx-icon name="thumb-up" />
@@ -45,8 +46,8 @@ import { QualityApi } from './quality-api';
         [class.feedback-active]="rating() === -1"
         [attr.aria-pressed]="rating() === -1"
         aria-label="回答待改善"
-        [pending]="working() === 'down'"
-        [disabled]="busy() && working() !== 'down'"
+        [pending]="saving.pendingFor('down')"
+        [disabled]="busy() && !saving.pendingFor('down')"
         (click)="rate(-1)"
       >
         <nx-icon name="thumb-down" />
@@ -85,11 +86,11 @@ import { QualityApi } from './quality-api';
         ><button
           nxPending
           class="secondary-button"
-          [pending]="working() === 'detail'"
-          [disabled]="busy() && working() !== 'detail'"
+          [pending]="saving.pendingFor('detail')"
+          [disabled]="busy() && !saving.pendingFor('detail')"
           (click)="save(-1)"
         >
-          {{ working() === 'detail' ? '儲存中…' : '儲存補充' }}
+          {{ saving.pendingFor('detail') ? '儲存中…' : '儲存補充' }}
         </button>
       </div>
     }
@@ -105,7 +106,6 @@ export class MessageFeedback {
   readonly message = input.required<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   private readonly api = inject(QualityApi);
-  private readonly scope = inject(ViewScope);
   private readonly savedRating = signal<number | null>(null);
   readonly rating = computed(() => this.savedRating() ?? this.message().feedbackRating ?? 0);
   /** 補充細節在使用者第一次開啟時才讀取。 */
@@ -119,15 +119,14 @@ export class MessageFeedback {
     return value && value.id === this.message().id ? value : null;
   });
   readonly expanded = computed(() => this.requested() && !!this.details());
-  /** 正在儲存的是哪個控制項：讚、待改善或補充說明；只有它轉圈。 */
-  readonly working = signal<'up' | 'down' | 'detail' | null>(null);
+  /** 儲存回饋；`key` 是按下的控制項（讚、待改善或補充說明），只有它轉圈。 */
+  readonly saving = action();
   /** 第一次開啟補充回饋時正在讀取既有內容。 */
   readonly opening = this.detailsRead.loading;
-  readonly busy = computed(() => this.working() !== null || this.detailsRead.loading());
+  readonly busy = computed(() => this.saving.pending() || this.detailsRead.loading());
   readonly reason = linkedSignal(() => this.details()?.feedback?.reason ?? '');
   readonly note = linkedSignal(() => this.details()?.feedback?.note ?? '');
-  readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.detailsRead.error());
+  readonly error = computed(() => this.saving.error() || this.detailsRead.error());
   readonly notice = signal('');
   readonly reasons = [
     { value: '', label: '選擇原因（選填）' },
@@ -143,32 +142,27 @@ export class MessageFeedback {
   openDetails() {
     if (this.expanded()) this.requested.set(false);
     else if (!this.busy()) {
-      this.saveError.set('');
+      this.saving.error.set('');
       this.requested.set(true);
     }
   }
   async save(value: number, from: 'up' | 'down' | 'detail' = 'detail') {
     if (this.busy()) return;
-    const id = this.message().id,
-      alive = this.scope.guard();
-    this.working.set(from);
-    this.saveError.set('');
-    try {
-      await this.api.feedback(
-        id,
-        value,
-        value === -1 ? this.reason() : '',
-        value === -1 ? this.note() : '',
-      );
-      if (!alive() || this.message().id !== id) return;
-      this.savedRating.set(value);
-      this.rated.emit({ id, rating: value });
-      this.requested.set(false);
-      this.notice.set(value ? '回饋已儲存' : '回饋已移除');
-    } catch (failure) {
-      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(failure));
-    } finally {
-      if (alive()) this.working.set(null);
-    }
+    const id = this.message().id;
+    const outcome = await this.saving.run(
+      () =>
+        this.api.feedback(
+          id,
+          value,
+          value === -1 ? this.reason() : '',
+          value === -1 ? this.note() : '',
+        ),
+      { key: from, current: () => this.message().id === id },
+    );
+    if (!outcome.ok) return;
+    this.savedRating.set(value);
+    this.rated.emit({ id, rating: value });
+    this.requested.set(false);
+    this.notice.set(value ? '回饋已儲存' : '回饋已移除');
   }
 }

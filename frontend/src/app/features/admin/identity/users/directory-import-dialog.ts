@@ -9,11 +9,11 @@ import {
   viewChild,
 } from '@angular/core';
 import type { DirectoryOutcomeDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
+import { action } from '@shared/browser/action';
 import { PendingButton } from '@shared/ui/pending-button';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { TreeView } from '@shared/ui/tree-view';
@@ -66,10 +66,9 @@ export class DirectoryImportDialog {
   readonly step = signal<Step>('select');
   readonly includeDisabled = signal(false);
   readonly outcomes = signal<DirectoryOutcomeDto[]>([]);
-  /** 進行中的寫入：重新預覽與匯入各自的按鈕轉圈，兩者都擋下關閉與其他操作。 */
-  readonly task = signal<'preview' | 'import' | null>(null);
-  readonly busy = computed(() => this.task() !== null);
-  readonly error = signal('');
+  /** 預覽（`preview`）或匯入（`import`）：各自的按鈕轉圈，兩者都擋下關閉與其他操作。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   /** 預覽的那一批人；確認時只匯入這一批，預覽中途改了勾選也不會匯入沒看過的人。 */
   private previewed: string[] = [];
 
@@ -114,7 +113,7 @@ export class DirectoryImportDialog {
     this.step.set('select');
     this.includeDisabled.set(false);
     this.outcomes.set([]);
-    this.error.set('');
+    this.working.error.set('');
     this.store.open();
     this.dialog().nativeElement.showModal();
   }
@@ -127,32 +126,37 @@ export class DirectoryImportDialog {
       includeDisabled === this.includeDisabled() || !this.previewed.length
         ? [...this.store.selection().keys()]
         : this.previewed;
-    await this.run('preview', async () => {
-      const result = await this.api.previewDirectoryImport({ sids, includeDisabled });
-      this.previewed = sids;
-      this.includeDisabled.set(includeDisabled);
-      this.outcomes.set(result.items);
-      this.step.set('preview');
-    });
+    const outcome = await this.working.run(
+      () => this.api.previewDirectoryImport({ sids, includeDisabled }),
+      { key: 'preview' },
+    );
+    if (!outcome.ok) return;
+    this.previewed = sids;
+    this.includeDisabled.set(includeDisabled);
+    this.outcomes.set(outcome.value.items);
+    this.step.set('preview');
   }
   back() {
     // 部分失敗後返回：成功的人狀態已變，重讀清單，匯入籃的分組才會跟著更新。
     if (this.step() === 'result') this.store.people.reload();
-    this.error.set('');
+    this.working.error.set('');
     this.previewed = [];
     this.step.set('select');
   }
   async confirm() {
     if (!this.pending() || this.busy()) return;
-    await this.run('import', async () => {
-      const result = await this.api.importDirectoryUsers({
-        sids: this.previewed,
-        includeDisabled: this.includeDisabled(),
-      });
-      this.users.changed();
-      this.outcomes.set(result.items);
-      this.step.set('result');
-    });
+    const outcome = await this.working.run(
+      () =>
+        this.api.importDirectoryUsers({
+          sids: this.previewed,
+          includeDisabled: this.includeDisabled(),
+        }),
+      { key: 'import' },
+    );
+    if (!outcome.ok) return;
+    this.users.changed();
+    this.outcomes.set(outcome.value.items);
+    this.step.set('result');
   }
   /** 結果步驟的「繼續匯入」：清空匯入籃、重讀目前節點（狀態已變），回到選取。 */
   again() {
@@ -160,16 +164,5 @@ export class DirectoryImportDialog {
     this.outcomes.set([]);
     this.includeDisabled.set(false);
     this.back();
-  }
-  private async run(task: 'preview' | 'import', work: () => Promise<void>) {
-    this.task.set(task);
-    this.error.set('');
-    try {
-      await work();
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.task.set(null);
-    }
   }
 }

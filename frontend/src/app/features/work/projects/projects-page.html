@@ -13,18 +13,18 @@
           nxPending
           type="button"
           class="primary-button project-start"
-          [pending]="working() === 'start:'"
-          [disabled]="(busy() && working() !== 'start:') || project.isArchived"
+          [pending]="working.pendingFor('start:')"
+          [disabled]="(busy() && !working.pendingFor('start:')) || project.isArchived"
           (click)="start()"
         >
-          <nx-icon name="chat" />{{ working() === 'start:' ? '開始中…' : '開始對話' }}
+          <nx-icon name="chat" />{{ working.pendingFor('start:') ? '開始中…' : '開始對話' }}
         </button>
       }
       @if (projectActions().length) {
         <nx-action-menu
           label="專案操作"
           [items]="projectActions()"
-          [busy]="working() === 'archive' || working() === 'delete'"
+          [busy]="working.pendingFor('archive') || working.pendingFor('delete')"
           (action)="projectAction($event)"
         />
       }
@@ -89,11 +89,11 @@
             notice-actions
             nxPending
             type="button"
-            [pending]="working() === 'archive'"
-            [disabled]="busy() && working() !== 'archive'"
+            [pending]="working.pendingFor('archive')"
+            [disabled]="busy() && !working.pendingFor('archive')"
             (click)="archive()"
           >
-            {{ working() === 'archive' ? '還原中…' : '還原專案' }}
+            {{ working.pendingFor('archive') ? '還原中…' : '還原專案' }}
           </button>
         }
       </nx-notice>
@@ -127,9 +127,9 @@
                 <button
                   type="button"
                   class="template-start"
-                  [attr.aria-busy]="working() === 'start:' + item.id || null"
+                  [attr.aria-busy]="working.pendingFor('start:' + item.id) || null"
                   [disabled]="
-                    (busy() && working() !== 'start:' + item.id) ||
+                    (busy() && !working.pendingFor('start:' + item.id)) ||
                     project.isArchived ||
                     !session.has('chat')
                   "
@@ -138,8 +138,9 @@
                   <strong>{{ item.title }}</strong
                   ><span>{{ item.content }}</span
                   ><small
-                    >{{ working() === 'start:' + item.id ? '開始中…' : '使用範本開始對話'
-                    }}<nx-icon [name]="working() === 'start:' + item.id ? 'loading' : 'chevron'"
+                    >{{ working.pendingFor('start:' + item.id) ? '開始中…' : '使用範本開始對話'
+                    }}<nx-icon
+                      [name]="working.pendingFor('start:' + item.id) ? 'loading' : 'chevron'"
                   /></small>
                 </button>
                 @if (editable()) {
@@ -155,8 +156,8 @@
                       type="button"
                       class="icon-button"
                       [attr.aria-label]="'移除範本 ' + item.title"
-                      [pending]="working() === 'remove:' + item.id"
-                      [disabled]="busy() && working() !== 'remove:' + item.id"
+                      [pending]="working.pendingFor('remove:' + item.id)"
+                      [disabled]="busy() && !working.pendingFor('remove:' + item.id)"
                       (click)="remove('template', item.id)"
                     >
                       <nx-icon name="trash" />
@@ -241,8 +242,8 @@
               panel-actions
               class="icon-button upload-label"
               title="上傳文件"
-              [attr.aria-busy]="working() === 'upload' || null"
-              ><nx-icon [name]="working() === 'upload' ? 'loading' : 'upload'" /><input
+              [attr.aria-busy]="working.pendingFor('upload') || null"
+              ><nx-icon [name]="working.pendingFor('upload') ? 'loading' : 'upload'" /><input
                 type="file"
                 aria-label="上傳專案文件"
                 multiple
@@ -274,8 +275,8 @@
                     type="button"
                     class="icon-button"
                     [attr.aria-label]="'移除 ' + file.fileName"
-                    [pending]="working() === 'remove:' + file.id"
-                    [disabled]="busy() && working() !== 'remove:' + file.id"
+                    [pending]="working.pendingFor('remove:' + file.id)"
+                    [disabled]="busy() && !working.pendingFor('remove:' + file.id)"
                     (click)="remove('file', file.id)"
                   >
                     <nx-icon name="trash" />
@@ -420,10 +421,10 @@
       ><button
         nxPending
         class="primary-button"
-        [pending]="working() === 'save'"
+        [pending]="working.pendingFor('save')"
         [disabled]="!name().trim() || (kind() === 'template' && !templateText().trim())"
       >
-        {{ working() === 'save' ? '儲存中…' : '儲存' }}
+        {{ working.pendingFor('save') ? '儲存中…' : '儲存' }}
       </button>
     </footer>
   </form>

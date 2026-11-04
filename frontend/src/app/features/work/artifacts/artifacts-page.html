@@ -13,8 +13,8 @@
           label="成果版本"
           [options]="choices()"
           [value]="'' + doc.version"
-          [loading]="working() === 'version' || revisionsRefreshing()"
-          [disabled]="busy() && working() !== 'version'"
+          [loading]="working.pendingFor('version') || revisionsRefreshing()"
+          [disabled]="busy() && !working.pendingFor('version')"
           (valueChange)="chooseVersion($event)"
         />
       }
@@ -24,7 +24,7 @@
         triggerLabel="匯出"
         icon="download"
         [items]="exports"
-        [busy]="working() === 'export'"
+        [busy]="working.pendingFor('export')"
         (action)="export($event)"
       />
       @if (documentActions().length) {
@@ -32,7 +32,7 @@
           class="artifact-menu"
           label="成果操作"
           [items]="documentActions()"
-          [busy]="working() === 'delete'"
+          [busy]="working.pendingFor('delete')"
           (action)="documentAction($event)"
         />
       }
@@ -122,13 +122,16 @@
           nxPending
           type="button"
           class="primary-button artifact-save"
-          [pending]="working() === 'save'"
+          [pending]="working.pendingFor('save')"
           [disabled]="
-            !dirty() || (busy() && working() !== 'save') || !content().trim() || !title().trim()
+            !dirty() ||
+            (busy() && !working.pendingFor('save')) ||
+            !content().trim() ||
+            !title().trim()
           "
           (click)="save()"
         >
-          {{ working() === 'save' ? '儲存中…' : '儲存新版本' }}
+          {{ working.pendingFor('save') ? '儲存中…' : '儲存新版本' }}
         </button>
       }
     </div>

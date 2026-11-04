@@ -1,7 +1,8 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import type { ChoiceOption } from '@shared/ui/choice-groups';
 import { ToastService } from '@shared/ui/toast-service';
 import { AccessControlApi } from './access-control-api';
@@ -31,24 +32,28 @@ export class AccessControlStore {
   readonly loading = this.catalogRead.loading;
   /** 重讀中（含寫入後與重試）：表格淡化、重試鈕轉圈。 */
   readonly refreshing = this.catalogRead.refreshing;
-  readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.catalogRead.error());
+  /**
+   * 頁面上（對話框以外）的寫入：失敗與版本過期都由頁面的 Notice 說明。各列以 `key` 區分，
+   * 只有按下的那一列轉圈，不同列可同時送出。
+   */
+  readonly writing = action({ concurrent: true });
+  readonly error = computed(() => this.writing.error() || this.catalogRead.error());
   readonly toast = inject(ToastService);
 
   load() {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.catalogRead.reload();
   }
   /** 授權已改變：重新讀取目錄與此帳號的授權。 */
   saved(title: string, description?: string) {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.toast.success(title, description);
     this.catalogRead.reload();
     void this.session.load(true);
   }
   /** 送出的版本已過期：對話框的草稿作廢，由頁面的 Notice 說明，目錄重讀成最新。 */
   stale() {
-    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.writing.fail(STALE_WRITE_MESSAGE);
     this.catalogRead.reload();
   }
   /** 選單已改變：只重新讀取此帳號的導覽（側邊欄），目錄不受影響。 */

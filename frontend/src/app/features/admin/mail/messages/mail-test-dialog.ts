@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { MailSampleDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { CopyValue } from '@shared/ui/copy-value';
@@ -62,9 +62,11 @@ export class MailTestDialog {
   readonly samples = signal<MailSampleDto[]>([]);
   readonly category = signal('');
   readonly values = signal<MailSampleValues>({});
-  readonly loading = signal(false);
-  readonly busy = signal(false);
-  readonly error = signal('');
+  /** 讀範本（每次開啟都重讀）與寄出；兩者的失敗都顯示在對話框內。 */
+  readonly reading = action();
+  readonly sending = action();
+  readonly busy = this.sending.pending;
+  readonly error = computed(() => this.sending.error() || this.reading.error());
   readonly types = types;
   readonly options = computed<SelectOption[]>(() =>
     this.samples().map((x) => ({ value: x.category, label: x.name, description: x.category })),
@@ -83,7 +85,8 @@ export class MailTestDialog {
   private readonly field = viewChild.required<ElementRef<HTMLInputElement>>('field');
 
   open() {
-    this.error.set('');
+    this.reading.reset();
+    this.sending.error.set('');
     this.dialog().nativeElement.showModal();
     requestAnimationFrame(() => this.field().nativeElement.focus());
     // 每次開啟重讀：範例值含操作者與當下時間，也可能剛部署了新的範本。
@@ -104,32 +107,22 @@ export class MailTestDialog {
     event.preventDefault();
     const to = this.to().trim();
     const sample = this.sample();
-    if (!to || !sample || this.invalid() || this.busy()) return;
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const result = await this.api.test(to, sample.category, changedValues(sample, this.values()));
-      this.dialog().nativeElement.close();
-      this.sent.emit(result.messageId);
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.busy.set(false);
-    }
+    if (!to || !sample || this.invalid()) return;
+    const outcome = await this.sending.run(() =>
+      this.api.test(to, sample.category, changedValues(sample, this.values())),
+    );
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.sent.emit(outcome.value.messageId);
   }
 
   private async load() {
-    this.loading.set(true);
-    try {
-      const samples = await this.api.samples();
-      this.samples.set(samples);
-      // 保留上次選的範本與填寫中的值；範本已不存在時回到第一個（設定測試信）。
-      if (!samples.some((x) => x.category === this.category()))
-        this.choose(samples[0]?.category ?? '');
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.loading.set(false);
-    }
+    const outcome = await this.reading.run(() => this.api.samples());
+    if (!outcome.ok) return;
+    const samples = outcome.value;
+    this.samples.set(samples);
+    // 保留上次選的範本與填寫中的值；範本已不存在時回到第一個（設定測試信）。
+    if (!samples.some((x) => x.category === this.category()))
+      this.choose(samples[0]?.category ?? '');
   }
 }

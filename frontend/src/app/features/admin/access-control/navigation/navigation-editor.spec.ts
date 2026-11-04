@@ -1,3 +1,4 @@
+import { Action } from '@shared/browser/action';
 import { computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -50,7 +51,7 @@ function setup() {
   };
   const store = {
     items,
-    actionError: signal(''),
+    writing: new Action({ guard: () => () => true }),
     toast: { success: vi.fn() },
     replace: vi.fn((next: NavigationItemDto[]) => items.set(next)),
     changed: vi.fn(),
@@ -167,8 +168,8 @@ describe('NavigationEditor', () => {
     );
     const before = editor.rows().map((entry) => entry.item.id);
     editor.key(key('End'), row(editor, 'chat'));
-    await vi.waitFor(() => expect(store.actionError()).not.toBe(''));
-    expect(store.actionError()).toContain(publicErrorHints['navigation_depth_exceeded']);
+    await vi.waitFor(() => expect(store.writing.error()).not.toBe(''));
+    expect(store.writing.error()).toContain(publicErrorHints['navigation_depth_exceeded']);
     expect(editor.rows().map((entry) => entry.item.id)).toEqual(before);
     expect(editor.announcement()).toBe('無法儲存位置，已還原');
     expect(store.changed).not.toHaveBeenCalled();

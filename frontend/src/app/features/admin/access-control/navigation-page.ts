@@ -6,6 +6,7 @@ import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from './access-control-store';
 import { accessPageNames, navigationTour } from './access-control-tour';
 import { NavigationStore } from './navigation-store';
+import { ViewScope } from '@shared/browser/view-scope';
 import { NavigationEditor } from './navigation/navigation-editor';
 import { NavigationItemDialog } from './navigation/navigation-item-dialog';
 
@@ -13,7 +14,7 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
 @Component({
   selector: 'nx-navigation-page',
   imports: [Notice, PendingButton, FeaturePage, NavigationEditor, NavigationItemDialog],
-  providers: [AccessControlStore, NavigationStore],
+  providers: [AccessControlStore, NavigationStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.navigation')"

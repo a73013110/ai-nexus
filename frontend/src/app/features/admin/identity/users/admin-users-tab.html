@@ -176,7 +176,7 @@
             <nx-action-menu
               [label]="'使用者操作：' + user.displayName"
               [items]="actions(user)"
-              [busy]="acting() === user.id"
+              [busy]="acting(user.id)"
               (action)="userAction($event, user)"
             />
           </td>

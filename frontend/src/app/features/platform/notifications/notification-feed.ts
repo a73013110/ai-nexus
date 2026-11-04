@@ -81,7 +81,7 @@ import { PendingButton } from '@shared/ui/pending-button';
                   type="button"
                   class="quiet-button"
                   [pending]="reading"
-                  (click)="store.read(item).catch(ignore)"
+                  (click)="store.read(item)"
                 >
                   {{ reading ? '標記中…' : '標為已讀' }}
                 </button>
@@ -132,7 +132,6 @@ export class NotificationFeed {
   readonly store = inject(NotificationStore);
   readonly date = formatDate;
   readonly url = notificationUrl;
-  readonly ignore = () => {};
   /** 骨架列的寬度（%），長短交錯才像通知。 */
   protected readonly skeleton = [82, 58, 74, 50, 66];
   /** 點擊列自己的控制項與文字選取，保留其原本行為。 */

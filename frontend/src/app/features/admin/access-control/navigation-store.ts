@@ -1,8 +1,9 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import type { NavigationItemDto } from '@core/api/schema';
 import { apiResource } from '@core/api/api-resource';
 import { catalogFeature } from '@core/api/catalog';
 import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { ToastService } from '@shared/ui/toast-service';
 import { AccessControlApi } from './access-control-api';
 import { AccessControlStore } from './access-control-store';
@@ -24,12 +25,16 @@ export class NavigationStore {
   readonly loading = computed(() => this.read.loading() || this.access.loading());
   /** 重讀中（含移動、刪除後與重試）；首次載入也算在內。 */
   readonly refreshing = computed(() => this.read.refreshing() || this.access.refreshing());
-  readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.read.error() || this.access.error());
+  /**
+   * 選單頁上的寫入（刪除、移動）：一次一筆，因為移動以目前的位置計算，前一筆未完成時算出的位置會過時。
+   * `key` 是節點 id（刪除）或 `order`（移動）。
+   */
+  readonly writing = action();
+  readonly error = computed(() => this.writing.error() || this.read.error() || this.access.error());
   readonly toast = inject(ToastService);
 
   load() {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.read.reload();
     this.access.load();
   }
@@ -39,13 +44,13 @@ export class NavigationStore {
   }
   /** 選單已寫入：重讀節點，以及此帳號的側欄（`/me` 的選單樹）。 */
   changed() {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.read.reload();
     this.access.navigationChanged();
   }
   /** 送出的版本已過期：由頁面的 Notice 說明，節點重讀成最新。 */
   stale() {
-    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.writing.fail(STALE_WRITE_MESSAGE);
     this.read.reload();
   }
   /** 頁面節點顯示功能的有效名稱（含管理員的覆寫）；目錄外的 ID 原樣顯示。 */

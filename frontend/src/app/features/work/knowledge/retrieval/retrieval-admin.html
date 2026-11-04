@@ -158,7 +158,7 @@
 <nx-data-table
   class="ops-table retrieval-capabilities"
   label="服務能力"
-  [busy]="capabilitiesRead.refreshing() || probing()"
+  [busy]="capabilitiesRead.refreshing() || probing.pending()"
   [stacked]="true"
 >
   <div table-toolbar class="ui-table-toolbar">
@@ -170,11 +170,11 @@
     type="button"
     class="quiet-button retrieval-probe"
     title="驗證只傳送合成資料，會計入檢索模型呼叫配額"
-    [pending]="probing()"
-    [disabled]="!probing() && !capabilities().length"
+    [pending]="probing.pending()"
+    [disabled]="!probing.pending() && !capabilities().length"
     (click)="probe()"
   >
-    <nx-icon name="check" />{{ probing() ? '驗證中…' : '驗證檢索模型' }}
+    <nx-icon name="check" />{{ probing.pending() ? '驗證中…' : '驗證檢索模型' }}
   </button>
   <table>
     <colgroup>
@@ -293,10 +293,10 @@
             nxPending
             type="submit"
             class="primary-button"
-            [pending]="searching()"
+            [pending]="searching.pending()"
             [disabled]="form.invalid || !selected().length"
           >
-            <nx-icon name="search" />{{ searching() ? '檢索中…' : '測試檢索' }}
+            <nx-icon name="search" />{{ searching.pending() ? '檢索中…' : '測試檢索' }}
           </button>
         </div>
       </div>
@@ -306,7 +306,7 @@
     <div class="retrieval-result">
       <nx-retrieval-results [result]="result" />
     </div>
-  } @else if (searching()) {
+  } @else if (searching.pending()) {
     <p class="form-note retrieval-result" role="status"><nx-icon name="loading" />正在檢索來源…</p>
   }
 </section>

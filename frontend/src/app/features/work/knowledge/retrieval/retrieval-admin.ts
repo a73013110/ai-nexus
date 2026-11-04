@@ -18,6 +18,7 @@ import type {
   RetrievalCapabilitiesDto,
   RetrievalConnectionDto,
 } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate, formatDay, formatNumber, formatPercent } from '@shared/browser/format';
 import { Card } from '@shared/ui/card';
@@ -84,7 +85,6 @@ const BENCH_COLLECTIONS = 3;
 })
 export class RetrievalAdmin {
   private readonly api = inject(KnowledgeApi);
-  private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   private readonly jobToasts = inject(JobToasts);
   readonly profilesRead = apiResource({
@@ -110,8 +110,8 @@ export class RetrievalAdmin {
   });
   readonly limit = BENCH_COLLECTIONS;
   readonly result = signal<KnowledgeSearchDto | null>(null);
-  /** 進行中的索引操作（索引 id 與動作）：只有按下的那顆按鈕轉圈，其他操作等它完成。 */
-  readonly working = signal<{ id: number; action: ProfileAction } | null>(null);
+  /** 索引操作（`<動作>:<索引 id>`）：只有按下的那顆按鈕轉圈，其他操作等它完成。 */
+  readonly working = action();
   readonly collectionsLoading = this.collectionsRead.loading;
   readonly refreshing = computed(
     () =>
@@ -119,13 +119,14 @@ export class RetrievalAdmin {
       this.capabilitiesRead.refreshing() ||
       this.collectionsRead.refreshing(),
   );
-  readonly probing = signal(false);
-  readonly searching = signal(false);
-  readonly actionError = signal('');
+  readonly probing = action();
+  readonly searching = action();
   /** 表格沒有資料時讀取失敗由表格狀態顯示（附重試）；已有資料的重新整理失敗才放到頁首提示。 */
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
+      this.probing.error() ||
+      this.searching.error() ||
       (this.profiles().length ? this.profilesRead.error() : '') ||
       (this.capabilities().length ? this.capabilitiesRead.error() : '') ||
       this.collectionsRead.error(),
@@ -157,7 +158,7 @@ export class RetrievalAdmin {
     return !!profile.job && isActive(profile.job.status);
   }
   load() {
-    this.actionError.set('');
+    this.clearErrors();
     this.profilesRead.reload();
     this.capabilitiesRead.reload();
     this.collectionsRead.reload();
@@ -165,80 +166,66 @@ export class RetrievalAdmin {
   select(id: string, checked: boolean) {
     this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((item) => item !== id)));
   }
-  async operate(profile: EmbeddingProfileDto, action: ProfileAction) {
-    if (this.working() || !(await this.confirmation().ask(confirmations[action](profile)))) return;
-    const guard = this.scope.guard();
-    this.working.set({ id: profile.id, action });
-    this.actionError.set('');
-    try {
-      if (action === 'clear') this.jobToasts.track(await this.api.clearProfileVectors(profile.id));
-      else if (action === 'rebuild')
-        this.jobToasts.track(await this.api.rebuildProfile(profile.id));
-      else await this.api.activateProfile(profile.id);
-      if (!guard()) return;
-      if (action === 'activate') this.toast.success('使用中索引已切換');
-      else
-        this.toast.success(
-          action === 'rebuild' ? '重建工作已排入佇列' : '清除工作已排入佇列',
-          '進度顯示在索引列。',
-        );
-      this.profilesRead.reload();
-    } catch (error) {
-      if (guard()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (guard()) this.working.set(null);
-    }
+  async operate(profile: EmbeddingProfileDto, kind: ProfileAction) {
+    if (this.working.pending() || !(await this.confirmation().ask(confirmations[kind](profile))))
+      return;
+    this.clearErrors();
+    const outcome = await this.working.run(
+      async () => {
+        // 清除與重建在背景進行：已離開頁面也照樣追蹤。
+        if (kind === 'clear') this.jobToasts.track(await this.api.clearProfileVectors(profile.id));
+        else if (kind === 'rebuild')
+          this.jobToasts.track(await this.api.rebuildProfile(profile.id));
+        else await this.api.activateProfile(profile.id);
+      },
+      { key: workKey(profile, kind) },
+    );
+    if (!outcome.ok) return;
+    if (kind === 'activate') this.toast.success('使用中索引已切換');
+    else
+      this.toast.success(
+        kind === 'rebuild' ? '重建工作已排入佇列' : '清除工作已排入佇列',
+        '進度顯示在索引列。',
+      );
+    this.profilesRead.reload();
   }
-  isWorking(profile: EmbeddingProfileDto, action: ProfileAction) {
-    const working = this.working();
-    return working?.id === profile.id && working.action === action;
+  /** 頁首一次只說明最近一個動作的失敗。 */
+  private clearErrors() {
+    for (const write of [this.working, this.probing, this.searching]) write.error.set('');
+  }
+  isWorking(profile: EmbeddingProfileDto, kind: ProfileAction) {
+    return this.working.pendingFor(workKey(profile, kind));
   }
   /** 其他操作進行中時擋下；按下的那顆由 `nxPending` 自己擋，不停用（焦點才不會掉）。 */
-  blocked(profile: EmbeddingProfileDto, action: ProfileAction) {
-    return !!this.working() && !this.isWorking(profile, action);
+  blocked(profile: EmbeddingProfileDto, kind: ProfileAction) {
+    return this.working.pending() && !this.isWorking(profile, kind);
   }
   async probe() {
-    if (this.probing()) return;
-    const guard = this.scope.guard();
-    this.probing.set(true);
-    this.actionError.set('');
-    try {
-      const result = await this.api.probeRetrieval();
-      if (guard()) this.capabilitiesRead.value.set(result);
-    } catch (error) {
-      if (guard()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (guard()) this.probing.set(false);
-    }
+    if (this.probing.pending()) return;
+    this.clearErrors();
+    const outcome = await this.probing.run(() => this.api.probeRetrieval());
+    if (outcome.ok) this.capabilitiesRead.value.set(outcome.value);
   }
   async search(event: Event) {
     event.preventDefault();
-    if (
-      this.form.invalid ||
-      !this.form.controls.query.value.trim() ||
-      !this.selected().length ||
-      this.searching()
-    )
+    if (this.form.invalid || !this.form.controls.query.value.trim() || !this.selected().length)
       return;
-    const guard = this.scope.guard();
-    this.searching.set(true);
-    this.actionError.set('');
+    if (this.searching.pending()) return;
+    this.clearErrors();
     this.result.set(null);
-    try {
-      const result = await this.api.searchRetrieval({
+    const outcome = await this.searching.run(() =>
+      this.api.searchRetrieval({
         query: this.form.controls.query.value,
         collectionIds: this.selected(),
         mode: this.mode(),
         rerank: this.rerank(),
-      });
-      if (guard()) this.result.set(result);
-    } catch (error) {
-      if (guard()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (guard()) this.searching.set(false);
-    }
+      }),
+    );
+    if (outcome.ok) this.result.set(outcome.value);
   }
 }
+
+const workKey = (profile: EmbeddingProfileDto, kind: ProfileAction) => `${kind}:${profile.id}`;
 
 const confirmations: Record<ProfileAction, (profile: EmbeddingProfileDto) => Confirmation> = {
   rebuild: (profile) => ({

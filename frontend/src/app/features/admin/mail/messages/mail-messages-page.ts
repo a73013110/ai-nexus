@@ -14,7 +14,8 @@ import { apiResource } from '@core/api/api-resource';
 import { routeOf } from '@core/api/catalog';
 import type { MailMessageDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
+import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
@@ -78,6 +79,7 @@ import { mailDetailTour, mailMessagesTour } from './mail-tour';
     TimeRangePicker,
     ViewSwitch,
   ],
+  providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   styleUrl: './mail-messages-page.scss',
@@ -224,11 +226,10 @@ export class MailMessagesPage {
   private readonly testDialog = viewChild(MailTestDialog);
   private readonly diagnosisDialog = viewChild(MailDiagnosisDialog);
   readonly notice = signal('');
-  readonly actionError = signal('');
-  readonly resending = signal(false);
-  readonly retrying = signal(false);
-  readonly savingSettings = signal(false);
-  readonly settingsError = signal('');
+  /** 詳情抽屜的立即重試（`retry`）與重寄（`resend`）：一次一個，失敗顯示在抽屜裡。 */
+  readonly detailAction = action();
+  /** 自動重試開關；失敗顯示在頁首。 */
+  readonly savingSettings = action();
   /** 同一次開啟的詳情重寄共用一個冪等鍵：連點或逾時重試只建立一封。 */
   private resendKey = '';
   readonly formatDate = formatDate;
@@ -255,7 +256,7 @@ export class MailMessagesPage {
   }
   openDetails(id: string) {
     if (this.selectedId() !== id) this.resendKey = crypto.randomUUID();
-    this.actionError.set('');
+    this.detailAction.error.set('');
     this.selectedId.set(id);
     this.drawer()?.open();
   }
@@ -281,53 +282,33 @@ export class MailMessagesPage {
     this.statusRead.reload();
   }
   async toggleAutoRetry(autoRetry: boolean) {
-    if (this.savingSettings()) return;
-    this.savingSettings.set(true);
-    this.settingsError.set('');
-    try {
-      const saved = await this.api.updateSettings(autoRetry);
-      const current = this.statusRead.value();
-      if (current) this.statusRead.value.set({ ...current, autoRetry: saved.autoRetry });
-    } catch (error) {
-      this.settingsError.set(safeMessage(error));
-    } finally {
-      this.savingSettings.set(false);
-    }
+    const outcome = await this.savingSettings.run(() => this.api.updateSettings(autoRetry));
+    const current = this.statusRead.value();
+    if (outcome.ok && current)
+      this.statusRead.value.set({ ...current, autoRetry: outcome.value.autoRetry });
   }
   async retry() {
     const id = this.selectedId();
-    if (!id || this.retrying()) return;
-    this.retrying.set(true);
-    this.actionError.set('');
-    try {
-      await this.api.retry(id);
-      this.notice.set('已排入立即重試，結果會自動更新在這封信的寄送嘗試。');
-      this.table.reload();
-      this.detailRead.reload();
-      this.statusRead.reload();
-    } catch (error) {
-      this.actionError.set(safeMessage(error));
-    } finally {
-      this.retrying.set(false);
-    }
+    if (!id) return;
+    const outcome = await this.detailAction.run(() => this.api.retry(id), { key: 'retry' });
+    if (!outcome.ok) return;
+    this.notice.set('已排入立即重試，結果會自動更新在這封信的寄送嘗試。');
+    this.table.reload();
+    this.detailRead.reload();
+    this.statusRead.reload();
   }
   async resend() {
     const id = this.selectedId();
-    if (!id || this.resending()) return;
-    this.resending.set(true);
-    this.actionError.set('');
-    try {
-      const result = await this.api.resend(id, this.resendKey);
-      this.notice.set(
-        result.duplicate
-          ? '這封信已經重寄過，沒有建立新的信。'
-          : `已建立重寄的信（訊息 ID ${result.messageId}），寄送結果請看第一筆紀錄。`,
-      );
-      this.reread();
-    } catch (error) {
-      this.actionError.set(safeMessage(error));
-    } finally {
-      this.resending.set(false);
-    }
+    if (!id) return;
+    const outcome = await this.detailAction.run(() => this.api.resend(id, this.resendKey), {
+      key: 'resend',
+    });
+    if (!outcome.ok) return;
+    this.notice.set(
+      outcome.value.duplicate
+        ? '這封信已經重寄過，沒有建立新的信。'
+        : `已建立重寄的信（訊息 ID ${outcome.value.messageId}），寄送結果請看第一筆紀錄。`,
+    );
+    this.reread();
   }
 }

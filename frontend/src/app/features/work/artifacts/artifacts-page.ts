@@ -20,6 +20,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { FeaturePage } from '@core/layout/feature-page';
 import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
@@ -81,7 +82,6 @@ export class ArtifactsPage {
   readonly maxSelection = MAX_SELECTED_TEXT;
   readonly formatNumber = formatNumber;
   private readonly api = inject(ArtifactsApi);
-  private readonly scope = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
@@ -118,8 +118,8 @@ export class ArtifactsPage {
    * 進行中的動作（`save`、`version`、`export`、`delete`）：觸發它的按鈕或選單鈕轉圈，
    * 其他寫入與離開頁面等它完成。
    */
-  readonly working = signal<'save' | 'version' | 'export' | 'delete' | null>(null);
-  readonly busy = computed(() => this.working() !== null);
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly listRefreshing = this.listRead.refreshing;
   /** 儲存新版本後版本清單重讀中：版本下拉轉圈。 */
   readonly revisionsRefreshing = this.revisionsRead.refreshing;
@@ -133,10 +133,9 @@ export class ArtifactsPage {
       this.documentRead.refreshing() ||
       this.revisionsRead.refreshing(),
   );
-  readonly actionError = signal('');
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
       this.listRead.error() ||
       this.documentRead.error() ||
       this.revisionsRead.error(),
@@ -230,18 +229,11 @@ export class ArtifactsPage {
       description: `${revision.author} · ${formatDate(revision.createdAt)}`,
     })),
   );
-  // 列表與 /:id 共用同一個元件，換網址不會銷毀 ViewScope；寫入另以導覽次數判斷是否仍屬於畫面上的文件。
-  private revision = 0;
   private replaceTarget: { start: number; end: number; text: string } | null = null;
-  private operationGuard() {
-    const revision = this.revision,
-      valid = this.scope.guard();
-    return () => valid() && revision === this.revision;
-  }
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
-      ++this.revision;
-      this.actionError.set('');
+      // 列表與 /:id 共用同一個元件，換網址不會銷毀 ViewScope：送出中的結果屬於上一份文件，放棄。
+      this.working.reset();
     });
     const unload = (event: BeforeUnloadEvent) => {
       if (this.dirty()) event.preventDefault();
@@ -251,7 +243,7 @@ export class ArtifactsPage {
     inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', unload));
   }
   reload() {
-    this.actionError.set('');
+    this.working.error.set('');
     this.listRead.reload();
     this.documentRead.reload();
     this.revisionsRead.reload();
@@ -266,46 +258,29 @@ export class ArtifactsPage {
     else if (action === 'delete') void this.remove();
   }
   async save() {
-    const doc = this.document(),
-      valid = this.operationGuard();
-    if (!doc || !this.editable() || this.busy() || !this.dirty()) return;
-    this.working.set('save');
-    this.actionError.set('');
-    try {
-      const value = await this.api.save(
-        doc.resource.id,
-        this.title(),
-        this.content(),
-        doc.currentVersion,
-      );
-      if (!valid()) return;
-      const priorMode = this.mode();
-      this.document.set(value);
-      this.mode.set(priorMode);
-      this.toast.success(`版本 ${value.version} 已儲存`);
-      this.revisionsRead.reload();
-      this.listRead.reload();
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const doc = this.document();
+    if (!doc || !this.editable() || !this.dirty()) return;
+    const outcome = await this.working.run(
+      () => this.api.save(doc.resource.id, this.title(), this.content(), doc.currentVersion),
+      { key: 'save' },
+    );
+    if (!outcome.ok) return;
+    const priorMode = this.mode();
+    this.document.set(outcome.value);
+    this.mode.set(priorMode);
+    this.toast.success(`版本 ${outcome.value.version} 已儲存`);
+    this.revisionsRead.reload();
+    this.listRead.reload();
   }
   async chooseVersion(version: string) {
     if (this.busy() || !(await this.canLeave())) return;
-    const id = this.document()?.resource.id,
-      valid = this.operationGuard();
+    const id = this.document()?.resource.id;
     if (!id) return;
-    this.working.set('version');
-    this.actionError.set('');
-    try {
-      const value = await this.api.get(id, Number(version));
-      if (valid() && this.document()?.resource.id === id) this.document.set(value);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const outcome = await this.working.run(() => this.api.get(id, Number(version)), {
+      key: 'version',
+      current: () => this.document()?.resource.id === id,
+    });
+    if (outcome.ok) this.document.set(outcome.value);
   }
   restore() {
     this.restoring.set(true);
@@ -348,7 +323,7 @@ export class ArtifactsPage {
   replace(text: string) {
     const target = this.replaceTarget;
     if (!target || this.content().slice(target.start, target.end) !== target.text) {
-      this.actionError.set('選取內容已經改變，請重新選取後再套用。');
+      this.working.fail('選取內容已經改變，請重新選取後再套用。');
       return;
     }
     this.content.set(
@@ -357,23 +332,15 @@ export class ArtifactsPage {
     this.selection.set(null);
   }
   async export(format: string) {
-    const doc = this.document(),
-      valid = this.operationGuard();
-    if (!doc || this.busy()) return;
-    this.working.set('export');
-    this.actionError.set('');
-    try {
-      const response = await this.api.export(doc.resource.id, format, doc.version),
-        blob = await response.blob();
-      if (valid()) {
-        downloadBlob(blob, doc.resource.name + '-v' + doc.version, format);
-        this.toast.success(`已匯出版本 ${doc.version}`);
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const doc = this.document();
+    if (!doc) return;
+    const outcome = await this.working.run(
+      async () => (await this.api.export(doc.resource.id, format, doc.version)).blob(),
+      { key: 'export' },
+    );
+    if (!outcome.ok) return;
+    downloadBlob(outcome.value, doc.resource.name + '-v' + doc.version, format);
+    this.toast.success(`已匯出版本 ${doc.version}`);
   }
   async remove() {
     const doc = this.document();
@@ -388,26 +355,17 @@ export class ArtifactsPage {
       }))
     )
       return;
-    const valid = this.operationGuard();
-    this.working.set('delete');
-    this.actionError.set('');
-    try {
-      await this.api.remove(doc.resource.id);
-      if (valid()) {
-        this.document.set(null);
-        // 頁面在 /artifacts 與 /artifacts/:id 之間保持掛載，所以列表在這裡移除它。
-        this.listRead.value.update((all) =>
-          all?.filter((item) => item.resource.id !== doc.resource.id),
-        );
-        this.listRead.reload();
-        // 導覽前先解鎖，否則 canLeave 會因 busy 擋下離開。
-        this.working.set(null);
-        await this.router.navigate([routeOf('artifacts')]);
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.working.set(null);
-    }
+    const outcome = await this.working.run(() => this.api.remove(doc.resource.id), {
+      key: 'delete',
+    });
+    if (!outcome.ok) return;
+    this.document.set(null);
+    // 頁面在 /artifacts 與 /artifacts/:id 之間保持掛載，所以列表在這裡移除它。
+    this.listRead.value.update((all) =>
+      all?.filter((item) => item.resource.id !== doc.resource.id),
+    );
+    this.listRead.reload();
+    // run 結束後才導覽：送出中 canLeave 會擋下離開。
+    await this.router.navigate([routeOf('artifacts')]);
   }
 }

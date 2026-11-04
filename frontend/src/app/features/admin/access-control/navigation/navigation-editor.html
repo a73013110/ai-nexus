@@ -128,10 +128,10 @@
               aria-haspopup="menu"
               [attr.aria-label]="'選單項目操作：' + row.name"
               [attr.aria-expanded]="isMenuOpen(trigger)"
-              [attr.aria-busy]="deleting() === row.item.id || null"
+              [attr.aria-busy]="deleting(row.item.id) || null"
               (click)="openMenu(row, trigger)"
             >
-              <nx-icon [name]="deleting() === row.item.id ? 'loading' : 'more'" />
+              <nx-icon [name]="deleting(row.item.id) ? 'loading' : 'more'" />
             </button>
           </td>
         </tr>

@@ -11,6 +11,7 @@ import { AccountSecurityApi } from './account-security-api';
 import { AccountSecurityStore, emailBadge } from './account-security-store';
 import { localPasswordProblem } from './local-login-dialog';
 import { deliveryText } from './verification-code-field';
+import { ViewScope } from '@shared/browser/view-scope';
 
 const security = (patch: Partial<AccountSecurityDto> = {}): AccountSecurityDto => ({
   displayName: '陳',
@@ -55,6 +56,7 @@ function setup(initial = security()) {
   const auth = { generation, guard: AuthService.prototype.guard, renewed: vi.fn(), load: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
+      { provide: ViewScope, useValue: { guard: () => () => true } },
       provideRouter([]),
       AccountSecurityStore,
       { provide: AccountSecurityApi, useValue: api },

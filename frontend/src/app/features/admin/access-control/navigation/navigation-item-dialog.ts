@@ -12,7 +12,7 @@ import {
 import type { NavigationItemDto } from '@core/api/schema';
 import { CATALOG_FEATURES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
@@ -120,8 +120,8 @@ export class NavigationItemDialog {
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly editor = new DraftEditor<Draft, Target>(sameDraft);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  /** 建立或儲存；失敗訊息顯示在對話框內（版本過期則關閉後由頁面說明）。 */
+  readonly saving = action();
   readonly fieldError = signal<FieldError | null>(null);
   readonly kinds: ViewOption[] = NAVIGATION_KINDS.map(({ kind, label, icon }) => ({
     value: kind,
@@ -224,7 +224,7 @@ export class NavigationItemDialog {
     );
   }
   private show(target: Target, draft: Draft) {
-    this.error.set('');
+    this.saving.error.set('');
     this.fieldError.set(null);
     this.editor.open(target, draft);
     this.dialog().nativeElement.showModal();
@@ -235,7 +235,7 @@ export class NavigationItemDialog {
   }
   revert() {
     this.editor.revert();
-    this.error.set('');
+    this.saving.error.set('');
     this.fieldError.set(null);
   }
   cancel(event: Event) {
@@ -243,7 +243,7 @@ export class NavigationItemDialog {
     void this.requestClose();
   }
   async requestClose() {
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     const editor = this.editor.current();
     const message = editor?.id
       ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
@@ -255,7 +255,7 @@ export class NavigationItemDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor.current();
-    if (!editor || this.saving() || (editor.id && !this.editor.dirty())) return;
+    if (!editor || this.saving.pending() || (editor.id && !this.editor.dirty())) return;
     const draft = editor.draft;
     const invalid = this.validate(draft);
     if (invalid) {
@@ -286,15 +286,12 @@ export class NavigationItemDialog {
       icon: draft.kind === 'page' ? null : draft.icon || null,
       audienceGroupIds: link ? draft.audienceGroupIds : null,
     };
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      if (editor.id)
-        await this.api.updateNavigationItem(editor.id, {
-          ...content,
-          rowVersion: editor.rowVersion,
-        });
-      else await this.api.createNavigationItem({ ...content, parentId: draft.parentId || null });
+    const outcome = await this.saving.run(() =>
+      editor.id
+        ? this.api.updateNavigationItem(editor.id, { ...content, rowVersion: editor.rowVersion })
+        : this.api.createNavigationItem({ ...content, parentId: draft.parentId || null }),
+    );
+    if (outcome.ok) {
       this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.toast.success(
@@ -302,15 +299,12 @@ export class NavigationItemDialog {
         '側欄選單已更新。',
       );
       this.store.changed();
-    } catch (error) {
-      if (isStaleWrite(error)) {
-        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.editor.markSaved();
-        this.dialog().nativeElement.close();
-        this.store.stale();
-      } else this.error.set(safeMessage(error));
-    } finally {
-      this.saving.set(false);
+    } else if (outcome.stale) {
+      // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明（對話框不留訊息）。
+      this.saving.reset();
+      this.editor.markSaved();
+      this.dialog().nativeElement.close();
+      this.store.stale();
     }
   }
   private validate(draft: Draft): FieldError | null {

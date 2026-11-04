@@ -75,8 +75,8 @@
         </aside>
       </div>
       <footer class="dialog-foot">
-        @if (error()) {
-          <p class="dialog-note directory-error" role="alert">{{ error() }}</p>
+        @if (working.error()) {
+          <p class="dialog-note directory-error" role="alert">{{ working.error() }}</p>
         } @else {
           <p class="dialog-note">{{ footNote() }}</p>
         }
@@ -107,8 +107,8 @@
       </footer>
     } @else {
       <div class="dialog-body directory-review">
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (working.error()) {
+          <nx-notice tone="danger" [message]="working.error()" />
         }
         @if (step() === 'result' && failed()) {
           <nx-notice
@@ -119,7 +119,7 @@
         <nx-stat-grid
           class="directory-summary"
           [label]="step() === 'preview' ? '匯入預覽摘要' : '匯入結果摘要'"
-          [busy]="task() === 'preview'"
+          [busy]="working.pendingFor('preview')"
         >
           <nx-stat-tile
             [label]="step() === 'preview' ? '新增' : '已新增'"
@@ -146,8 +146,8 @@
             label="仍要匯入 AD 已停用的帳號"
             description="例如帳號先建好、到職才啟用的人；匯入後仍無法以 AD 登入，直到 AD 啟用。"
             [checked]="includeDisabled()"
-            [disabled]="task() === 'import'"
-            [pending]="task() === 'preview'"
+            [disabled]="working.pendingFor('import')"
+            [pending]="working.pendingFor('preview')"
             (checkedChange)="preview($event)"
           />
         }
@@ -155,7 +155,7 @@
           [label]="step() === 'preview' ? '匯入預覽' : '匯入結果'"
           [items]="outcomes()"
           [known]="store.selection()"
-          [busy]="task() === 'preview'"
+          [busy]="working.pendingFor('preview')"
         />
       </div>
       <footer class="dialog-foot">
@@ -179,11 +179,11 @@
             nxPending
             type="button"
             class="primary-button directory-confirm"
-            [pending]="task() === 'import'"
-            [disabled]="!pending() || task() === 'preview'"
+            [pending]="working.pendingFor('import')"
+            [disabled]="!pending() || working.pendingFor('preview')"
             (click)="confirm()"
           >
-            {{ task() === 'import' ? '匯入中…' : '確認匯入（' + pending() + ' 人）' }}
+            {{ working.pendingFor('import') ? '匯入中…' : '確認匯入（' + pending() + ' 人）' }}
           </button>
         } @else {
           <p class="dialog-note" role="status">{{ summary() }}</p>

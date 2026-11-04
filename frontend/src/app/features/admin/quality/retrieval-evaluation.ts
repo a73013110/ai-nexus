@@ -1,7 +1,7 @@
 import { apiResource } from '@core/api/api-resource';
 import { Notice } from '@shared/ui/notice';
 import { Field } from '@shared/ui/field';
-import { ClientValidationError } from '@core/errors/safe-errors';
+import { ClientValidationError, safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,6 +21,7 @@ import type {
 import { isActive } from '@core/api/generation-status';
 import { QualityApi } from './quality-api';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { formatDate } from '@shared/browser/format';
 import { downloadFile } from '@shared/browser/download';
@@ -59,7 +60,6 @@ export class RetrievalEvaluation {
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobToasts = inject(JobToasts);
-  private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   private readonly collectionsRead = apiResource({
     feature: 'knowledge',
@@ -88,17 +88,16 @@ export class RetrievalEvaluation {
     const value = this.reportRead.value();
     return value?.run.id === this.reportId() ? value : null;
   });
-  readonly actionError = signal('');
+  /** 寫入與下載：`key` 是觸發的控制項（`start`、`cancel`、`retry`、`download`、`import`），只有它轉圈。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly error = computed(
     () =>
-      this.actionError() ||
+      this.working.error() ||
       this.collectionsRead.error() ||
       this.runsRead.error() ||
       this.reportRead.error(),
   );
-  readonly busy = signal(false);
-  /** 由哪個控制項觸發的寫入：只有它轉圈，其他寫入仍由 `busy` 擋下。 */
-  readonly working = signal<'start' | 'cancel' | 'retry' | 'download' | null>(null);
   readonly loading = computed(() => this.collectionsRead.loading() || this.runsRead.loading());
   readonly runsLoading = this.runsRead.loading;
   /** 讀取失敗後按重試：重試鈕轉圈。 */
@@ -131,7 +130,7 @@ export class RetrievalEvaluation {
     2,
   );
   load() {
-    this.actionError.set('');
+    this.working.error.set('');
     this.collectionsRead.reload();
     this.runsRead.reload();
   }
@@ -146,100 +145,70 @@ export class RetrievalEvaluation {
     this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((item) => item !== id)));
   }
   select(id: string) {
-    this.actionError.set('');
+    this.working.error.set('');
     if (id === this.reportId()) this.reportRead.reload();
     else this.reportId.set(id);
   }
   async create(event: Event) {
     event.preventDefault();
     if (this.busy() || this.form.invalid || !this.selected().length) return;
-    const valid = this.scope.guard();
-    this.actionError.set('');
     let cases: RetrievalEvaluationCase[];
     try {
       cases = JSON.parse(this.form.controls.corpus.value) as RetrievalEvaluationCase[];
       if (!Array.isArray(cases) || cases.length < 1 || cases.length > 20)
         throw new ClientValidationError('retrievalEvaluationFormat');
     } catch (error) {
-      this.actionError.set(
+      this.working.fail(
         error instanceof SyntaxError
           ? 'JSON 格式不正確，請依範例修正後再執行。'
-          : this.scope.message(error),
+          : safeMessage(error),
       );
       return;
     }
-    this.busy.set(true);
-    this.working.set('start');
-    try {
-      const run = await this.api.startRetrievalEvaluation({
-        title: this.form.controls.title.value.trim(),
-        collectionIds: this.selected(),
-        cases,
-      });
-      this.jobToasts.track(run.job);
-      if (!valid()) return;
-      this.runsRead.value.update((runs) => [run, ...(runs ?? [])]);
-      this.select(run.id);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.settle();
-    }
+    const outcome = await this.working.run(
+      async () => {
+        const run = await this.api.startRetrievalEvaluation({
+          title: this.form.controls.title.value.trim(),
+          collectionIds: this.selected(),
+          cases,
+        });
+        // 評測在背景進行：已離開頁面也照樣追蹤。
+        this.jobToasts.track(run.job);
+        return run;
+      },
+      { key: 'start' },
+    );
+    if (!outcome.ok) return;
+    this.runsRead.value.update((runs) => [outcome.value, ...(runs ?? [])]);
+    this.select(outcome.value.id);
   }
   async importCorpus(event: Event) {
     const input = event.target as HTMLInputElement,
-      file = input.files?.[0],
-      valid = this.scope.guard();
+      file = input.files?.[0];
     input.value = '';
     if (!file) return;
     if (file.size > 1000000) {
-      this.actionError.set('驗收集檔案最多 1 MB。');
+      this.working.fail('驗收集檔案最多 1 MB。');
       return;
     }
-    try {
-      const text = await file.text();
-      if (valid()) {
-        this.form.controls.corpus.setValue(text);
-        this.actionError.set('');
-      }
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    }
+    const outcome = await this.working.run(() => file.text(), { key: 'import' });
+    if (outcome.ok) this.form.controls.corpus.setValue(outcome.value);
   }
-  async control(action: 'cancel' | 'retry') {
-    const report = this.report(),
-      valid = this.scope.guard();
-    if (!report || this.busy()) return;
-    this.busy.set(true);
-    this.working.set(action);
-    this.actionError.set('');
-    try {
-      await this.jobToasts.control(report.run.job.id, action === 'retry');
-      if (valid()) this.select(report.run.id);
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.settle();
-    }
+  async control(kind: 'cancel' | 'retry') {
+    const report = this.report();
+    if (!report) return;
+    const outcome = await this.working.run(
+      () => this.jobToasts.control(report.run.job.id, kind === 'retry'),
+      { key: kind },
+    );
+    if (outcome.ok) this.select(report.run.id);
   }
   async download() {
-    const report = this.report(),
-      valid = this.scope.guard();
-    if (!report || this.busy()) return;
-    this.busy.set(true);
-    this.working.set('download');
-    this.actionError.set('');
-    try {
-      const latest = await this.api.retrievalReport(report.run.id);
-      if (valid()) downloadFile(JSON.stringify(latest, null, 2), report.run.title, 'json');
-    } catch (error) {
-      if (valid()) this.actionError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.settle();
-    }
-  }
-  private settle() {
-    this.busy.set(false);
-    this.working.set(null);
+    const report = this.report();
+    if (!report) return;
+    const outcome = await this.working.run(() => this.api.retrievalReport(report.run.id), {
+      key: 'download',
+    });
+    if (outcome.ok) downloadFile(JSON.stringify(outcome.value, null, 2), report.run.title, 'json');
   }
 }

@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
@@ -34,7 +34,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
     size="sm"
     #dialog
     class="platform-dialog"
-    [busy]="busy()"
+    [busy]="saving.pending()"
     (close)="store.dialog() === 'local-login' && store.close()"
   >
     <form class="dialog-form" (submit)="submit($event)">
@@ -44,8 +44,8 @@ export function localPasswordProblem(password: string, confirmation: string) {
           本地密碼與 AD 密碼分開管理，可在 AD 無法使用時登入；AD 使用者需定期（預設 30 天內）用 AD
           登入一次，本地密碼才會持續有效。儲存後其他裝置上的登入會登出。
         </p>
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (saving.error()) {
+          <nx-notice tone="danger" [message]="saving.error()" />
         }
         <label
           >本地帳號<input
@@ -54,7 +54,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
             required
             maxlength="64"
             [value]="account()"
-            [readOnly]="busy()"
+            [readOnly]="saving.pending()"
             (input)="account.set($any($event.target).value)"
         /></label>
         <label
@@ -66,7 +66,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
             minlength="12"
             maxlength="128"
             [value]="password()"
-            [readOnly]="busy()"
+            [readOnly]="saving.pending()"
             (input)="password.set($any($event.target).value)"
         /></label>
         <label
@@ -77,7 +77,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
             required
             maxlength="128"
             [value]="confirmation()"
-            [readOnly]="busy()"
+            [readOnly]="saving.pending()"
             (input)="confirmation.set($any($event.target).value)"
         /></label>
         <p class="form-note">12–128 個字元，建議用一句好記的長句；不可包含帳號名稱或常見密碼。</p>
@@ -86,13 +86,13 @@ export function localPasswordProblem(password: string, confirmation: string) {
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="busy() || null"
-          (click)="busy() || store.close()"
+          [attr.aria-disabled]="saving.pending() || null"
+          (click)="saving.pending() || store.close()"
         >
           取消
         </button>
-        <button nxPending type="submit" class="primary-button" [pending]="busy()">
-          {{ busy() ? '儲存中…' : '儲存' }}
+        <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
+          {{ saving.pending() ? '儲存中…' : '儲存' }}
         </button>
       </footer>
     </form>
@@ -106,8 +106,7 @@ export class LocalLoginDialog {
   readonly account = signal('');
   readonly password = signal('');
   readonly confirmation = signal('');
-  readonly busy = signal(false);
-  readonly error = signal('');
+  readonly saving = action();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   constructor() {
@@ -117,23 +116,17 @@ export class LocalLoginDialog {
       this.account.set((security?.localLogin.account ?? security?.adAccount ?? '').toLowerCase());
       this.password.set('');
       this.confirmation.set('');
-      this.error.set('');
+      this.saving.error.set('');
     });
   }
 
   async submit(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
+    if (this.saving.pending()) return;
     const problem = localPasswordProblem(this.password(), this.confirmation());
-    if (problem) return this.error.set(problem);
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      await this.store.setLocalLogin({ account: this.account().trim(), password: this.password() });
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.busy.set(false);
-    }
+    if (problem) return this.saving.fail(problem);
+    await this.saving.run(() =>
+      this.store.setLocalLogin({ account: this.account().trim(), password: this.password() }),
+    );
   }
 }

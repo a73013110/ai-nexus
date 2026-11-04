@@ -33,7 +33,7 @@
           placeholder="選擇郵件範本"
           [options]="options()"
           [value]="category()"
-          [loading]="loading()"
+          [loading]="reading.pending()"
           [disabled]="busy()"
           (valueChange)="choose($event)"
       /></label>

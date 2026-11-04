@@ -3,7 +3,7 @@
   #editorDialog
   class="platform-dialog admin-editor"
   [size]="editor.current()?.kind === 'feature' ? 'sm' : 'lg'"
-  [busy]="saving()"
+  [busy]="saving.pending()"
   (cancel)="cancel($event)"
 >
   @if (editor.current(); as e) {
@@ -39,8 +39,8 @@
       }
       <!-- 角色、功能與群組的「群組設定」頁籤是一頁區段，與使用者的頁籤相同。 -->
       <ng-template #content>
-        @if (editorError()) {
-          <nx-notice tone="danger" [message]="editorError()" />
+        @if (saving.error()) {
+          <nx-notice tone="danger" [message]="saving.error()" />
         }
         @if (e.kind === 'group' && groupSection() === 'models') {
           <nx-model-policy-editor
@@ -48,7 +48,7 @@
             [loading]="store.loading()"
             [busy]="store.refreshing()"
             [value]="e.draft.modelPolicy"
-            [disabled]="saving()"
+            [disabled]="saving.pending()"
             (valueChange)="update('modelPolicy', $event)"
           />
         } @else if (e.kind === 'group' && groupSection() === 'features') {
@@ -75,7 +75,7 @@
                   label="授予功能"
                   [groups]="featureChoices()"
                   [selected]="e.draft.ids"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (selectedChange)="update('ids', $event)"
                 />
               </div>
@@ -127,7 +127,7 @@
                           [label]="grant.name + '：所有成員的範圍'"
                           [options]="grant.options"
                           [value]="grant.value"
-                          [disabled]="saving()"
+                          [disabled]="saving.pending()"
                           (valueChange)="updateScope(grant.id, $event)"
                         />
                         @if (grant.manager; as manager) {
@@ -142,7 +142,7 @@
                               [label]="grant.name + '：主管另可看的範圍'"
                               [options]="manager.options"
                               [value]="manager.value"
-                              [disabled]="saving()"
+                              [disabled]="saving.pending()"
                               (valueChange)="updateScope(grant.id, $event, 'managerScopes')"
                             />
                           }
@@ -207,7 +207,7 @@
                       autocomplete="off"
                       [attr.aria-describedby]="id + '-id-hint'"
                       [value]="e.draft.id"
-                      [readOnly]="saving()"
+                      [readOnly]="saving.pending()"
                       (input)="update('id', $any($event.target).value)"
                   /></label>
                   <p class="form-note" [id]="id + '-id-hint'">
@@ -223,7 +223,7 @@
                     maxlength="120"
                     [placeholder]="e.defaultName"
                     [value]="e.draft.name"
-                    [readOnly]="saving()"
+                    [readOnly]="saving.pending()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
                 @if (e.kind === 'feature') {
@@ -237,7 +237,7 @@
                   [label]="'啟用' + label(e.kind)"
                   [description]="enabledNote[e.kind]"
                   [checked]="e.draft.enabled"
-                  [disabled]="saving()"
+                  [disabled]="saving.pending()"
                   (checkedChange)="update('enabled', $event)"
                 />
               </div>
@@ -257,7 +257,7 @@
                     label="加入功能群組"
                     [groups]="groupChoices()"
                     [selected]="e.draft.ids"
-                    [disabled]="saving()"
+                    [disabled]="saving.pending()"
                     (selectedChange)="update('ids', $event)"
                   />
                 </div>
@@ -312,7 +312,7 @@
                       placeholder="使用網站預設容量"
                       [attr.aria-describedby]="id + '-storage-hint'"
                       [value]="e.draft.storage"
-                      [readOnly]="saving()"
+                      [readOnly]="saving.pending()"
                       (input)="update('storage', $any($event.target).value)"
                   /></label>
                   <p class="form-note" [id]="id + '-storage-hint'">
@@ -329,20 +329,20 @@
           <button
             type="button"
             class="secondary-button"
-            [attr.aria-disabled]="saving() || null"
+            [attr.aria-disabled]="saving.pending() || null"
             (click)="requestClose()"
           >
             取消
           </button>
-          <button nxPending type="submit" class="primary-button" [pending]="saving()">
-            {{ saving() ? '建立中…' : '建立' + label(e.kind) }}
+          <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
+            {{ saving.pending() ? '建立中…' : '建立' + label(e.kind) }}
           </button>
         </footer>
       } @else {
         <nx-dialog-save-bar
           [label]="'儲存' + label(e.kind)"
           [dirty]="editor.dirty()"
-          [saving]="saving()"
+          [saving]="saving.pending()"
           (revert)="revert()"
         />
       }

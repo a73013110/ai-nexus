@@ -13,16 +13,16 @@
           nxPending
           type="button"
           class="primary-button knowledge-upload"
-          [pending]="uploading()"
+          [pending]="uploading.pending()"
           (click)="fileInput.click()"
         >
-          <nx-icon name="upload" />{{ uploading() ? '上傳中…' : '上傳文件' }}
+          <nx-icon name="upload" />{{ uploading.pending() ? '上傳中…' : '上傳文件' }}
         </button>
       }
       <nx-action-menu
         label="知識庫操作"
         [items]="collectionActions()"
-        [busy]="working().has(collection.resource.id)"
+        [busy]="working.pendingFor(collection.resource.id)"
         (action)="action($event)"
       />
     } @else if (!id()) {
@@ -93,7 +93,7 @@
         heading="來源文件"
         icon="document"
         [count]="loadingDocuments() ? null : documents().length"
-        [nxFileDrop]="collection.resource.canEdit && !uploading()"
+        [nxFileDrop]="collection.resource.canEdit && !uploading.pending()"
         (filesDropped)="upload($event)"
       >
         @if (collection.resource.canEdit) {
@@ -102,13 +102,13 @@
               class="icon-button"
               aria-label="貼上純文字"
               title="貼上純文字"
-              [disabled]="uploading()"
+              [disabled]="uploading.pending()"
               (click)="textEditor().open(collection.resource.id)"
             >
               <nx-icon name="edit" /></button
             ><nx-library-picker
               [compact]="true"
-              [disabled]="uploading()"
+              [disabled]="uploading.pending()"
               (chosen)="addLibrary($event)"
             />
           </ng-container>
@@ -152,7 +152,7 @@
                   <nx-action-menu
                     [label]="'文件操作：' + document.fileName"
                     [items]="actions(document)"
-                    [busy]="working().has(document.id)"
+                    [busy]="working.pendingFor(document.id)"
                     (action)="documentAction($event, document)"
                   />
                 }
@@ -194,19 +194,19 @@
           ><button
             nxPending
             class="secondary-button"
-            [pending]="searching()"
+            [pending]="searching.pending()"
             [disabled]="!query().trim()"
           >
-            <nx-icon name="search" />{{ searching() ? '檢索中…' : '檢索來源' }}
+            <nx-icon name="search" />{{ searching.pending() ? '檢索中…' : '檢索來源' }}
           </button>
         </form>
         @if (result(); as result) {
           <nx-retrieval-results
             [result]="result"
-            [class.is-refreshing]="searching()"
-            [attr.aria-busy]="searching() || null"
+            [class.is-refreshing]="searching.pending()"
+            [attr.aria-busy]="searching.pending() || null"
           />
-        } @else if (searching()) {
+        } @else if (searching.pending()) {
           <p class="form-note" role="status">正在檢索來源…</p>
         }
       </nx-panel>
@@ -234,12 +234,12 @@
   }
   <nx-text-source-editor (saved)="textSaved()" />
 </nx-feature-page>
-<dialog nxCompactDialog #editorDialog class="platform-dialog" [busy]="saving()">
+<dialog nxCompactDialog #editorDialog class="platform-dialog" [busy]="saving.pending()">
   <form class="dialog-form" (submit)="save($event)">
     <nx-dialog-header [heading]="editorId() ? '編輯知識庫' : '新增知識庫'" />
     <div class="dialog-body">
-      @if (editorError()) {
-        <nx-notice tone="danger" [message]="editorError()" />
+      @if (saving.error()) {
+        <nx-notice tone="danger" [message]="saving.error()" />
       }
       <label
         >名稱<input
@@ -248,7 +248,7 @@
           autofocus
           required
           maxlength="120"
-          [readOnly]="saving()"
+          [readOnly]="saving.pending()"
           [value]="editorName()"
           (input)="editorName.set($any($event.target).value)" /></label
       ><label
@@ -257,7 +257,7 @@
           aria-label="知識庫說明"
           rows="3"
           maxlength="2000"
-          [readOnly]="saving()"
+          [readOnly]="saving.pending()"
           [value]="editorDescription()"
           (input)="editorDescription.set($any($event.target).value)"
         ></textarea>
@@ -268,12 +268,12 @@
       <button
         type="button"
         class="secondary-button"
-        [attr.aria-disabled]="saving() || null"
-        (click)="saving() || editorDialog.close()"
+        [attr.aria-disabled]="saving.pending() || null"
+        (click)="saving.pending() || editorDialog.close()"
       >
         取消</button
-      ><button nxPending class="primary-button" [pending]="saving()">
-        {{ saving() ? '儲存中…' : '儲存知識庫' }}
+      ><button nxPending class="primary-button" [pending]="saving.pending()">
+        {{ saving.pending() ? '儲存中…' : '儲存知識庫' }}
       </button>
     </footer>
   </form>

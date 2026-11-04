@@ -4,6 +4,7 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from './access-control-store';
+import { ViewScope } from '@shared/browser/view-scope';
 import { accessPageNames, rolesTour } from './access-control-tour';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
 import { AdminRolesTab } from './roles/admin-roles-tab';
@@ -12,7 +13,7 @@ import { AdminRolesTab } from './roles/admin-roles-tab';
 @Component({
   selector: 'nx-roles-page',
   imports: [Notice, PendingButton, FeaturePage, AccessEditorDialog, AdminRolesTab],
-  providers: [AccessControlStore],
+  providers: [AccessControlStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.roles')"

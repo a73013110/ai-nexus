@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { AdminUserDto, DirectoryOutcomeDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { Checkbox } from '@shared/ui/checkbox';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -44,7 +44,7 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
       #dialog
       class="platform-dialog"
       (close)="opened.set(false)"
-      [busy]="busy()"
+      [busy]="syncing.pending()"
     >
       <nx-dialog-header
         heading="從 AD 更新使用者"
@@ -53,8 +53,8 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
       />
       @if (opened()) {
         <div class="dialog-body">
-          @if (error()) {
-            <nx-notice tone="danger" [message]="error()" />
+          @if (syncing.error()) {
+            <nx-notice tone="danger" [message]="syncing.error()" />
           }
           @if (outcomes(); as items) {
             <p class="form-note" role="status">{{ summary() }}</p>
@@ -94,8 +94,8 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
             <button
               type="button"
               class="secondary-button"
-              [attr.aria-disabled]="busy() || null"
-              (click)="busy() || dialog.close()"
+              [attr.aria-disabled]="syncing.pending() || null"
+              (click)="syncing.pending() || dialog.close()"
             >
               取消
             </button>
@@ -103,11 +103,11 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
               nxPending
               type="button"
               class="primary-button"
-              [pending]="busy()"
+              [pending]="syncing.pending()"
               [disabled]="!selected().size"
               (click)="sync()"
             >
-              {{ busy() ? '更新中…' : '從 AD 更新（' + selected().size + ' 人）' }}
+              {{ syncing.pending() ? '更新中…' : '從 AD 更新（' + selected().size + ' 人）' }}
             </button>
           }
         </footer>
@@ -124,8 +124,7 @@ export class DirectorySyncDialog {
   readonly users = signal<AdminUserDto[]>([]);
   readonly selected = signal<ReadonlySet<string>>(new Set());
   readonly outcomes = signal<DirectoryOutcomeDto[] | null>(null);
-  readonly busy = signal(false);
-  readonly error = signal('');
+  readonly syncing = action();
   readonly summary = computed(() => summarize(this.outcomes() ?? []));
 
   /** 列表一頁 100 筆，剛好是伺服器的單次上限；預設勾選有 AD 帳號的人。 */
@@ -136,7 +135,7 @@ export class DirectorySyncDialog {
       new Set(page.filter((user) => user.authentication?.adAccount).map((user) => user.id)),
     );
     this.outcomes.set(null);
-    this.error.set('');
+    this.syncing.error.set('');
     this.opened.set(true);
     this.dialog().nativeElement.showModal();
   }
@@ -150,19 +149,13 @@ export class DirectorySyncDialog {
     this.selected.set(new Set(checked ? this.users().map((user) => user.id) : []));
   }
   async sync() {
-    if (!this.selected().size || this.busy()) return;
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const ids = this.users()
-        .map((user) => user.id)
-        .filter((id) => this.selected().has(id));
-      this.outcomes.set((await this.api.syncDirectoryUsers(ids)).items);
-      this.store.changed();
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.busy.set(false);
-    }
+    if (!this.selected().size) return;
+    const ids = this.users()
+      .map((user) => user.id)
+      .filter((id) => this.selected().has(id));
+    const outcome = await this.syncing.run(() => this.api.syncDirectoryUsers(ids));
+    if (!outcome.ok) return;
+    this.outcomes.set(outcome.value.items);
+    this.store.changed();
   }
 }

@@ -9,7 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { VerificationCodeDto } from '@core/api/schema';
-import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
@@ -50,8 +50,8 @@ const METHODS = [
       <nx-dialog-header heading="確認是你本人" closeLabel="關閉確認身分" />
       <div class="dialog-body">
         <p class="form-note">變更信箱或登入方式前請再確認一次身分；確認後幾分鐘內不必重複輸入。</p>
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (working.error()) {
+          <nx-notice tone="danger" [message]="working.error()" />
         }
         @if (options().length === 0) {
           <nx-notice
@@ -90,11 +90,13 @@ const METHODS = [
             nxPending
             type="button"
             class="secondary-button"
-            [pending]="working() === 'send'"
-            [disabled]="working() === 'confirm'"
+            [pending]="working.pendingFor('send')"
+            [disabled]="working.pendingFor('confirm')"
             (click)="send()"
           >
-            {{ working() === 'send' ? '寄送中…' : challenge() ? '重新寄送驗證碼' : '寄送驗證碼' }}
+            {{
+              working.pendingFor('send') ? '寄送中…' : challenge() ? '重新寄送驗證碼' : '寄送驗證碼'
+            }}
           </button>
         }
       </div>
@@ -111,10 +113,10 @@ const METHODS = [
           nxPending
           type="submit"
           class="primary-button"
-          [pending]="working() === 'confirm'"
-          [disabled]="working() === 'send' || (!busy() && !ready())"
+          [pending]="working.pendingFor('confirm')"
+          [disabled]="working.pendingFor('send') || (!busy() && !ready())"
         >
-          {{ working() === 'confirm' ? '確認中…' : '確認' }}
+          {{ working.pendingFor('confirm') ? '確認中…' : '確認' }}
         </button>
       </footer>
     </form>
@@ -132,10 +134,9 @@ export class ReauthenticationDialog {
   readonly password = signal('');
   readonly code = signal('');
   readonly challenge = signal<VerificationCodeDto | null>(null);
-  /** 進行中的動作：寄送驗證碼或確認身分；只讓按下的那顆轉。 */
-  readonly working = signal<'' | 'send' | 'confirm'>('');
-  readonly busy = computed(() => this.working() !== '');
-  readonly error = signal('');
+  /** 寄送驗證碼（`send`）或確認身分（`confirm`）：只讓按下的那顆轉。 */
+  readonly working = action();
+  readonly busy = this.working.pending;
   readonly ready = computed(() =>
     this.method() === 'password'
       ? this.password().length > 0
@@ -148,40 +149,29 @@ export class ReauthenticationDialog {
       this.password.set('');
       this.code.set('');
       this.challenge.set(null);
-      this.error.set('');
+      this.working.error.set('');
     });
   }
 
   async send() {
-    if (this.busy()) return;
-    this.working.set('send');
-    this.error.set('');
-    try {
-      this.challenge.set(await this.store.sendCode());
-      this.code.set('');
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.working.set('');
-    }
+    const outcome = await this.working.run(() => this.store.sendCode(), { key: 'send' });
+    if (!outcome.ok) return;
+    this.challenge.set(outcome.value);
+    this.code.set('');
   }
 
   async submit(event: Event) {
     event.preventDefault();
     if (this.busy() || !this.ready()) return;
-    this.working.set('confirm');
-    this.error.set('');
-    try {
-      const challenge = this.challenge();
-      await this.store.reauthenticate(
-        this.method() === 'password'
-          ? { password: this.password() }
-          : { challengeId: challenge!.id, code: this.code() },
-      );
-    } catch (error) {
-      this.error.set(safeMessage(error));
-    } finally {
-      this.working.set('');
-    }
+    const challenge = this.challenge();
+    await this.working.run(
+      () =>
+        this.store.reauthenticate(
+          this.method() === 'password'
+            ? { password: this.password() }
+            : { challengeId: challenge!.id, code: this.code() },
+        ),
+      { key: 'confirm' },
+    );
   }
 }

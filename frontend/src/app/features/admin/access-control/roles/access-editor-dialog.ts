@@ -19,7 +19,8 @@ import type {
 import { catalogFeature, featureSections } from '@core/api/catalog';
 import { CATALOG_SCOPES } from '@core/api/feature-catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { isStaleWrite, safeMessage } from '@core/errors/safe-errors';
+import { safeMessage } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { featureIcon } from '@core/layout/navigation-tree';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { uniqueId } from '@shared/browser/unique-id';
@@ -237,9 +238,8 @@ export class AccessEditorDialog {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AccessControlApi);
   readonly editor = new DraftEditor<AccessDraft, Target>(sameDraft);
-  readonly saving = signal(false);
-  /** 儲存中或測試其他身分時，欄位唯讀。 */
-  readonly editorError = signal('');
+  /** 儲存；欄位檢查與伺服器的失敗都顯示在對話框內（版本過期則關閉後由頁面說明）。儲存中欄位唯讀。 */
+  readonly saving = action();
   /** 功能群組目前的頁籤。 */
   readonly groupSection = signal<GroupSection>('settings');
   /**
@@ -400,7 +400,7 @@ export class AccessEditorDialog {
   open(kind: AccessKind, item?: AccessItem) {
     // 重讀中列上的版本可能還是舊的（例如剛存完同一列），等重讀完才能開。
     if (item && this.store.refreshing()) return;
-    this.editorError.set('');
+    this.saving.error.set('');
     const role = kind === 'role' ? (item as AdminRoleDto) : null,
       group = kind === 'group' ? (item as AdminGroupDto) : null,
       feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
@@ -446,7 +446,7 @@ export class AccessEditorDialog {
   /** 還原為開啟時的值；分頁停留在原位。 */
   revert() {
     this.editor.revert();
-    this.editorError.set('');
+    this.saving.error.set('');
   }
   /** Escape、關閉鈕、抽屜的滑動關閉都會走到這裡。 */
   cancel(event: Event) {
@@ -454,7 +454,7 @@ export class AccessEditorDialog {
     void this.requestClose();
   }
   async requestClose() {
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     const editor = this.editor.current();
     const message = editor?.isNew
       ? `尚未建立${this.label(editor.kind)}，關閉後會捨棄已填寫的內容。`
@@ -465,13 +465,13 @@ export class AccessEditorDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor.current();
-    if (!editor || this.saving() || (!editor.isNew && !this.editor.dirty())) return;
+    if (!editor || this.saving.pending() || (!editor.isNew && !this.editor.dirty())) return;
     const draft = editor.draft;
     // 錯誤會打開含有該欄位的分頁並聚焦（或顯示訊息），
     // 即使欄位位於頁面較下方，修正處也能被看到。
     const fail = (section: GroupSection, message: string, field?: string) => {
       if (editor.kind === 'group') this.selectSection(section);
-      this.editorError.set(message);
+      this.saving.fail(message);
       afterNextRender(
         () => {
           const body = this.body()?.nativeElement;
@@ -498,9 +498,7 @@ export class AccessEditorDialog {
         return fail('settings', safeMessage(error), 'storage');
       }
     }
-    this.saving.set(true);
-    this.editorError.set('');
-    try {
+    const outcome = await this.saving.run(async () => {
       if (editor.kind === 'role')
         await this.api.role(draft.id, {
           name: draft.name,
@@ -524,21 +522,20 @@ export class AccessEditorDialog {
           enabled: draft.enabled,
           rowVersion: editor.rowVersion ?? 0,
         });
+    });
+    if (outcome.ok) {
       this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.saved(
         editor.isNew ? '已建立' + this.label(editor.kind) : '已儲存',
         '授權變更會在下一次操作生效。',
       );
-    } catch (error) {
-      if (isStaleWrite(error)) {
-        // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.editor.markSaved();
-        this.dialog().nativeElement.close();
-        this.store.stale();
-      } else this.editorError.set(safeMessage(error));
-    } finally {
-      this.saving.set(false);
+    } else if (outcome.stale) {
+      // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明（對話框不留訊息）。
+      this.saving.reset();
+      this.editor.markSaved();
+      this.dialog().nativeElement.close();
+      this.store.stale();
     }
   }
   label(kind: AccessKind) {

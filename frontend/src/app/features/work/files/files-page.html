@@ -8,11 +8,11 @@
       nxPending
       type="button"
       class="primary-button file-upload"
-      [pending]="uploading()"
-      [disabled]="!uploading() && !policy()"
+      [pending]="uploading.pending()"
+      [disabled]="!uploading.pending() && !policy()"
       (click)="fileInput.click()"
     >
-      <nx-icon name="upload" />{{ uploading() ? '上傳中…' : '上傳檔案' }}
+      <nx-icon name="upload" />{{ uploading.pending() ? '上傳中…' : '上傳檔案' }}
     </button>
     <input
       #fileInput
@@ -39,7 +39,7 @@
   <div
     #gallery
     class="file-drop"
-    [nxFileDrop]="!uploading() && !!policy()"
+    [nxFileDrop]="!uploading.pending() && !!policy()"
     (filesDropped)="upload($event)"
   >
     <nx-resource-gallery
@@ -66,7 +66,7 @@
       <nx-file-browser
         [items]="store.items()"
         [knowledge]="session.has('knowledge')"
-        [working]="deleting()"
+        [working]="isDeleting"
         (addKnowledge)="knowledge().open($event)"
         (remove)="remove($event)"
         (rename)="rename($event)"

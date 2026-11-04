@@ -19,6 +19,7 @@ import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ProjectsApi } from '@features/work/projects/projects-api';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { uniqueId } from '@shared/browser/unique-id';
 
@@ -32,7 +33,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
   imports: [Notice, CompactDialog, DialogHeader, Field, FormField, PendingButton, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="busy()">
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving.pending()">
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="讓這段對話更合用" closeLabel="關閉對話設定" />
       <div class="dialog-body">
@@ -76,7 +77,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
                     [value]="projectId()"
                     [options]="projectOptions()"
                     [loading]="projectsRead.refreshing() || moving()"
-                    [disabled]="busy() && !moving()"
+                    [disabled]="saving.pending() && !moving()"
                     (valueChange)="chooseProject($event)"
                 /></label>
                 <p class="form-note">
@@ -94,8 +95,8 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="busy() || null"
-          (click)="busy() || dialog.close()"
+          [attr.aria-disabled]="saving.pending() || null"
+          (click)="saving.pending() || dialog.close()"
         >
           取消
         </button>
@@ -103,10 +104,10 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
           nxPending
           type="submit"
           class="primary-button"
-          [pending]="busy() && !moving()"
+          [pending]="saving.pending() && !moving()"
           [disabled]="fields().invalid()"
         >
-          {{ busy() && !moving() ? '儲存中…' : '儲存設定' }}
+          {{ saving.pending() && !moving() ? '儲存中…' : '儲存設定' }}
         </button>
       </footer>
     </form>
@@ -116,7 +117,6 @@ export class ConversationSettingsDialog {
   readonly id = uniqueId('nx-conversation-settings');
   readonly session = inject(WorkspaceSession);
   private readonly projects = inject(ProjectsApi);
-  private readonly scope = inject(ViewScope);
   readonly projectId = signal('');
   /** 正在編輯的對話。 */
   private readonly target = signal<ConversationDto | null>(null);
@@ -144,20 +144,20 @@ export class ConversationSettingsDialog {
     maxLength(schema.instruction, 4000);
     maxLength(schema.labels, 150);
     // 送出中欄位唯讀（不停用，焦點留在原處）；失敗後解除即可修改再送出。
-    readonly(schema.instruction, () => this.busy());
-    readonly(schema.labels, () => this.busy());
+    readonly(schema.instruction, () => this.saving.pending());
+    readonly(schema.labels, () => this.saving.pending());
   });
   readonly labelRule = LABEL_RULE;
-  readonly busy = signal(false);
-  /** 所屬專案立即儲存中：下拉鈕轉圈，送出鈕與其他欄位等它完成。 */
-  readonly moving = signal(false);
-  readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.projectsRead.error());
+  /** 儲存設定（`settings`）或立即變更所屬專案（`project`）；一次一件，其他欄位等它完成。 */
+  readonly saving = action();
+  /** 所屬專案立即儲存中：下拉鈕轉圈。 */
+  readonly moving = computed(() => this.saving.pendingFor('project'));
+  readonly error = computed(() => this.saving.error() || this.projectsRead.error());
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   open(conversation: ConversationDto) {
     this.target.set(conversation);
     this.opened.update((value) => value + 1);
-    this.actionError.set('');
+    this.saving.error.set('');
     this.projectId.set(conversation.projectId ?? '');
     this.model.set({
       instruction: conversation.systemInstruction,
@@ -167,48 +167,32 @@ export class ConversationSettingsDialog {
   }
   async chooseProject(value: string) {
     const target = this.target();
-    if (!target || this.busy()) return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.moving.set(true);
-    this.actionError.set('');
-    try {
-      if (await this.assignProject()(target, value || null)) {
-        if (valid()) this.projectId.set(value);
-      } else if (valid())
-        this.actionError.set('未能變更專案，請確認沒有正在生成的回答，並檢查專案權限。');
-    } finally {
-      if (valid()) {
-        this.busy.set(false);
-        this.moving.set(false);
-      }
-    }
+    if (!target) return;
+    const outcome = await this.saving.run(() => this.assignProject()(target, value || null), {
+      key: 'project',
+    });
+    if (!outcome.ok) return;
+    if (outcome.value) this.projectId.set(value);
+    else this.saving.fail('未能變更專案，請確認沒有正在生成的回答，並檢查專案權限。');
   }
   async submit(event: Event) {
     event.preventDefault();
     const target = this.target();
-    if (this.busy() || !target || this.fields().invalid()) return;
+    if (this.saving.pending() || !target || this.fields().invalid()) return;
     const labels = this.model()
       .labels.split(/[,，]/)
       .map((label) => label.trim())
       .filter(Boolean);
     if (labels.length > MAX_LABELS || labels.some((label) => label.length > MAX_LABEL_LENGTH)) {
-      this.actionError.set(LABEL_RULE);
+      this.saving.fail(LABEL_RULE);
       return;
     }
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.actionError.set('');
-    try {
-      const saved = await this.save()(target, {
-        systemInstruction: this.model().instruction,
-        labels,
-      });
-      if (!valid()) return;
-      if (saved) this.dialog()?.nativeElement.close();
-      else this.actionError.set('未能儲存設定，請確認連線後重試。');
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+    const outcome = await this.saving.run(
+      () => this.save()(target, { systemInstruction: this.model().instruction, labels }),
+      { key: 'settings' },
+    );
+    if (!outcome.ok) return;
+    if (outcome.value) this.dialog()?.nativeElement.close();
+    else this.saving.fail('未能儲存設定，請確認連線後重試。');
   }
 }

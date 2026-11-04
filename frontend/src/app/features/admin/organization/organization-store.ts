@@ -61,7 +61,9 @@ export class OrganizationStore {
    * 正在寫入的對象（例：`unit:<id>`、`primary:<userId>`）：只有那個控制項轉圈，
    * 其他寫入仍由 `busy` 擋下。
    */
-  readonly working = this.writing.key;
+  working(key: string) {
+    return this.writing.pendingFor(key);
+  }
   readonly error = computed(() => this.writing.error() || this.unitsRead.error());
   /**
    * 成員的勾選要等寫入後的重讀回來才解除：重讀前成員資料仍是舊的，此時切換另一個勾選會帶著舊值
@@ -72,8 +74,7 @@ export class OrganizationStore {
   /** `key` 的成員寫入正在送出，或已送出、正等重讀確認。 */
   memberPending(key: string) {
     return (
-      (this.writing.pending() && this.working() === key) ||
-      (this.membersRead.refreshing() && this.settling() === key)
+      this.writing.pendingFor(key) || (this.membersRead.refreshing() && this.settling() === key)
     );
   }
 
@@ -155,7 +156,7 @@ export class OrganizationStore {
   private async run(write: () => Promise<unknown>, done: string, after: () => void, key: string) {
     if (this.busy()) return false;
     this.settling.set('');
-    const outcome = await this.writing.run(write, key);
+    const outcome = await this.writing.run(write, { key });
     if (outcome.ok) {
       if (done) this.toast.success(done);
       this.settling.set(key);
