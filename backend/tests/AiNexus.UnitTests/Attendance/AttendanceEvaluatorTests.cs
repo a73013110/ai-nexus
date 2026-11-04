@@ -470,14 +470,25 @@ public sealed class AttendanceEvaluatorTests
     [Fact]
     public void TodayIsNeverAnAnomalyAndNotYetJudgedForLateness()
     {
-        foreach (var (first, last) in new (DateTimeOffset?, DateTimeOffset?)[] { (null, null), (At(9, 30), null), (At(9, 30), At(12, 0)) })
+        // 應下班照樣由上班刷卡算出（遲到照表定下班），只有一筆也算：中午匯入時通常只有上班那筆。
+        foreach (var (first, last, expected) in new (DateTimeOffset?, DateTimeOffset?, DateTimeOffset?)[] { (null, null, null), (At(9, 30), null, At(18, 0)), (At(8, 10), At(12, 0), At(17, 40)) })
         {
             var result = AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, first, last, []), Rules, Day);
 
             Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.DayInProgress), (result.Status, result.Reason));
             Assert.Equal((null, 0, null), (result.Coverage, result.ShortSeconds, result.AdjustedClockOut));
-            Assert.Equal((first, null, null, 0, 0), (result.ClockIn, result.ClockOut, result.ExpectedClockOut, result.LateSeconds, result.EarlyLeaveSeconds));
+            Assert.Equal((first, null, expected, 0, 0), (result.ClockIn, result.ClockOut, result.ExpectedClockOut, result.LateSeconds, result.EarlyLeaveSeconds));
+            Assert.Empty(result.Gaps);
         }
+    }
+
+    [Fact]
+    public void TodayAlsoForecastsTheClockOutAfterApprovedForms()
+    {
+        // 08:10 到、請 15:40～17:40 的假：扣兩小時後 15:40 可走；原本的應下班照樣是 17:40。
+        var result = AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, At(8, 10), null, [Approved(At(15, 40), At(17, 40))]), Rules, Day);
+
+        Assert.Equal(((DateTimeOffset?)At(17, 40), (DateTimeOffset?)At(15, 40), 2 * 3600), (result.ExpectedClockOut, result.AdjustedClockOut, result.FormSeconds));
     }
 
     [Fact]

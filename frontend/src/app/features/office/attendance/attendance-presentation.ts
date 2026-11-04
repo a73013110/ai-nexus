@@ -315,6 +315,9 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
     /** 只有一筆刷卡時上下班是同一筆，只顯示一次。 */
     singlePunch: !!day.clockIn && day.clockIn === day.clockOut,
     expected: clockTime(day.expectedClockOut),
+    /** 今天的應下班是由上班刷卡先算出的（還沒判定），放在 title 說明。 */
+    expectedNote:
+      day.date === today && day.expectedClockOut ? '依今天的上班時間算出，下班刷卡晚上才更新' : '',
     /** 扣掉核准表單後的應下班；與原本的應下班相同時不重複顯示。 */
     adjusted:
       day.adjustedClockOut && day.adjustedClockOut !== day.expectedClockOut

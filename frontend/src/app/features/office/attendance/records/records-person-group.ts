@@ -126,7 +126,12 @@ export type RecordsGroup = ReturnType<typeof presentGroup>;
               —
             }
           </td>
-          <td nxTableColumn="expected" class="records-time" data-label="應下班">
+          <td
+            nxTableColumn="expected"
+            class="records-time"
+            data-label="應下班"
+            [attr.title]="row.expectedNote || null"
+          >
             {{ row.expected || '—' }}
             <!-- 原本的應下班照舊系統；扣掉核准表單後的時間另起一行，走在它之後就補足。 -->
             @if (row.adjusted) {

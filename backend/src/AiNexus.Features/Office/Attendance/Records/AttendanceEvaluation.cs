@@ -2,7 +2,8 @@ namespace AiNexus.Features.Office.Attendance.Records;
 
 /// <summary>
 /// 一個出勤日的判定結果。<paramref name="ClockIn"/>／<paramref name="ClockOut"/> 是最早與最晚刷卡（+08:00，精確到秒），任何狀態都照實回傳；只有今天不回傳下班（見 <see cref="AttendanceEvaluator"/>）。
-/// <paramref name="ExpectedClockOut"/> 與遲到、早退秒數是不看表單的原始判定（同舊系統），只在 <see cref="AttendanceStatus.Present"/> 時有值，其餘為 null 與 0。
+/// <paramref name="ExpectedClockOut"/> 與遲到、早退秒數是不看表單的原始判定（同舊系統），只在 <see cref="AttendanceStatus.Present"/> 時有值，其餘為 null 與 0；
+/// 例外是今天（<see cref="AttendanceReason.DayInProgress"/>）：有上班刷卡就先由它算出應下班與扣表單後的應下班，遲到早退仍為 0。
 /// 遲到、早退用整數秒而不是 <see cref="TimeSpan"/>：JSON 是單純數字，前端直接格式化成「分:秒」或「時:分」，不必解析 <c>"00:05:00"</c> 這類字串。
 /// 表單的部分（規則見 <see cref="AttendanceEvaluator"/>）：
 /// <list type="bullet">

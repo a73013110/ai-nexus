@@ -28,6 +28,7 @@ public static class AttendanceEvaluator
     /// 今天的刷卡要等 HAMS 接收、轉出才匯入（中午與晚上各一次），白天看到的「沒刷卡」「只有上班」都不是結論；連遲到也不算，上班那筆可能還沒收進來。
     /// 今天不回傳下班（<see cref="AttendanceEvaluation.ClockOut"/> 為 null，任何狀態都是）：中午匯入的最晚一筆只是當時最後的刷卡，
     /// 畫面與匯出照實顯示會被看成已經下班；中午匯入是為了讓人知道今天幾點到。
+    /// 應下班與扣表單後的應下班改由上班刷卡先算出來（只有一筆也算，中午通常只有上班那筆），讓人知道今天幾點可以走；遲到與早退仍不算。
     /// 放假、請假與其他無法判定的狀態本來就不是異常，維持原樣。未來的日子沒有可判定的東西，呼叫端不要傳進來（拋出）。
     /// </summary>
     public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules, DateOnly today)
@@ -35,13 +36,20 @@ public static class AttendanceEvaluator
         ArgumentOutOfRangeException.ThrowIfGreaterThan(day.Date, today);
         var result = Evaluate(day, rules);
         if (day.Date != today) return result;
-        return result.Status is AttendanceStatus.Present or AttendanceStatus.Anomaly
-            ? result with
-            {
-                Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ClockOut = null, ExpectedClockOut = null, LateSeconds = 0, EarlyLeaveSeconds = 0,
-                AdjustedClockOut = null, Coverage = null, ShortSeconds = 0, Gaps = []
-            }
-            : result with { ClockOut = null };
+        if (result.Status is not (AttendanceStatus.Present or AttendanceStatus.Anomaly)) return result with { ClockOut = null };
+        // 出勤與異常一定有日型的規則；沒有上班刷卡（整天沒刷）就沒有可推算的應下班。
+        DateTimeOffset? expected = null, adjusted = null;
+        if (Judged(result.ClockIn, rules.PunchPrecision) is { } inAt)
+        {
+            var shift = new Shift(day.Date, RuleOf(day.DayType, rules)!);
+            expected = shift.ExpectedClockOut(inAt);
+            adjusted = result.FormSeconds > 0 ? shift.ClockOutWith(inAt, result.FormSeconds) : null;
+        }
+        return result with
+        {
+            Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ClockOut = null, ExpectedClockOut = expected, LateSeconds = 0, EarlyLeaveSeconds = 0,
+            AdjustedClockOut = adjusted, Coverage = null, ShortSeconds = 0, Gaps = []
+        };
     }
 
     /// <summary>判定一天：先照舊系統算遲到、早退與應下班，再看表單補不補得足（<see cref="GapCoverage"/>）。</summary>
@@ -63,14 +71,7 @@ public static class AttendanceEvaluator
         var unjudged = new AttendanceEvaluation(day.Date, day.DayType, AttendanceStatus.Undetermined, null, clockIn, clockOut, null, 0, 0, day.FormState);
 
         if (day.DayType == AttendanceDayType.DayOff) return unjudged with { Status = AttendanceStatus.DayOff };
-        var rule = day.DayType switch
-        {
-            AttendanceDayType.FullDay => rules.FullDay,
-            AttendanceDayType.MorningOff => rules.MorningOff,
-            AttendanceDayType.AfternoonOff => rules.AfternoonOff,
-            _ => null
-        };
-        if (rule is null) return unjudged with { Reason = AttendanceReason.DayTypeUnknown };
+        if (RuleOf(day.DayType, rules) is not { } rule) return unjudged with { Reason = AttendanceReason.DayTypeUnknown };
         // 公文系統連不上時每天都會「沒有假單」，判成異常就是整頁誤報（ADR 0018）。
         if (clockIn is null && day.Forms is null) return unjudged with { Reason = AttendanceReason.FormsUnavailable };
 
@@ -97,9 +98,9 @@ public static class AttendanceEvaluator
         // 但分不出缺的是哪一次，當成上班會判出大段早退、當成下班會判出大段遲到，所以不算遲到早退，刷卡時間照樣回傳。
         if (clockIn == clockOut) return judged with { Status = AttendanceStatus.Anomaly, Reason = AttendanceReason.SinglePunch };
 
-        // 遲到從彈性終點起算（彈性內到都不算遲到）；遲到照表定下班，否則上班（早於彈性起點以起點計）＋時數。
+        // 遲到從彈性終點起算（彈性內到都不算遲到）。
         var late = inAt.Value > shift.FlexEnd;
-        var expected = late ? shift.ScheduledEnd : shift.ClockOutWith(inAt.Value, 0)!.Value;
+        var expected = shift.ExpectedClockOut(inAt.Value);
         var early = outAt.Value < expected;
         List<AttendanceGap> gaps = [];
         if (late) gaps.Add(new(AttendanceGapKind.Late, shift.FlexEnd, inAt.Value));
@@ -127,6 +128,9 @@ public static class AttendanceEvaluator
         public DateTimeOffset FlexEnd { get; } = TaipeiTime.At(date, rule.FlexEnd);
         public DateTimeOffset ScheduledStart { get; } = TaipeiTime.At(date, rule.ScheduledStart);
         public DateTimeOffset ScheduledEnd { get; } = TaipeiTime.At(date, rule.ScheduledEnd);
+
+        /// <summary>不看表單的應下班：遲到照表定下班，否則上班（早於彈性起點以起點計）＋時數。</summary>
+        public DateTimeOffset ExpectedClockOut(DateTimeOffset clockIn) => clockIn > FlexEnd ? ScheduledEnd : ClockOutWith(clockIn, 0)!.Value;
 
         /// <summary>一天該上的淨工時（全天 9.5 小時扣午休 1.5 小時＝8 小時）。</summary>
         private int NetWork => workSeconds - (int)rule.BreakLength.TotalSeconds;
@@ -195,6 +199,15 @@ public static class AttendanceEvaluator
             return span <= start - from ? from + span : end + (span - (start - from));
         }
     }
+
+    /// <summary>日型的上下班規則；整天放假與不知道日型沒有規則。</summary>
+    private static WorkdayRule? RuleOf(AttendanceDayType type, WorkdayOptions rules) => type switch
+    {
+        AttendanceDayType.FullDay => rules.FullDay,
+        AttendanceDayType.MorningOff => rules.MorningOff,
+        AttendanceDayType.AfternoonOff => rules.AfternoonOff,
+        _ => null
+    };
 
     private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a <= b ? a : b;
     private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a >= b ? a : b;

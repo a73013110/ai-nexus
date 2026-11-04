@@ -384,7 +384,7 @@ describe('AttendanceRecordsPage', () => {
     expect(page.draft().person).toBe('u1');
   });
 
-  it('shows today with the arrival time and the clock-out as updated in the evening', async () => {
+  it('shows today with the arrival time, the expected clock-out and the clock-out as updated in the evening', async () => {
     const data = records();
     data.people[0] = {
       ...data.people[0],
@@ -394,7 +394,7 @@ describe('AttendanceRecordsPage', () => {
           reason: 'DayInProgress',
           clockIn: '2026-10-22T07:50:54+08:00',
           clockOut: null,
-          expectedClockOut: null,
+          expectedClockOut: '2026-10-22T17:30:00+08:00',
         }),
       ],
     };
@@ -402,6 +402,10 @@ describe('AttendanceRecordsPage', () => {
     await fixture.whenStable();
     const row = root.querySelector('.records-person-group tr:not(.records-person-row)')!;
     expect(row.querySelector('.records-today')?.textContent).toContain('今天');
+    // 應下班由上班時間先算出，讓人知道幾點能走。
+    const expected = row.querySelector('td[nxTableColumn="expected"]')!;
+    expect(expected.textContent).toContain('17:30');
+    expect(expected.getAttribute('title')).toBe('依今天的上班時間算出，下班刷卡晚上才更新');
     expect(row.querySelector('td[nxTableColumn="clockIn"]')?.textContent).toContain('07:50:54');
     // 中午只先匯入到當時的刷卡：下班格不寫時間、也不是「未刷卡」。
     const clockOut = row.querySelector('td[nxTableColumn="clockOut"]')!;
