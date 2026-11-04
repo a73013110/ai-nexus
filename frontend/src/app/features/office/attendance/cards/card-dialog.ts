@@ -230,11 +230,11 @@ export class CardDialog {
     this.error.set('');
     if (editor.card) {
       const outcome = await this.store.saveNote(editor.card, note);
-      if (!outcome.saved && !outcome.stale) return this.error.set(outcome.error);
+      if (!outcome.ok && !outcome.stale) return this.error.set(outcome.error);
       // 版本已過期時也關掉：再送也會被拒，要從重讀後的資料重新開始。
       this.editor.markSaved();
       this.dialog().nativeElement.close();
-      if (!outcome.saved) this.stale.emit(outcome.error);
+      if (!outcome.ok) this.stale.emit(outcome.error);
       return;
     }
     const cardNumber = draft.cardNumber.trim();
@@ -248,7 +248,7 @@ export class CardDialog {
       hiddenFromRecords: draft.hidden,
       note,
     });
-    if (!outcome.saved) return this.error.set(outcome.error);
+    if (!outcome.ok) return this.error.set(outcome.error);
     this.editor.markSaved();
     this.dialog().nativeElement.close();
     this.created.emit(outcome.value);

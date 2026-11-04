@@ -409,7 +409,7 @@ export class AssignmentDialog {
                 confirm: '接手',
               }),
         );
-    if (!outcome.saved) {
+    if (!outcome.ok) {
       // 打開時的版本已過期，再送也會被拒：關掉，從重讀後的資料重新開始。新增不帶版本，接手重送時會重讀歷史，留著就好。
       if (outcome.stale && editor.id) {
         this.editor.markSaved();

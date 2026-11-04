@@ -306,7 +306,7 @@ describe('AttendanceImportsPage', () => {
     await fixture.whenStable();
     root.querySelector<HTMLButtonElement>('.imports-reimport')!.click();
     await dialog().submit(new Event('submit'));
-    expect(dialog().error()).toContain('讀不到打卡檔資料夾');
+    expect(dialog().running.error()).toContain('讀不到打卡檔資料夾');
     expect(toast.success).not.toHaveBeenCalled();
     expect(root.querySelector('.imports-failure')).toBeNull();
   });

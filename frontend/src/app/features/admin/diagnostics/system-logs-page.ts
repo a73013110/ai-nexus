@@ -9,10 +9,10 @@ import {
 import { RouterLink } from '@angular/router';
 import { FeaturePage } from '@core/layout/feature-page';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
 import type { DiagnosticSummary, LogLevel } from '@core/api/schema';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
-import { downloadBlob } from '@shared/browser/download';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
 import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
@@ -76,7 +76,6 @@ export class SystemLogsPage {
   readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(DiagnosticsApi);
-  private readonly view = inject(ViewScope);
   private readonly inspector = viewChild(LogDetailDrawer);
   readonly query = queryState(logQueryOptions);
   readonly draft = this.query.draft;
@@ -114,15 +113,14 @@ export class SystemLogsPage {
     navigated: () => {
       this.inspector()?.close();
       this.closeDetail();
-      this.exportError.set('');
+      this.exporting.error.set('');
     },
   });
   readonly events = this.table.rows;
   readonly loading = this.table.refreshing;
   readonly submitted = this.filter;
   readonly degraded = computed(() => this.table.data()?.degraded === true);
-  readonly exporting = signal(false);
-  readonly exportError = signal('');
+  readonly exporting = action();
   readonly selectedEntry = signal<DiagnosticSummary | null>(null);
   readonly selectedIndex = computed(() =>
     this.events().findIndex((entry) => entry.logId === this.selectedEntry()?.logId),
@@ -172,28 +170,17 @@ export class SystemLogsPage {
     if (entry) this.inspect(entry);
   }
   async export() {
-    if (!this.table.data() || this.exporting() || !this.session.has('diagnostics.logs.export'))
-      return;
+    if (!this.table.data() || !this.session.has('diagnostics.logs.export')) return;
     // 預設區間（最近 N 小時）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filter = logFilter(this.query.applied());
-    if (typeof filter === 'string') {
-      this.exportError.set(filter);
-      return;
-    }
-    const guard = this.view.guard();
-    this.exporting.set(true);
-    this.exportError.set('');
-    try {
-      const response = await this.api.export({
-        ...filter,
-        sortDirection: this.table.sort()?.direction ?? 'desc',
-      });
-      const blob = await response.blob();
-      if (guard()) downloadBlob(blob, 'ai-nexus-logs', 'csv');
-    } catch (error) {
-      if (guard()) this.exportError.set(safeMessage(error));
-    } finally {
-      if (guard()) this.exporting.set(false);
-    }
+    if (typeof filter === 'string') return this.exporting.fail(filter);
+    const sortDirection = this.table.sort()?.direction ?? 'desc';
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.api.export({ ...filter, sortDirection }), {
+        title: 'ai-nexus-logs',
+        extension: 'csv',
+      }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
 }

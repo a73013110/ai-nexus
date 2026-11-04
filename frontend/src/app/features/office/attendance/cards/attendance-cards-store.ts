@@ -8,19 +8,12 @@ import type {
   CardDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { STALE_WRITE_MESSAGE, isStaleWrite, safeMessage } from '@core/errors/safe-errors';
+import { ACTION_SKIPPED, action, type ActionOutcome } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ToastService } from '@shared/ui/toast-service';
 import { AttendanceApi } from '../attendance-api';
 import { errorCode } from '../attendance-presentation';
 import { punchTable } from '../punches/punch-table';
-
-/**
- * 寫入的結果：失敗時 `error` 是審核過的訊息；使用者取消接手時為空。
- * `stale` 表示送出的版本已過期（期間有人改過）：畫面已重讀，表單手上的版本再送也一樣被拒。
- */
-export type WriteOutcome<T = unknown> =
-  { saved: true; value: T } | { saved: false; error: string; stale?: boolean };
 
 /** 新增持有期間；要接手的那一段的版本由 `assign` 在使用者確認後才帶上。 */
 export type AssignRequest = Omit<CardAssignmentCreateRequest, 'takeOverRowVersion'>;
@@ -84,13 +77,13 @@ export class AttendanceCardsStore {
   });
   /** 寫入按鈕只給有 `attendance.cards.maintain` 的人。 */
   readonly canMaintain = computed(() => this.session.has('attendance.cards.maintain'));
-  private readonly writing = signal(false);
+  private readonly writing = action();
   /** 寫入中或資料重讀中：重讀完之前畫面上的版本是舊的，這時送出只會被拒，所以寫入鈕一起停用。 */
   readonly busy = computed(
-    () => this.writing() || this.cardsRefreshing() || this.assignmentsRefreshing(),
+    () => this.writing.pending() || this.cardsRefreshing() || this.assignmentsRefreshing(),
   );
   /** 抽屜裡按下的刪除（`card:<id>`、`assignment:<id>`）；只讓那顆按鈕轉，其他寫入鈕照 `busy` 停用。 */
-  readonly working = signal('');
+  readonly working = this.writing.key;
 
   reloadCards() {
     this.cardsRead.reload();
@@ -134,7 +127,7 @@ export class AttendanceCardsStore {
       `已刪除卡號 ${card.cardNumber}`,
       `card:${card.id}`,
     );
-    if (outcome.saved && this.selectedId() === card.id) this.selectedId.set(null);
+    if (outcome.ok && this.selectedId() === card.id) this.selectedId.set(null);
     return outcome;
   }
 
@@ -146,43 +139,34 @@ export class AttendanceCardsStore {
   async assign(
     request: AssignRequest,
     confirmTakeOver: (holder: string) => Promise<boolean>,
-  ): Promise<WriteOutcome<CardAssignmentDto>> {
-    if (this.busy()) return { saved: false, error: '' };
-    const alive = this.scope.guard();
-    this.writing.set(true);
-    try {
-      const body: CardAssignmentCreateRequest = { ...request, takeOverRowVersion: null };
-      let saved: CardAssignmentDto;
+  ): Promise<ActionOutcome<CardAssignmentDto>> {
+    if (this.busy()) return ACTION_SKIPPED;
+    const body: CardAssignmentCreateRequest = { ...request, takeOverRowVersion: null };
+    const first = await this.writing.run(async () => {
       try {
-        saved = await this.api.createAssignment(body);
+        return { held: false as const, saved: await this.api.createAssignment(body) };
       } catch (error) {
-        if (errorCode(error) !== 'attendance_card_held' || !alive()) throw error;
-        const history = await this.api.assignments(body.cardId);
+        if (errorCode(error) !== 'attendance_card_held') throw error;
         const at = Date.parse(body.startsAt);
-        const current = history.find((item) => covers(item, at));
-        this.writing.set(false);
-        const agreed = await confirmTakeOver(current ? holderName(current) : '目前的持有人');
-        if (!alive() || !agreed) {
-          this.afterWrite();
-          return { saved: false, error: '' };
-        }
-        this.writing.set(true);
-        saved = await this.api.createAssignment({
-          ...body,
-          takeOverRowVersion: current?.rowVersion ?? null,
-        });
+        const history = await this.api.assignments(body.cardId);
+        return { held: true as const, current: history.find((item) => covers(item, at)) };
       }
-      if (!alive()) return { saved: false, error: '' };
-      this.toast.success(`已將卡號 ${saved.cardNumber} 指派給 ${holderName(saved)}`);
+    });
+    if (!first.ok) return this.settle<CardAssignmentDto>(first, assigned);
+    if (!first.value.held) return this.settle({ ok: true, value: first.value.saved }, assigned);
+    // 問使用者時不算送出中：確認對話框的按鈕要能按。
+    const current = first.value.current;
+    const alive = this.scope.guard();
+    const agreed = await confirmTakeOver(current ? holderName(current) : '目前的持有人');
+    if (!alive()) return ACTION_SKIPPED;
+    if (!agreed) {
       this.afterWrite();
-      return { saved: true, value: saved };
-    } catch (error) {
-      if (!alive()) return { saved: false, error: '' };
-      this.afterWrite();
-      return this.failure(error);
-    } finally {
-      if (alive()) this.writing.set(false);
+      return ACTION_SKIPPED;
     }
+    return this.write(
+      () => this.api.createAssignment({ ...body, takeOverRowVersion: current?.rowVersion ?? null }),
+      assigned,
+    );
   }
   updateAssignment(id: string, body: CardAssignmentUpdateRequest, done = '已儲存持有期間') {
     return this.write(() => this.api.updateAssignment(id, body), done);
@@ -202,34 +186,22 @@ export class AttendanceCardsStore {
     this.punches.reload();
   }
 
-  private failure(error: unknown): WriteOutcome<never> {
-    return isStaleWrite(error)
-      ? { saved: false, error: STALE_WRITE_MESSAGE, stale: true }
-      : { saved: false, error: safeMessage(error) };
+  /** 寫入中或重讀中略過；成功提示 `done`。成功或失敗都重讀（例如期間有人改了同一張卡），讓畫面回到伺服器的狀態。 */
+  private async write<T>(
+    run: () => Promise<T>,
+    done: string | ((value: T) => string),
+    key = '',
+  ): Promise<ActionOutcome<T>> {
+    if (this.busy()) return ACTION_SKIPPED;
+    return this.settle(await this.writing.run(run, key), done);
   }
 
-  /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */
-  private async write<T>(run: () => Promise<T>, done: string, key = ''): Promise<WriteOutcome<T>> {
-    if (this.busy()) return { saved: false, error: '' };
-    const alive = this.scope.guard();
-    this.writing.set(true);
-    this.working.set(key);
-    try {
-      const value = await run();
-      if (!alive()) return { saved: false, error: '' };
-      this.toast.success(done);
-      this.afterWrite();
-      return { saved: true, value };
-    } catch (error) {
-      if (!alive()) return { saved: false, error: '' };
-      // 例如期間有人改了同一張卡：重讀，讓畫面回到伺服器的狀態。
-      this.afterWrite();
-      return this.failure(error);
-    } finally {
-      if (alive()) {
-        this.writing.set(false);
-        this.working.set('');
-      }
-    }
+  private settle<T>(outcome: ActionOutcome<T>, done: string | ((value: T) => string)) {
+    if (outcome.ok) this.toast.success(typeof done === 'string' ? done : done(outcome.value));
+    if (outcome.ok || outcome.error) this.afterWrite();
+    return outcome;
   }
 }
+
+const assigned = (saved: CardAssignmentDto) =>
+  `已將卡號 ${saved.cardNumber} 指派給 ${holderName(saved)}`;

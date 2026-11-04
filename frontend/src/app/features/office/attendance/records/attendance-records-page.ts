@@ -16,7 +16,8 @@ import type { AttendancePersonOptionDto } from '@core/api/schema';
 import { routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
-import { attachmentName, downloadBlob } from '@shared/browser/download';
+import { action } from '@shared/browser/action';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Checkbox } from '@shared/ui/checkbox';
 import { DataTable, DataTableColumn, TableState, type TableColumn } from '@shared/ui/data-table';
@@ -102,7 +103,6 @@ export class AttendanceRecordsPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AttendanceApi);
   private readonly organization = inject(OrganizationApi);
-  private readonly view = inject(ViewScope);
   readonly ranges = RECORD_RANGES;
   readonly coverages = RECORD_COVERAGES;
   /** 隱藏的卡在卡號對應頁維護；沒有那一頁的權限時不給連結。 */
@@ -217,8 +217,7 @@ export class AttendanceRecordsPage {
     return rules ? { schedules: rules.schedules.map(presentSchedule), items: rules.rules } : null;
   });
   readonly rulesError = this.rulesRead.error;
-  readonly exporting = signal(false);
-  readonly exportError = signal('');
+  readonly exporting = action({ message: attendanceProblem });
   readonly groups = computed(() => {
     const data = this.records();
     return data ? this.people().map((person) => presentGroup(person, data.today)) : [];
@@ -245,25 +244,15 @@ export class AttendanceRecordsPage {
   }
 
   async export() {
-    if (this.exporting()) return;
     // 「本月」等預設區間以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filters = recordFilters(this.query.applied());
-    if (typeof filters === 'string') {
-      this.exportError.set(filters);
-      return;
-    }
-    const guard = this.view.guard();
-    this.exporting.set(true);
-    this.exportError.set('');
-    try {
-      const response = await this.api.exportRecords(filters);
-      const name = attachmentName(response, { title: '出缺勤計算', extension: 'xlsx' });
-      const blob = await response.blob();
-      if (guard()) downloadBlob(blob, name.title, name.extension);
-    } catch (error) {
-      if (guard()) this.exportError.set(attendanceProblem(error));
-    } finally {
-      if (guard()) this.exporting.set(false);
-    }
+    if (typeof filters === 'string') return this.exporting.fail(filters);
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.api.exportRecords(filters), {
+        title: '出缺勤計算',
+        extension: 'xlsx',
+      }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
 }

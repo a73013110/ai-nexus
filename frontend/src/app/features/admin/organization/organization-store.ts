@@ -1,8 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { UnitDto, UnitMemberDto } from '@core/api/schema';
-import { STALE_WRITE_MESSAGE, writeFailureMessage } from '@core/errors/safe-errors';
-import { ViewScope } from '@shared/browser/view-scope';
+import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
+import { action } from '@shared/browser/action';
 import { ToastService } from '@shared/ui/toast-service';
 import { OrganizationApi } from './organization-api';
 import { headsOf, moved, unitRows } from './unit-tree';
@@ -14,7 +14,6 @@ import { headsOf, moved, unitRows } from './unit-tree';
 @Injectable()
 export class OrganizationStore {
   private readonly api = inject(OrganizationApi);
-  private readonly scope = inject(ViewScope);
   readonly toast = inject(ToastService);
   private readonly unitsRead = apiResource({
     feature: 'organization',
@@ -55,29 +54,31 @@ export class OrganizationStore {
   readonly membersError = this.membersRead.error;
   /** 成員重讀中（寫入後、重試）：清單淡化。 */
   readonly membersRefreshing = this.membersRead.refreshing;
-  private readonly writing = signal(false);
+  private readonly writing = action();
   /** 寫入中或重讀中：重讀完之前列上的版本還是舊的，此時送出修改或刪除只會版本衝突。 */
-  readonly busy = computed(() => this.writing() || this.unitsRead.refreshing());
+  readonly busy = computed(() => this.writing.pending() || this.unitsRead.refreshing());
   /**
    * 正在寫入的對象（例：`unit:<id>`、`primary:<userId>`）：只有那個控制項轉圈，
    * 其他寫入仍由 `busy` 擋下。
    */
-  readonly working = signal<string | null>(null);
-  readonly actionError = signal('');
-  readonly error = computed(() => this.actionError() || this.unitsRead.error());
+  readonly working = this.writing.key;
+  readonly error = computed(() => this.writing.error() || this.unitsRead.error());
   /**
    * 成員的勾選要等寫入後的重讀回來才解除：重讀前成員資料仍是舊的，此時切換另一個勾選會帶著舊值
    * 覆寫剛存好的那一個；剛寫入的那一項在重讀期間也繼續轉圈，方框不會先跳回舊狀態。
    */
   readonly membersLocked = computed(() => this.busy() || this.membersRead.refreshing());
-  private readonly settling = signal<string | null>(null);
+  private readonly settling = signal('');
   /** `key` 的成員寫入正在送出，或已送出、正等重讀確認。 */
   memberPending(key: string) {
-    return this.working() === key || (this.membersRead.refreshing() && this.settling() === key);
+    return (
+      (this.writing.pending() && this.working() === key) ||
+      (this.membersRead.refreshing() && this.settling() === key)
+    );
   }
 
   load() {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.unitsRead.reload();
     this.membersRead.reload();
   }
@@ -93,12 +94,12 @@ export class OrganizationStore {
   }
   /** 單位已寫入（對話框）：重讀清單，成員數跟著更新。 */
   changed() {
-    this.actionError.set('');
+    this.writing.error.set('');
     this.unitsRead.reload();
   }
   /** 送出的版本已過期：由頁面的 Notice 說明，單位重讀成最新。 */
   stale() {
-    this.actionError.set(STALE_WRITE_MESSAGE);
+    this.writing.fail(STALE_WRITE_MESSAGE);
     this.unitsRead.reload();
   }
 
@@ -150,32 +151,16 @@ export class OrganizationStore {
     this.unitsRead.reload();
   }
 
-  /** 寫入共用的忙碌、錯誤與提示；離開頁面或換帳號後才回來的結果不再套用。 */
+  /** 寫入中或重讀中略過；失敗時重讀（例如期間有人改了同一層），讓畫面回到伺服器的狀態。 */
   private async run(write: () => Promise<unknown>, done: string, after: () => void, key: string) {
     if (this.busy()) return false;
-    const alive = this.scope.guard();
-    this.writing.set(true);
-    this.working.set(key || null);
-    this.settling.set(null);
-    this.actionError.set('');
-    try {
-      await write();
-      if (!alive()) return false;
+    this.settling.set('');
+    const outcome = await this.writing.run(write, key);
+    if (outcome.ok) {
       if (done) this.toast.success(done);
-      this.settling.set(key || null);
+      this.settling.set(key);
       after();
-      return true;
-    } catch (error) {
-      if (!alive()) return false;
-      this.actionError.set(writeFailureMessage(error));
-      // 例如期間有人改了同一層：重讀，讓畫面回到伺服器的狀態。
-      this.unitsRead.reload();
-      return false;
-    } finally {
-      if (alive()) {
-        this.writing.set(false);
-        this.working.set(null);
-      }
-    }
+    } else if (outcome.error) this.unitsRead.reload();
+    return outcome.ok;
   }
 }

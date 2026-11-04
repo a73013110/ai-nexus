@@ -96,12 +96,12 @@
         }
       </div>
     </nx-query-bar>
-    @if (exportError()) {
+    @if (exporting.error()) {
       <nx-notice
         tone="danger"
-        [message]="exportError()"
+        [message]="exporting.error()"
         [dismissible]="true"
-        (dismissed)="exportError.set('')"
+        (dismissed)="exporting.error.set('')"
       />
     }
     <nx-data-table
@@ -118,11 +118,11 @@
           table-actions
           type="button"
           class="quiet-button log-export"
-          [pending]="exporting()"
+          [pending]="exporting.pending()"
           [disabled]="!table.data()"
           (click)="export()"
         >
-          <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 CSV' }}
+          <nx-icon name="download" />{{ exporting.pending() ? '匯出中…' : '匯出 CSV' }}
         </button>
       }
       <table class="log-table">

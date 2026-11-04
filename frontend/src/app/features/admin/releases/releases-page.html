@@ -85,12 +85,12 @@
         (valueChange)="showSection($event)"
       />
     </div>
-    @if (exportError()) {
+    @if (exporting.error()) {
       <nx-notice
         tone="danger"
-        [message]="exportError()"
+        [message]="exporting.error()"
         [dismissible]="true"
-        (dismissed)="exportError.set('')"
+        (dismissed)="exporting.error.set('')"
       />
     }
     @if (section() === 'changes') {
@@ -108,11 +108,11 @@
           table-actions
           type="button"
           class="quiet-button"
-          [pending]="exporting()"
+          [pending]="exporting.pending()"
           [disabled]="!changes.value()?.length"
           (click)="export()"
         >
-          <nx-icon name="download" />{{ exporting() ? '下載中…' : '下載 .sql' }}
+          <nx-icon name="download" />{{ exporting.pending() ? '下載中…' : '下載 .sql' }}
         </button>
         <table class="releases-table">
           <caption class="sr-only">

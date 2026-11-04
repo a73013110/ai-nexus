@@ -4,8 +4,8 @@ import { apiResource } from '@core/api/api-resource';
 import type { DashboardDto, DashboardSectionDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { localDateKey } from '@shared/browser/calendar-day';
-import { downloadBlob } from '@shared/browser/download';
-import { ViewScope } from '@shared/browser/view-scope';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
+import { action } from '@shared/browser/action';
 import { BillingApi, chargeKind, datePeriod } from '@features/admin/billing/billing-api';
 import { DashboardApi } from './dashboard-api';
 import { dayRange, fillDays } from './dashboard-format';
@@ -29,7 +29,6 @@ export class DashboardStore {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(DashboardApi);
   private readonly billing = inject(BillingApi);
-  private readonly view = inject(ViewScope);
   private readonly requestedScope = signal(
     inject(ActivatedRoute).snapshot.queryParamMap.get('scope') === 'platform'
       ? 'platform'
@@ -72,11 +71,12 @@ export class DashboardStore {
   readonly loading = this.resource.loading;
   readonly refreshing = this.resource.refreshing;
   readonly formError = signal('');
-  readonly exportError = signal('');
   /** 讀取本身的失敗（不含表單與匯出）；表格的重試只對它有意義。 */
   readonly loadError = this.resource.error;
-  readonly error = computed(() => this.formError() || this.resource.error() || this.exportError());
-  readonly exporting = signal(false);
+  readonly error = computed(
+    () => this.formError() || this.resource.error() || this.exporting.error(),
+  );
+  readonly exporting = action();
   readonly appliedFrom = computed(() => this.resource.value()?.query.from ?? this.from());
   readonly appliedThrough = computed(() => this.resource.value()?.query.through ?? this.through());
   readonly appliedOwner = computed(() => this.resource.value()?.query.owner ?? '');
@@ -187,7 +187,7 @@ export class DashboardStore {
   /** 讀取所選期間；`force` 即使沒有變更也會再讀一次（重新整理、重試）。 */
   load(force = true) {
     clearTimeout(this.settle);
-    this.exportError.set('');
+    this.exporting.error.set('');
     if (!this.from() || !this.through() || this.from() > this.through()) {
       this.formError.set('請提供有效的開始與結束日期。');
       return;
@@ -227,20 +227,14 @@ export class DashboardStore {
     this.load();
   }
   async export() {
-    if (this.exporting() || !this.data()) return;
-    const valid = this.view.guard();
-    this.exporting.set(true);
-    try {
-      const response = await this.billing.export(
-        datePeriod(this.appliedFrom(), this.appliedThrough()),
-        this.appliedOwner(),
-      );
-      const blob = await response.blob();
-      if (valid()) downloadBlob(blob, 'ai-nexus-spend', 'csv');
-    } catch (error) {
-      if (valid()) this.exportError.set(this.view.message(error));
-    } finally {
-      if (valid()) this.exporting.set(false);
-    }
+    if (!this.data()) return;
+    const period = datePeriod(this.appliedFrom(), this.appliedThrough());
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.billing.export(period, this.appliedOwner()), {
+        title: 'ai-nexus-spend',
+        extension: 'csv',
+      }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
 }

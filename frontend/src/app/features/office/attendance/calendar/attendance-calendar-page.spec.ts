@@ -158,7 +158,7 @@ describe('AttendanceCalendarPage', () => {
       expect.stringMatching(/-01$/),
       expect.objectContaining({ remark: '補假' }),
     );
-    expect(editor.error()).toContain('公文系統的連線設為唯讀');
+    expect(editor.saving.error()).toContain('公文系統的連線設為唯讀');
     expect(root.querySelector('.calendar-day-error')?.textContent).toContain('唯讀');
     expect(root.querySelector('.calendar-read-only')).not.toBeNull();
     expect(root.querySelector('[role="grid"]')?.getAttribute('aria-readonly')).toBe('true');

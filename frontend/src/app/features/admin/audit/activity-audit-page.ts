@@ -11,11 +11,11 @@ import { apiResource } from '@core/api/api-resource';
 import type { FeatureDto } from '@core/api/schema';
 import { catalogFeature, routeOf } from '@core/api/catalog';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
 import { FeaturePage } from '@core/layout/feature-page';
 import { FeatureSummary } from '@features/admin/access-control/roles/feature-summary';
-import { downloadBlob } from '@shared/browser/download';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
 import { formatDate, formatModelName } from '@shared/browser/format';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
@@ -87,7 +87,6 @@ export class ActivityAuditPage {
   readonly routeOf = routeOf;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AuditApi);
-  private readonly view = inject(ViewScope);
   private readonly catalogRead = apiResource({
     feature: 'audit',
     loader: () => this.api.catalog(),
@@ -154,7 +153,7 @@ export class ActivityAuditPage {
     navigated: () => {
       this.drawer()?.close();
       this.selectedId.set(null);
-      this.exportError.set('');
+      this.exporting.error.set('');
     },
   });
   readonly rows = this.table.rows;
@@ -163,8 +162,7 @@ export class ActivityAuditPage {
   /** 動作選項來自目錄：讀到前選單顯示「正在載入」，不先只給「所有動作」。 */
   readonly catalogLoading = this.catalogRead.loading;
   readonly catalogRefreshing = this.catalogRead.refreshing;
-  readonly exporting = signal(false);
-  readonly exportError = signal('');
+  readonly exporting = action();
   readonly selectedId = signal<number | null>(null);
   readonly drawer = viewChild(DetailDrawer);
   readonly presentedRows = computed(() =>
@@ -235,25 +233,14 @@ export class ActivityAuditPage {
     if (row) this.openDetails(row.entry.id);
   }
   async export() {
-    if (!this.table.data() || this.exporting()) return;
+    if (!this.table.data()) return;
     // 預設區間（最近 N 天）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
     const filters = auditFilters(this.query.applied());
-    if (typeof filters === 'string') {
-      this.exportError.set(filters);
-      return;
-    }
-    const guard = this.view.guard();
-    this.exporting.set(true);
-    this.exportError.set('');
-    try {
-      const response = await this.api.export(filters);
-      const blob = await response.blob();
-      if (guard()) downloadBlob(blob, 'ai-nexus-audit', 'csv');
-    } catch (error) {
-      if (guard()) this.exportError.set(safeMessage(error));
-    } finally {
-      if (guard()) this.exporting.set(false);
-    }
+    if (typeof filters === 'string') return this.exporting.fail(filters);
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.api.export(filters), { title: 'ai-nexus-audit', extension: 'csv' }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
   private resolveFeatures(ids: string[]): FeatureDto[] {
     const features = this.features();

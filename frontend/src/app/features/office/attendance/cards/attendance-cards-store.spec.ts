@@ -112,7 +112,7 @@ describe('AttendanceCardsStore', () => {
       holderName: '新進同仁',
       takeOverRowVersion: held.rowVersion,
     });
-    expect(outcome.saved).toBe(true);
+    expect(outcome.ok).toBe(true);
     expect(toast.success).toHaveBeenCalledWith('已將卡號 0012345 指派給 新進同仁');
     await settle();
     expect(store.busy()).toBe(false);
@@ -122,7 +122,7 @@ describe('AttendanceCardsStore', () => {
     const { store, api, settle } = setup();
     await settle();
     const outcome = await store.assign(request, async () => false);
-    expect(outcome).toEqual({ saved: false, error: '' });
+    expect(outcome).toEqual({ ok: false, error: '', stale: false });
     expect(api.createAssignment).toHaveBeenCalledOnce();
     await settle();
     expect(store.busy()).toBe(false);
@@ -133,7 +133,7 @@ describe('AttendanceCardsStore', () => {
     await settle();
     const saving = store.setHidden({ ...card, note: '訪客' }, true);
     expect(store.working()).toBe('hidden:c1');
-    expect((await saving).saved).toBe(true);
+    expect((await saving).ok).toBe(true);
     expect(api.updateCard).toHaveBeenCalledWith('c1', {
       hiddenFromRecords: true,
       note: '訪客',
@@ -170,8 +170,8 @@ describe('AttendanceCardsStore', () => {
     api.updateCard.mockRejectedValueOnce(new ApiError(409, 'admin_write_conflict', undefined, ''));
     const reads = api.cards.mock.calls.length;
     const outcome = await store.saveNote(card, '後存的');
-    expect(outcome).toMatchObject({ saved: false, stale: true });
-    expect(outcome.saved ? '' : outcome.error).toContain('畫面已更新');
+    expect(outcome).toMatchObject({ ok: false, stale: true });
+    expect(outcome.ok ? '' : outcome.error).toContain('畫面已更新');
     expect(store.busy()).toBe(true);
     await settle();
     expect(api.cards.mock.calls.length).toBeGreaterThan(reads);
@@ -185,8 +185,8 @@ describe('AttendanceCardsStore', () => {
       new ApiError(409, 'attendance_assignment_overlap', undefined, ''),
     );
     const outcome = await store.assign({ ...request, cardId: 'c2' }, async () => true);
-    expect(outcome.saved).toBe(false);
-    expect(outcome.saved ? '' : outcome.error).toContain('重疊');
+    expect(outcome.ok).toBe(false);
+    expect(outcome.ok ? '' : outcome.error).toContain('重疊');
   });
 
   it('shows write actions only with the maintain action', async () => {

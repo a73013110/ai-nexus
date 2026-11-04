@@ -13,7 +13,9 @@ import type { OnlineSession } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
 import { FeaturePage } from '@core/layout/feature-page';
-import { downloadBlob } from '@shared/browser/download';
+import { action } from '@shared/browser/action';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
+import { ViewScope } from '@shared/browser/view-scope';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { EmptyState } from '@shared/ui/empty-state';
@@ -72,6 +74,7 @@ const DRAWER_TITLES = {
   ],
   providers: [
     MonitoringStore,
+    ViewScope,
     {
       provide: EXTRA_ICONS,
       useValue: { monitor: Monitor, server: Server, network: Network, pause: Pause },
@@ -87,7 +90,7 @@ export class MonitoringPage {
   readonly ready = signal(false);
   readonly featureFilter = signal('all');
   readonly selection = signal<Selection | null>(null);
-  readonly exporting = signal(false);
+  readonly exporting = action();
   /**
    * 正在建立或恢復連線：重新連線鈕轉圈。失敗後狀態仍是 `reconnecting`（等退避再自動重試），
    * 這段期間帶著錯誤、不算進行中，使用者才能按「重新連線」立刻重試。
@@ -202,15 +205,9 @@ export class MonitoringPage {
     this.show(target);
   }
   async export() {
-    this.exporting.set(true);
-    this.actionError.set('');
-    try {
-      const response = await this.store.export();
-      downloadBlob(await response.blob(), 'ai-nexus-即時監控', 'json');
-    } catch (error) {
-      this.actionError.set(safeMessage(error));
-    } finally {
-      this.exporting.set(false);
-    }
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.store.export(), { title: 'ai-nexus-即時監控', extension: 'json' }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
 }

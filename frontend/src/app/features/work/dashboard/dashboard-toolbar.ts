@@ -69,11 +69,11 @@ import { DashboardStore } from './dashboard-store';
           nxPending
           type="button"
           class="toolbar-pill toolbar-button"
-          [pending]="store.exporting()"
-          [disabled]="store.refreshing() && !store.exporting()"
+          [pending]="store.exporting.pending()"
+          [disabled]="store.refreshing() && !store.exporting.pending()"
           (click)="store.export()"
         >
-          <nx-icon name="download" />{{ store.exporting() ? '匯出中…' : '匯出費用' }}
+          <nx-icon name="download" />{{ store.exporting.pending() ? '匯出中…' : '匯出費用' }}
         </button>
       }
     </div>`,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attachmentName } from './download';
+import { attachmentName, readAttachment } from './download';
 
 const fallback = { title: 'ai-nexus', extension: 'xlsx' };
 const response = (disposition?: string) =>
@@ -27,5 +27,16 @@ describe('attachmentName', () => {
       fallback,
     );
     expect(attachmentName(response(), fallback)).toBe(fallback);
+  });
+});
+
+describe('readAttachment', () => {
+  it('reads the body with the server file name', async () => {
+    const file = await readAttachment(
+      new Response('a,b', { headers: { 'Content-Disposition': 'attachment; filename=logs.csv' } }),
+      fallback,
+    );
+    expect(file).toMatchObject({ title: 'logs', extension: 'csv' });
+    expect(await file.blob.text()).toBe('a,b');
   });
 });

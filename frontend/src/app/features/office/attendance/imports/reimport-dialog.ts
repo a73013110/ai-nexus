@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import type { PunchReimportResult } from '@core/api/schema';
 import { formatNumber } from '@shared/browser/format';
-import { ViewScope } from '@shared/browser/view-scope';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -117,14 +117,14 @@ export function reimportOutcome(result: PunchReimportResult): {
     #reimportDialog
     class="platform-dialog"
     size="sm"
-    [busy]="running()"
+    [busy]="running.pending()"
     (cancel)="cancel($event)"
   >
     <form class="dialog-form" novalidate (submit)="submit($event)">
       <nx-dialog-header heading="手動重匯打卡檔" closeLabel="關閉重匯" [tour]="tour()" />
       <div class="dialog-body">
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
+        @if (running.error()) {
+          <nx-notice tone="danger" [message]="running.error()" />
         }
         <nx-view-switch
           label="重匯範圍"
@@ -132,7 +132,7 @@ export function reimportOutcome(result: PunchReimportResult): {
           [fill]="true"
           [options]="modes"
           [value]="mode()"
-          [disabled]="running()"
+          [disabled]="running.pending()"
           (valueChange)="switchMode($any($event))"
         />
         <div [nxViewMotion]="mode()">
@@ -142,7 +142,7 @@ export function reimportOutcome(result: PunchReimportResult): {
               [withTime]="false"
               [max]="today"
               [value]="date()"
-              [disabled]="running()"
+              [disabled]="running.pending()"
               (valueChange)="date.set($event)"
             />
           } @else {
@@ -152,7 +152,7 @@ export function reimportOutcome(result: PunchReimportResult): {
                 [withTime]="false"
                 [max]="today"
                 [value]="from()"
-                [disabled]="running()"
+                [disabled]="running.pending()"
                 (valueChange)="from.set($event)"
               />
               <nx-date-time-picker
@@ -161,7 +161,7 @@ export function reimportOutcome(result: PunchReimportResult): {
                 [min]="from()"
                 [max]="today"
                 [value]="to()"
-                [disabled]="running()"
+                [disabled]="running.pending()"
                 (valueChange)="to.set($event)"
               />
             </div>
@@ -179,7 +179,7 @@ export function reimportOutcome(result: PunchReimportResult): {
         <button
           type="button"
           class="secondary-button"
-          [attr.aria-disabled]="running() || null"
+          [attr.aria-disabled]="running.pending() || null"
           (click)="close()"
         >
           取消
@@ -188,10 +188,10 @@ export function reimportOutcome(result: PunchReimportResult): {
           nxPending
           type="submit"
           class="primary-button"
-          [pending]="running()"
-          [disabled]="!running() && !range()"
+          [pending]="running.pending()"
+          [disabled]="!running.pending() && !range()"
         >
-          {{ running() ? '重匯中…' : '重匯' }}
+          {{ running.pending() ? '重匯中…' : '重匯' }}
         </button>
       </footer>
     </form>
@@ -199,7 +199,6 @@ export function reimportOutcome(result: PunchReimportResult): {
 })
 export class ReimportDialog {
   private readonly api = inject(AttendanceApi);
-  private readonly scope = inject(ViewScope);
   readonly imported = output<PunchReimportResult>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('reimportDialog');
   readonly modes = MODES;
@@ -208,8 +207,7 @@ export class ReimportDialog {
   readonly date = signal(this.today);
   readonly from = signal(this.today);
   readonly to = signal(this.today);
-  readonly running = signal(false);
-  readonly error = signal('');
+  readonly running = action({ message: attendanceProblem });
   readonly tour = computed(() => reimportTour({ mode: this.mode() }));
   /** 這次要重匯的區間；單一檔案是起訖相同的區間。無效時為 undefined，送出停用。 */
   private readonly plan = computed(() =>
@@ -235,7 +233,7 @@ export class ReimportDialog {
 
   open() {
     const today = taipeiToday();
-    this.error.set('');
+    this.running.error.set('');
     this.mode.set('single');
     this.date.set(today);
     this.from.set(today);
@@ -244,18 +242,18 @@ export class ReimportDialog {
   }
   /** 切到區間時從單一檔案選的日期開始、到今天為止（不超過上限），切回時保留各自的選擇。 */
   switchMode(mode: ReimportMode) {
-    if (mode === this.mode() || this.running()) return;
+    if (mode === this.mode() || this.running.pending()) return;
     if (mode === 'range' && isDate(this.date())) {
       const today = taipeiToday();
       const last = shiftDays(this.date(), MAX_REIMPORT_DAYS - 1);
       this.from.set(this.date());
       this.to.set(last < today ? last : today);
     }
-    this.error.set('');
+    this.running.error.set('');
     this.mode.set(mode);
   }
   close() {
-    if (!this.running()) this.dialog().nativeElement.close();
+    if (!this.running.pending()) this.dialog().nativeElement.close();
   }
   cancel(event: Event) {
     event.preventDefault();
@@ -264,19 +262,10 @@ export class ReimportDialog {
   async submit(event: Event) {
     event.preventDefault();
     const range = this.range();
-    if (this.running() || !range) return;
-    const alive = this.scope.guard();
-    this.running.set(true);
-    this.error.set('');
-    try {
-      const result = await this.api.reimport(range.from, range.to);
-      if (!alive()) return;
-      this.dialog().nativeElement.close();
-      this.imported.emit(result);
-    } catch (error) {
-      if (alive()) this.error.set(attendanceProblem(error));
-    } finally {
-      if (alive()) this.running.set(false);
-    }
+    if (!range) return;
+    const outcome = await this.running.run(() => this.api.reimport(range.from, range.to));
+    if (!outcome.ok) return;
+    this.dialog().nativeElement.close();
+    this.imported.emit(outcome.value);
   }
 }

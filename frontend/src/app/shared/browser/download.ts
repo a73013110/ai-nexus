@@ -42,3 +42,23 @@ export function attachmentName(
     ? { title: name.slice(0, dot), extension: name.slice(dot + 1) }
     : fallback;
 }
+
+/** 從下載回應讀出的檔案；`saveAttachment` 交給瀏覽器下載。 */
+export interface Attachment {
+  blob: Blob;
+  title: string;
+  extension: string;
+}
+
+/** 讀完下載回應；檔名取伺服器給的（`attachmentName`），沒給時用 `fallback`。 */
+export async function readAttachment(
+  response: Response,
+  fallback: { title: string; extension: string },
+): Promise<Attachment> {
+  const name = attachmentName(response, fallback);
+  return { blob: await response.blob(), ...name };
+}
+
+export function saveAttachment(file: Attachment) {
+  downloadBlob(file.blob, file.title, file.extension);
+}

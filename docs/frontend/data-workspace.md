@@ -32,7 +32,7 @@
 - 大表（日誌、稽核）用 `cursor` 分頁：不計總數也不跳頁，以時間範圍與排序定位，因為 COUNT 與深 offset 成本隨資料量成長。其餘用 `offset`，可輸入頁碼。
 - 分頁列版型固定：左側範圍與每頁筆數（inline `Select`，手機隱藏），右側一組有外框的翻頁按鈕、頁碼夾在中間；頁面不自訂分頁樣式。卡片格線、選擇器也用表格模型，以 `<nx-table-pagination [table]>` 翻頁，單位用 `unit`。
 - 表格工具列（`[table-toolbar]`）只放標題＋必要計數（沒有分頁時的筆數、未定價等需要注意的數量）；表格層級的動作（匯出、驗證）放 `[table-actions]`（「欄位」旁），匯出由伺服器處理整個已套用的查詢，不只已載入的頁。
-  - 下載用 `ApiClient.open` 取回應、`attachmentName`（`frontend/src/app/shared/browser/download.ts`）取伺服器的 `filename*` 中文檔名，再 `downloadBlob`；匯出鈕用 `nxPending`，送出中顯示「匯出中…」。
+  - 下載用 `ApiClient.open` 取回應，在 `action()` 裡以 `readAttachment` 讀出（檔名取伺服器的 `filename*`），成功再 `saveAttachment`；匯出鈕用 `nxPending`，送出中顯示「匯出中…」。
   - 不放說明句：操作提示交給按鈕名稱與 `title`，單位寫在表頭，頁面層級的說明放頁面工具列的 `form-note`。
   - 有 `offset` 分頁時筆數只在頁尾出現；工具列與頁尾不重複筆數、查詢區間、時區或操作提示。
   - 頁首 `page-actions` 放整頁的動作（整頁快照匯出、診斷），不放表格動作與跨功能連結。

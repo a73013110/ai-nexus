@@ -113,13 +113,13 @@
       (checkedChange)="query.set('includeDaysOff', $event)"
     />
   </nx-query-bar>
-  @if (exportError()) {
+  @if (exporting.error()) {
     <nx-notice
       class="records-export-error"
       tone="danger"
-      [message]="exportError()"
+      [message]="exporting.error()"
       [dismissible]="true"
-      (dismissed)="exportError.set('')"
+      (dismissed)="exporting.error.set('')"
     />
   }
   @if (records(); as data) {
@@ -173,11 +173,11 @@
       table-actions
       type="button"
       class="quiet-button records-export"
-      [pending]="exporting()"
-      [disabled]="!exporting() && !people().length"
+      [pending]="exporting.pending()"
+      [disabled]="!exporting.pending() && !people().length"
       (click)="export()"
     >
-      <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 Excel' }}
+      <nx-icon name="download" />{{ exporting.pending() ? '匯出中…' : '匯出 Excel' }}
     </button>
     <!-- 人員資訊寫一次，寬版放在跨列的人員欄、手機卡片放在段首列（兩處只會顯示一處）。 -->
     <ng-template #personInfo let-group>

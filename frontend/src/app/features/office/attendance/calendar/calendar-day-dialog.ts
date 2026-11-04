@@ -5,12 +5,11 @@ import {
   computed,
   inject,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import type { CalendarDayDto } from '@core/api/schema';
 import { uniqueId } from '@shared/browser/unique-id';
-import { ViewScope } from '@shared/browser/view-scope';
+import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -62,7 +61,7 @@ const same = (a: DayDraft, b: DayDraft) =>
       #dayDialog
       class="platform-dialog"
       size="sm"
-      [busy]="saving()"
+      [busy]="saving.pending()"
       (cancel)="cancel($event)"
     >
       @if (editor.current(); as e) {
@@ -74,10 +73,10 @@ const same = (a: DayDraft, b: DayDraft) =>
             [tour]="tour"
           />
           <div class="dialog-body">
-            @if (error()) {
-              <nx-notice class="calendar-day-error" tone="danger" [message]="error()" />
+            @if (saving.error()) {
+              <nx-notice class="calendar-day-error" tone="danger" [message]="saving.error()" />
             }
-            <fieldset class="day-kind" [disabled]="saving()">
+            <fieldset class="day-kind" [disabled]="saving.pending()">
               <legend>
                 放假時段
                 @if (kind() !== openedKind()) {
@@ -115,7 +114,7 @@ const same = (a: DayDraft, b: DayDraft) =>
                   [attr.maxlength]="remarkMax"
                   [attr.aria-describedby]="id + '-remark-note'"
                   [value]="e.draft.remark"
-                  [readOnly]="saving()"
+                  [readOnly]="saving.pending()"
                   (input)="update('remark', remark.value)"
               /></label>
               <p class="day-remark-meta">
@@ -131,7 +130,7 @@ const same = (a: DayDraft, b: DayDraft) =>
           <nx-dialog-save-bar
             label="儲存至公文系統"
             [dirty]="editor.dirty()"
-            [saving]="saving()"
+            [saving]="saving.pending()"
             (revert)="revert()"
           />
         </form>
@@ -142,7 +141,6 @@ const same = (a: DayDraft, b: DayDraft) =>
 export class CalendarDayDialog {
   readonly id = uniqueId('nx-calendar-day');
   private readonly api = inject(AttendanceApi);
-  private readonly scope = inject(ViewScope);
   private readonly toast = inject(ToastService);
   readonly remarkMax = REMARK_MAX;
   readonly kinds = HOLIDAY_KINDS;
@@ -152,8 +150,7 @@ export class CalendarDayDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dayDialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly editor = new DraftEditor<DayDraft, { day: CalendarDayDto }>(same);
-  readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saving = action({ message: attendanceProblem });
   readonly tour = CALENDAR_DAY_TOUR;
   readonly kind = computed(() => {
     const draft = this.editor.current()?.draft;
@@ -189,7 +186,7 @@ export class CalendarDayDialog {
       afternoonOff: day.afternoonOff,
       remark: day.remark ?? '',
     };
-    this.error.set('');
+    this.saving.error.set('');
     this.editor.open({ day }, draft);
     this.dialog().nativeElement.showModal();
   }
@@ -203,14 +200,14 @@ export class CalendarDayDialog {
   }
   revert() {
     this.editor.revert();
-    this.error.set('');
+    this.saving.error.set('');
   }
   cancel(event: Event) {
     event.preventDefault();
     void this.requestClose();
   }
   async requestClose() {
-    if (this.saving()) return;
+    if (this.saving.pending()) return;
     if (
       await this.editor.confirmDiscard(
         this.confirmation(),
@@ -223,28 +220,22 @@ export class CalendarDayDialog {
   async save(event: Event) {
     event.preventDefault();
     const editor = this.editor.current();
-    if (!editor || this.saving() || !this.editor.dirty()) return;
+    if (!editor || !this.editor.dirty()) return;
     const { day, draft } = editor;
-    const alive = this.scope.guard();
-    this.saving.set(true);
-    this.error.set('');
-    try {
-      const saved = await this.api.updateCalendarDay(day.date, {
+    const outcome = await this.saving.run(() =>
+      this.api.updateCalendarDay(day.date, {
         morningOff: draft.morningOff,
         afternoonOff: draft.afternoonOff,
         remark: draft.remark.trim() || null,
-      });
-      if (!alive()) return;
-      this.editor.markSaved();
-      this.dialog().nativeElement.close();
-      this.toast.success(`已更新 ${day.date.replaceAll('-', '/')} 的假日設定`);
-      this.saved.emit(saved);
-    } catch (error) {
-      if (!alive()) return;
-      this.error.set(attendanceProblem(error));
-      if (errorCode(error) === 'attendance_gd_read_only') this.readOnly.emit();
-    } finally {
-      if (alive()) this.saving.set(false);
+      }),
+    );
+    if (!outcome.ok) {
+      if (errorCode(outcome.cause) === 'attendance_gd_read_only') this.readOnly.emit();
+      return;
     }
+    this.editor.markSaved();
+    this.dialog().nativeElement.close();
+    this.toast.success(`已更新 ${day.date.replaceAll('-', '/')} 的假日設定`);
+    this.saved.emit(outcome.value);
   }
 }

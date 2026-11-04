@@ -69,12 +69,12 @@
         (valueChange)="query.set('range', $event)"
       />
     </nx-query-bar>
-    @if (exportError()) {
+    @if (exporting.error()) {
       <nx-notice
         tone="danger"
-        [message]="exportError()"
+        [message]="exporting.error()"
         [dismissible]="true"
-        (dismissed)="exportError.set('')"
+        (dismissed)="exporting.error.set('')"
       />
     }
     <nx-data-table
@@ -92,11 +92,11 @@
         table-actions
         type="button"
         class="quiet-button audit-export"
-        [pending]="exporting()"
+        [pending]="exporting.pending()"
         [disabled]="!rows().length"
         (click)="export()"
       >
-        <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出 CSV' }}
+        <nx-icon name="download" />{{ exporting.pending() ? '匯出中…' : '匯出 CSV' }}
       </button>
       <table>
         <caption class="sr-only">

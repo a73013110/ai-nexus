@@ -239,7 +239,7 @@ export class AttendanceCardsPage {
     )
       return;
     const outcome = await this.store.deleteCard(card);
-    if (outcome.saved) this.drawer()?.close();
+    if (outcome.ok) this.drawer()?.close();
     else this.drawerError.set(outcome.error);
   }
   cardAction(card: CardDto, action: string) {
@@ -249,7 +249,7 @@ export class AttendanceCardsPage {
   async setVisible(card: CardDto, visible: boolean) {
     this.drawerError.set('');
     const outcome = await this.store.setHidden(card, !visible);
-    if (!outcome.saved) this.drawerError.set(outcome.error);
+    if (!outcome.ok) this.drawerError.set(outcome.error);
   }
   /** 卡片目前有人持有時就是轉給其他人，對話框會寫明前一位的期間在何時結束。 */
   assign(card: CardDto) {
@@ -318,6 +318,6 @@ export class AttendanceCardsPage {
     )
       return;
     const outcome = await this.store.deleteAssignment(item);
-    if (!outcome.saved) this.drawerError.set(outcome.error);
+    if (!outcome.ok) this.drawerError.set(outcome.error);
   }
 }

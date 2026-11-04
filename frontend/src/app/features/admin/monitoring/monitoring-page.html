@@ -33,16 +33,16 @@
         nxPending
         type="button"
         class="quiet-button monitor-export"
-        [pending]="exporting()"
+        [pending]="exporting.pending()"
         [disabled]="!store.snapshot()"
         (click)="export()"
       >
-        <nx-icon name="download" />{{ exporting() ? '匯出中…' : '匯出快照' }}
+        <nx-icon name="download" />{{ exporting.pending() ? '匯出中…' : '匯出快照' }}
       </button>
     </div>
   }
-  @if (actionError()) {
-    <nx-notice tone="danger" [message]="actionError()" />
+  @if (actionError() || exporting.error()) {
+    <nx-notice tone="danger" [message]="actionError() || exporting.error()" />
   }
   @if (store.snapshot(); as data) {
     <!-- 連線中斷時保留最近快照並淡化（標題列的狀態說明原因，不淡化）；恢復後自動更新。 -->

@@ -9,10 +9,10 @@ import {
 import { apiResource } from '@core/api/api-resource';
 import type { SchemaChangeDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { safeMessage } from '@core/errors/safe-errors';
 import { FeaturePage } from '@core/layout/feature-page';
-import { attachmentName, downloadBlob } from '@shared/browser/download';
+import { readAttachment, saveAttachment } from '@shared/browser/download';
 import { formatDate } from '@shared/browser/format';
+import { action } from '@shared/browser/action';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
@@ -72,7 +72,6 @@ const options = (names: Record<string, string>) =>
 export class ReleasesPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(ReleasesApi);
-  private readonly view = inject(ViewScope);
   private readonly drawer = viewChild(DetailDrawer);
   readonly status = apiResource({
     feature: 'releases',
@@ -143,8 +142,7 @@ export class ReleasesPage {
     params: () => this.selected() ?? undefined,
     loader: (change, signal) => this.api.change(change.schemaName, change.name, signal),
   });
-  readonly exporting = signal(false);
-  readonly exportError = signal('');
+  readonly exporting = action();
   readonly changeNames = CHANGE_NAMES;
   readonly typeNames = OBJECT_TYPE_NAMES;
   readonly changeTone = changeTone;
@@ -170,19 +168,13 @@ export class ReleasesPage {
     this.selected.set(null);
   }
   async export() {
-    if (this.exporting() || !this.changes.value()?.length) return;
-    const guard = this.view.guard();
-    this.exporting.set(true);
-    this.exportError.set('');
-    try {
-      const response = await this.api.export();
-      const name = attachmentName(response, { title: 'ai-nexus-schema-changes', extension: 'sql' });
-      const blob = await response.blob();
-      if (guard()) downloadBlob(blob, name.title, name.extension);
-    } catch (error) {
-      if (guard()) this.exportError.set(safeMessage(error));
-    } finally {
-      if (guard()) this.exporting.set(false);
-    }
+    if (!this.changes.value()?.length) return;
+    const file = await this.exporting.run(async () =>
+      readAttachment(await this.api.export(), {
+        title: 'ai-nexus-schema-changes',
+        extension: 'sql',
+      }),
+    );
+    if (file.ok) saveAttachment(file.value);
   }
 }
