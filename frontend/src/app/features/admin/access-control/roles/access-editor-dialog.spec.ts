@@ -121,16 +121,16 @@ describe('AccessEditorDialog', () => {
     expect(store.stale).toHaveBeenCalled();
     expect(store.saved).not.toHaveBeenCalled();
     expect(dialog.editorError()).toBe('');
-    expect(dialog.dirty()).toBe(false);
+    expect(dialog.editor.dirty()).toBe(false);
   });
 
   it('does not open a row while the catalog is rereading, because its version may be old', () => {
     const { dialog, store } = setup();
     store.refreshing.set(true);
     dialog.open('role', role);
-    expect(dialog.editor()).toBeNull();
+    expect(dialog.editor.current()).toBeNull();
     dialog.open('role');
-    expect(dialog.editor()?.isNew).toBe(true);
+    expect(dialog.editor.current()?.isNew).toBe(true);
   });
 
   it('requires an identifier and a name for new roles', async () => {
@@ -177,9 +177,9 @@ describe('AccessEditorDialog', () => {
         icon: 'download',
       }) as AdminFeatureDto;
     dialog.open('feature', feature('diagnostics.logs', '/admin/diagnostics/logs'));
-    expect(dialog.editor()!.subtitle).toBe('diagnostics.logs · /admin/diagnostics/logs');
+    expect(dialog.editor.current()!.subtitle).toBe('diagnostics.logs · /admin/diagnostics/logs');
     dialog.open('feature', feature('diagnostics.logs.export', ''));
-    expect(dialog.editor()!.subtitle).toBe('diagnostics.logs.export');
+    expect(dialog.editor.current()!.subtitle).toBe('diagnostics.logs.export');
     dialog.update('name', '匯出日誌');
     await dialog.save(new Event('submit'));
     expect(api.feature).toHaveBeenCalledWith('diagnostics.logs.export', {
@@ -193,7 +193,7 @@ describe('AccessEditorDialog', () => {
     const { dialog, api } = setup();
     const feature = { ...catalog.features[0], name: '聊天', route: '/work/chat' };
     dialog.open('feature', feature as AdminFeatureDto);
-    expect(dialog.editor()!.defaultName).toBe('對話');
+    expect(dialog.editor.current()!.defaultName).toBe('對話');
     dialog.update('name', ' ');
     await dialog.save(new Event('submit'));
     expect(dialog.editorError()).toBe('');
@@ -213,12 +213,15 @@ describe('AccessEditorDialog', () => {
     expect(dialog.groupSection()).toBe('settings');
     dialog.update('name', '審閱');
     dialog.update('modelPolicy', {
-      ...dialog.editor()!.modelPolicy,
+      ...dialog.editor.current()!.draft.modelPolicy,
       tokenLimits: { m: '-1' },
     });
     await dialog.save(new Event('submit'));
     expect(dialog.groupSection()).toBe('models');
-    dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, tokenLimits: {} });
+    dialog.update('modelPolicy', {
+      ...dialog.editor.current()!.draft.modelPolicy,
+      tokenLimits: {},
+    });
     dialog.update('storage', 'abc');
     await dialog.save(new Event('submit'));
     expect(dialog.groupSection()).toBe('settings');
@@ -339,9 +342,9 @@ describe('AccessEditorDialog', () => {
     dialog.open('group', scoped);
     expect(dialog.scopedGrants()[0].manager?.value).toBe('managed-tree');
     dialog.updateScope('attendance.records', '', 'managerScopes');
-    expect(dialog.dirty()).toBe(true);
+    expect(dialog.editor.dirty()).toBe(true);
     dialog.updateScope('attendance.records', 'managed-tree', 'managerScopes');
-    expect(dialog.dirty()).toBe(false);
+    expect(dialog.editor.dirty()).toBe(false);
   });
 
   it('treats a changed scope as unsaved and ignores scopes of features no longer granted', () => {
@@ -350,34 +353,40 @@ describe('AccessEditorDialog', () => {
     dialog.open('group', scoped);
     expect(dialog.scopedGrants()[0].value).toBe('all');
     dialog.updateScope('audit', 'unit');
-    expect(dialog.dirty()).toBe(true);
+    expect(dialog.editor.dirty()).toBe(true);
     dialog.updateScope('audit', 'all');
-    expect(dialog.dirty()).toBe(false);
+    expect(dialog.editor.dirty()).toBe(false);
   });
 
   it('tracks unsaved changes against the values as opened and reverts to them', async () => {
     const { dialog, api } = setup();
     dialog.open('group', group);
-    expect(dialog.dirty()).toBe(false);
+    expect(dialog.editor.dirty()).toBe(false);
     // 沒有可儲存的內容：儲存會像其停用的按鈕一樣被拒絕。
     await dialog.save(new Event('submit'));
     expect(api.group).not.toHaveBeenCalled();
     // 相同的 id 以不同順序排列，且空白的 token 上限，儲存的政策相同。
     dialog.update('ids', ['off', 'repositories']);
-    dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, tokenLimits: { m: ' ' } });
-    expect(dialog.dirty()).toBe(false);
+    dialog.update('modelPolicy', {
+      ...dialog.editor.current()!.draft.modelPolicy,
+      tokenLimits: { m: ' ' },
+    });
+    expect(dialog.editor.dirty()).toBe(false);
     dialog.selectSection('models');
     dialog.update('storage', '3');
     dialog.update('enabled', false);
-    expect(dialog.dirty()).toBe(true);
+    expect(dialog.editor.dirty()).toBe(true);
     // 一次儲存涵蓋所有分頁，所以持有變更的那個分頁會被標記。
     expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false, false, false]);
-    dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, restricted: true });
+    dialog.update('modelPolicy', {
+      ...dialog.editor.current()!.draft.modelPolicy,
+      restricted: true,
+    });
     expect(dialog.groupSections().map((item) => item.dirty)).toEqual([true, false, false, true]);
     dialog.revert();
-    expect(dialog.dirty()).toBe(false);
-    expect(dialog.editor()!.enabled).toBe(true);
-    expect(dialog.editor()!.storage).toBe('');
+    expect(dialog.editor.dirty()).toBe(false);
+    expect(dialog.editor.current()!.draft.enabled).toBe(true);
+    expect(dialog.editor.current()!.draft.storage).toBe('');
     expect(dialog.groupSection()).toBe('models');
   });
 
@@ -402,7 +411,7 @@ describe('AccessEditorDialog', () => {
     await dialog.requestClose();
     expect(ask).toHaveBeenCalledWith(expect.objectContaining({ confirm: '放棄變更' }));
     expect(native.open).toBe(true);
-    expect(dialog.editor()!.name).toBe('成員們');
+    expect(dialog.editor.current()!.draft.name).toBe('成員們');
     ask.mockResolvedValueOnce(true);
     await dialog.requestClose();
     expect(native.open).toBe(false);

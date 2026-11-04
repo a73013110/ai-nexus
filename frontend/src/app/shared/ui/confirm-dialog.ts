@@ -18,6 +18,7 @@ export interface Confirmation {
   confirm: string;
   danger?: boolean;
 }
+/** 以 Promise 回答的確認對話框：`ask` 等使用者選擇；再次詢問或元件銷毀時，前一個問題視為取消。 */
 @Component({
   selector: 'nx-confirm-dialog',
   imports: [CompactDialog, DialogHeader],
@@ -62,6 +63,10 @@ export class ConfirmDialog {
     this.value.set(value);
     this.dialog().nativeElement.showModal();
     return new Promise<boolean>((resolve) => (this.resolve = resolve));
+  }
+  /** 關閉、切換或離開會捨棄未儲存的變更時，全站同一個標題與按鈕；`message` 說明捨棄什麼、之後會是什麼內容。 */
+  discard(message: string) {
+    return this.ask({ title: '放棄未儲存的變更？', message, confirm: '放棄變更' });
   }
   onCancel(event: Event) {
     event.preventDefault();

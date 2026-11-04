@@ -29,6 +29,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
@@ -57,15 +58,22 @@ export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
 /** 功能群組的頁籤：基本資料與附件容量、授予功能、各功能的資料範圍、AI 模型；一次儲存涵蓋全部。 */
 export type GroupSection = 'settings' | 'features' | 'scopes' | 'models';
 const LABELS: Record<AccessKind, string> = { role: '角色', group: '功能群組', feature: '功能' };
-interface Editor {
+/** 開啟時固定的編輯對象。 */
+interface Target {
   kind: AccessKind;
-  id: string;
   /** 開啟時讀到的版本；新增時沒有。 */
   rowVersion: number | null;
-  name: string;
-  /** 開啟時固定，讓標題顯示正在編輯的對象，而不是草稿名稱。 */
+  /** 讓標題顯示正在編輯的對象，而不是草稿名稱。 */
   title: string;
   subtitle: string;
+  /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
+  defaultName: string;
+  isNew: boolean;
+}
+/** 可修改的欄位；識別碼只有新增時能填。 */
+interface AccessDraft {
+  id: string;
+  name: string;
   enabled: boolean;
   ids: string[];
   /** 群組授權的資料範圍（功能 ID → 範圍）；未選過的功能取它支援的最窄範圍，見 `grantScopes`。 */
@@ -74,9 +82,6 @@ interface Editor {
   managerScopes: Record<string, string>;
   modelPolicy: ModelPolicyDraft;
   storage: string;
-  /** 功能的目錄預設名稱；名稱留白或與它相同就是不覆寫。 */
-  defaultName: string;
-  isNew: boolean;
 }
 
 /** 授權上的兩種範圍：`scopes` 給群組的所有成員，`managerScopes` 是成員中組織勾選為主管的人另可看的（ADR 0017、0022）。 */
@@ -159,7 +164,7 @@ function sameRecord(a: Record<string, string>, b: Record<string, string>) {
   return keys.length === Object.keys(b).length && keys.every((id) => a[id] === b[id]);
 }
 
-function sameScopes(first: Editor, second: Editor) {
+function sameScopes(first: AccessDraft, second: AccessDraft) {
   return (
     sameRecord(grantScopes(first.ids, first.scopes), grantScopes(second.ids, second.scopes)) &&
     sameRecord(
@@ -170,7 +175,7 @@ function sameScopes(first: Editor, second: Editor) {
 }
 
 /** 「群組設定」頁籤持有的欄位；角色與功能也只比較這些加上 `ids`。 */
-function sameBasics(first: Editor, second: Editor) {
+function sameBasics(first: AccessDraft, second: AccessDraft) {
   return (
     first.id === second.id &&
     first.name === second.name &&
@@ -180,7 +185,7 @@ function sameBasics(first: Editor, second: Editor) {
 }
 
 /** 草稿是否與已儲存的內容相同。 */
-function sameEditor(first: Editor, second: Editor) {
+function sameDraft(first: AccessDraft, second: AccessDraft) {
   return (
     sameBasics(first, second) &&
     sameIds(first.ids, second.ids) &&
@@ -231,14 +236,7 @@ export class AccessEditorDialog {
   readonly store = inject(AccessControlStore);
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AccessControlApi);
-  readonly editor = signal<Editor | null>(null);
-  /** 開啟時的草稿，用於還原與未儲存變更的檢查。 */
-  private readonly opened = signal<Editor | null>(null);
-  readonly dirty = computed(() => {
-    const draft = this.editor(),
-      opened = this.opened();
-    return !!draft && !!opened && !sameEditor(draft, opened);
-  });
+  readonly editor = new DraftEditor<AccessDraft, Target>(sameDraft);
   readonly saving = signal(false);
   /** 儲存中或測試其他身分時，欄位唯讀。 */
   readonly editorError = signal('');
@@ -249,9 +247,9 @@ export class AccessEditorDialog {
    * 有幾個要選範圍；新勾選有範圍的功能時兩者都會標記，因為它的預設範圍也會一起儲存。
    */
   readonly groupSections = computed<readonly (TabItem & { value: GroupSection })[]>(() => {
-    const draft = this.editor(),
-      opened = this.opened();
-    const changed = (same: (first: Editor, second: Editor) => boolean) =>
+    const draft = this.editor.current()?.draft,
+      opened = this.editor.baseline();
+    const changed = (same: (first: AccessDraft, second: AccessDraft) => boolean) =>
       !!draft && !!opened && !same(draft, opened);
     return [
       { value: 'settings', label: '群組設定', dirty: changed(sameBasics) },
@@ -292,8 +290,9 @@ export class AccessEditorDialog {
   );
   /** 群組授予功能；已勾選且有資料範圍的功能在 id 後附上目前的範圍，不切頁籤也看得到。 */
   readonly featureChoices = computed<ChoiceGroup[]>(() => {
-    const draft = this.editor();
-    const scopes = draft?.kind === 'group' ? grantScopes(draft.ids, draft.scopes) : {};
+    const editor = this.editor.current();
+    const scopes =
+      editor?.kind === 'group' ? grantScopes(editor.draft.ids, editor.draft.scopes) : {};
     return this.sections().map((section) => ({
       id: section.id,
       name: section.name,
@@ -322,11 +321,12 @@ export class AccessEditorDialog {
    * `fresh` 是這次才勾選的功能：它已套用最窄的預設範圍，提醒管理員確認。
    */
   readonly scopedGrants = computed(() => {
-    const draft = this.editor();
-    if (!draft || draft.kind !== 'group') return [];
+    const editor = this.editor.current();
+    if (!editor || editor.kind !== 'group') return [];
+    const draft = editor.draft;
     const scopes = grantScopes(draft.ids, draft.scopes),
       managerScopes = grantManagerScopes(draft.ids, draft.scopes, draft.managerScopes);
-    const granted = new Set(this.opened()?.ids ?? []);
+    const granted = new Set(this.editor.baseline()?.ids ?? []);
     const sections = new Map(
       this.sections().flatMap((section) => section.features.map((item) => [item.id, section.name])),
     );
@@ -367,12 +367,12 @@ export class AccessEditorDialog {
   /** 有任一功能能另外給主管時，才需要說明主管是誰。 */
   readonly managerScoped = computed(() => this.scopedGrants().some((grant) => grant.manager));
   readonly tour = computed(() => {
-    const draft = this.editor();
-    return draft
+    const editor = this.editor.current();
+    return editor
       ? accessEditorTour({
           names: accessPageNames((id) => this.session.featureName(id)),
-          kind: draft.kind,
-          creating: draft.isNew,
+          kind: editor.kind,
+          creating: editor.isNew,
           section: this.groupSection(),
           scoped: this.scopedGrants().length > 0,
         })
@@ -385,10 +385,10 @@ export class AccessEditorDialog {
   }
   /** 角色儲存後會授予的內容：已啟用群組中已啟用的功能。 */
   readonly proposedFeatures = computed(() => {
-    const draft = this.editor(),
+    const editor = this.editor.current(),
       catalog = this.store.catalog();
-    if (!draft || !draft.enabled || draft.kind !== 'role' || !catalog) return [];
-    const groups = new Set(draft.ids);
+    if (!editor || !editor.draft.enabled || editor.kind !== 'role' || !catalog) return [];
+    const groups = new Set(editor.draft.ids);
     const features = new Set(
       catalog.groups
         .filter((item) => item.enabled && groups.has(item.id))
@@ -405,14 +405,18 @@ export class AccessEditorDialog {
       group = kind === 'group' ? (item as AdminGroupDto) : null,
       feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
     const name = role?.name || group?.name || feature?.name || '';
-    const draft: Editor = {
+    const target: Target = {
       kind,
-      id: item?.id || '',
       rowVersion: item?.rowVersion ?? null,
-      name,
       title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
       // 沒有頁面的功能（例如 `diagnostics.logs.export` 這類動作）沒有網址可顯示。
       subtitle: feature ? [feature.id, feature.route].filter(Boolean).join(' · ') : item?.id || '',
+      defaultName: (feature && catalogFeature(feature.id)?.name) || '',
+      isNew: !item,
+    };
+    const draft: AccessDraft = {
+      id: item?.id || '',
+      name,
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: [...(role?.groupIds || group?.featureIds || [])],
       scopes: { ...group?.scopes },
@@ -422,11 +426,8 @@ export class AccessEditorDialog {
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
           : storageLimitGb(group.policy.storedAttachmentLimitBytes),
-      defaultName: (feature && catalogFeature(feature.id)?.name) || '',
-      isNew: !item,
     };
-    this.editor.set(draft);
-    this.opened.set(draft);
+    this.editor.open(target, draft);
     this.selectSection('settings');
     this.dialog().nativeElement.showModal();
   }
@@ -435,17 +436,16 @@ export class AccessEditorDialog {
     this.groupSection.set(section);
     this.body()?.nativeElement.scrollTo({ top: 0 });
   }
-  update<K extends keyof Editor>(key: K, value: Editor[K]) {
-    this.editor.update((old) => (old ? { ...old, [key]: value } : null));
+  update<K extends keyof AccessDraft>(key: K, value: AccessDraft[K]) {
+    this.editor.update(key, value);
   }
   updateScope(feature: string, scope: string, axis: ScopeAxis = 'scopes') {
-    this.editor.update((old) =>
-      old ? { ...old, [axis]: { ...old[axis], [feature]: scope } } : null,
-    );
+    const scopes = this.editor.current()?.draft[axis];
+    if (scopes) this.editor.update(axis, { ...scopes, [feature]: scope });
   }
   /** 還原為開啟時的值；分頁停留在原位。 */
   revert() {
-    this.editor.set(this.opened());
+    this.editor.revert();
     this.editorError.set('');
   }
   /** Escape、關閉鈕、抽屜的滑動關閉都會走到這裡。 */
@@ -455,29 +455,22 @@ export class AccessEditorDialog {
   }
   async requestClose() {
     if (this.saving()) return;
-    const draft = this.editor();
-    if (
-      draft &&
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: draft.isNew
-          ? `尚未建立${this.label(draft.kind)}，關閉後會捨棄已填寫的內容。`
-          : `「${draft.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`,
-        confirm: '放棄變更',
-      }))
-    )
-      return;
-    this.dialog().nativeElement.close();
+    const editor = this.editor.current();
+    const message = editor?.isNew
+      ? `尚未建立${this.label(editor.kind)}，關閉後會捨棄已填寫的內容。`
+      : `「${editor?.title}」的變更尚未儲存，關閉後會恢復為已儲存的設定。`;
+    if (await this.editor.confirmDiscard(this.confirmation(), message))
+      this.dialog().nativeElement.close();
   }
   async save(event: Event) {
     event.preventDefault();
-    const draft = this.editor();
-    if (!draft || this.saving() || (!draft.isNew && !this.dirty())) return;
+    const editor = this.editor.current();
+    if (!editor || this.saving() || (!editor.isNew && !this.editor.dirty())) return;
+    const draft = editor.draft;
     // 錯誤會打開含有該欄位的分頁並聚焦（或顯示訊息），
     // 即使欄位位於頁面較下方，修正處也能被看到。
     const fail = (section: GroupSection, message: string, field?: string) => {
-      if (draft.kind === 'group') this.selectSection(section);
+      if (editor.kind === 'group') this.selectSection(section);
       this.editorError.set(message);
       afterNextRender(
         () => {
@@ -490,10 +483,10 @@ export class AccessEditorDialog {
       );
     };
     // 功能的名稱可以留白，表示沿用目錄的預設名稱；其他項目都要有名稱。
-    if (!draft.id || (draft.kind !== 'feature' && !draft.name.trim()))
+    if (!draft.id || (editor.kind !== 'feature' && !draft.name.trim()))
       return fail('settings', '請輸入識別碼與名稱。', draft.id ? 'name' : 'id');
     let policy: GroupPolicyRequest | undefined;
-    if (draft.kind === 'group') {
+    if (editor.kind === 'group') {
       try {
         policy = modelPolicyRequest(draft.modelPolicy);
       } catch (error) {
@@ -508,14 +501,14 @@ export class AccessEditorDialog {
     this.saving.set(true);
     this.editorError.set('');
     try {
-      if (draft.kind === 'role')
+      if (editor.kind === 'role')
         await this.api.role(draft.id, {
           name: draft.name,
           enabled: draft.enabled,
           groupIds: draft.ids,
-          rowVersion: draft.rowVersion,
+          rowVersion: editor.rowVersion,
         });
-      if (draft.kind === 'group' && policy)
+      if (editor.kind === 'group' && policy)
         await this.api.group(draft.id, {
           name: draft.name,
           enabled: draft.enabled,
@@ -523,24 +516,24 @@ export class AccessEditorDialog {
           scopes: grantScopes(draft.ids, draft.scopes),
           managerScopes: grantManagerScopes(draft.ids, draft.scopes, draft.managerScopes),
           policy,
-          rowVersion: draft.rowVersion,
+          rowVersion: editor.rowVersion,
         });
-      if (draft.kind === 'feature')
+      if (editor.kind === 'feature')
         await this.api.feature(draft.id, {
-          name: featureNameOverride(draft.name, draft.defaultName),
+          name: featureNameOverride(draft.name, editor.defaultName),
           enabled: draft.enabled,
-          rowVersion: draft.rowVersion ?? 0,
+          rowVersion: editor.rowVersion ?? 0,
         });
-      this.opened.set(draft);
+      this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.saved(
-        draft.isNew ? '已建立' + this.label(draft.kind) : '已儲存',
+        editor.isNew ? '已建立' + this.label(editor.kind) : '已儲存',
         '授權變更會在下一次操作生效。',
       );
     } catch (error) {
       if (isStaleWrite(error)) {
         // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.opened.set(draft);
+        this.editor.markSaved();
         this.dialog().nativeElement.close();
         this.store.stale();
       } else this.editorError.set(safeMessage(error));

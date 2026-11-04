@@ -2,11 +2,11 @@
   nxCompactDialog
   #itemDialog
   class="platform-dialog navigation-item-dialog"
-  [size]="editor()?.draft?.kind === 'link' ? 'lg' : 'md'"
+  [size]="editor.current()?.draft?.kind === 'link' ? 'lg' : 'md'"
   [busy]="saving()"
   (cancel)="cancel($event)"
 >
-  @if (editor(); as e) {
+  @if (editor.current(); as e) {
     <!-- 由 save() 檢查，說明放在欄位旁；瀏覽器原生提示的文字與位置各家不同，不用它。 -->
     <form class="dialog-form" novalidate (submit)="save($event)">
       <nx-dialog-header
@@ -187,7 +187,7 @@
       } @else {
         <nx-dialog-save-bar
           [label]="'儲存' + label(e.draft.kind)"
-          [dirty]="dirty()"
+          [dirty]="editor.dirty()"
           [saving]="saving()"
           (revert)="revert()"
         />

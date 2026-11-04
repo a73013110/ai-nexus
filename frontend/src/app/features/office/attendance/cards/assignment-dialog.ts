@@ -17,6 +17,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -39,8 +40,8 @@ export interface AssignmentDraft {
   note: string;
 }
 /** 修改既有期間時帶打開時讀到的版本，期間被別人改過就回 409，不蓋掉對方的修改；新增時兩者都是 null。 */
-type Editor = EditorFields & ({ id: string; rowVersion: number } | { id: null; rowVersion: null });
-interface EditorFields {
+type Target = TargetFields & ({ id: string; rowVersion: number } | { id: null; rowVersion: null });
+interface TargetFields {
   cardId: string;
   cardNumber: string;
   title: string;
@@ -48,7 +49,6 @@ interface EditorFields {
   ending: boolean;
   /** 新增時卡片目前的持有人：標題改為「轉給其他人」，接手時不再另外確認。 */
   transferFrom: string | null;
-  draft: AssignmentDraft;
 }
 
 /** 與後端 `CardAssignment.HolderNameMaxLength`、`NoteMaxLength` 相同。 */
@@ -93,7 +93,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
       [busy]="store.busy()"
       (cancel)="cancel($event)"
     >
-      @if (editor(); as e) {
+      @if (editor.current(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header
             [heading]="e.title"
@@ -206,7 +206,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
               type="submit"
               class="primary-button"
               [pending]="store.busy()"
-              [disabled]="!store.busy() && !!e.id && !dirty()"
+              [disabled]="!store.busy() && !!e.id && !editor.dirty()"
             >
               {{
                 store.busy()
@@ -244,21 +244,20 @@ export class AssignmentDialog {
   private readonly picker = viewChild(PersonPicker);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('assignmentDialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly editor = signal<Editor | null>(null);
-  private readonly opened = signal<AssignmentDraft | null>(null);
+  readonly editor = new DraftEditor<AssignmentDraft, Target>(same);
   readonly error = signal('');
   readonly holderError = signal('');
   readonly periodError = signal('');
   readonly people = directorySearch(
     () => {
-      const user = this.editor()?.draft.user;
+      const user = this.editor.current()?.draft.user;
       return user ? [user.id] : [];
     },
     { includeSelf: true },
   );
   /** 已決定的持有人；沒有時顯示選擇器。使用者優先，舊資料兩者都有時姓名只是備援。 */
   readonly holder = computed(() => {
-    const draft = this.editor()?.draft;
+    const draft = this.editor.current()?.draft;
     if (draft?.user)
       return {
         bound: true,
@@ -267,11 +266,6 @@ export class AssignmentDialog {
       };
     const name = draft?.holderName.trim();
     return name ? { bound: false, name, detail: '尚無帳號，只記姓名' } : null;
-  });
-  readonly dirty = computed(() => {
-    const editor = this.editor(),
-      opened = this.opened();
-    return !!editor && !!opened && !same(editor.draft, opened);
   });
 
   /**
@@ -283,22 +277,24 @@ export class AssignmentDialog {
     startsAt?: string,
     endsAt?: string | null,
   ) {
-    this.show({
-      id: null,
-      rowVersion: null,
-      cardId: card.id,
-      cardNumber: card.cardNumber,
-      title: card.holder ? '轉給其他人' : '指派持有人',
-      ending: false,
-      transferFrom: card.holder ?? null,
-      draft: {
+    this.show(
+      {
+        id: null,
+        rowVersion: null,
+        cardId: card.id,
+        cardNumber: card.cardNumber,
+        title: card.holder ? '轉給其他人' : '指派持有人',
+        ending: false,
+        transferFrom: card.holder ?? null,
+      },
+      {
         user: null,
         holderName: '',
         startsAt: wall(startsAt ?? new Date().toISOString()),
         endsAt: wall(endsAt),
         note: '',
       },
-    });
+    );
   }
   /** 修改；`ending` 時把結束時間預填為現在。 */
   edit(item: CardAssignmentDto, ending = false) {
@@ -320,24 +316,21 @@ export class AssignmentDialog {
         title: ending ? '結束持有' : '編輯持有期間',
         ending,
         transferFrom: null,
-        draft,
       },
-      ending ? { ...draft, endsAt: wall(new Date().toISOString()) } : undefined,
+      draft,
+      ending ? { ...draft, endsAt: wall(new Date().toISOString()) } : draft,
     );
   }
-  private show(editor: Editor, start?: AssignmentDraft) {
+  private show(target: Target, draft: AssignmentDraft, start = draft) {
     this.error.set('');
     this.holderError.set('');
     this.periodError.set('');
     this.people.clear();
-    this.opened.set(editor.draft);
-    this.editor.set(start ? { ...editor, draft: start } : editor);
+    this.editor.open(target, draft, start);
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof AssignmentDraft>(key: K, value: AssignmentDraft[K]) {
-    this.editor.update((editor) =>
-      editor ? { ...editor, draft: { ...editor.draft, [key]: value } } : null,
-    );
+    this.editor.update(key, value);
     if (key === 'user' || key === 'holderName') this.holderError.set('');
     if (key === 'startsAt' || key === 'endsAt') this.periodError.set('');
   }
@@ -353,9 +346,7 @@ export class AssignmentDialog {
     afterNextRender(() => this.picker()?.focus(), { injector: this.injector });
   }
   private setHolder(user: Holder | null, holderName: string) {
-    this.editor.update((editor) =>
-      editor ? { ...editor, draft: { ...editor.draft, user, holderName } } : null,
-    );
+    this.editor.patch({ user, holderName });
     this.holderError.set('');
     this.people.clear();
   }
@@ -366,15 +357,12 @@ export class AssignmentDialog {
   async requestClose() {
     if (this.store.busy()) return;
     if (
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: '持有期間尚未儲存，關閉後會捨棄已填寫的內容。',
-        confirm: '放棄變更',
-      }))
+      await this.editor.confirmDiscard(
+        this.confirmation(),
+        '持有期間尚未儲存，關閉後會捨棄已填寫的內容。',
+      )
     )
-      return;
-    this.dialog().nativeElement.close();
+      this.dialog().nativeElement.close();
   }
 
   /** 本機先檢查必填與期間，伺服器仍會以相同規則再檢查一次。 */
@@ -401,8 +389,8 @@ export class AssignmentDialog {
 
   async save(event: Event) {
     event.preventDefault();
-    const editor = this.editor();
-    if (!editor || this.store.busy() || (editor.id && !this.dirty())) return;
+    const editor = this.editor.current();
+    if (!editor || this.store.busy() || (editor.id && !this.editor.dirty())) return;
     const body = this.validate(editor.draft);
     if (!body) return;
     this.error.set('');
@@ -424,13 +412,13 @@ export class AssignmentDialog {
     if (!outcome.saved) {
       // 打開時的版本已過期，再送也會被拒：關掉，從重讀後的資料重新開始。新增不帶版本，接手重送時會重讀歷史，留著就好。
       if (outcome.stale && editor.id) {
-        this.opened.set(editor.draft);
+        this.editor.markSaved();
         this.dialog().nativeElement.close();
         this.stale.emit(outcome.error);
       } else this.error.set(outcome.error);
       return;
     }
-    this.opened.set(editor.draft);
+    this.editor.markSaved();
     this.dialog().nativeElement.close();
   }
 }

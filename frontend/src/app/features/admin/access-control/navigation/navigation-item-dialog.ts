@@ -20,6 +20,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { ICON_NAMES } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -54,8 +55,9 @@ interface FieldError {
   message: string;
 }
 /** 編輯的節點與開啟時讀到的版本；新增時兩者都沒有。 */
-type Target = { id: string; rowVersion: number } | { id: null; rowVersion: null };
-type Editor = Target & { title: string; draft: Draft };
+type Target = ({ id: string; rowVersion: number } | { id: null; rowVersion: null }) & {
+  title: string;
+};
 
 /**
  * 外部連結的網址：絕對 `https://`、不含帳號密碼，與後端 `NavigationLinks.WellFormed` 相同。
@@ -117,16 +119,10 @@ export class NavigationItemDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('itemDialog');
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly editor = signal<Editor | null>(null);
-  private readonly opened = signal<Draft | null>(null);
+  readonly editor = new DraftEditor<Draft, Target>(sameDraft);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly fieldError = signal<FieldError | null>(null);
-  readonly dirty = computed(() => {
-    const editor = this.editor(),
-      opened = this.opened();
-    return !!editor && !!opened && !sameDraft(editor.draft, opened);
-  });
   readonly kinds: ViewOption[] = NAVIGATION_KINDS.map(({ kind, label, icon }) => ({
     value: kind,
     label,
@@ -181,7 +177,7 @@ export class NavigationItemDialog {
   ]);
   readonly label = navigationKindLabel;
   readonly tour = computed(() => {
-    const editor = this.editor();
+    const editor = this.editor.current();
     return editor
       ? navigationItemTour({
           names: accessPageNames((id) => this.session.featureName(id)),
@@ -193,22 +189,28 @@ export class NavigationItemDialog {
 
   /** 新增：`parentId` 為 `null` 時放在最上層。 */
   create(kind: NavigationKind, parentId: string | null = null) {
-    this.show({ id: null, rowVersion: null }, '新增選單項目', {
-      kind,
-      parentId: parentId ?? '',
-      featureId: '',
-      name: '',
-      url: '',
-      openInNewTab: true,
-      icon: '',
-      audienceGroupIds: [],
-    });
+    this.show(
+      { id: null, rowVersion: null, title: '新增選單項目' },
+      {
+        kind,
+        parentId: parentId ?? '',
+        featureId: '',
+        name: '',
+        url: '',
+        openInNewTab: true,
+        icon: '',
+        audienceGroupIds: [],
+      },
+    );
   }
   edit(item: NavigationItemDto) {
     const kind = item.kind as NavigationKind;
     this.show(
-      { id: item.id, rowVersion: item.rowVersion },
-      `編輯${navigationKindLabel(kind)}：${this.store.name(item)}`,
+      {
+        id: item.id,
+        rowVersion: item.rowVersion,
+        title: `編輯${navigationKindLabel(kind)}：${this.store.name(item)}`,
+      },
       {
         kind,
         parentId: item.parentId ?? '',
@@ -221,22 +223,18 @@ export class NavigationItemDialog {
       },
     );
   }
-  private show(target: Target, title: string, draft: Draft) {
+  private show(target: Target, draft: Draft) {
     this.error.set('');
     this.fieldError.set(null);
-    this.editor.set({ ...target, title, draft });
-    this.opened.set(draft);
+    this.editor.open(target, draft);
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof Draft>(key: K, value: Draft[K]) {
-    this.editor.update((editor) =>
-      editor ? { ...editor, draft: { ...editor.draft, [key]: value } } : null,
-    );
+    this.editor.update(key, value);
     if (this.fieldError()?.field === key) this.fieldError.set(null);
   }
   revert() {
-    const opened = this.opened();
-    this.editor.update((editor) => (editor && opened ? { ...editor, draft: opened } : editor));
+    this.editor.revert();
     this.error.set('');
     this.fieldError.set(null);
   }
@@ -246,26 +244,18 @@ export class NavigationItemDialog {
   }
   async requestClose() {
     if (this.saving()) return;
-    const editor = this.editor();
-    if (
-      editor &&
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: editor.id
-          ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
-          : '尚未建立選單項目，關閉後會捨棄已填寫的內容。',
-        confirm: '放棄變更',
-      }))
-    )
-      return;
-    this.dialog().nativeElement.close();
+    const editor = this.editor.current();
+    const message = editor?.id
+      ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
+      : '尚未建立選單項目，關閉後會捨棄已填寫的內容。';
+    if (await this.editor.confirmDiscard(this.confirmation(), message))
+      this.dialog().nativeElement.close();
   }
 
   async save(event: Event) {
     event.preventDefault();
-    const editor = this.editor();
-    if (!editor || this.saving() || (editor.id && !this.dirty())) return;
+    const editor = this.editor.current();
+    if (!editor || this.saving() || (editor.id && !this.editor.dirty())) return;
     const draft = editor.draft;
     const invalid = this.validate(draft);
     if (invalid) {
@@ -305,7 +295,7 @@ export class NavigationItemDialog {
           rowVersion: editor.rowVersion,
         });
       else await this.api.createNavigationItem({ ...content, parentId: draft.parentId || null });
-      this.opened.set(draft);
+      this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.toast.success(
         editor.id ? '已儲存' : `已新增${navigationKindLabel(draft.kind)}`,
@@ -315,7 +305,7 @@ export class NavigationItemDialog {
     } catch (error) {
       if (isStaleWrite(error)) {
         // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.opened.set(draft);
+        this.editor.markSaved();
         this.dialog().nativeElement.close();
         this.store.stale();
       } else this.error.set(safeMessage(error));

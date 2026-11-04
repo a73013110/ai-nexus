@@ -350,8 +350,8 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
   await expectViewportContained(page);
   await dialog.getByRole("button", { name: "取消", exact: true }).click();
   await page
-    .getByRole("dialog", { name: "放棄未儲存的內容" })
-    .getByRole("button", { name: "放棄修改", exact: true })
+    .getByRole("dialog", { name: "放棄未儲存的變更？", exact: true })
+    .getByRole("button", { name: "放棄變更", exact: true })
     .click();
   await expect(dialog).not.toBeVisible();
 });

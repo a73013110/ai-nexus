@@ -177,10 +177,8 @@ export class AdminUserInspector {
     const tab = this.store.tab();
     if (this.store.saving()) return false;
     if (tab === 'conversations' || !this.store.dirty()[tab]) return true;
-    return this.confirmation().ask({
-      title: '放棄未儲存的變更？',
-      message: `「${this.tabs().find((item) => item.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
-      confirm: '放棄變更',
-    });
+    return this.confirmation().discard(
+      `「${this.tabs().find((item) => item.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
+    );
   }
 }

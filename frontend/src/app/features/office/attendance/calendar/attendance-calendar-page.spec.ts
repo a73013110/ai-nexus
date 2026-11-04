@@ -216,7 +216,7 @@ describe('AttendanceCalendarPage', () => {
     expect(root.querySelector('[role="grid"]')?.getAttribute('aria-readonly')).toBe('true');
     cell(1).click();
     await fixture.whenStable();
-    expect(dialog().day()).toBeNull();
+    expect(dialog().editor.current()).toBeNull();
     await showList();
     expect(root.querySelector('.calendar-edit')).toBeNull();
   });
@@ -233,7 +233,7 @@ describe('CalendarDayDialog', () => {
     await fixture.whenStable();
     cell(2).click();
     await fixture.whenStable();
-    const editor = dialog();
+    const day = dialog();
     const options = [...root.querySelectorAll<HTMLInputElement>('.day-kind input[type="radio"]')];
     expect(options.map((option) => option.value)).toEqual([
       'FullDay',
@@ -245,12 +245,12 @@ describe('CalendarDayDialog', () => {
     expect(root.querySelector('.day-kind legend small')).toBeNull();
     options[3].click();
     await fixture.whenStable();
-    expect(editor.draft()).toMatchObject({ morningOff: true, afternoonOff: true });
-    expect(editor.dirty()).toBe(true);
+    expect(day.editor.current()?.draft).toMatchObject({ morningOff: true, afternoonOff: true });
+    expect(day.editor.dirty()).toBe(true);
     expect(root.querySelector('.day-kind legend small')?.textContent).toContain('原為「下午放假」');
-    editor.revert();
+    day.revert();
     await fixture.whenStable();
-    expect(editor.dirty()).toBe(false);
-    expect(editor.kind()).toBe('AfternoonOff');
+    expect(day.editor.dirty()).toBe(false);
+    expect(day.kind()).toBe('AfternoonOff');
   });
 });

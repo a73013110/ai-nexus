@@ -222,7 +222,7 @@ test("unsaved settings can be discarded without losing the question draft", asyn
   await chooseSelect(page, "主題", "深色");
   await page.getByRole("button", { name: "關閉設定", exact: true }).click();
   const confirm = page.getByRole("dialog", {
-    name: "放棄尚未儲存的設定？",
+    name: "放棄未儲存的變更？",
     exact: true,
   });
   await expect(confirm).toBeVisible();

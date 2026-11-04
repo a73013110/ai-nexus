@@ -65,7 +65,11 @@ describe('PriceVersionDialog', () => {
   it('starts pristine from a version, so saving and reverting wait for a change', () => {
     const { dialog } = setup();
     dialog.open({ from: 'history', price: version });
-    expect(dialog.draft()).toMatchObject({ modelId: 'qwen3:8b', perRequest: 0.3, effectiveAt: '' });
+    expect(dialog.editor.current()!.draft).toMatchObject({
+      modelId: 'qwen3:8b',
+      perRequest: 0.3,
+      effectiveAt: '',
+    });
     expect(dialog.detail()).toContain('已帶入此版本');
     expect(dialog.dirty()).toBe(false);
     expect(dialog.canSave()).toBe(false);
@@ -73,22 +77,26 @@ describe('PriceVersionDialog', () => {
     expect(dialog.dirty()).toBe(true);
     expect(dialog.canSave()).toBe(true);
     dialog.revert();
-    expect(dialog.draft().perRequest).toBe(0.3);
+    expect(dialog.editor.current()!.draft.perRequest).toBe(0.3);
     expect(dialog.dirty()).toBe(false);
   });
 
   it('picks the provider’s first model, zeroes a free price and refuses cached above input', () => {
     const { dialog } = setup();
     dialog.open();
-    expect(dialog.draft().modelId).toBe('gemma');
+    expect(dialog.editor.current()!.draft.modelId).toBe('gemma');
     dialog.setProvider('ollama');
-    expect(dialog.draft().modelId).toBe('qwen3:8b');
+    expect(dialog.editor.current()!.draft.modelId).toBe('qwen3:8b');
     dialog.field('inputPerMillion', 1);
     dialog.field('cachedInputPerMillion', 2);
     expect(dialog.rateError()).toBeTruthy();
     expect(dialog.canSave()).toBe(false);
     dialog.setKind('free');
-    expect(dialog.draft()).toMatchObject({ kind: 'free', inputPerMillion: 0, perRequest: 0 });
+    expect(dialog.editor.current()!.draft).toMatchObject({
+      kind: 'free',
+      inputPerMillion: 0,
+      perRequest: 0,
+    });
     expect(dialog.rateError()).toBe('');
   });
 

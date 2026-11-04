@@ -15,6 +15,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -64,7 +65,7 @@ const same = (a: DayDraft, b: DayDraft) =>
       [busy]="saving()"
       (cancel)="cancel($event)"
     >
-      @if (day()) {
+      @if (editor.current(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header
             [heading]="title()"
@@ -113,7 +114,7 @@ const same = (a: DayDraft, b: DayDraft) =>
                   placeholder="例如：國慶日、颱風停班"
                   [attr.maxlength]="remarkMax"
                   [attr.aria-describedby]="id + '-remark-note'"
-                  [value]="draft().remark"
+                  [value]="e.draft.remark"
                   [readOnly]="saving()"
                   (input)="update('remark', remark.value)"
               /></label>
@@ -122,14 +123,14 @@ const same = (a: DayDraft, b: DayDraft) =>
                   >罕用字與表情符號公文系統存不下，會被拒絕。</span
                 >
                 <span class="day-remark-count" [class.is-near]="remarkNear()" aria-hidden="true"
-                  >{{ draft().remark.length }} / {{ remarkMax }}</span
+                  >{{ e.draft.remark.length }} / {{ remarkMax }}</span
                 >
               </p>
             </div>
           </div>
           <nx-dialog-save-bar
             label="儲存至公文系統"
-            [dirty]="dirty()"
+            [dirty]="editor.dirty()"
             [saving]="saving()"
             (revert)="revert()"
           />
@@ -150,35 +151,35 @@ export class CalendarDayDialog {
   readonly readOnly = output<void>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dayDialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly day = signal<CalendarDayDto | null>(null);
-  readonly draft = signal<DayDraft>({ morningOff: false, afternoonOff: false, remark: '' });
-  private readonly opened = signal<DayDraft | null>(null);
+  readonly editor = new DraftEditor<DayDraft, { day: CalendarDayDto }>(same);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly tour = CALENDAR_DAY_TOUR;
-  readonly dirty = computed(() => {
-    const opened = this.opened();
-    return !!opened && !same(this.draft(), opened);
+  readonly kind = computed(() => {
+    const draft = this.editor.current()?.draft;
+    return holidayKind(!!draft?.morningOff, !!draft?.afternoonOff);
   });
-  readonly kind = computed(() => holidayKind(this.draft().morningOff, this.draft().afternoonOff));
+  /** 公文系統目前的時段，改過時在標題旁寫「原為…」。 */
   readonly openedKind = computed(() => {
-    const opened = this.opened();
+    const opened = this.editor.baseline();
     return opened ? holidayKind(opened.morningOff, opened.afternoonOff) : this.kind();
   });
   readonly openedLabel = computed(
     () => HOLIDAY_KINDS.find((option) => option.kind === this.openedKind())?.label ?? '',
   );
   /** 剩不到 20 字時計數變色；上限是字數，GD 實際以位元組計，所以只提醒、不擋。 */
-  readonly remarkNear = computed(() => this.draft().remark.length > REMARK_MAX - 20);
+  readonly remarkNear = computed(
+    () => (this.editor.current()?.draft.remark.length ?? 0) > REMARK_MAX - 20,
+  );
   /** 「編輯假日：2026 年 10 月 5 日」，星期放在標題旁（detail），無障礙名稱仍是完整日期。 */
   readonly title = computed(() => {
-    const date = this.day()?.date;
+    const date = this.editor.current()?.day.date;
     return date
       ? `編輯假日：${date.slice(0, 4)} 年 ${Number(date.slice(5, 7))} 月 ${Number(date.slice(8))} 日`
       : '';
   });
   readonly weekdayName = computed(() => {
-    const date = this.day()?.date;
+    const date = this.editor.current()?.day.date;
     return date ? `星期${weekday(date)}` : '';
   });
 
@@ -189,26 +190,19 @@ export class CalendarDayDialog {
       remark: day.remark ?? '',
     };
     this.error.set('');
-    this.day.set(day);
-    this.draft.set(draft);
-    this.opened.set(draft);
+    this.editor.open({ day }, draft);
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof DayDraft>(key: K, value: DayDraft[K]) {
-    this.draft.update((draft) => ({ ...draft, [key]: value }));
+    this.editor.update(key, value);
   }
   choose(kind: HolidayKind) {
     const option = HOLIDAY_KINDS.find((item) => item.kind === kind);
     if (!option) return;
-    this.draft.update((draft) => ({
-      ...draft,
-      morningOff: option.morningOff,
-      afternoonOff: option.afternoonOff,
-    }));
+    this.editor.patch({ morningOff: option.morningOff, afternoonOff: option.afternoonOff });
   }
   revert() {
-    const opened = this.opened();
-    if (opened) this.draft.set(opened);
+    this.editor.revert();
     this.error.set('');
   }
   cancel(event: Event) {
@@ -218,22 +212,19 @@ export class CalendarDayDialog {
   async requestClose() {
     if (this.saving()) return;
     if (
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: `「${this.title()}」的變更尚未儲存，關閉後會恢復為公文系統目前的內容。`,
-        confirm: '放棄變更',
-      }))
+      await this.editor.confirmDiscard(
+        this.confirmation(),
+        `「${this.title()}」的變更尚未儲存，關閉後會恢復為公文系統目前的內容。`,
+      )
     )
-      return;
-    this.dialog().nativeElement.close();
+      this.dialog().nativeElement.close();
   }
 
   async save(event: Event) {
     event.preventDefault();
-    const day = this.day();
-    if (!day || this.saving() || !this.dirty()) return;
-    const draft = this.draft();
+    const editor = this.editor.current();
+    if (!editor || this.saving() || !this.editor.dirty()) return;
+    const { day, draft } = editor;
     const alive = this.scope.guard();
     this.saving.set(true);
     this.error.set('');
@@ -244,7 +235,7 @@ export class CalendarDayDialog {
         remark: draft.remark.trim() || null,
       });
       if (!alive()) return;
-      this.opened.set(draft);
+      this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.toast.success(`已更新 ${day.date.replaceAll('-', '/')} 的假日設定`);
       this.saved.emit(saved);

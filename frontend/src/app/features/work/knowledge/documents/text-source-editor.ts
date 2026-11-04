@@ -170,11 +170,7 @@ export class TextSourceEditor {
     if (
       this.signature() !== this.initial() &&
       (this.title() || this.text()) &&
-      !(await this.confirm().ask({
-        title: '放棄未儲存的內容',
-        message: '這次文字修改尚未儲存。',
-        confirm: '放棄修改',
-      }))
+      !(await this.confirm().discard('這次文字修改尚未儲存，關閉後會捨棄。'))
     )
       return;
     this.editing.set(null);

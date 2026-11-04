@@ -18,6 +18,7 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
@@ -83,35 +84,34 @@ export class PriceVersionDialog {
   /** 區塊標題與費率錯誤的 DOM ID 前綴（`aria-labelledby`、`aria-describedby`）。 */
   readonly id = uniqueId('nx-price-version');
   /** 表單在首次開啟時建立並保留，讓關閉中的對話框不會被清空。 */
-  readonly opened = signal(false);
-  readonly seed = signal<PriceSeed>({ from: 'blank' });
-  private readonly baseline = signal(emptyPrice());
-  readonly draft = signal(emptyPrice());
+  readonly editor = new DraftEditor<PriceRequest, { seed: PriceSeed }>(samePrice);
+  /** 生效時間另存：留白是「立即」，不屬於從起點複製的欄位，填了就算有變更。 */
   readonly effective = signal('');
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly dirty = computed(() => !!this.effective() || !samePrice(this.draft(), this.baseline()));
+  readonly dirty = computed(() => !!this.effective() || this.editor.dirty());
   readonly detail = computed(() => {
-    const seed = this.seed();
-    if (seed.from === 'history')
+    const seed = this.editor.current()?.seed;
+    if (seed?.from === 'history')
       return `已帶入此版本（${formatDate(seed.price.effectiveAt)} 生效）。儲存會建立新版本，歷史價格保持原樣。`;
-    if (seed.from === 'current') return '以目前價格為起點；儲存會建立新版本，歷史價格保持原樣。';
+    if (seed?.from === 'current') return '以目前價格為起點；儲存會建立新版本，歷史價格保持原樣。';
     return '價格只影響之後的呼叫；不同幣別分開統計。';
   });
   readonly tour = computed(() => {
-    const from = this.seed().from;
+    const from = this.editor.current()?.seed.from;
     return priceVersionTour({ copied: from === 'current' || from === 'history' });
   });
-  readonly rateError = computed(() =>
-    this.draft().cachedInputPerMillion > this.draft().inputPerMillion
+  readonly rateError = computed(() => {
+    const draft = this.editor.current()?.draft;
+    return draft && draft.cachedInputPerMillion > draft.inputPerMillion
       ? '快取輸入不得高於一般輸入。'
-      : '',
-  );
+      : '';
+  });
   readonly canSave = computed(
     () =>
       !this.saving() &&
       this.dirty() &&
-      !!this.draft().modelId.trim() &&
+      !!this.editor.current()?.draft.modelId.trim() &&
       !this.rateError() &&
       (this.picker()?.valid() ?? true),
   );
@@ -134,17 +134,9 @@ export class PriceVersionDialog {
     { key: 'outputPerMillion', label: '輸出 / 百萬 tokens' },
     { key: 'perRequest', label: '每次呼叫固定費用' },
   ];
-  /** 供應商的模型與工具，依顯示名稱排列：已設定的目標與已定價的。 */
-  readonly modelChoices = computed(() => {
-    const provider = this.draft().provider;
-    const choices = new Map<string, string>();
-    for (const price of this.prices())
-      if (price.provider === provider) choices.set(price.modelId, formatModelDisplayName(price));
-    // 已設定目標的名稱優先於價格紀錄上的名稱。
-    for (const target of this.targets())
-      if (target.provider === provider) choices.set(target.modelId, target.displayName);
-    return [...choices].map(([value, label]) => ({ value, label }));
-  });
+  readonly modelChoices = computed(() =>
+    this.choicesFor(this.editor.current()?.draft.provider ?? ''),
+  );
   open(seed: PriceSeed = { from: 'blank' }) {
     let draft: PriceRequest;
     if (seed.from === 'current' || seed.from === 'history') {
@@ -153,40 +145,32 @@ export class PriceVersionDialog {
     } else if (seed.from === 'target')
       draft = { ...emptyPrice(), provider: seed.provider, modelId: seed.modelId };
     else draft = emptyPrice();
-    this.seed.set(seed);
-    this.draft.set(draft);
-    if (!draft.modelId) this.field('modelId', this.firstChoice());
-    this.baseline.set(this.draft());
+    if (!draft.modelId) draft = { ...draft, modelId: this.firstChoice(draft.provider) };
+    this.editor.open({ seed }, draft);
     this.effective.set('');
     this.resetPicker();
     this.error.set('');
-    this.opened.set(true);
     this.dialog().nativeElement.showModal();
   }
   field<K extends keyof PriceRequest>(key: K, value: PriceRequest[K]) {
-    this.draft.update((draft) => ({ ...draft, [key]: value }));
+    this.editor.update(key, value);
   }
   setProvider(provider: string) {
-    this.draft.update((draft) => ({ ...draft, provider, modelId: '' }));
-    this.field('modelId', this.firstChoice());
+    this.editor.patch({ provider, modelId: this.firstChoice(provider) });
   }
   setKind(kind: string) {
-    this.field('kind', kind);
-    if (kind === 'free')
-      this.draft.update((draft) => ({
-        ...draft,
-        inputPerMillion: 0,
-        cachedInputPerMillion: 0,
-        outputPerMillion: 0,
-        perRequest: 0,
-      }));
+    this.editor.patch(
+      kind === 'free'
+        ? { kind, inputPerMillion: 0, cachedInputPerMillion: 0, outputPerMillion: 0, perRequest: 0 }
+        : { kind },
+    );
   }
   rateField(key: RateKey, event: Event) {
     const value = (event.target as HTMLInputElement).valueAsNumber;
     this.field(key, Number.isFinite(value) ? value : 0);
   }
   revert() {
-    this.draft.set(this.baseline());
+    this.editor.revert();
     this.effective.set('');
     this.resetPicker();
     this.error.set('');
@@ -196,19 +180,15 @@ export class PriceVersionDialog {
     event.preventDefault();
     if (this.saving()) return;
     if (
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: '這個價格版本尚未儲存，關閉後會捨棄填寫的內容。',
-        confirm: '放棄變更',
-      }))
+      !this.dirty() ||
+      (await this.confirmation().discard('這個價格版本尚未儲存，關閉後會捨棄填寫的內容。'))
     )
-      return;
-    this.dialog().nativeElement.close();
+      this.dialog().nativeElement.close();
   }
   async save(event: Event) {
     event.preventDefault();
-    if (!this.canSave()) return;
+    const draft = this.editor.current()?.draft;
+    if (!draft || !this.canSave()) return;
     const valid = this.scope.guard();
     this.saving.set(true);
     this.error.set('');
@@ -217,12 +197,14 @@ export class PriceVersionDialog {
         this.effective() ? parseDateTimeInput(this.effective()) : new Date()
       ).toISOString();
       await this.api.addPrice({
-        ...this.draft(),
-        modelId: this.draft().modelId.trim(),
-        note: this.draft().note.trim(),
+        ...draft,
+        modelId: draft.modelId.trim(),
+        note: draft.note.trim(),
         effectiveAt,
       });
       if (!valid()) return;
+      this.editor.markSaved();
+      this.effective.set('');
       this.dialog().nativeElement.close();
       this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
       this.saved.emit();
@@ -232,8 +214,18 @@ export class PriceVersionDialog {
       if (valid()) this.saving.set(false);
     }
   }
-  private firstChoice() {
-    return this.modelChoices()[0]?.value ?? '';
+  /** 供應商的模型與工具，依顯示名稱排列：已設定的目標與已定價的。 */
+  private choicesFor(provider: string) {
+    const choices = new Map<string, string>();
+    for (const price of this.prices())
+      if (price.provider === provider) choices.set(price.modelId, formatModelDisplayName(price));
+    // 已設定目標的名稱優先於價格紀錄上的名稱。
+    for (const target of this.targets())
+      if (target.provider === provider) choices.set(target.modelId, target.displayName);
+    return [...choices].map(([value, label]) => ({ value, label }));
+  }
+  private firstChoice(provider: string) {
+    return this.choicesFor(provider)[0]?.value ?? '';
   }
   /** 選擇器無法讀取的輸入文字，會留在欄位中，直到在此清除。 */
   private resetPicker() {

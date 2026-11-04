@@ -2,11 +2,11 @@
   nxCompactDialog
   #editorDialog
   class="platform-dialog admin-editor"
-  [size]="editor()?.kind === 'feature' ? 'sm' : 'lg'"
+  [size]="editor.current()?.kind === 'feature' ? 'sm' : 'lg'"
   [busy]="saving()"
   (cancel)="cancel($event)"
 >
-  @if (editor(); as e) {
+  @if (editor.current(); as e) {
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header
         [heading]="e.title"
@@ -47,7 +47,7 @@
             [models]="store.catalog()?.models || []"
             [loading]="store.loading()"
             [busy]="store.refreshing()"
-            [value]="e.modelPolicy"
+            [value]="e.draft.modelPolicy"
             [disabled]="saving()"
             (valueChange)="update('modelPolicy', $event)"
           />
@@ -74,7 +74,7 @@
                 <nx-choice-groups
                   label="授予功能"
                   [groups]="featureChoices()"
-                  [selected]="e.ids"
+                  [selected]="e.draft.ids"
                   [disabled]="saving()"
                   (selectedChange)="update('ids', $event)"
                 />
@@ -206,7 +206,7 @@
                       placeholder="例如：document-reviewers"
                       autocomplete="off"
                       [attr.aria-describedby]="id + '-id-hint'"
-                      [value]="e.id"
+                      [value]="e.draft.id"
                       [readOnly]="saving()"
                       (input)="update('id', $any($event.target).value)"
                   /></label>
@@ -222,21 +222,21 @@
                     [required]="e.kind !== 'feature'"
                     maxlength="120"
                     [placeholder]="e.defaultName"
-                    [value]="e.name"
+                    [value]="e.draft.name"
                     [readOnly]="saving()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
                 @if (e.kind === 'feature') {
                   <p class="form-note feature-identity">
-                    <nx-icon [name]="icon(catalogIcon(e.id))" />預設名稱「{{
-                      e.defaultName || e.id
+                    <nx-icon [name]="icon(catalogIcon(e.draft.id))" />預設名稱「{{
+                      e.defaultName || e.draft.id
                     }}」
                   </p>
                 }
                 <nx-checkbox
                   [label]="'啟用' + label(e.kind)"
                   [description]="enabledNote[e.kind]"
-                  [checked]="e.enabled"
+                  [checked]="e.draft.enabled"
                   [disabled]="saving()"
                   (checkedChange)="update('enabled', $event)"
                 />
@@ -256,7 +256,7 @@
                   <nx-choice-groups
                     label="加入功能群組"
                     [groups]="groupChoices()"
-                    [selected]="e.ids"
+                    [selected]="e.draft.ids"
                     [disabled]="saving()"
                     (selectedChange)="update('ids', $event)"
                   />
@@ -272,7 +272,7 @@
                   <p class="form-note">依目前勾選的功能群組試算。</p>
                 </header>
                 <div class="form-section-body">
-                  @if (!e.enabled) {
+                  @if (!e.draft.enabled) {
                     <nx-notice tone="warning" message="角色已停用，儲存後不授予任何功能。" />
                   }
                   <nx-feature-summary
@@ -311,7 +311,7 @@
                       step="0.000000001"
                       placeholder="使用網站預設容量"
                       [attr.aria-describedby]="id + '-storage-hint'"
-                      [value]="e.storage"
+                      [value]="e.draft.storage"
                       [readOnly]="saving()"
                       (input)="update('storage', $any($event.target).value)"
                   /></label>
@@ -341,7 +341,7 @@
       } @else {
         <nx-dialog-save-bar
           [label]="'儲存' + label(e.kind)"
-          [dirty]="dirty()"
+          [dirty]="editor.dirty()"
           [saving]="saving()"
           (revert)="revert()"
         />

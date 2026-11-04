@@ -34,11 +34,14 @@
 
 ## 控制項
 
-- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
+- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證或 API；草稿見[未儲存的變更](#未儲存的變更)。
 - 多選清單用 `ChoiceGroups`（每類一張卡片），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色；不用原生勾選框的外觀，對齊見 [並排對齊](alignment.md)。
 - 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。日曆的週末欄淡底、不在當月的日期最淡，方向鍵、Page Up／Down 或滾輪換月。
 - 文字輸入：IME 組字中（含 keyCode 229）的 Enter 不送出，Shift+Enter 換行；長草稿自動增高。
 
 ## 未儲存的變更
 
-有未儲存變更的頁面實作 `canLeave()`，路由加 `pendingChanges` guard；對話框切頁籤或關閉前用 `ConfirmDialog` 確認。
+- 有未儲存變更的頁面實作 `canLeave()`，路由加 `pendingChanges` guard。
+- 關閉、切頁籤或離開會捨棄變更時，用 `ConfirmDialog.discard(說明)`：全站同一個標題「放棄未儲存的變更？」與「放棄變更」鈕，說明只寫捨棄什麼、之後會是什麼內容。
+- 開啟時建立草稿的編輯對話框用 [`DraftEditor`](../../frontend/src/app/shared/ui/draft-editor.ts)：`open(對象, 草稿)` 記下基準，提供 `dirty`、`revert`、`confirmDiscard`；比較規則（去空白、忽略順序）由功能傳入。儲存成功或版本過期後先 `markSaved()` 再關閉，退場動畫期間儲存列才不會閃出「有未儲存的變更」。欄位驗證、送出與對話框開關留在功能。
+- 基準跟著伺服器重讀的（使用者檢視器的各頁籤）用 `linkedSignal` 保存基準，不用 `DraftEditor`。

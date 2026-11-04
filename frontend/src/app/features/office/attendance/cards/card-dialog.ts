@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  computed,
   inject,
   output,
   signal,
@@ -15,6 +14,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -26,9 +26,8 @@ export interface CardDraft {
   note: string;
 }
 /** 新增（`card` 為 null）或修改一張卡的備註；卡號建立後不改，隱藏在抽屜裡直接切換。 */
-interface Editor {
+interface Target {
   card: CardDto | null;
-  draft: CardDraft;
 }
 
 /** 與後端 `Card.CardNumberMaxLength`、`Card.NoteMaxLength` 相同；伺服器仍會再檢查。 */
@@ -64,7 +63,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
       [busy]="store.busy()"
       (cancel)="cancel($event)"
     >
-      @if (editor(); as e) {
+      @if (editor.current(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header
             [heading]="e.card ? '編輯備註' : '新增卡號'"
@@ -159,7 +158,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
           } @else {
             <nx-dialog-save-bar
               label="儲存備註"
-              [dirty]="dirty()"
+              [dirty]="editor.dirty()"
               [saving]="store.busy()"
               (revert)="revert()"
             />
@@ -181,41 +180,31 @@ export class CardDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('cardDialog');
   private readonly numberInput = viewChild<ElementRef<HTMLInputElement>>('number');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly editor = signal<Editor | null>(null);
-  private readonly opened = signal<CardDraft | null>(null);
+  readonly editor = new DraftEditor<CardDraft, Target>(sameDraft);
   readonly error = signal('');
   readonly numberError = signal('');
-  readonly dirty = computed(() => {
-    const editor = this.editor(),
-      opened = this.opened();
-    return !!editor && !!opened && !sameDraft(editor.draft, opened);
-  });
 
   create() {
-    this.show({ card: null, draft: { cardNumber: '', hidden: false, note: '' } });
+    this.show({ card: null }, { cardNumber: '', hidden: false, note: '' });
   }
   editNote(card: CardDto) {
-    this.show({
-      card,
-      draft: { cardNumber: card.cardNumber, hidden: card.hiddenFromRecords, note: card.note ?? '' },
-    });
+    this.show(
+      { card },
+      { cardNumber: card.cardNumber, hidden: card.hiddenFromRecords, note: card.note ?? '' },
+    );
   }
-  private show(editor: Editor) {
+  private show(target: Target, draft: CardDraft) {
     this.error.set('');
     this.numberError.set('');
-    this.editor.set(editor);
-    this.opened.set(editor.draft);
+    this.editor.open(target, draft);
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof CardDraft>(key: K, value: CardDraft[K]) {
-    this.editor.update((editor) =>
-      editor ? { ...editor, draft: { ...editor.draft, [key]: value } } : null,
-    );
+    this.editor.update(key, value);
     if (key === 'cardNumber') this.numberError.set('');
   }
   revert() {
-    const opened = this.opened();
-    this.editor.update((editor) => (editor && opened ? { ...editor, draft: opened } : editor));
+    this.editor.revert();
     this.error.set('');
     this.numberError.set('');
   }
@@ -225,26 +214,17 @@ export class CardDialog {
   }
   async requestClose() {
     if (this.store.busy()) return;
-    const editor = this.editor();
-    if (
-      editor &&
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: editor.card
-          ? '備註的變更尚未儲存，關閉後會恢復為已儲存的內容。'
-          : '尚未新增卡號，關閉後會捨棄已填寫的內容。',
-        confirm: '放棄變更',
-      }))
-    )
-      return;
-    this.dialog().nativeElement.close();
+    const message = this.editor.current()?.card
+      ? '備註的變更尚未儲存，關閉後會恢復為已儲存的內容。'
+      : '尚未新增卡號，關閉後會捨棄已填寫的內容。';
+    if (await this.editor.confirmDiscard(this.confirmation(), message))
+      this.dialog().nativeElement.close();
   }
 
   async save(event: Event) {
     event.preventDefault();
-    const editor = this.editor();
-    if (!editor || this.store.busy() || (editor.card && !this.dirty())) return;
+    const editor = this.editor.current();
+    if (!editor || this.store.busy() || (editor.card && !this.editor.dirty())) return;
     const draft = editor.draft;
     const note = draft.note.trim() || null;
     this.error.set('');
@@ -252,7 +232,7 @@ export class CardDialog {
       const outcome = await this.store.saveNote(editor.card, note);
       if (!outcome.saved && !outcome.stale) return this.error.set(outcome.error);
       // 版本已過期時也關掉：再送也會被拒，要從重讀後的資料重新開始。
-      this.opened.set(draft);
+      this.editor.markSaved();
       this.dialog().nativeElement.close();
       if (!outcome.saved) this.stale.emit(outcome.error);
       return;
@@ -269,7 +249,7 @@ export class CardDialog {
       note,
     });
     if (!outcome.saved) return this.error.set(outcome.error);
-    this.opened.set(draft);
+    this.editor.markSaved();
     this.dialog().nativeElement.close();
     this.created.emit(outcome.value);
   }

@@ -187,9 +187,10 @@ describe('AttendanceCardsPage', () => {
     (notice.querySelector('.cards-assign-pending') as HTMLButtonElement).click();
     await settle();
     const dialog = host.querySelector('nx-assignment-dialog')!;
-    const editor = fixture.debugElement
-      .query(By.directive(AssignmentDialog))
-      .componentInstance.editor() as { draft: { startsAt: string; endsAt: string } };
+    const editor = (
+      fixture.debugElement.query(By.directive(AssignmentDialog))
+        .componentInstance as AssignmentDialog
+    ).editor.current()!;
     expect(dialog.querySelector('dialog')?.hasAttribute('open')).toBe(true);
     // 台北時間：開始是第一筆未歸戶刷卡，結束是下一段期間的開始。
     expect(editor.draft.startsAt).toBe('2026-10-01T08:55:00');

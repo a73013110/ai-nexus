@@ -15,6 +15,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
@@ -35,10 +36,8 @@ interface Draft {
   headRank: string;
 }
 /** 編輯的單位與開啟時讀到的版本；新增時兩者都沒有。 */
-type Target = { id: string; rowVersion: number } | { id: null; rowVersion: null };
-type Editor = Target & {
+type Target = ({ id: string; rowVersion: number } | { id: null; rowVersion: null }) & {
   title: string;
-  draft: Draft;
   /** 來自公文系統的單位（`gdDepNo` 有值）。 */
   imported: boolean;
 };
@@ -77,7 +76,7 @@ const sameDraft = (a: Draft, b: Draft) =>
       [busy]="saving()"
       (cancel)="cancel($event)"
     >
-      @if (editor(); as e) {
+      @if (editor.current(); as e) {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header [heading]="e.title" closeLabel="關閉單位編輯" [tour]="tour()" />
           <div class="dialog-body">
@@ -192,7 +191,7 @@ const sameDraft = (a: Draft, b: Draft) =>
           } @else {
             <nx-dialog-save-bar
               label="儲存單位"
-              [dirty]="dirty()"
+              [dirty]="editor.dirty()"
               [saving]="saving()"
               (revert)="revert()"
             />
@@ -209,34 +208,28 @@ export class UnitDialog {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('unitDialog');
   private readonly nameInput = viewChild<ElementRef<HTMLInputElement>>('name');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly editor = signal<Editor | null>(null);
-  private readonly opened = signal<Draft | null>(null);
+  readonly editor = new DraftEditor<Draft, Target>(sameDraft);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly nameError = signal('');
-  readonly imported = computed(() => !!this.editor()?.imported);
+  readonly imported = computed(() => !!this.editor.current()?.imported);
   readonly tour = computed(() =>
     unitDialogTour({
-      editing: !!this.editor()?.id,
+      editing: !!this.editor.current()?.id,
       imported: this.imported(),
     }),
   );
-  readonly dirty = computed(() => {
-    const editor = this.editor(),
-      opened = this.opened();
-    return !!editor && !!opened && !sameDraft(editor.draft, opened);
-  });
   /** 可選的上層：排除自己與下層，以及放進去後整棵子樹會超過上限的單位；「最上層」由選單釘在最上方。 */
   readonly parents = computed(() => {
     const units = this.store.units();
-    const id = this.editor()?.id;
+    const id = this.editor.current()?.id;
     const excluded = id ? subtree(units, id) : new Set<string>();
     const height = id ? heightOf(units, id) : 1;
     return unitNodes(units, (row) => !excluded.has(row.unit.id) && row.depth + height <= MAX_DEPTH);
   });
   /** 不能設為首長單位的原因；已設的仍可改回一般單位，所以有值時不擋。 */
   readonly headBlocked = computed(() => {
-    const editor = this.editor();
+    const editor = this.editor.current();
     if (!editor || editor.draft.headRank) return '';
     if (!editor.draft.parentId) return '最上層的單位沒有上層可帶領。';
     return editor.id && headsOf(this.store.units(), editor.id).length
@@ -245,7 +238,7 @@ export class UnitDialog {
   });
   /** 層級選項；同一個上層已被其他單位使用的層級停用，並標出是誰。 */
   readonly headRanks = computed<SelectOption[]>(() => {
-    const editor = this.editor();
+    const editor = this.editor.current();
     const taken = new Map(
       (editor?.draft.parentId ? headsOf(this.store.units(), editor.draft.parentId) : [])
         .filter((unit) => unit.id !== editor?.id)
@@ -268,38 +261,42 @@ export class UnitDialog {
 
   create(parent: UnitDto | null = null) {
     const title = parent ? `新增下層單位：${parent.name}` : '新增單位';
-    this.show({ id: null, rowVersion: null }, title, false, {
-      parentId: parent?.id ?? '',
-      name: '',
-      enabled: true,
-      headRank: '',
-    });
+    this.show(
+      { id: null, rowVersion: null, title, imported: false },
+      {
+        parentId: parent?.id ?? '',
+        name: '',
+        enabled: true,
+        headRank: '',
+      },
+    );
   }
   edit(unit: UnitDto) {
-    const target = { id: unit.id, rowVersion: unit.rowVersion };
-    this.show(target, `編輯單位：${unit.name}`, unit.gdDepNo != null, {
+    const target = {
+      id: unit.id,
+      rowVersion: unit.rowVersion,
+      title: `編輯單位：${unit.name}`,
+      imported: unit.gdDepNo != null,
+    };
+    this.show(target, {
       parentId: unit.parentId ?? '',
       name: unit.name,
       enabled: unit.enabled,
       headRank: unit.headRank == null ? '' : String(unit.headRank),
     });
   }
-  private show(target: Target, title: string, imported: boolean, draft: Draft) {
+  private show(target: Target, draft: Draft) {
     this.error.set('');
     this.nameError.set('');
-    this.editor.set({ ...target, title, draft, imported });
-    this.opened.set(draft);
+    this.editor.open(target, draft);
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof Draft>(key: K, value: Draft[K]) {
-    this.editor.update((editor) =>
-      editor ? { ...editor, draft: { ...editor.draft, [key]: value } } : null,
-    );
+    this.editor.update(key, value);
     if (key === 'name') this.nameError.set('');
   }
   revert() {
-    const opened = this.opened();
-    this.editor.update((editor) => (editor && opened ? { ...editor, draft: opened } : editor));
+    this.editor.revert();
     this.error.set('');
     this.nameError.set('');
   }
@@ -309,26 +306,18 @@ export class UnitDialog {
   }
   async requestClose() {
     if (this.saving()) return;
-    const editor = this.editor();
-    if (
-      editor &&
-      this.dirty() &&
-      !(await this.confirmation().ask({
-        title: '放棄未儲存的變更？',
-        message: editor.id
-          ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
-          : '尚未建立單位，關閉後會捨棄已填寫的內容。',
-        confirm: '放棄變更',
-      }))
-    )
-      return;
-    this.dialog().nativeElement.close();
+    const editor = this.editor.current();
+    const message = editor?.id
+      ? `「${editor.title}」的變更尚未儲存，關閉後會恢復為已儲存的內容。`
+      : '尚未建立單位，關閉後會捨棄已填寫的內容。';
+    if (await this.editor.confirmDiscard(this.confirmation(), message))
+      this.dialog().nativeElement.close();
   }
 
   async save(event: Event) {
     event.preventDefault();
-    const editor = this.editor();
-    if (!editor || this.saving() || (editor.id && !this.dirty())) return;
+    const editor = this.editor.current();
+    if (!editor || this.saving() || (editor.id && !this.editor.dirty())) return;
     const draft = editor.draft;
     const name = draft.name.trim();
     if (!name || name.length > 120) {
@@ -348,14 +337,14 @@ export class UnitDialog {
       if (editor.id)
         await this.api.updateUnit(editor.id, { ...body, rowVersion: editor.rowVersion });
       else this.store.select(await this.api.createUnit(body));
-      this.opened.set(draft);
+      this.editor.markSaved();
       this.dialog().nativeElement.close();
       this.store.toast.success(editor.id ? '已儲存' : `已新增「${name}」`);
       this.store.changed();
     } catch (error) {
       if (isStaleWrite(error)) {
         // 手上的版本已過期，再送也一樣被拒：草稿作廢，關閉後由頁面說明。
-        this.opened.set(draft);
+        this.editor.markSaved();
         this.dialog().nativeElement.close();
         this.store.stale();
       } else this.error.set(safeMessage(error));

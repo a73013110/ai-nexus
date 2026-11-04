@@ -158,18 +158,18 @@ describe('NavigationItemDialog', () => {
       audienceGroupIds: ['administrators'],
     });
     expect(dialog.error()).toContain(publicErrorHints['navigation_link_host_not_allowed']);
-    expect(dialog.editor()!.draft.url).toBe('https://other.example.com/');
+    expect(dialog.editor.current()!.draft.url).toBe('https://other.example.com/');
     expect(store.changed).not.toHaveBeenCalled();
   });
 
   it('edits a link in place without moving it and only when something changed', async () => {
     const { dialog, api } = setup();
     dialog.edit(items[1]);
-    expect(dialog.editor()!.title).toBe('編輯外部連結：維運手冊');
+    expect(dialog.editor.current()!.title).toBe('編輯外部連結：維運手冊');
     await dialog.save(new Event('submit'));
     expect(api.updateNavigationItem).not.toHaveBeenCalled();
     dialog.update('openInNewTab', true);
-    expect(dialog.dirty()).toBe(true);
+    expect(dialog.editor.dirty()).toBe(true);
     await dialog.save(new Event('submit'));
     expect(api.updateNavigationItem).toHaveBeenCalledWith('wiki', {
       kind: 'link',
@@ -194,7 +194,7 @@ describe('NavigationItemDialog', () => {
     expect(store.stale).toHaveBeenCalled();
     expect(store.changed).not.toHaveBeenCalled();
     expect(dialog.error()).toBe('');
-    expect(dialog.dirty()).toBe(false);
+    expect(dialog.editor.dirty()).toBe(false);
   });
 
   it('requires a name for a group', async () => {

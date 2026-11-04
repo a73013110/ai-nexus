@@ -44,7 +44,7 @@ export class SettingsDialog {
   private readonly auth = inject(AuthService);
   readonly state = signal({ changed: false, saving: false });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  private readonly discard = viewChild.required<ConfirmDialog>('discard');
+  private readonly confirmation = viewChild.required<ConfirmDialog>('discard');
   constructor() {
     effect(() => {
       const dialog = this.dialog()?.nativeElement;
@@ -58,7 +58,7 @@ export class SettingsDialog {
     effect(() => {
       if (account()) return;
       account = this.auth.guard();
-      this.discard().answer(false);
+      this.confirmation().answer(false);
       this.overlay.close();
     });
   }
@@ -70,11 +70,7 @@ export class SettingsDialog {
     if (this.state().saving) return;
     if (
       !this.state().changed ||
-      (await this.discard().ask({
-        title: '放棄尚未儲存的設定？',
-        message: '會恢復已儲存的偏好，原頁面的內容與草稿仍保留。',
-        confirm: '放棄變更',
-      }))
+      (await this.confirmation().discard('會恢復已儲存的偏好，原頁面的內容與草稿仍保留。'))
     )
       this.overlay.close();
   }

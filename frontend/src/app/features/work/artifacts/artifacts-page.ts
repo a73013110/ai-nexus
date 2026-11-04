@@ -320,12 +320,7 @@ export class ArtifactsPage {
   canLeave(): boolean | Promise<boolean> {
     return (
       !this.busy() &&
-      (!this.dirty() ||
-        this.confirm().ask({
-          title: '尚有未儲存的編輯',
-          message: '目前編輯尚未保存。離開後會捨棄本次修改，既有版本仍保留。',
-          confirm: '捨棄本次修改',
-        }))
+      (!this.dirty() || this.confirm().discard('離開後會捨棄本次修改，既有版本仍保留。'))
     );
   }
   onEditorInput(event: Event) {
