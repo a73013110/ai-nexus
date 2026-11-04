@@ -49,7 +49,7 @@ const commentLimit = 20_000;
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './repository-review.scss',
+  styleUrls: ['../repository-subpage.scss', './repository-review.scss'],
   template: `<a class="back" [routerLink]="store.link('reviews')"><nx-icon name="left" />AI 檢閱</a>
     @if (error()) {
       <nx-notice [message]="error()"

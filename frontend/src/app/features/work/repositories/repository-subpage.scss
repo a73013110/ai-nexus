@@ -1,0 +1,31 @@
+// 儲存庫子頁（變更、討論串、AI 檢閱）共用的骨架：返回連結與頁首卡片；AI 檢閱的整體報告用同一張卡片。
+// 由各元件的 styleUrls 引入，仍受元件封裝。
+:host {
+  display: grid;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  justify-self: start;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  text-decoration: none;
+  --icon-size: var(--icon-sm);
+  &:hover {
+    color: var(--ink);
+  }
+}
+.head,
+.report {
+  display: grid;
+  gap: var(--p-space-3);
+  padding: var(--p-space-5);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  animation: panel-arrive var(--motion-morph) var(--ease-spring) both;
+}

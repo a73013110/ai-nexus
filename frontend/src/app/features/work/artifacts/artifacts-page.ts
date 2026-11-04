@@ -35,7 +35,11 @@ import { MAX_SELECTED_TEXT } from '@shared/browser/text-selection';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
-import { accessLabel } from '@features/work/collaboration/access-label';
+import {
+  accessLabel,
+  filterResources,
+  OWNERSHIP_FILTERS,
+} from '@features/work/collaboration/access-label';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
 import { artifactTour, artifactsTour } from './artifacts-tour';
@@ -140,11 +144,7 @@ export class ArtifactsPage {
   readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly ownership = signal('all');
-  readonly ownerships = [
-    { value: 'all', label: '全部' },
-    { value: 'mine', label: '我擁有' },
-    { value: 'shared', label: '共用給我' },
-  ];
+  readonly ownerships = OWNERSHIP_FILTERS;
   readonly access = accessLabel;
   readonly when = relativeTime;
   readonly exports: MenuAction[] = [
@@ -172,15 +172,7 @@ export class ArtifactsPage {
   readonly tools = viewChild.required(TextTools);
   readonly sharing = viewChild(ResourceSharing);
   readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
-  readonly visible = computed(() => {
-    const term = this.filter().toLowerCase(),
-      ownership = this.ownership();
-    return this.list().filter(
-      (item) =>
-        (ownership === 'all' || item.resource.isOwner === (ownership === 'mine')) &&
-        item.resource.name.toLowerCase().includes(term),
-    );
-  });
+  readonly visible = computed(() => filterResources(this.list(), this.ownership(), this.filter()));
   readonly dirty = computed(() => {
     const doc = this.document();
     return (

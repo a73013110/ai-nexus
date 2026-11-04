@@ -24,7 +24,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
   imports: [RouterLink, Icon, Notice, PendingButton, RepositoryDiff, RepositoryReviewDialog],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './repository-change.scss',
+  styleUrls: ['../repository-subpage.scss', './repository-change.scss'],
   template: `<a class="back" [routerLink]="store.link('commits')" queryParamsHandling="preserve"
       ><nx-icon name="left" />提交紀錄</a
     >

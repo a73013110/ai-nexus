@@ -38,7 +38,7 @@ interface Thread {
   imports: [RouterLink, Icon, MarkdownView, Notice, PendingButton, RepositoryReviewDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './repository-thread.scss',
+  styleUrls: ['../repository-subpage.scss', './repository-thread.scss'],
   template: `<a class="back" [routerLink]="store.link(kind())"
       ><nx-icon name="left" />{{ kind() === 'pulls' ? 'Pull Request' : '議題' }}</a
     >

@@ -39,7 +39,11 @@ import { Panel } from '@shared/ui/panel';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { ResourceSharing } from '@features/work/collaboration/resource-sharing';
-import { accessLabel } from '@features/work/collaboration/access-label';
+import {
+  accessLabel,
+  filterResources,
+  OWNERSHIP_FILTERS,
+} from '@features/work/collaboration/access-label';
 import { FileDrop } from '@shared/browser/file-drop';
 import { acceptsFile, FilesApi } from '@features/work/files/files-api';
 import { KnowledgeApi } from './knowledge-api';
@@ -147,20 +151,10 @@ export class KnowledgePage {
   readonly status = documentStatus;
   readonly term = signal('');
   readonly ownership = signal('all');
-  readonly ownerships = [
-    { value: 'all', label: '全部' },
-    { value: 'mine', label: '我擁有' },
-    { value: 'shared', label: '共用給我' },
-  ];
-  readonly gallery = computed(() => {
-    const term = this.term().toLowerCase(),
-      ownership = this.ownership();
-    return this.collections().filter(
-      (item) =>
-        (ownership === 'all' || item.resource.isOwner === (ownership === 'mine')) &&
-        item.resource.name.toLowerCase().includes(term),
-    );
-  });
+  readonly ownerships = OWNERSHIP_FILTERS;
+  readonly gallery = computed(() =>
+    filterResources(this.collections(), this.ownership(), this.term()),
+  );
   readonly uploading = signal(false);
   // 篩選、查詢與其結果，都屬於畫面上的那個集合。
   readonly filter = linkedSignal(() => (this.id(), ''));
