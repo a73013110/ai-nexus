@@ -105,7 +105,8 @@ public sealed class PdfRenderer(IOptions<PdfOptions> options) : IAsyncDisposable
                 Headless = true,
                 Timeout = timeout,
                 // IIS 集區身分通常無法建立 Chromium 的沙箱；頁面已關閉 JavaScript 與網路，只渲染系統自己產生的 HTML。
-                Args = ["--no-sandbox"],
+                // Windows 版 Edge 會經相容層重新啟動自己、原行程立刻結束，Puppeteer 便判定啟動失敗；Chrome 會忽略這個旗標。
+                Args = ["--no-sandbox", "--edge-skip-compat-layer-relaunch"],
             });
             return browser;
         }
