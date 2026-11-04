@@ -157,6 +157,11 @@ tr.records-week-start > td {
 .records-none {
   color: var(--secondary);
 }
+/* 今天的下班：還沒匯入，不是缺卡；用次要文字，與「未刷卡」的虛線框區隔。 */
+.records-pending {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
 .records-remark {
   display: block;
   overflow: hidden;

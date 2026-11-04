@@ -47,7 +47,7 @@ public sealed class ListPunchImportPunchesTests
     public async Task LeavesOutPunchesOwnedByANeighbouringFile()
     {
         await using var session = await PunchImportSession.CreateAsync();
-        // 10/1 深夜的刷卡也出現在 10/2 的檔，歸先匯入的 10/1。
+        // 10/1 深夜的刷卡也出現在 10/2 的檔（HAMS 手動轉出與排程各寫一次），歸先匯入的 10/1。
         session.Source.Write(Oct1, [Line("A001", 10, 1, 23, 50)]);
         session.Source.Write(Oct2, [Line("A001", 10, 1, 23, 50), Line("A001", 10, 2, 8, 0)]);
         await session.ScanAsync();

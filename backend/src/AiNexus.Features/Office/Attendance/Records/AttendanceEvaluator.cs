@@ -24,21 +24,24 @@ public static class AttendanceEvaluator
 
     /// <summary>
     /// 以 <paramref name="today"/>（台灣日期）為準判定：過去的日子同 <see cref="Evaluate(AttendanceDay, WorkdayOptions)"/>；
-    /// 今天的出勤與異常改為 <see cref="AttendanceStatus.Undetermined"/>（<see cref="AttendanceReason.DayInProgress"/>），刷卡與表單時數照樣回傳。
-    /// 今天的檔通常晚上才匯入，白天看到的「沒刷卡」「只有上班」都不是結論；連遲到也不算，因為中午的快照之後還可能被晚上的檔取代。
+    /// 今天的出勤與異常改為 <see cref="AttendanceStatus.Undetermined"/>（<see cref="AttendanceReason.DayInProgress"/>），上班刷卡與表單時數照樣回傳。
+    /// 今天的刷卡要等 HAMS 接收、轉出才匯入（中午與晚上各一次），白天看到的「沒刷卡」「只有上班」都不是結論；連遲到也不算，上班那筆可能還沒收進來。
+    /// 今天不回傳下班（<see cref="AttendanceEvaluation.ClockOut"/> 為 null，任何狀態都是）：中午匯入的最晚一筆只是當時最後的刷卡，
+    /// 畫面與匯出照實顯示會被看成已經下班；中午匯入是為了讓人知道今天幾點到。
     /// 放假、請假與其他無法判定的狀態本來就不是異常，維持原樣。未來的日子沒有可判定的東西，呼叫端不要傳進來（拋出）。
     /// </summary>
     public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules, DateOnly today)
     {
         ArgumentOutOfRangeException.ThrowIfGreaterThan(day.Date, today);
         var result = Evaluate(day, rules);
-        return day.Date == today && result.Status is AttendanceStatus.Present or AttendanceStatus.Anomaly
+        if (day.Date != today) return result;
+        return result.Status is AttendanceStatus.Present or AttendanceStatus.Anomaly
             ? result with
             {
-                Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ExpectedClockOut = null, LateSeconds = 0, EarlyLeaveSeconds = 0,
+                Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ClockOut = null, ExpectedClockOut = null, LateSeconds = 0, EarlyLeaveSeconds = 0,
                 AdjustedClockOut = null, Coverage = null, ShortSeconds = 0, Gaps = []
             }
-            : result;
+            : result with { ClockOut = null };
     }
 
     /// <summary>判定一天：先照舊系統算遲到、早退與應下班，再看表單補不補得足（<see cref="GapCoverage"/>）。</summary>

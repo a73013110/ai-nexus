@@ -9,19 +9,22 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Office.Attendance.Imports;
 
 /// <summary>
-/// 以檔案為單位的刷卡匯入（ADR 0018）：每日檔是當天的快照，重匯時這個檔先前寫入的列要換成新內容。
+/// 以檔案為單位的刷卡匯入（ADR 0018）。HAMS 的轉出只附加不改寫（每筆刷卡只轉出一次，附加到執行當天的檔），所以排程與手動的寫法不同：
+/// <list type="bullet">
+/// <item><b>排程：只新增</b>。檔案裡資料庫還沒有的刷卡才寫入，檔案少了行也不刪：檔案被誤刪或重新產生時，HAMS 已轉出的刷卡不會再轉出，刪了就補不回來。</item>
+/// <item><b>手動重匯：整檔取代</b>。HR 修正檔案後重匯，這個檔先前寫入、新內容已沒有的刷卡一併刪除，不必另外寫 SQL 修資料。</item>
+/// </list>
 /// <para>
 /// <b>交易</b>：解析在交易外（讀不到或格式錯誤都不碰資料庫），之後在單一交易內寫刷卡的增刪與匯入列，再讓檔案列指向它。
 /// 任何錯誤整個回復，<c>Punches</c> 維持上次成功的內容；失敗的匯入列另外在回復之後的新交易寫入，否則會跟著回復而消失。
 /// </para>
 /// <para>
-/// <b>去重</b>：刷卡的唯一鍵是（卡號、時間、機器代號）。新內容裡已屬於別的檔的那一筆不重寫，歸先寫入的檔。
+/// <b>去重</b>：刷卡的唯一鍵是（卡號、時間、機器代號），不分檔案；已在資料庫的那一筆不重寫，歸先寫入的檔。來源怎麼轉出（只留首末筆或全部、幾個檔重複）都不影響結果。
 /// </para>
 /// <para>
-/// <b>鄰檔補救</b>：同一筆刷卡出現在相鄰兩天的檔（前一天深夜的刷卡也會出現在次日的檔）時，它屬於先匯入的 A 檔，B 檔那份被當成重複略過。
-/// 之後重匯 A、而新內容已沒有這一筆，刪掉它就會讓資料憑空消失，因為 B 檔其實還有。所以刪除刷卡時，在同一個交易內把可能含有它的其他檔
-/// （檔名日期為該刷卡出勤日的前一天、當天與後一天）標記為要重匯（清掉 <c>ImportedModifiedAt</c> 與 <c>ImportedSize</c>），排程下一輪就會重匯它們，
-/// 這筆刷卡便改歸 B。標記與刪除同交易，所以不會有「已刪除但還沒標記」的瞬間，程序在中間中止也不會遺失。
+/// <b>鄰檔補救</b>：手動重匯刪掉的刷卡可能也在別的檔裡（例如在 HAMS 畫面手動轉出，又寫進刷卡日期的檔），那份當初被當成重複略過。
+/// HAMS 只會把刷卡寫進刷卡當天或之後執行的檔，所以刪除時在同一個交易內把檔名日期不早於該刷卡出勤日、已成功匯入的檔標記為要重匯
+/// （清掉 <c>ImportedModifiedAt</c> 與 <c>ImportedSize</c>），下一次掃描以只新增的方式補回，這筆刷卡便改歸那個檔。
 /// </para>
 /// <para>
 /// <b>併行</b>：讀檔與解析不持鎖（來源可能是慢的網路資料夾）；寫入交易的第一步取 <see cref="AttendanceLocks.PunchImport"/>，跨程序也一次一個寫入。
@@ -37,7 +40,7 @@ public sealed partial class PunchImporter(
     ILogger<PunchImporter> logger,
     TimeProvider clock)
 {
-    /// <summary>HR 手動重匯一個檔（區間由 <see cref="ReimportPunchFiles"/> 逐檔呼叫）：不論檔案有沒有變動都重匯。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
+    /// <summary>HR 手動重匯一個檔（區間由 <see cref="ReimportPunchFiles"/> 逐檔呼叫）：不論檔案有沒有變動，都把這個檔的刷卡換成檔案內容。找不到檔案或來源資料夾讀不到時回傳錯誤，不留匯入紀錄（沒有檔案可記）；匯入本身失敗則回傳狀態為 failed 的匯入列。</summary>
     public async Task<Result<PunchImport>> ReimportAsync(string fileName, Guid requestedBy, CancellationToken ct)
     {
         var located = await Task.Run(() => Locate(fileName), ct);
@@ -47,7 +50,7 @@ public sealed partial class PunchImporter(
     }
 
     /// <summary>
-    /// 排程匯入：以最新的檔案與資料庫狀態判斷，取得寫入鎖後再判斷一次，等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
+    /// 排程匯入（只新增）：以最新的檔案與資料庫狀態判斷，取得寫入鎖後再判斷一次，等鎖期間別的匯入可能已經處理過。不需要匯入或檔案已不存在回傳 null。
     /// </summary>
     public async Task<PunchImport?> ImportIfChangedAsync(string fileName, CancellationToken ct)
     {
@@ -138,26 +141,36 @@ public sealed partial class PunchImporter(
         attempt = attempt with { StartedAt = clock.GetUtcNow() };
         var file = await FileRowAsync(attempt.FileName, ct);
 
-        // 只載入新內容涵蓋的出勤日、屬於別的檔的刷卡：同一筆刷卡的出勤日必定相同，範圍之外不可能重複。
-        var foreign = new HashSet<(string, long, string)>();
-        if (punches.Count > 0)
+        var incoming = punches.ToDictionary(x => x.Key);
+        var dropped = new List<Punch>();
+        int kept;
+        if (attempt.Trigger == PunchImportTriggers.Manual)
         {
-            var (first, last) = (punches.Min(x => x.AttendanceDate), punches.Max(x => x.AttendanceDate));
-            var rows = await db.Punches.AsNoTracking().Where(x => x.PunchFileId != file.Id && x.AttendanceDate >= first && x.AttendanceDate <= last)
-                .Select(x => new { x.CardNumber, x.PunchedAt, x.MachineCode }).ToListAsync(ct);
-            foreign = [.. rows.Select(x => ParsedPunch.KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode))];
+            // 整檔取代：結果與「刪光再寫入新內容」相同，但只動有差異的列，不變的列保留原本的 Id。
+            var owned = await db.Punches.Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
+            foreach (var row in owned)
+            {
+                if (incoming.Remove(ParsedPunch.KeyOf(row.CardNumber, row.PunchedAt, row.MachineCode), out var punch)) row.EventCode = punch.EventCode;
+                else dropped.Add(row);
+            }
+            db.RemoveRange(dropped);
+            kept = owned.Count - dropped.Count;
+        }
+        else
+        {
+            kept = await db.Punches.CountAsync(x => x.PunchFileId == file.Id, ct);
         }
 
-        // 結果與「刪光再寫入新內容」相同，但只動有差異的列：寫入量小，不變的列也保留原本的 Id。
-        var incoming = punches.ToDictionary(x => x.Key);
-        var owned = await db.Punches.Where(x => x.PunchFileId == file.Id).ToListAsync(ct);
-        var dropped = new List<Punch>();
-        foreach (var row in owned)
+        // 只載入新內容涵蓋的出勤日：同一筆刷卡的出勤日必定相同，其他日期不可能重複；依日期清單而不是區間，打卡機時鐘錯亂的一行不會把整年都載進來。
+        var dates = incoming.Values.Select(x => x.AttendanceDate).Distinct().ToList();
+        var known = new HashSet<(string, long, string)>();
+        if (dates.Count > 0)
         {
-            if (incoming.Remove(ParsedPunch.KeyOf(row.CardNumber, row.PunchedAt, row.MachineCode), out var punch)) row.EventCode = punch.EventCode;
-            else dropped.Add(row);
+            var rows = await db.Punches.AsNoTracking().Where(x => dates.Contains(x.AttendanceDate))
+                .Select(x => new { x.CardNumber, x.PunchedAt, x.MachineCode }).ToListAsync(ct);
+            known = [.. rows.Select(x => ParsedPunch.KeyOf(x.CardNumber, x.PunchedAt, x.MachineCode))];
         }
-        var added = incoming.Values.Where(x => !foreign.Contains(x.Key)).Select(x => new Punch
+        var added = incoming.Values.Where(x => !known.Contains(x.Key)).Select(x => new Punch
         {
             PunchFileId = file.Id,
             CardNumber = x.CardNumber,
@@ -166,12 +179,11 @@ public sealed partial class PunchImporter(
             MachineCode = x.MachineCode,
             EventCode = x.EventCode,
         }).ToList();
-        db.RemoveRange(dropped);
         db.AddRange(added);
         await RegisterCardsAsync(added, ct);
         var requeued = await RequeueNeighboursAsync(file, dropped, ct);
 
-        var import = await RecordAsync(file, attempt, owned.Count - dropped.Count + added.Count, null, ct);
+        var import = await RecordAsync(file, attempt, kept + added.Count, null, ct);
         await transaction.CommitAsync(ct);
         return (import, requeued);
     }
@@ -190,15 +202,17 @@ public sealed partial class PunchImporter(
     }
 
     /// <summary>
-    /// 被刪除的刷卡可能還存在別的檔（見類別說明）：把可能含有它們的、已經成功匯入過的檔標記為要重匯。
-    /// 從沒成功匯入的檔（版本本來就是空值）下一輪也會匯入，不必標記。
+    /// 被刪除的刷卡可能還存在別的檔（見類別說明）：把檔名日期不早於最早那筆的出勤日、已經成功匯入過的其他檔標記為要重匯。
+    /// 從沒成功匯入的檔（版本本來就是空值）下一輪也會匯入，不必標記。檔名日期在記憶體裡解析：檔案列一年才幾百列，而檔名的大小寫與副檔名不固定，SQL 不好比。
     /// </summary>
     private async Task<int> RequeueNeighboursAsync(PunchFile file, List<Punch> dropped, CancellationToken ct)
     {
         if (dropped.Count == 0) return 0;
-        var names = dropped.Select(x => x.AttendanceDate).Distinct()
-            .SelectMany(date => new[] { date.AddDays(-1), date, date.AddDays(1) }).Select(PunchFileParser.FileNameFor).Distinct().ToList();
-        return await db.PunchFiles.Where(x => names.Contains(x.FileName) && x.Id != file.Id && x.ImportedModifiedAt != null)
+        var earliest = dropped.Min(x => x.AttendanceDate);
+        var files = await db.PunchFiles.AsNoTracking().Where(x => x.Id != file.Id && x.ImportedModifiedAt != null).Select(x => new { x.Id, x.FileName }).ToListAsync(ct);
+        var ids = files.Where(x => PunchFileParser.TryParseFileName(x.FileName, out var date) && date >= earliest).Select(x => x.Id).ToList();
+        if (ids.Count == 0) return 0;
+        return await db.PunchFiles.Where(x => ids.Contains(x.Id))
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.ImportedModifiedAt, (DateTimeOffset?)null).SetProperty(x => x.ImportedSize, (long?)null), ct);
     }
 
@@ -266,6 +280,6 @@ public sealed partial class PunchImporter(
     [LoggerMessage(EventId = 3401, EventName = "attendance.import_failed", Level = LogLevel.Warning, Message = "Punch file import failed ({Kind}, {Reason}), file {ResourceId}; punches keep the last successful content.")]
     private static partial void LogFailed(ILogger logger, string kind, string reason, Guid resourceId);
 
-    [LoggerMessage(EventId = 3402, EventName = "attendance.import_requeued", Level = LogLevel.Information, Message = "Queued {Count} neighbouring punch files for re-import after punches left file {ResourceId}.")]
+    [LoggerMessage(EventId = 3402, EventName = "attendance.import_requeued", Level = LogLevel.Information, Message = "Queued {Count} later punch files for re-import after a manual re-import removed punches from file {ResourceId}.")]
     private static partial void LogRequeued(ILogger logger, int count, Guid resourceId);
 }

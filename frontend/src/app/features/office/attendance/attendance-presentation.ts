@@ -38,7 +38,7 @@ export const ATTENDANCE_REASON: Record<NonNullable<AttendanceReason>, string> = 
   SinglePunch: '只有一筆刷卡，分不出上班或下班',
   FormsUnavailable: '表單無法取得，沒刷卡的日子不判異常',
   DayTypeUnknown: '假日行事曆無法取得，不確定是否上班日',
-  DayInProgress: '今天尚未結束，打卡檔晚上才匯入',
+  DayInProgress: '今天還沒結束，下班刷卡晚上才更新',
 };
 
 export const ATTENDANCE_DAY_TYPE: Record<AttendanceDayType, string> = {
@@ -310,6 +310,8 @@ export function presentRecord(day: AttendanceRecordDto, today: string) {
         : '',
     clockIn: clockTime(day.clockIn),
     clockOut: clockTime(day.clockOut),
+    /** 今天後端不回傳下班（中午只先匯入到當時的刷卡）：已經到了的人下班格寫「晚上更新」，不留「—」讓人以為沒刷下班卡。 */
+    clockOutPending: day.date === today && !!day.clockIn,
     /** 只有一筆刷卡時上下班是同一筆，只顯示一次。 */
     singlePunch: !!day.clockIn && day.clockIn === day.clockOut,
     expected: clockTime(day.expectedClockOut),

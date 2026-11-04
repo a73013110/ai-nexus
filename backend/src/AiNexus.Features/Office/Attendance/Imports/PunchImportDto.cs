@@ -5,7 +5,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 
 /// <summary>
 /// 一次匯入的紀錄。<see cref="FileName"/> 是來源檔名（<c>yyyyMMdd.txt</c>）；<see cref="RequestedById"/> 只有手動重匯才有值，
-/// <see cref="RequestedByName"/> 取自使用者主檔。<see cref="PunchCount"/> 是這個檔匯入後擁有的刷卡筆數，扣掉已屬於別的檔的重複刷卡，失敗時為 0。
+/// <see cref="RequestedByName"/> 取自使用者主檔。<see cref="PunchCount"/> 是這個檔匯入後擁有的刷卡筆數，扣掉已屬於別的檔的重複刷卡（排程只新增，檔案少了行也照算），失敗時為 0。
 /// <see cref="ErrorMessage"/> 只在失敗時有值，是給 HR 看的說明（不含檔案內容與路徑）。
 /// <see cref="IsCurrent"/> 表示這個檔目前的刷卡就是這次匯入寫入的（同一個檔最近一次成功的匯入），只有它能列出匯入的刷卡；
 /// 刷卡依檔案保存、不依匯入保存，之後再成功匯入同一個檔，舊紀錄的內容就被取代了。

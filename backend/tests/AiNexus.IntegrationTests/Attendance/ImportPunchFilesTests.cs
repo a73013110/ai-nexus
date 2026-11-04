@@ -92,40 +92,46 @@ public sealed class ImportPunchFilesTests
     }
 
     [Fact]
-    public async Task ReimportingAChangedFileReplacesWhatItImportedBefore()
+    public async Task AScheduledImportAddsWhatHamsAppendedAndKeepsWhatWasThere()
     {
         await using var session = await PunchImportSession.CreateAsync();
-        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 12, 0), Line("B002", 10, 1, 8, 30)]);
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 8, 20), Line("B002", 10, 1, 8, 30)]);
         await session.ScanAsync();
-        Assert.Equal(3, (await session.PunchesAsync()).Count);
 
-        // 打卡機中午多輸出一次、晚上再覆蓋：每張卡的最晚刷卡換成新的，A001 的 12:00 不見了，C003 是新來的。
+        // 晚上的轉出附加這段時間的新刷卡（每批各留首末筆），同一張卡一天因此不只兩行。
         session.Clock.Advance(TimeSpan.FromHours(6));
-        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 18, 5), Line("B002", 10, 1, 8, 30), Line("C003", 10, 1, 9, 0)]);
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 8, 20), Line("B002", 10, 1, 8, 30), Line("A001", 10, 1, 17, 0), Line("A001", 10, 1, 18, 5)]);
         var scan = await session.ScanAsync();
 
         Assert.Equal(1, scan.Imported);
         Assert.Equal(
-            [("A001", At(10, 1, 8, 0)), ("B002", At(10, 1, 8, 30)), ("C003", At(10, 1, 9, 0)), ("A001", At(10, 1, 18, 5))],
+            [("A001", At(10, 1, 8, 0)), ("A001", At(10, 1, 8, 20)), ("B002", At(10, 1, 8, 30)), ("A001", At(10, 1, 17, 0)), ("A001", At(10, 1, 18, 5))],
             (await session.PunchesAsync()).Select(x => (x.Card, x.At)));
         var imports = await session.ImportsAsync(Oct1);
-        Assert.Equal([3, 4], imports.Select(x => x.PunchCount));
+        Assert.Equal([3, 5], imports.Select(x => x.PunchCount));
         Assert.Equal(imports[1].Id, (await session.FileAsync(Oct1)).LastImportId);
     }
 
     [Fact]
-    public async Task AFileThatLostAllItsLinesEmptiesItsPunches()
+    public async Task AScheduledImportNeverDeletesPunchesTheFileNoLongerHas()
     {
         await using var session = await PunchImportSession.CreateAsync();
-        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("B002", 10, 1, 8, 30)]);
+        session.Source.Write(Oct2, [Line("A001", 10, 2, 8, 0)]);
         await session.ScanAsync();
 
-        session.Clock.Advance(TimeSpan.FromHours(1));
-        session.Source.Write(Oct1, [], age: TimeSpan.FromMinutes(30));
-        await session.ScanAsync();
+        // 有人刪掉檔案後 HAMS 重新轉出：已轉出過的刷卡不會再出現，新檔只有之後的刷卡；清空的檔也一樣。
+        session.Clock.Advance(TimeSpan.FromHours(2));
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 9, 25)]);
+        session.Source.Write(Oct2, [], age: TimeSpan.FromMinutes(30));
+        var scan = await session.ScanAsync();
 
-        Assert.Empty(await session.PunchesAsync());
-        Assert.Equal([1, 0], (await session.ImportsAsync()).Select(x => x.PunchCount));
+        Assert.Equal(2, scan.Imported);
+        Assert.Equal([At(10, 1, 8, 0), At(10, 1, 8, 30), At(10, 1, 9, 25), At(10, 2, 8, 0)], (await session.PunchesAsync()).Select(x => x.At));
+        Assert.Equal([2, 3], (await session.ImportsAsync(Oct1)).Select(x => x.PunchCount));
+        Assert.Equal([1, 1], (await session.ImportsAsync(Oct2)).Select(x => x.PunchCount));
+        // 沒有刪除就沒有要補救的鄰檔：再掃一次什麼都不做。
+        Assert.Equal(0, (await session.ScanAsync()).Imported);
     }
 
     [Fact]
@@ -142,7 +148,7 @@ public sealed class ImportPunchFilesTests
         Assert.Equal(
             [("A001", At(10, 1, 8, 0), Oct1), ("A001", At(10, 1, 23, 55), Oct1), ("A001", At(10, 2, 8, 5), Oct2)],
             (await session.PunchesAsync()).Select(x => (x.Card, x.At, x.File)));
-        // 重複的那筆算在先寫入的檔，後一天的檔只算實際寫入的一筆。
+        // 重複的那筆算在檔名日期較早、先寫入的檔，後一天的檔只算實際寫入的一筆。
         Assert.Equal([2], (await session.ImportsAsync(Oct1)).Select(x => x.PunchCount));
         Assert.Equal([1], (await session.ImportsAsync(Oct2)).Select(x => x.PunchCount));
     }

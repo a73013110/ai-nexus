@@ -133,10 +133,7 @@ public sealed class PunchImportOptions : IValidatableObject
     /// </summary>
     [Range(0, 86400)] public int FailedRetrySeconds { get; set; } = 900;
 
-    /// <summary>超過這麼久沒有任何成功的匯入，監控判為不健康。打卡機每天輸出，預設 36 小時＝漏掉一次輸出。</summary>
-    [Range(1, 720)] public int StaleAfterHours { get; set; } = 36;
-
-    /// <summary>單一檔案大小上限。每日檔每張卡只有最早與最晚兩筆，正常遠小於此；超過視為異常，整檔匯入失敗。</summary>
+    /// <summary>單一檔案大小上限。每日檔最多是當天的全部刷卡，正常遠小於此；超過視為異常，整檔匯入失敗。</summary>
     [Range(1024, 64 * 1024 * 1024)] public int MaxFileBytes { get; set; } = 8 * 1024 * 1024;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

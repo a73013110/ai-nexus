@@ -120,6 +120,8 @@ export type RecordsGroup = ReturnType<typeof presentGroup>;
               >
             } @else if (row.missing) {
               <span class="records-missing">未刷卡</span>
+            } @else if (row.clockOutPending) {
+              <span class="records-pending" title="今天的下班刷卡晚上才更新">晚上更新</span>
             } @else {
               —
             }

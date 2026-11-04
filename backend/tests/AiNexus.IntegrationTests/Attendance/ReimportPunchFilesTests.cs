@@ -63,6 +63,36 @@ public sealed class ReimportPunchFilesTests
     }
 
     [Fact]
+    public async Task AManualReimportReplacesTheFilesPunchesWithWhatTheFileNowSays()
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 12, 0), Line("B002", 10, 1, 8, 30)]);
+        await session.ScanAsync();
+
+        // HR 修正檔案：拿掉誤刷的 12:00、補上漏掉的 18:05，重匯就讓資料與檔案一致，不必另外寫 SQL。
+        session.Clock.Advance(TimeSpan.FromHours(1));
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("B002", 10, 1, 8, 30), Line("A001", 10, 1, 18, 5)]);
+        var dto = Assert.Single((await ReimportOkAsync(session.Hr, Request)).Imports);
+
+        Assert.Equal((PunchImportStatuses.Succeeded, 3), (dto.Status, dto.PunchCount));
+        Assert.Equal([("A001", At(10, 1, 8, 0)), ("B002", At(10, 1, 8, 30)), ("A001", At(10, 1, 18, 5))], (await session.PunchesAsync()).Select(x => (x.Card, x.At)));
+    }
+
+    [Fact]
+    public async Task AManualReimportOfAnEmptiedFileRemovesItsPunches()
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
+        await session.ScanAsync();
+
+        session.Source.Write(Oct1, []);
+        var dto = Assert.Single((await ReimportOkAsync(session.Hr, Request)).Imports);
+
+        Assert.Equal((PunchImportStatuses.Succeeded, 0), (dto.Status, dto.PunchCount));
+        Assert.Empty(await session.PunchesAsync());
+    }
+
+    [Fact]
     public async Task ReimportingAFileThatWasNeverImportedImportsIt()
     {
         await using var session = await PunchImportSession.CreateAsync(options => options.Import.Enabled = false);

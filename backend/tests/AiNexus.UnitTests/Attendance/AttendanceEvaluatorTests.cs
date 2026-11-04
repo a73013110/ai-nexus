@@ -476,8 +476,21 @@ public sealed class AttendanceEvaluatorTests
 
             Assert.Equal((AttendanceStatus.Undetermined, AttendanceReason.DayInProgress), (result.Status, result.Reason));
             Assert.Equal((null, 0, null), (result.Coverage, result.ShortSeconds, result.AdjustedClockOut));
-            Assert.Equal((first, null, 0, 0), (result.ClockIn, result.ExpectedClockOut, result.LateSeconds, result.EarlyLeaveSeconds));
+            Assert.Equal((first, null, null, 0, 0), (result.ClockIn, result.ClockOut, result.ExpectedClockOut, result.LateSeconds, result.EarlyLeaveSeconds));
         }
+    }
+
+    [Fact]
+    public void TodayNeverShowsTheLatestPunchAsClockOutWhateverTheState()
+    {
+        // 中午匯入的最晚一筆只是當時最後的刷卡；放假日來加班、請下午假的人也一樣不回傳下班。
+        foreach (var (type, forms) in new (AttendanceDayType, FormPeriod[])[] { (AttendanceDayType.DayOff, []), (AttendanceDayType.FullDay, [Approved(At(13, 30), At(18, 0))]), (AttendanceDayType.FullDay, []) })
+        {
+            var result = AttendanceEvaluator.Evaluate(new(Day, type, At(8, 10), At(11, 34), forms), Rules, Day);
+
+            Assert.Equal((At(8, 10), (DateTimeOffset?)null), (result.ClockIn, result.ClockOut));
+        }
+        Assert.Equal(At(11, 34), AttendanceEvaluator.Evaluate(new(Day, AttendanceDayType.FullDay, At(8, 10), At(11, 34), []), Rules, Day.AddDays(1)).ClockOut);
     }
 
     [Fact]

@@ -152,6 +152,8 @@ internal sealed class FakeGd : IDisposable
         => Execute("INSERT [dbo].[Pub_Days] (hDate, UserId, AM, PM, hReMark) VALUES (@day, @userId, @morningOff, @afternoonOff, @remark)",
             new { day = day.ToDateTime(TimeOnly.MinValue), userId, morningOff, afternoonOff, remark = new DbString { Value = remark, IsAnsi = false, Length = 4000 } });
 
+    public void RemoveDay(DateOnly day) => Execute("DELETE [dbo].[Pub_Days] WHERE hDate = @day", new { day = day.ToDateTime(TimeOnly.MinValue) });
+
     /// <summary>直接讀假 GD 的一天（不經被測程式）。</summary>
     public GdDay Day(DateOnly day)
     {

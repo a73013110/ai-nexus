@@ -10,7 +10,7 @@ public sealed record PunchScanResult(bool SourceAvailable, int Found, int Import
 
 /// <summary>
 /// 定期掃描打卡機輸出資料夾，把需要重匯的每日檔（<see cref="PunchImportPlanner"/>）交給 <see cref="PunchImporter"/>；
-/// 依修改時間與大小判斷，所以打卡機增加輸出次數不必改程式。啟動後立即掃描一次，之後每 <c>ScanIntervalSeconds</c> 一次；未啟用時不掃描。
+/// 依修改時間與大小判斷，所以 HAMS 增加轉出次數不必改程式。啟動後立即掃描一次，之後每 <c>ScanIntervalSeconds</c> 一次；未啟用時不掃描。
 /// </summary>
 public sealed partial class PunchImportWorker(
     IServiceScopeFactory scopes,
@@ -19,8 +19,6 @@ public sealed partial class PunchImportWorker(
     ILogger<PunchImportWorker> logger,
     TimeProvider clock) : BackgroundService
 {
-    private const int MaxPasses = 3;
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!options.Value.Import.Enabled) return;
@@ -63,44 +61,36 @@ public sealed partial class PunchImportWorker(
         }
         if (state.SourceRead()) LogSourceRestored(logger);
 
+        // 手動重匯標記要重匯的檔（PunchImporter 的鄰檔補救）在下一次掃描處理；排程匯入只新增、不會再標記別的檔，所以一輪就夠。
+        var known = await StatesAsync(ct);
         var (imported, failed, waiting) = (0, 0, 0);
-        // 匯入一個檔可能把別的檔標記為要重匯（見 PunchImporter 的鄰檔補救），這時開頭載入的狀態已經過時；有匯入就再掃一輪，最多三輪。
-        for (var pass = 0; pass < MaxPasses; pass++)
+        foreach (var info in files)
         {
-            var known = await StatesAsync(ct);
-            var (passImported, passFailed) = (0, 0);
-            waiting = 0;
-            foreach (var info in files)
+            var now = clock.GetUtcNow();
+            if (!PunchImportPlanner.NeedsImport(known.GetValueOrDefault(info.Name), info, now, settings)) continue;
+            if (PunchImportPlanner.IsSettling(info, now, settings))
             {
-                var now = clock.GetUtcNow();
-                if (!PunchImportPlanner.NeedsImport(known.GetValueOrDefault(info.Name), info, now, settings)) continue;
-                if (PunchImportPlanner.IsSettling(info, now, settings))
-                {
-                    waiting++;
-                    continue;
-                }
-                try
-                {
-                    using var scope = scopes.CreateScope();
-                    var import = await scope.ServiceProvider.GetRequiredService<PunchImporter>().ImportIfChangedAsync(info.Name, ct);
-                    if (import is null) continue;
-                    if (import.Status == PunchImportStatuses.Succeeded) passImported++;
-                    else passFailed++;
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    // 連失敗紀錄都寫不進去（資料庫不可用）：沒有匯入列，下一輪掃描會再試。
-                    passFailed++;
-                    LogImportAborted(logger, ex.GetType().Name);
-                }
+                waiting++;
+                continue;
             }
-            imported += passImported;
-            failed += passFailed;
-            if (passImported == 0) break;
+            try
+            {
+                using var scope = scopes.CreateScope();
+                var import = await scope.ServiceProvider.GetRequiredService<PunchImporter>().ImportIfChangedAsync(info.Name, ct);
+                if (import is null) continue;
+                if (import.Status == PunchImportStatuses.Succeeded) imported++;
+                else failed++;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // 連失敗紀錄都寫不進去（資料庫不可用）：沒有匯入列，下一輪掃描會再試。
+                failed++;
+                LogImportAborted(logger, ex.GetType().Name);
+            }
         }
         return new(true, files.Count, imported, failed, waiting);
     }

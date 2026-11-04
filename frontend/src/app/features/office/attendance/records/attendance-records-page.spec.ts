@@ -384,6 +384,34 @@ describe('AttendanceRecordsPage', () => {
     expect(page.draft().person).toBe('u1');
   });
 
+  it('shows today with the arrival time and the clock-out as updated in the evening', async () => {
+    const data = records();
+    data.people[0] = {
+      ...data.people[0],
+      days: [
+        day('2026-10-22', {
+          status: 'Undetermined',
+          reason: 'DayInProgress',
+          clockIn: '2026-10-22T07:50:54+08:00',
+          clockOut: null,
+          expectedClockOut: null,
+        }),
+      ],
+    };
+    const { fixture, root } = setup(async () => data);
+    await fixture.whenStable();
+    const row = root.querySelector('.records-person-group tr:not(.records-person-row)')!;
+    expect(row.querySelector('.records-today')?.textContent).toContain('今天');
+    expect(row.querySelector('td[nxTableColumn="clockIn"]')?.textContent).toContain('07:50:54');
+    // 中午只先匯入到當時的刷卡：下班格不寫時間、也不是「未刷卡」。
+    const clockOut = row.querySelector('td[nxTableColumn="clockOut"]')!;
+    expect(clockOut.querySelector('.records-pending')?.textContent?.trim()).toBe('晚上更新');
+    expect(clockOut.querySelector('.records-missing')).toBeNull();
+    expect(row.querySelector('nx-status-badge')?.getAttribute('title')).toBe(
+      '今天還沒結束，下班刷卡晚上才更新',
+    );
+  });
+
   it('marks holders without an account and shows the calendar remark of a day off', async () => {
     const data = records();
     data.people[0] = {
