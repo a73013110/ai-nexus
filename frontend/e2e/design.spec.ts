@@ -362,6 +362,53 @@ test("island follows the preview theme instead of a fixed dark zone", async ({
   await expect.poll(lightness).toBeLessThan(80);
 });
 
+test("island rows keep one height, with or without an action, so every row lines up", async ({
+  page,
+}) => {
+  await gallery(page);
+  await page.getByRole("button", { name: "一般提示", exact: true }).click();
+  // 緊急警告沒有動作按鈕、排在第一列，會自動展開。
+  await page.getByRole("button", { name: "緊急警告", exact: true }).click();
+  const rows = page.locator("#design-island .island-item");
+  await expect(rows).toHaveCount(2);
+  const layout = await page
+    .locator("#design-island nx-island")
+    .evaluate((island) => {
+      const center = (element: Element | null) => {
+        const rect = element!.getBoundingClientRect();
+        return rect.top + rect.height / 2;
+      };
+      return {
+        collapse: center(island.querySelector(".island-collapse")),
+        rows: [...island.querySelectorAll(".island-item")].map((row) => {
+          const message = row.querySelector<HTMLElement>(".island-message")!;
+          const style = getComputedStyle(message);
+          return {
+            // 不含第二列起的分隔線。
+            height: row.clientHeight,
+            glyph: center(row.querySelector(".island-glyph")),
+            // 訊息第一行的中線：內距之後半個行高。
+            text:
+              message.getBoundingClientRect().top +
+              parseFloat(style.paddingTop) +
+              parseFloat(style.lineHeight) / 2,
+            action: row.querySelector("button")
+              ? center(row.querySelector("button"))
+              : null,
+          };
+        }),
+      };
+    });
+  const [first, second] = layout.rows;
+  expect(Math.abs(first.height - second.height)).toBeLessThan(0.5);
+  for (const row of layout.rows) {
+    expect(Math.abs(row.glyph - row.text)).toBeLessThan(1);
+    if (row.action !== null)
+      expect(Math.abs(row.action - row.text)).toBeLessThan(1);
+  }
+  expect(Math.abs(layout.collapse - first.text)).toBeLessThan(1);
+});
+
 test("missed toasts stay in the notification center's session list, opened and left by keyboard", async ({
   page,
 }) => {

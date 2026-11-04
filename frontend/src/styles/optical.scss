@@ -17,6 +17,18 @@
   margin-block-start: calc((1lh - var(--icon-size, var(--icon-xl, 1.25rem))) / 2);
 }
 
+/// 圖示、可換行的訊息與按鈕排成一列，而且多列疊在一起時（動態島）：容器用 `align-items: flex-start`，
+/// 第一行是一條 `--button-target` 高的帶，圖示、訊息第一行與按鈕都對齊帶的中線。有沒有按鈕列高都一樣，
+/// 訊息換行時圖示與按鈕仍留在第一行。訊息用 `band-text`、圖示用 `band-icon`；按鈕本身就是帶高，不必調整。
+@mixin band-text {
+  padding-block: calc((var(--button-target) - 1lh) / 2);
+}
+
+@mixin band-icon {
+  flex: none;
+  margin-block-start: calc((var(--button-target) - var(--icon-size, var(--icon-xl, 1.25rem))) / 2);
+}
+
 /// 同上，但放不下時以刪節號截斷。修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與
 /// 下伸部（g、y）；改用 `clip` 並把裁切邊界往外放，只截斷行尾、不切字的上下緣。
 @mixin label-line-truncate {

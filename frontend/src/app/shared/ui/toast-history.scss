@@ -1,3 +1,5 @@
+@use 'optical';
+
 :host {
   display: block;
   min-width: 0;
@@ -13,11 +15,13 @@
   padding: 0;
   list-style: none;
 }
+// 字級設在整列，圖示量到的 1lh 才是標題那一行。
 .toast-record {
   display: flex;
   align-items: flex-start;
   gap: var(--p-space-3);
   padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
+  font-size: var(--text-label);
 }
 .toast-record + .toast-record {
   border-top: 1px solid var(--line);
@@ -36,8 +40,7 @@
 }
 .toast-record > nx-icon {
   --icon-size: var(--icon-md);
-  flex: none;
-  margin-top: 0.125rem;
+  @include optical.line-icon;
   color: var(--tone);
 }
 .toast-record-text {
@@ -46,7 +49,6 @@
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: var(--text-label);
 }
 .toast-record-text strong {
   font-weight: 550;

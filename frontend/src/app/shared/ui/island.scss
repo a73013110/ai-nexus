@@ -1,3 +1,5 @@
+@use 'optical';
+
 // The capsule follows the page theme: an inverted ink capsule would shout on a light page, so it
 // floats as a raised surface with a hairline and a soft shadow, and tone colours carry the state.
 :host {
@@ -69,6 +71,9 @@
   flex: none;
   color: var(--tone);
 }
+.island-item > .island-glyph {
+  @include optical.band-icon;
+}
 .island-pill {
   display: flex;
   align-items: center;
@@ -113,18 +118,24 @@
   padding: var(--p-space-1) 0 var(--p-space-1) var(--p-space-4);
   list-style: none;
 }
+// 每列的第一行是按鈕高的帶（optical.band-*）：沒有動作的列與有動作的列一樣高，收合鈕才對得齊第一列。
 .island-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--p-space-2);
-  min-height: var(--button-target);
   padding-block: var(--p-space-1);
   overflow-wrap: anywhere;
+}
+// 複製鈕放在行內會多出行框的下緣空間，改成 flex 讓高度就是按鈕高。
+.island-item > nx-issue-code {
+  display: flex;
+  flex: none;
 }
 .island-item + .island-item {
   border-top: 1px solid var(--line);
 }
 .island-message {
+  @include optical.band-text;
   flex: 1;
   min-width: 0;
   color: var(--tone);
@@ -146,7 +157,7 @@
   background: var(--accent);
   opacity: 0.88;
 }
-// 與第一則通知同一列置中：上方是清單與項目各一層 --p-space-1 內距，不是收合膠囊的高度。
+// 與第一則通知的第一行帶置中：上方是清單與項目各一層 --p-space-1 內距，不是收合膠囊的高度。
 .island-collapse {
   margin: calc(2 * var(--p-space-1)) calc((var(--island-height) - var(--button-target)) / 2);
   border-radius: 50%;

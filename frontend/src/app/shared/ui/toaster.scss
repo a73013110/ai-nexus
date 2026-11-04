@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'optical';
 
 // A manual popover: transparent and click-through except for the stack itself. Keyframes live in
 // motion.scss; the surface is ::before, so the card can morph from a capsule with its shadow.
@@ -86,8 +87,7 @@ ol {
 }
 .toast-icon {
   --icon-size: var(--icon-md);
-  flex: none;
-  margin-top: 0.125rem;
+  @include optical.line-icon;
   color: var(--tone);
 }
 .toast-text {
