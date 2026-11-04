@@ -7,7 +7,8 @@
 1. 在模組根目錄新增 `<Module>Monitoring.cs`（`internal sealed class`；一個模組有多個來源時各自以能力命名、放在能力資料夾，如 `Inference/Runs/GenerationQueueMonitoring.cs`），實作 [`IMonitoringSource`](../../backend/src/AiNexus.Platform/Monitoring/IMonitoringSource.cs)：`Id`（穩定、kebab-case）、`Name`（繁體中文）、`Order`、`Refresh` 與 `ReadAsync`。
 2. 回傳 [`SubsystemReading`](../../backend/src/AiNexus.Platform/Monitoring/SubsystemReading.cs)：狀態用 `SubsystemStates`，數字用 `SubsystemFact.Count`／`Bytes`／`Percent`／`Seconds`／`Tokens`，文字用 `Words`；未知值傳 `null`。
 3. 狀態語意：`failing` 功能無法運作、`degraded` 部分受影響、`healthy` 正常運作中、`idle` 未使用或未啟用、`unobserved` 只表示讀不到。不要用 `unobserved` 表示「未啟用」，健康摘要會把讀取後的 `unobserved` 當成讀取失敗。
-4. 範例：[`JobsMonitoring`](../../backend/src/AiNexus.Features/Work/Jobs/JobsMonitoring.cs)。在 `MonitoringSnapshotTests` 確認來源讀得到。
+4. 手上有未完成工作的來源，在讀數帶 `StopImpact`，見下方「停站影響」。
+5. 範例：[`JobsMonitoring`](../../backend/src/AiNexus.Features/Work/Jobs/JobsMonitoring.cs)。在 `MonitoringSnapshotTests` 確認來源讀得到。
 
 ## 讀取規則
 
@@ -17,6 +18,16 @@
 - 應用程式停止時不再開始讀取，並等待進行中的讀取結束。
 - 來源要便宜：記憶體狀態、設定或走索引的彙總查詢。系統範圍沒有 `ICurrentUser`；`Document` 沒有 query filter，要自行排除已刪除列。
 - 來源觸發的共用背景工作若本來就該計入指標（例：`ModelCatalog` 的探測），以 `ExecutionContext.SuppressFlow()` 啟動，避免 suppression 隨 AsyncLocal 流入。
+
+## 停站影響
+
+發版前要知道「現在停站會中斷什麼」，所以持有工作的來源要在讀數帶 [`StopImpact`](../../backend/src/AiNexus.Platform/Monitoring/SubsystemReading.cs)，不持有工作的來源省略：
+
+- `Interrupts`：只在程序記憶體裡、停站即失敗、要使用者重來的工作。
+- `Resumes`：已存在資料庫、重啟後自動接續的工作，只是晚一點完成。
+- 目前：生成佇列回報排隊加生成中的回答為 `Interrupts`；背景工作、郵件回報等待加執行中為 `Resumes`。新增持有工作的背景服務（程序內佇列、durable job 以外的長工作）時一併回報，否則監控頁會說「可以停站」。
+
+[`StopReadiness`](../../backend/src/AiNexus.Features/Admin/Monitoring/Snapshots/StopReadiness.cs) 加總成快照的 `stop`：有 `Interrupts` 就是 `interrupts`；否則只要有子系統讀不到（尚未讀取或讀取失敗）就是 `unknown`，不在看不到的時候說可以停；其餘為 `clear`。
 
 ## 目前的來源
 

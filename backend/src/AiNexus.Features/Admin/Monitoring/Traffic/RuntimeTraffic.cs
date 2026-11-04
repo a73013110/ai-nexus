@@ -145,14 +145,14 @@ public sealed class RuntimeTraffic : IDisposable
     }
 
     /// <summary>
-    /// 1、5 或 15 分鐘時間窗的快照。<paramref name="subsystems"/> 為其他模組的快取讀數；健康判定在釋放鎖之後才進行。
+    /// 1、5 或 15 分鐘時間窗的快照。<paramref name="subsystems"/> 為其他模組的快取讀數；健康與停站判定在釋放鎖之後才進行。
     /// </summary>
     public MonitoringSnapshot Snapshot(int minutes, MonitoredSubsystem[]? subsystems = null)
     {
         // 呼叫端需先以 MonitoringReads.ValidWindow 驗證時間窗。
         if (!MonitoringReads.ValidWindow(minutes)) throw new ArgumentOutOfRangeException(nameof(minutes));
         var snapshot = Collect(minutes, subsystems ?? []);
-        return snapshot with { Health = MonitoringHealth.Evaluate(snapshot) };
+        return snapshot with { Health = MonitoringHealth.Evaluate(snapshot), Stop = StopReadiness.Evaluate(snapshot) };
     }
 
     private MonitoringSnapshot Collect(int minutes, MonitoredSubsystem[] subsystems)
@@ -193,7 +193,7 @@ public sealed class RuntimeTraffic : IDisposable
             }
             var visibleSessions = sessions.Values.OrderByDescending(x => x.LastSeen).ThenBy(x => x.Id).Take(200).Select(x => x.Dto()).ToArray();
             return new(MonitoringSnapshot.CurrentVersion, Enabled, instance, started, now, minutes, options.Value.RefreshSeconds, options.Value.SessionTimeoutSeconds,
-                MonitoringHealth.Pending, sessions.Values.Select(x => x.User).Distinct().Count(), sessions.Count, sessions.Values.Count(x => x.State == "active"),
+                MonitoringHealth.Pending, StopReadiness.Pending, sessions.Values.Select(x => x.User).Distinct().Count(), sessions.Count, sessions.Values.Count(x => x.State == "active"),
                 Math.Max(0, Volatile.Read(ref inFlight) - Volatile.Read(ref openStreams)), Math.Max(0, Volatile.Read(ref openStreams)),
                 Math.Max(0, sessions.Count - visibleSessions.Length), droppedSessions, resources, resourceTimeline.ToArray(), total.Dto(seconds),
                 recent.Dto(Math.Max(BucketSeconds, end - recentSince)), timeline.ToArray(), visibleSessions,

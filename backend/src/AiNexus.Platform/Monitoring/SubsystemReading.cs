@@ -1,7 +1,16 @@
 namespace AiNexus.Platform.Monitoring;
 
-/// <summary><see cref="IMonitoringSource"/> 的讀數：狀態碼（見 <see cref="SubsystemStates"/>）、選填的單行摘要，以及指標清單。</summary>
-public sealed record SubsystemReading(string Status, string? Summary, IReadOnlyList<SubsystemFact> Facts);
+/// <summary>
+/// <see cref="IMonitoringSource"/> 的讀數：狀態碼（見 <see cref="SubsystemStates"/>）、選填的單行摘要、指標清單，
+/// 以及停站時手上工作的下場（<see cref="StopImpact"/>；不持有工作的來源省略）。
+/// </summary>
+public sealed record SubsystemReading(string Status, string? Summary, IReadOnlyList<SubsystemFact> Facts, StopImpact? Stop = null);
+
+/// <summary>
+/// 現在停站（發版、回收集區）時這個子系統手上尚未完成的工作：<c>Interrupts</c> 只存在程序內、停站即失敗，要使用者重來；
+/// <c>Resumes</c> 已存在資料庫，重啟後自動接續，只是晚一點完成。監控頁加總成「現在能不能停站」。
+/// </summary>
+public sealed record StopImpact(int Interrupts, int Resumes);
 
 /// <summary>
 /// 子系統的單一指標。<c>Value</c> 為 null 代表未知；<c>Unit</c>（見 <see cref="SubsystemUnits"/>）決定前端如何格式化；

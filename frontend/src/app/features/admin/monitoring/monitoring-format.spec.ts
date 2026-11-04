@@ -5,6 +5,7 @@ import {
   factTone,
   healthAnnouncement,
   healthHeadline,
+  stopView,
   subsystemStatus,
   toneOf,
   uptimeText,
@@ -110,5 +111,45 @@ describe('monitoring format', () => {
     expect(subsystemStatus('degraded')).toBe('效能下降');
     expect(subsystemStatus('later')).toBe('later');
     expect(healthAnnouncement({ status: 'healthy', issues: [] })).toBe('系統恢復正常');
+  });
+
+  it('answers whether stopping now interrupts work, and never says clear while blind', () => {
+    const subsystem = (
+      id: string,
+      stop: { interrupts: number; resumes: number } | null,
+      status = 'healthy',
+    ) => ({
+      id,
+      name: id === 'generation' ? '生成佇列' : '背景工作',
+      status,
+      summary: null,
+      facts: [],
+      observedAt: '2026-10-13T04:02:31Z' as string | null,
+      stop,
+    });
+    const busy = stopView({ status: 'interrupts', interrupts: 2, resumes: 1 }, [
+      subsystem('generation', { interrupts: 2, resumes: 0 }),
+      subsystem('jobs', { interrupts: 0, resumes: 1 }),
+      subsystem('storage', null),
+    ]);
+    expect(busy.text).toBe('會中斷 2 項，1 項重啟後接續');
+    expect(busy.alert).toBe(true);
+    expect(busy.dots.map((dot) => [dot.tone, dot.title])).toEqual([
+      ['warning', '生成佇列：2 項會中斷'],
+      ['success', '背景工作：1 項重啟後接續'],
+    ]);
+    const quiet = [subsystem('jobs', { interrupts: 0, resumes: 0 })];
+    expect(stopView({ status: 'clear', interrupts: 0, resumes: 0 }, quiet)).toMatchObject({
+      text: '可以停站',
+      alert: false,
+      dots: [{ tone: 'success', title: '背景工作：沒有進行中的工作' }],
+    });
+    const unknown = { status: 'unknown', interrupts: 0, resumes: 0 };
+    expect(stopView(unknown, [subsystem('jobs', null, 'unobserved')])).toMatchObject({
+      text: '無法確認',
+      dots: [{ tone: 'neutral', title: '背景工作：無法讀取' }],
+    });
+    const unread = { ...subsystem('jobs', null, 'unobserved'), observedAt: null };
+    expect(stopView(unknown, [unread]).text).toBe('確認中');
   });
 });

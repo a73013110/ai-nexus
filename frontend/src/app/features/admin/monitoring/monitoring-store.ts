@@ -35,6 +35,7 @@ export function readSnapshot(value: unknown): MonitoringSnapshot {
     arrays.some((key) => !Array.isArray(snapshot[key])) ||
     !snapshot.health ||
     !Array.isArray(snapshot.health.issues) ||
+    !snapshot.stop ||
     !snapshot.resources ||
     !snapshot.traffic ||
     !Number.isFinite(Date.parse(snapshot.at))

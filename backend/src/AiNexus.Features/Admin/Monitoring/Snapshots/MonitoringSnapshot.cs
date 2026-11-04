@@ -32,8 +32,12 @@ public sealed record RuntimeResources(double? CpuPercent, long WorkingSetBytes, 
 /// </summary>
 public sealed record ResourcePoint(DateTimeOffset At, double? CpuPercent, long? WorkingSetBytes, long? ManagedHeapBytes, long? ThreadPoolQueueLength, double? GcPausePercent);
 
-/// <summary>其他模組的 <see cref="IMonitoringSource"/> 所回報的子系統；<c>ObservedAt</c> 在第一次讀取前為 null。</summary>
-public sealed record MonitoredSubsystem(string Id, string Name, string Status, string? Summary, SubsystemFact[] Facts, DateTimeOffset? ObservedAt);
+/// <summary>
+/// 其他模組的 <see cref="IMonitoringSource"/> 所回報的子系統；<c>ObservedAt</c> 在第一次讀取前為 null，
+/// <c>Stop</c> 只有持有工作的來源才有。
+/// </summary>
+public sealed record MonitoredSubsystem(string Id, string Name, string Status, string? Summary, SubsystemFact[] Facts, DateTimeOffset? ObservedAt,
+    StopImpact? Stop = null);
 
 /// <summary>值得管理員注意的問題；<c>Subject</c> 為相關的相依服務、子系統或指標 id。</summary>
 public sealed record HealthIssue(string Code, string Severity, string Subject, string Title, string Detail);
@@ -42,10 +46,16 @@ public sealed record HealthIssue(string Code, string Severity, string Subject, s
 public sealed record HealthSummary(string Status, HealthIssue[] Issues);
 
 /// <summary>
-/// 本實例的即時檢視。<c>Traffic</c>、相依服務、端點與活動隨 <c>WindowMinutes</c> 變動；<c>RecentTraffic</c> 永遠是最後一分鐘的已完成區間，並作為 <c>Health</c> 的依據。
+/// 現在停站的影響，由各子系統的 <see cref="StopImpact"/> 加總（見 <see cref="StopReadiness"/>）：
+/// <c>clear</c> 可以停站、<c>interrupts</c> 會中斷進行中的工作、<c>unknown</c> 有子系統讀不到而無法確定。
+/// </summary>
+public sealed record StopSummary(string Status, int Interrupts, int Resumes);
+
+/// <summary>
+/// 本實例的即時檢視。<c>Traffic</c>、相依服務、端點與活動隨 <c>WindowMinutes</c> 變動；<c>RecentTraffic</c> 永遠是最後一分鐘的已完成區間，並作為 <c>Health</c> 的依據；<c>Stop</c> 只看子系統讀數。
 /// </summary>
 public sealed record MonitoringSnapshot(int Version, bool Enabled, string Instance, DateTimeOffset StartedAt, DateTimeOffset At, int WindowMinutes,
-    int RefreshSeconds, int SessionTimeoutSeconds, HealthSummary Health, int OnlineUsers, int OnlineSessions, int ActiveSessions, int InFlightRequests,
+    int RefreshSeconds, int SessionTimeoutSeconds, HealthSummary Health, StopSummary Stop, int OnlineUsers, int OnlineSessions, int ActiveSessions, int InFlightRequests,
     int OpenStreams, int OmittedSessions, long DroppedSessions, RuntimeResources Resources, ResourcePoint[] ResourceTimeline, TrafficMetrics Traffic,
     TrafficMetrics RecentTraffic, TrafficPoint[] Timeline, OnlineSession[] Sessions, TrafficActivity[] Activities, DependencyTraffic[] Dependencies,
     EndpointTraffic[] Endpoints, MonitoredSubsystem[] Subsystems)

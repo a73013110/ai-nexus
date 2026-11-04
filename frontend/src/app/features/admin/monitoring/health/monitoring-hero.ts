@@ -8,6 +8,7 @@ import {
   healthHeadline,
   isProblem,
   monitoringTime,
+  stopView,
   subsystemStatus,
   toneOf,
   uptimeText,
@@ -23,8 +24,8 @@ const CONNECTION: Record<string, string> = {
 };
 
 /**
- * 頁面的一眼答案：系統健康的一個標題、下一步、資料來源與新鮮度，以及每個依賴與子系統的一個點，
- * 這是頁面中唯一讀取一秒時鐘的部分。
+ * 頁面的一眼答案：系統健康的一個標題、下一步、資料來源與新鮮度，每個依賴與子系統的一個點，
+ * 以及現在停站會影響什麼。這是頁面中唯一讀取一秒時鐘的部分。
  */
 @Component({
   selector: 'nx-monitoring-hero',
@@ -61,7 +62,7 @@ const CONNECTION: Record<string, string> = {
                 <i [attr.data-tone]="dot.tone" [attr.title]="dot.title"></i>
               }
             </span>
-            <span [class.is-alert]="group.problems > 0">{{ group.text }}</span>
+            <span [class.is-alert]="group.alert">{{ group.text }}</span>
           </dd>
         </div>
       }
@@ -106,12 +107,11 @@ export class MonitoringHero {
       items: readonly { id: string; name: string; status: string }[],
       words: (status: string) => string,
     ) => {
-      const problems = items.filter((item) => isProblem(item.status));
-      const healthy = items.filter((item) => item.status === 'healthy').length;
+      const problems = items.filter((item) => isProblem(item.status)).length;
       return {
         key,
         label,
-        problems: problems.length,
+        alert: problems > 0,
         dots: items.map((item) => ({
           id: item.id,
           tone: toneOf(item.status),
@@ -119,9 +119,9 @@ export class MonitoringHero {
         })),
         text: !items.length
           ? '尚未設定'
-          : problems.length
-            ? `${problems.length} 項異常`
-            : healthy
+          : problems
+            ? `${problems} 項異常`
+            : items.some((item) => item.status === 'healthy')
               ? '沒有異常'
               : '尚無觀測',
       };
@@ -129,6 +129,7 @@ export class MonitoringHero {
     return [
       group('dependencies', '周邊服務', this.store.dependencies(), dependencyStatus),
       group('subsystems', '子系統', this.store.subsystems(), subsystemStatus),
+      { key: 'stop', label: '停站影響', ...stopView(this.data().stop, this.store.subsystems()) },
     ];
   });
 }

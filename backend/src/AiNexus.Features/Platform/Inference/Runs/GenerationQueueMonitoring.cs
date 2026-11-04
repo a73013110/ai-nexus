@@ -43,6 +43,7 @@ internal sealed class GenerationQueueMonitoring(GenerationScheduler scheduler) :
             SubsystemFact.Count("locked_conversations", "鎖定中的對話", scheduler.LockedConversations),
         ];
 
-        return Task.FromResult(new SubsystemReading(status, summary, facts));
+        // 排隊與生成中的回答都只在本程序的記憶體裡，停站後由租約復原標為失敗，使用者要重新生成。
+        return Task.FromResult(new SubsystemReading(status, summary, facts, new StopImpact(reserved, 0)));
     }
 }

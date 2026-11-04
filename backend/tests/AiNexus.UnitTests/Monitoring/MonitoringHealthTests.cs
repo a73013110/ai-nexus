@@ -14,9 +14,9 @@ public sealed class MonitoringHealthTests
 
     private static ResourcePoint Point(double? cpu = 5, long queue = 0, double? pause = 0) => new(Now, cpu, 100, 50, queue, pause);
 
-    private static MonitoringSnapshot Snapshot(TrafficMetrics? recent = null, RuntimeResources? resources = null, ResourcePoint[]? points = null,
+    internal static MonitoringSnapshot Snapshot(TrafficMetrics? recent = null, RuntimeResources? resources = null, ResourcePoint[]? points = null,
         DependencyTraffic[]? dependencies = null, MonitoredSubsystem[]? subsystems = null, bool enabled = true, long dropped = 0) =>
-        new(MonitoringSnapshot.CurrentVersion, enabled, "test", Now, Now, 5, 3, 90, MonitoringHealth.Pending, 0, 0, 0, 0, 0, 0, dropped,
+        new(MonitoringSnapshot.CurrentVersion, enabled, "test", Now, Now, 5, 3, 90, MonitoringHealth.Pending, StopReadiness.Pending, 0, 0, 0, 0, 0, 0, dropped,
             resources ?? Resources(), points ?? [Point(), Point(), Point()], recent ?? Metrics(), recent ?? Metrics(), [], [], [], dependencies ?? [], [], subsystems ?? []);
 
     private static DependencyTraffic Dependency(string status, long requests, long errors) =>

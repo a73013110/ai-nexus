@@ -6344,6 +6344,7 @@ export interface components {
             facts: components["schemas"]["SubsystemFact"][];
             /** Format: date-time */
             observedAt: null | string;
+            stop: null | components["schemas"]["StopImpact"];
         };
         MonitoringSnapshot: {
             /** Format: int32 */
@@ -6361,6 +6362,7 @@ export interface components {
             /** Format: int32 */
             sessionTimeoutSeconds: number;
             health: components["schemas"]["HealthSummary"];
+            stop: components["schemas"]["StopSummary"];
             /** Format: int32 */
             onlineUsers: number;
             /** Format: int32 */
@@ -7392,6 +7394,19 @@ export interface components {
             queueDepth: number;
             generating: boolean;
         };
+        StopImpact: {
+            /** Format: int32 */
+            interrupts: number;
+            /** Format: int32 */
+            resumes: number;
+        };
+        StopSummary: {
+            status: string;
+            /** Format: int32 */
+            interrupts: number;
+            /** Format: int32 */
+            resumes: number;
+        };
         SubsystemFact: {
             id: string;
             label: string;
@@ -8141,6 +8156,8 @@ export type SpendUserDto = components['schemas']['SpendUserDto'];
 export type SqlVectorCapabilitiesDto = components['schemas']['SqlVectorCapabilitiesDto'];
 export type StartRepositoryChatRequest = components['schemas']['StartRepositoryChatRequest'];
 export type StatusDto = components['schemas']['StatusDto'];
+export type StopImpact = components['schemas']['StopImpact'];
+export type StopSummary = components['schemas']['StopSummary'];
 export type SubsystemFact = components['schemas']['SubsystemFact'];
 export type TablePageOfPunchDto = components['schemas']['TablePageOfPunchDto'];
 export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];

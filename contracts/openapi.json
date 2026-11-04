@@ -17211,7 +17211,8 @@
           "status",
           "summary",
           "facts",
-          "observedAt"
+          "observedAt",
+          "stop"
         ],
         "type": "object",
         "properties": {
@@ -17242,6 +17243,16 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "stop": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/StopImpact"
+              }
+            ]
           }
         }
       },
@@ -17256,6 +17267,7 @@
           "refreshSeconds",
           "sessionTimeoutSeconds",
           "health",
+          "stop",
           "onlineUsers",
           "onlineSessions",
           "activeSessions",
@@ -17308,6 +17320,9 @@
           },
           "health": {
             "$ref": "#/components/schemas/HealthSummary"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/StopSummary"
           },
           "onlineUsers": {
             "type": "integer",
@@ -21155,6 +21170,44 @@
           },
           "generating": {
             "type": "boolean"
+          }
+        }
+      },
+      "StopImpact": {
+        "required": [
+          "interrupts",
+          "resumes"
+        ],
+        "type": "object",
+        "properties": {
+          "interrupts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resumes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "StopSummary": {
+        "required": [
+          "status",
+          "interrupts",
+          "resumes"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "interrupts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "resumes": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },

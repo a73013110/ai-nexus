@@ -2,7 +2,7 @@
 
 ## 更新與回復
 
-維運窗口先等待背景任務結束，停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
+維運窗口先看[監控頁](../features/monitoring.md)主視覺的「停站影響」：顯示「會中斷 N 項」時等生成跑完；「可以停站」時，重啟後接續的背景工作與郵件不必等。「確認中」或「無法確認」時先查讀不到的子系統。之後停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
 
 更新前先完成 [SQL＋原檔一致性備份](backup.md) 並停止全部 host，再依套件 `database\README.md` 部署資料庫（先看 `changes.md`，以 SQLCMD 模式執行 `update.sql`：版本與手動異動檢查 → 結構 → 全文與種子資料 → 記錄版本；`manual\` 由工程師判斷是否執行，見 [資料庫建置與權限](database-setup.md#部署)），完成後執行 `EXEC releases.usp_ListSchemaChanges` 確認沒有差異。網站啟動時會比對 EF 對應的表與欄位，結構沒更新就不會啟動。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 

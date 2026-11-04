@@ -4,12 +4,11 @@
 
 ## 操作
 
-- 主視覺一句話回答健康（正常／N 項需要注意／N 項嚴重問題）並列出問題；與周邊服務或子系統有關的問題可點開詳情。暫停、斷線或停用採集時改說明資料時間點，狀態穩定兩份快照才播報。
+- 主視覺一句話回答健康（正常／N 項需要注意／N 項嚴重問題）並列出問題，可點開詳情；「停站影響」說明停站會中斷什麼（[規則](../architecture/monitoring-sources.md#停站影響)）。暫停、斷線或停用採集時改說明資料時間點，狀態穩定兩份快照才播報。
 - 關鍵指標固定為最近 1 分鐘；走勢、周邊服務、熱門 API 與事件依 1／5／15 分鐘範圍。
 - 周邊服務只連線有觀測的依賴，尚無觀測的收在下方；子系統卡片來自各模組，見 [監控子系統](../architecture/monitoring-sources.md)。點選列、卡片或工作階段看詳情。
 - 在線人員可依功能、狀態篩選，搜尋名稱／帳號／IP／裝置，排序及分頁。趨勢可選請求速率、P95、5xx 或 HTTP 回應量。
 - 有 `diagnostics.logs` 才能從操作動態依 trace ID 前往系統日誌。
-- 頁面右上角與詳情抽屜可開啟操作導覽。
 - 支援暫停／恢復、重連、JSON 快照匯出、深淺色、375px（執行環境、無異常子系統與熱門 API 收合）、鍵盤及減少動態。背景分頁停止訂閱；退避重連保留有時間標記的舊快照，授權失效後清空。
 
 ## 身分與觀測定義
@@ -67,10 +66,10 @@ IP 是請求來源；網站前有代理時需設[信任的代理](../operations/
 | Monitoring.SessionTimeoutSeconds | 90 | 60–300 |
 | Monitoring.RefreshSeconds | 3 | 2–15 |
 
-一般設定可覆寫，修改後重啟，不需秘密或 SQL server-wide monitoring 權限。Presence 每人每分鐘 120 次，監控讀取每分鐘 60 次，匯出每分鐘兩次。
+設定修改後重啟，不需秘密或 SQL server-wide monitoring 權限。Presence 每人每分鐘 120 次，監控讀取每分鐘 60 次，匯出每分鐘兩次。
 
-SSE 的不緩衝與 heartbeat 沿用回答串流的做法，見 [SSE](../architecture/sse.md)。
+SSE 的不緩衝與 heartbeat 見 [SSE](../architecture/sse.md)。
 
 ## 驗證
 
-單元與整合測試在各自的 Monitoring 資料夾。MonitoringBrowserTests 以真實 Kestrel、前端及 Edge 驗證心跳到即時快照與稽核；`frontend/e2e/monitoring.spec.ts` 以本機 SSE fixture 驗頁面互動、深淺色、375px、鍵盤與減少動畫。SQL／IIS／AD 與代理 IP 需依部署環境實機驗收。
+MonitoringBrowserTests 以真實 Kestrel、前端及 Edge 驗證心跳到即時快照與稽核；`frontend/e2e/monitoring.spec.ts` 以本機 SSE fixture 驗頁面互動、深淺色、375px、鍵盤與減少動畫。SQL／IIS／AD 與代理 IP 需在部署環境驗收。

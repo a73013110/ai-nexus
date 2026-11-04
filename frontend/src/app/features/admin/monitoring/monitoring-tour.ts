@@ -29,7 +29,7 @@ export function monitoringTour(options: {
         target: `${PAGE} nx-monitoring-hero`,
         title: '一句話回答健康',
         description:
-          '依錯誤率、5xx、延遲、程序資源、周邊服務與子系統，判定正常、需要注意或嚴重問題，並列出問題。\n與周邊服務或子系統有關的問題，可點開詳情。',
+          '依錯誤率、5xx、延遲、程序資源、周邊服務與子系統，判定正常、需要注意或嚴重問題，並列出問題。\n與周邊服務或子系統有關的問題，可點開詳情。\n「停站影響」說明現在停站會中斷哪些工作，發版前先看這裡。',
         side: 'bottom',
       },
       {

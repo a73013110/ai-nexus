@@ -119,6 +119,7 @@ const snapshot: MonitoringSnapshot = {
   refreshSeconds: 3,
   sessionTimeoutSeconds: 90,
   health: { status: 'healthy', issues: [] },
+  stop: { status: 'clear', interrupts: 0, resumes: 0 },
   onlineUsers: 1,
   onlineSessions: 1,
   activeSessions: 1,
@@ -160,7 +161,15 @@ const snapshot: MonitoringSnapshot = {
   ],
   endpoints: [],
   subsystems: [
-    { id: 'jobs', name: '背景工作', status: 'healthy', summary: null, facts: [], observedAt: null },
+    {
+      id: 'jobs',
+      name: '背景工作',
+      status: 'healthy',
+      summary: null,
+      facts: [],
+      observedAt: null,
+      stop: null,
+    },
   ],
 };
 

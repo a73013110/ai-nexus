@@ -49,6 +49,7 @@ function snapshot(): MonitoringSnapshot {
     openStreams: 3,
     omittedSessions: 0,
     droppedSessions: 0,
+    stop: { status: "interrupts", interrupts: 2, resumes: 0 },
     health: {
       status: "attention",
       issues: [
@@ -211,6 +212,7 @@ function snapshot(): MonitoringSnapshot {
           fact("queued", "等待中", 0, "count"),
         ],
         observedAt: new Date().toISOString(),
+        stop: { interrupts: 2, resumes: 0 },
       },
       {
         id: "usage-today",
@@ -367,6 +369,10 @@ test("health, service map, session filters, inspectors, range changes and snapsh
       page.getByRole("heading", { name: /1 項需要注意/ }),
     ).toBeVisible();
     await expect(page.getByRole("heading", { name: "周邊服務" })).toBeVisible();
+    // 發版前看的那一行：生成中的回答停站會中斷。
+    await expect(page.locator("nx-monitoring-hero")).toContainText(
+      "會中斷 2 項",
+    );
     await expect(page.locator('[data-vital="users"]')).toContainText("12");
     await expect(page.locator('[data-vital="p95"]')).toContainText("75");
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(11);

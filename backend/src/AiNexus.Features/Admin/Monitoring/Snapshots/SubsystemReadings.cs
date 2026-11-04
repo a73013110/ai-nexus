@@ -80,7 +80,7 @@ public sealed partial class SubsystemReadings
             var source = (IMonitoringSource)scope.ServiceProvider.GetRequiredService(entry.Type);
             using var timeout = new CancellationTokenSource(Timeout, clock);
             var result = await source.ReadAsync(timeout.Token).WaitAsync(Timeout, clock);
-            reading = new(entry.Id, entry.Name, result.Status, result.Summary, result.Facts.ToArray(), clock.GetUtcNow());
+            reading = new(entry.Id, entry.Name, result.Status, result.Summary, result.Facts.ToArray(), clock.GetUtcNow(), result.Stop);
         }
         catch (Exception error)
         {

@@ -1,4 +1,9 @@
-import type { HealthSummary, SubsystemFact } from '@core/api/schema';
+import type {
+  HealthSummary,
+  MonitoredSubsystem,
+  StopSummary,
+  SubsystemFact,
+} from '@core/api/schema';
 import { inject } from '@angular/core';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import {
@@ -201,6 +206,47 @@ export function healthHeadline(view: HealthView): HealthHeadline {
         tone: 'neutral',
       };
   }
+}
+
+export interface StopView {
+  readonly text: string;
+  /** 有會中斷的工作：文字以警示色呈現。 */
+  readonly alert: boolean;
+  readonly dots: readonly {
+    readonly id: string;
+    readonly tone: BadgeTone;
+    readonly title: string;
+  }[];
+}
+
+/**
+ * 「現在停站會影響什麼」，發版前看這一行。點只列持有工作的子系統與讀不到的子系統：
+ * 讀不到的來源可能正持有工作，所以和後端一樣不在這時說「可以停站」。
+ */
+export function stopView(stop: StopSummary, subsystems: readonly MonitoredSubsystem[]): StopView {
+  const resumes = stop.resumes ? `，${formatNumber(stop.resumes)} 項重啟後接續` : '';
+  const text =
+    stop.status === 'interrupts'
+      ? `會中斷 ${formatNumber(stop.interrupts)} 項${resumes}`
+      : stop.status === 'clear'
+        ? `可以停站${resumes}`
+        : subsystems.some((subsystem) => !subsystem.observedAt)
+          ? '確認中'
+          : '無法確認';
+  const dots = subsystems
+    .filter((subsystem) => subsystem.stop || subsystem.status === 'unobserved')
+    .map(({ id, name, stop: work }) => ({
+      id,
+      tone: (!work ? 'neutral' : work.interrupts ? 'warning' : 'success') as BadgeTone,
+      title: !work
+        ? `${name}：無法讀取`
+        : work.interrupts
+          ? `${name}：${formatNumber(work.interrupts)} 項會中斷`
+          : work.resumes
+            ? `${name}：${formatNumber(work.resumes)} 項重啟後接續`
+            : `${name}：沒有進行中的工作`,
+    }));
+  return { text, alert: stop.status === 'interrupts', dots };
 }
 
 /** 健康狀態穩定到新狀態時，螢幕閱讀器會聽到的內容。 */

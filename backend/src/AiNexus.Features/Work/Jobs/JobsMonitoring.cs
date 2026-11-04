@@ -53,6 +53,7 @@ internal sealed class JobsMonitoring(AppDbContext db, TimeProvider clock) : IMon
             SubsystemFact.Seconds("oldest_queued", "最久等待", waited, waited > 600 ? SubsystemTones.Warning : SubsystemTones.Neutral),
             SubsystemFact.Count("expired_leases", "租約過期", stuck, stuck > 0 ? SubsystemTones.Danger : SubsystemTones.Neutral),
         ];
-        return new(status, summary, facts);
+        // 工作與檢查點都在資料庫：停站後租約到期由重啟的程序重新領取，從檢查點接續。
+        return new(status, summary, facts, new StopImpact(0, queued + running));
     }
 }

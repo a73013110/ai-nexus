@@ -38,7 +38,8 @@ internal sealed class MailMonitoring(AppDbContext db, MailCircuit circuit, IOpti
             SubsystemFact.Seconds("oldest_queued", "最久等待", waited, waited > 600 ? SubsystemTones.Warning : SubsystemTones.Neutral),
             SubsystemFact.Count("sent_24h", "24 小時內寄出", queue.SentLastDay),
         ];
-        return new(status, summary, facts);
+        // 信件在 outbox 資料表，停站後由重啟的程序繼續寄送。
+        return new(status, summary, facts, new StopImpact(0, queue.Queued + queue.Sending));
     }
 }
 

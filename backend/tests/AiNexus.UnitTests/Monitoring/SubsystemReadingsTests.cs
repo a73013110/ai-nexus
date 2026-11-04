@@ -11,7 +11,7 @@ namespace AiNexus.UnitTests.Monitoring;
 
 public sealed class SubsystemReadingsTests
 {
-    private static readonly SubsystemReading Ready = new(SubsystemStates.Healthy, "正常", [SubsystemFact.Count("items", "項目", 3)]);
+    private static readonly SubsystemReading Ready = new(SubsystemStates.Healthy, "正常", [SubsystemFact.Count("items", "項目", 3)], new StopImpact(1, 2));
 
     private static (SubsystemReadings Readings, Probe Probe, FakeTimeProvider Clock) Create()
     {
@@ -37,6 +37,7 @@ public sealed class SubsystemReadingsTests
         var read = readings.Read()[1];
         Assert.Equal((SubsystemStates.Healthy, "正常", clock.GetUtcNow()), (read.Status, read.Summary, read.ObservedAt!.Value));
         Assert.Equal("items", Assert.Single(read.Facts).Id);
+        Assert.Equal(new StopImpact(1, 2), read.Stop);
         await readings.Settled; Assert.Equal(1, probe.Reads);
         clock.Advance(ProbeSource.Interval);
         Assert.Equal(read, readings.Read()[1]);
@@ -51,7 +52,7 @@ public sealed class SubsystemReadingsTests
         readings.Read(); await readings.Settled;
         var failed = readings.Read()[1];
         Assert.Equal((SubsystemStates.Unobserved, SubsystemReadings.UnreadableSummary), (failed.Status, failed.Summary));
-        Assert.Empty(failed.Facts); Assert.NotNull(failed.ObservedAt);
+        Assert.Empty(failed.Facts); Assert.Null(failed.Stop); Assert.NotNull(failed.ObservedAt);
         probe.Fail = null; probe.Next.SetResult(Ready);
         await readings.Settled; Assert.Equal(1, probe.Reads);
         clock.Advance(ProbeSource.Interval); readings.Read(); await readings.Settled;
