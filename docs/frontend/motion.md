@@ -16,7 +16,7 @@
 
 ## 動態島
 
-- `shared/ui/island.ts`：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。
+- `shared/ui/island.ts`：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded），以「－」縮回（同 `FloatingPanel`，也可按 Esc）。展開後不會多出內容（只有一則、沒有 `message`、`action`、`link`）時 pill 只是狀態、不能點開。
 - 會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。
 - 跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 `morphSize`（`shared/ui/morph-size.ts`）量測內容後用彈簧過渡，不依賴 `interpolate-size`。
 - `IslandService` 預設是根實例（composer）；元件在 `providers` 自備一份就有獨立的島。文件檢視器以此把處理進度與錯誤浮在內容底部，不與底下 composer 的提示混在一起。

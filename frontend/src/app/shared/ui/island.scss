@@ -84,7 +84,8 @@
   color: inherit;
   white-space: nowrap;
 }
-.island-pill:hover {
+// 不能展開的膠囊是 div、只表示狀態，不給滑過效果。
+button.island-pill:hover {
   background: var(--hover);
 }
 .island-label {

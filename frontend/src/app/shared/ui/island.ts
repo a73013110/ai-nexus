@@ -22,7 +22,7 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
 /**
  * `IslandService` 登記的通知所形成的單一變形膠囊。只有一則通知時是精簡膠囊；兩則以上時，
  * 其餘的會分到一個泡泡中。開啟任何一個，都會展開每則通知與其動作。緊急通知會在出現時展開，
- * 直到使用者收合。
+ * 直到使用者縮小。展開後不會多出內容時（只有一則、也只有標籤），膠囊只是狀態，不能點開。
  * 膠囊在量測過的尺寸之間做動畫（`morphSize`）。預設接在 `IslandService` 的根實例；
  * 元件在 `providers` 自備一份時，那個範圍內的島只顯示該元件的通知（例：文件檢視器）。
  */
@@ -83,13 +83,13 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
               #collapseButton
               type="button"
               class="icon-button island-collapse"
-              aria-label="收合提示"
-              title="收合提示"
+              aria-label="縮小提示"
+              title="縮小（Esc）"
               (click)="collapse()"
             >
-              <nx-icon name="chevron-up" />
+              <nx-icon name="minus" />
             </button>
-          } @else {
+          } @else if (expandable()) {
             <button
               #pill
               type="button"
@@ -99,12 +99,12 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
               [attr.aria-label]="first.label + '，展開提示'"
               (click)="open()"
             >
-              <ng-container *ngTemplateOutlet="glyph; context: { $implicit: first }" /><span
-                role="status"
-                class="island-label"
-                >{{ first.label }}</span
-              >
+              <ng-container *ngTemplateOutlet="capsule; context: { $implicit: first }" />
             </button>
+          } @else {
+            <div class="island-pill" animate.enter="island-swap">
+              <ng-container *ngTemplateOutlet="capsule; context: { $implicit: first }" />
+            </div>
           }
         </div>
       </div>
@@ -125,6 +125,13 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
         </button>
       }
     }
+    <ng-template #capsule let-item>
+      <ng-container *ngTemplateOutlet="glyph; context: { $implicit: item }" /><span
+        role="status"
+        class="island-label"
+        >{{ item.label }}</span
+      >
+    </ng-template>
     <ng-template #glyph let-item>
       @if (item.tone === 'live') {
         <nx-ai-mark class="island-glyph" state="working" />
@@ -138,11 +145,13 @@ export class Island {
   readonly items = this.island.items;
   readonly primary = computed<IslandItem | null>(() => this.items()[0] ?? null);
   readonly rest = computed(() => this.items().slice(1));
-  /** 島清空後自行關閉。 */
-  private readonly opened = linkedSignal({
-    source: () => this.items().length > 0,
-    computation: () => false,
+  /** 展開後看得到膠囊以外的東西：其他通知，或第一則的完整句子、動作、連結。 */
+  readonly expandable = computed(() => {
+    const [first, ...rest] = this.items();
+    return !!first && (rest.length > 0 || hasDetail(first));
   });
+  /** 變成不能展開（含清空）就關上，之後再能展開時也不會自己打開。 */
+  private readonly opened = linkedSignal({ source: this.expandable, computation: () => false });
   private readonly ids = computed(() => this.items().map((item) => item.id));
   /** 使用者已收合的通知；緊急的通知要重新出現後才會再次展開。 */
   private readonly seen = linkedSignal<readonly string[], ReadonlySet<string>>({
@@ -155,7 +164,8 @@ export class Island {
     // 即使為空也要讀取，讓離開的通知在重新出現前就被遺忘。
     const seen = this.seen();
     if (!items.length) return 'hidden';
-    if (this.opened() || items.some((item) => item.urgent && !seen.has(item.id))) return 'expanded';
+    const urgent = items.some((item) => item.urgent && !seen.has(item.id));
+    if (this.expandable() && (this.opened() || urgent)) return 'expanded';
     return items.length > 1 ? 'split' : 'compact';
   });
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
@@ -180,4 +190,8 @@ export class Island {
     event.stopPropagation();
     this.collapse();
   }
+}
+
+function hasDetail(item: IslandItem) {
+  return (!!item.message && item.message !== item.label) || !!item.action || !!item.link;
 }

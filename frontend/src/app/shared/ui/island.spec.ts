@@ -59,9 +59,42 @@ describe('Island', () => {
     expect(island.mode()).toBe('compact');
   });
 
+  it('keeps a lone label-only notice as a status that cannot open', () => {
+    const { fixture, host, island } = setup();
+    host.items.set([item('live', 5, { urgent: true, message: 'live' })]);
+    fixture.detectChanges();
+    expect(island.expandable()).toBe(false);
+    expect(island.mode()).toBe('compact');
+    const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('button.island-pill')).toBeNull();
+    expect(element.querySelector('[role="status"]')?.textContent).toBe('live');
+    island.open();
+    expect(island.mode()).toBe('compact');
+    // 多出一則就能展開；那則離開後回到不能展開，之前的展開也不留著。
+    host.items.set([item('live', 5), item('next', 1)]);
+    island.open();
+    expect(island.mode()).toBe('expanded');
+    host.items.set([item('live', 5)]);
+    expect(island.mode()).toBe('compact');
+    host.items.set([item('live', 5), item('next', 1)]);
+    expect(island.mode()).toBe('split');
+  });
+
+  it('opens a lone notice that has more to show', () => {
+    const { host, island } = setup();
+    for (const extra of [
+      { message: '完整句子' },
+      { action: { label: '重試', run: () => undefined } },
+      { link: { label: '前往', commands: ['/'] } },
+    ]) {
+      host.items.set([item('one', 1, extra)]);
+      expect(island.expandable()).toBe(true);
+    }
+  });
+
   it('expands urgent notices until collapsed, and again when they return', () => {
     const { fixture, host, island } = setup();
-    host.items.set([item('warn', 5, { urgent: true })]);
+    host.items.set([item('warn', 5, { urgent: true, message: '請縮短內容' })]);
     expect(island.mode()).toBe('expanded');
     island.collapse();
     expect(island.mode()).toBe('compact');
@@ -70,7 +103,7 @@ describe('Island', () => {
     island.collapse();
     host.items.set([]);
     fixture.detectChanges();
-    host.items.set([item('warn', 5, { urgent: true })]);
+    host.items.set([item('warn', 5, { urgent: true, message: '請縮短內容' })]);
     expect(island.mode()).toBe('expanded');
   });
 });
