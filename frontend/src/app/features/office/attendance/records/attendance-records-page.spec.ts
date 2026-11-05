@@ -104,6 +104,8 @@ const rules: AttendanceRulesDto = {
       flexStart: '08:00:00',
       flexEnd: '09:00:00',
       workHours: 9.5,
+      breakStart: '12:00:00',
+      breakEnd: '13:00:00',
     },
   ],
   rules: [{ title: '遲到', text: '晚於彈性終點上班為遲到。例：上班日 09:10 到，遲到 10 分。' }],
@@ -135,6 +137,18 @@ function setup(
     people: vi.fn(async () => people),
     rules: vi.fn(async () => rules),
     exportRecords: vi.fn(async (_query: AttendanceRecordFilters) => new Response('')),
+    explanation: vi.fn(async (_query: { date: string; userId?: string; card?: string }) => ({
+      date: '2026-10-01',
+      dayType: 'FullDay' as const,
+      status: 'Anomaly' as const,
+      reason: null,
+      coverage: 'Unexplained' as const,
+      shortSeconds: 725,
+      schedule: rules.schedules[0],
+      steps: [{ kind: 'Punch' as const, at: '09:12:05', text: '上班刷卡，晚於彈性終點。' }],
+      conclusion: '遲到：沒有表單抵掉遲到的 12 分 5 秒，未補足。',
+      rules: ['遲到'],
+    })),
   };
   const organization = { units: vi.fn(async () => []) };
   TestBed.configureTestingModule({
@@ -624,6 +638,23 @@ describe('AttendanceRecordsPage', () => {
     unexplained.click();
     await fixture.whenStable();
     expect(api.records.mock.calls.at(-1)![0].coverage).toBe('Unexplained');
+  });
+
+  it('opens how a day was judged next to its status, with the rules it cites', async () => {
+    HTMLElement.prototype.showPopover ??= function () {};
+    HTMLElement.prototype.hidePopover ??= function () {};
+    const { fixture, root, api } = setup(async () => records());
+    await fixture.whenStable();
+    const status = root.querySelector<HTMLButtonElement>('.records-explain')!;
+    status.click();
+    await fixture.whenStable();
+    expect(api.explanation.mock.calls[0][0]).toEqual({ date: '2026-10-01', userId: 'u1' });
+    expect(status.getAttribute('aria-expanded')).toBe('true');
+    const panel = root.querySelector('.record-explanation')!;
+    expect(panel.textContent).toContain('王小明 · 10/01（四）');
+    expect(panel.textContent).toContain('上班刷卡，晚於彈性終點。');
+    expect(panel.textContent).toContain('遲到：沒有表單抵掉遲到的 12 分 5 秒，未補足。');
+    expect(panel.querySelector('dd')?.textContent).toContain('晚於彈性終點上班為遲到');
   });
 
   it('shows each form as a card and the day as waiting on a form', async () => {

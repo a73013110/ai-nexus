@@ -1,5 +1,6 @@
 // 固定的公開操作提示；與 PublicErrorCatalog.cs 保持同步。
 export const publicErrorHints: Readonly<Record<string, string>> = {
+  assistant_question_invalid: '提問不正確：請輸入 500 字以內的問題後再送出。',
   attachment_limit: '附件數量超過單則訊息上限，或包含重複的附件。',
   https_required: '此工作區需要 HTTPS 安全連線。',
   identity_changed: '測試身分已結束，請重新載入工作區。',
@@ -130,6 +131,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
     '這次匯入的刷卡已被之後的匯入取代，或這次匯入失敗，沒有可列出的刷卡。',
   attendance_import_not_found: '找不到這筆匯入紀錄，請重新整理。',
   attendance_import_source_unavailable: '讀不到打卡檔資料夾，請聯絡管理員確認網路共用與讀取權限。',
+  attendance_record_not_found: '找不到這一天的出勤紀錄，請重新查詢。',
   attendance_records_filter_invalid: '查詢條件不正確，請重新選擇人員或重新整理頁面。',
   attendance_records_range_invalid: '查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。',
   attendance_user_not_found: '找不到這位使用者，帳號可能已刪除。',

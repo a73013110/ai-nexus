@@ -34,6 +34,22 @@ markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
     !env?.['streaming'] && label !== 'text' ? ` data-language="${escape(label)}"` : '';
   return `<div class="embed embed-code">${codeEmbedBar(label)}<pre class="embed-body"><code${deferred}>${escape(token.content)}</code></pre></div>`;
 };
+// 依據編號（頁內助理的「早退 2 天 [3]」）：只在呼叫端給了依據數量時才認，`[3](網址)` 仍是連結，
+// 超出數量的編號照原文顯示，不變成指向不存在依據的按鈕。點擊由 `MarkdownView` 以 `.markdown-cite` 委派。
+markdown.inline.ruler.before('link', 'citation', (state, silent) => {
+  const citations = Number(state.env?.['citations'] ?? 0);
+  if (!citations || state.src.charCodeAt(state.pos) !== 0x5b) return false;
+  const match = /^\[(\d{1,3})\](?!\()/.exec(state.src.slice(state.pos));
+  const number = Number(match?.[1]);
+  if (!match || number < 1 || number > citations) return false;
+  if (!silent) state.push('citation', '', 0).content = String(number);
+  state.pos += match[0].length;
+  return true;
+});
+markdown.renderer.rules['citation'] = (tokens, index) => {
+  const number = tokens[index].content;
+  return `<button type="button" class="markdown-cite" aria-label="依據 ${number}" title="依據 ${number}">${number}</button>`;
+};
 // 表格包進內嵌區塊：寬表格在區塊內橫向捲動，不撐寬回答。
 markdown.renderer.rules['table_open'] = () => '<div class="embed embed-table"><table>';
 markdown.renderer.rules['table_close'] = () => '</table></div>';
@@ -79,14 +95,19 @@ const rendered = new LruCache<string, RenderedMarkdown>({
  * 這裡是唯一的可信 HTML 邊界。解析時停用原始 HTML，接著把產生的標記縮減為一個小的 HTML 白名單；
  * 任何任意的 HTML 輸入都不被信任。圍欄保留原本的巢狀結構；只有渲染器自有的插槽會掛載 Angular 元件。
  */
-export function renderMarkdownWithDiagrams(content: string, streaming = false): RenderedMarkdown {
-  // 串流的前緣每幀都會改變，且從不重複顯示，因此不快取。
-  const cached = streaming ? undefined : rendered.get(content);
+export function renderMarkdownWithDiagrams(
+  content: string,
+  streaming = false,
+  citations = 0,
+): RenderedMarkdown {
+  // 串流的前緣每幀都會改變，且從不重複顯示，因此不快取。依據數量會改變輸出，所以算進鍵。
+  const key = citations ? `${citations}\u0000${content}` : content;
+  const cached = streaming ? undefined : rendered.get(key);
   if (cached) return cached;
   const diagrams: string[] = [];
-  const html = sanitizeMarkdown(markdown.render(content, { streaming, diagrams }));
+  const html = sanitizeMarkdown(markdown.render(content, { streaming, diagrams, citations }));
   const result: RenderedMarkdown = Object.freeze({ html, diagrams: Object.freeze(diagrams) });
-  if (!streaming) rendered.set(content, result);
+  if (!streaming) rendered.set(key, result);
   return result;
 }
 

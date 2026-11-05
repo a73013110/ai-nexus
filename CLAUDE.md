@@ -14,6 +14,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 請求驗證、欄位規則代碼、文字欄位規則 | `docs/architecture/request-validation.md` |
 | 模組邊界、跨模組依賴、domain event | `docs/architecture/module-boundaries.md` |
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
+| 頁內助理（依頁面資料回答） | `docs/architecture/page-assistant.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
 | 讀寫其他系統的資料庫（GD 等）、新增外部資料庫 | `docs/architecture/external-databases.md` |

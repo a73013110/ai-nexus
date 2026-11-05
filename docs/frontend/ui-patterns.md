@@ -30,16 +30,17 @@
 
 - 用原生 `<dialog class="platform-dialog" nxCompactDialog size="…">`：`sm` 確認與單欄、`md` 表單（預設）、`lg` 清單與檢視器、`full`。不接管 focus、Escape 或業務狀態。
 - 結構：`<nx-dialog-header heading detail>`（關閉鈕也經 `cancel`，忙碌與未儲存的攔截照常生效）＋ `.dialog-body`（唯一捲動區，欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`；表單可用 `form.dialog-form` 包住三者。開啟單筆紀錄（表單、單據）時標題列加 `icon` 與 `dialog-subtitle`（種類、單號、時間各一個子元素，分隔點由樣式畫）；單據日期一律帶年。
-- 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出，不佔版面。
-- 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套出現與淡出規則（`shared/ui/idle-chrome.ts`），鍵盤焦點或展開的選單在內不淡出。
+- 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出。
+- 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套出現與淡出規則，鍵盤焦點或展開的選單在內不淡出。
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
-- `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
+- `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal。
-- 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`（區塊堆疊，段落間距比頁面寬）。
-- 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」，不必切過去才知道。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
+- 與頁面並用、長時間開著的工具（頁內助理）用 `FloatingPanel`：可拖動、調整大小、全螢幕或縮成[動態島](motion.md#動態島)，沒有關閉。
+- 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`。
+- 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
-- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用，呼叫端只負責組 `FileListItem`；其他系統的檔案以 `ReaderTarget.remote` 預覽；`layout` 選 `cards`／`tiles`／`rows`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
+- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用；其他系統的檔案以 `ReaderTarget.remote` 預覽；`layout` 選 `cards`／`tiles`／`rows`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
 
 ## 提示、載入與錯誤
 
@@ -53,7 +54,7 @@
 
 - 浮層（選單、`InfoPopover`、Select）用原生 top layer（不用會被裁切的 `<details>`），依空間翻轉並限高；開關、重新定位與 manual 浮層的點外關閉用 `shared/browser/anchored-popover.ts`。
 - 共用 UI 的 DOM ID 每個實例唯一。關閉浮層、對話框或抽屜後焦點回到觸發元素；Escape 一層一層關閉巢狀浮層。
-- 圖層（對話框、詳情抽屜、浮層、toast、放大的表格）都在 top layer，依開啟順序疊放、不用 z-index；Esc 交給焦點所在的圖層（`frontend/src/app/shared/browser/top-layer.ts`）。
+- 圖層（對話框、詳情抽屜、浮動面板、浮層、toast、放大的表格）都在 top layer，依開啟順序疊放、不用 z-index；Esc 交給焦點所在的圖層（`frontend/src/app/shared/browser/top-layer.ts`）。
 - 按下後會被移除的按鈕要把焦點交給接手的控制項，不讓它掉到 `<body>`。
 - 群組控制（ViewSwitch、Tabs、ActionMenu、表格事件按鈕、長清單列）用方向鍵／Home／End 移動，跳過停用項目。
 - 操作不能只靠 hover 出現；focus、停用、錯誤、斷線都要可辨識。

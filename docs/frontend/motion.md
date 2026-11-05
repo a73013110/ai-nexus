@@ -19,8 +19,9 @@
 - `shared/ui/island.ts`：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。
 - 會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。
 - 跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 `morphSize`（`shared/ui/morph-size.ts`）量測內容後用彈簧過渡，不依賴 `interpolate-size`。
-- `IslandService` 預設是根實例（composer）；元件在 `providers` 自備一份就有獨立的島。文件檢視器以此把處理進度、失敗（含重試）與錯誤浮在內容底部，放大時也不佔版面，也不與底下 composer 的提示混在一起。
+- `IslandService` 預設是根實例（composer）；元件在 `providers` 自備一份就有獨立的島。文件檢視器以此把處理進度與錯誤浮在內容底部，不與底下 composer 的提示混在一起。
 - `FloatingToolbar` 用同一套變形：膠囊隨模式切換、展開搜尋或多出搜尋結果列彈簧變寬變高；閒置時縮小淡出，喚回時彈回。
+- `FloatingPanel` 縮小也是這種膠囊：外框以彈簧收進面板下緣的角落，內容不重排、裁切後淡出；島可拖動，點一下從同一角長回。
 
 ## 通知（toast）
 
@@ -30,7 +31,7 @@
 - 同一 `id` 再次顯示會原地更新並重新計時（例：上傳中→已上傳）；進行中的 toast 設 `duration: 0`，失敗或中止時 `dismiss`。
 - 關閉：關閉鈕、Esc（焦點移到下一則或回到原處）、向右滑或甩動。帶動作的 toast 預設 8 秒。
 - 圖層是 manual popover；被之後開的圖層蓋住時，新 toast 重新進入 top layer、顯示在最上面（modal 開著時受 inert，無法點）。
-- 背景任務結束的 toast 是例外的失敗回饋：失敗仍留在任務頁與通知匣，規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
+- 背景任務結束的 toast 規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
 - 螢幕閱讀器只聽兩個常駐 live region（polite／danger 用 assertive），不重複朗讀卡片；換帳號時清空。
 
 ### 本次工作階段紀錄
@@ -54,7 +55,6 @@
 - 進場從觸發點長出（小幅位移＋微縮，`--ease-spring`），退場沿原路 `--ease-exit`。
 - 方向與原點由定位函式（`shared/browser/popover-position.ts` 的 `setPopoverOrigin`）在量測後寫入 `data-side` 與 `transform-origin`。進場因此用 keyframes（`popover-arrive`）而不是 `@starting-style`：後者的起始值在 `showPopover()` 後第一次量測就固定，翻轉來不及生效；keyframes 裡的 `var()` 會重新解析。
 - 退場中已不是 `:popover-open`，Esc 歸屬（`DetailDrawer`）與 light dismiss 不受影響；同時 inert、不接點擊。e2e 關閉後用 `toBeHidden()` 等退場結束。
-- 對話大綱的預覽隨指標換位置、關閉即移除元素，不套這組動效。
 
 ## 減少動態
 

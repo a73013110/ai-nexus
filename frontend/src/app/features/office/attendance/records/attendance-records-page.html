@@ -179,6 +179,15 @@
     >
       <nx-icon name="download" />{{ exporting.pending() ? '匯出中…' : '匯出 Excel' }}
     </button>
+    <button
+      table-actions
+      type="button"
+      class="quiet-button records-assistant"
+      [disabled]="!records()"
+      (click)="assistantPanel.open()"
+    >
+      <nx-icon name="chat" />問助理
+    </button>
     <!-- 人員資訊寫一次，寬版放在跨列的人員欄、手機卡片放在段首列（兩處只會顯示一處）。 -->
     <ng-template #personInfo let-group>
       <span class="records-person-name"
@@ -282,6 +291,7 @@
           [group]="group"
           [info]="personInfo"
           (openForm)="formDialog.open($event.desNo, $event.date)"
+          (explain)="explanation.open($event.anchor, group.person, $event.date)"
         ></tbody>
       }
     </table>
@@ -294,3 +304,10 @@
   </nx-data-table>
 </nx-feature-page>
 <nx-gd-form-dialog #formDialog />
+<nx-record-explanation #explanation [rules]="rules()?.items ?? []" />
+<nx-assistant-panel
+  #assistantPanel
+  title="出勤助理"
+  [conversation]="assistant"
+  [suggestions]="suggestions()"
+/>

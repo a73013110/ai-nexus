@@ -43,7 +43,9 @@ public sealed class ModelTaskService(
     public const int FramingTokenReserve = 160;
 
     /// <summary>
-    /// 執行單趟非交談模型生成。
+    /// 執行單趟非交談模型生成。<paramref name="history"/> 是放在提問之前的先前輪次（user／assistant 交替），
+    /// 長度與提問合計受 <see cref="MaxPromptCharacters"/> 限制；<paramref name="onText"/> 在每段文字到達時呼叫，
+    /// 讓呼叫端邊生成邊轉送（例如頁內助理的 SSE）。驗證、配額與上下文的錯誤都在第一段文字之前回傳。
     /// </summary>
     public async Task<Result<ModelTaskResult>> GenerateAsync(
         Guid owner,
@@ -55,7 +57,9 @@ public sealed class ModelTaskService(
         IReadOnlyList<InferenceImage>? images = null,
         string? expectedConfiguration = null,
         int? maxOutputTokens = null,
-        bool allowEmpty = false)
+        bool allowEmpty = false,
+        IReadOnlyList<InferenceMessage>? history = null,
+        Func<string, CancellationToken, ValueTask>? onText = null)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -63,7 +67,8 @@ public sealed class ModelTaskService(
         var billing = scope.ServiceProvider.GetRequiredService<IModelCallMeter>();
 
         // 輸入過長直接拒絕，避免後面的 token 估算與配額預扣白做
-        if (prompt.Length > MaxPromptCharacters || instruction.Length > 24000)
+        history ??= [];
+        if (prompt.Length + history.Sum(x => x.Content.Length) > MaxPromptCharacters || instruction.Length > 24000)
         {
             return InferenceErrors.TaskInputTooLong;
         }
@@ -93,7 +98,7 @@ public sealed class ModelTaskService(
         }
 
         // 先確認內容能放進上下文，超出時不要產生任何配額預扣
-        var estimatedPromptTokens = Encoding.UTF8.GetByteCount(prompt + instruction);
+        var estimatedPromptTokens = Encoding.UTF8.GetByteCount(prompt + instruction) + history.Sum(x => Encoding.UTF8.GetByteCount(x.Content));
         var estimatedImageTokens = images?.Sum(x => x.EstimatedTokens) ?? 0;
         if (estimatedPromptTokens + estimatedImageTokens + outputBudget + FramingTokenReserve > profile.ContextTokens)
         {
@@ -118,11 +123,7 @@ public sealed class ModelTaskService(
             profile.ReasoningControl,
             profile.SupportsImages);
 
-        var messages = new[]
-        {
-            new InferenceMessage("system", instruction),
-            new InferenceMessage("user", prompt, images)
-        };
+        InferenceMessage[] messages = [new("system", instruction), .. history, new("user", prompt, images)];
 
         var inputEstimate = MessageCost.Estimate(messages);
 
@@ -164,6 +165,7 @@ public sealed class ModelTaskService(
             await foreach (var chunk in router.StreamAsync(profile.Provider, profile.NativeId, messages, parameters, timeout.Token))
             {
                 text.Append(chunk.Text);
+                if (onText is not null && chunk.Text.Length > 0) await onText(chunk.Text, ct);
                 done |= chunk.Done;
                 call.InputTokens = chunk.InputTokens ?? call.InputTokens;
                 call.OutputTokens = chunk.OutputTokens ?? call.OutputTokens;

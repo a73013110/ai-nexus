@@ -140,3 +140,30 @@
 .hljs-comment {
   color: var(--muted);
 }
+// 依據編號（頁內助理）：上標大小的小圓角標籤，點擊在依據清單中標出那一筆。
+.markdown .markdown-cite {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  margin-inline: 0.1em;
+  padding: 0 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-item);
+  background: var(--surface-subtle);
+  color: var(--secondary);
+  font: inherit;
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  vertical-align: 0.15em;
+  cursor: pointer;
+  transition:
+    color var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
+  &:hover,
+  &:focus-visible {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+}

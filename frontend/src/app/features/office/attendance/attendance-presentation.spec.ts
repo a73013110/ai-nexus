@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { GdForm } from '@core/api/schema';
+import type { AttendanceExplanationDto, GdForm } from '@core/api/schema';
 import { ApiError } from '@core/errors/safe-errors';
 import {
   GAP_COVERAGE,
@@ -9,6 +9,7 @@ import {
   formatSeconds,
   monthBounds,
   presentRecord,
+  presentExplanation,
   presentForm,
   shiftMonth,
   summarizePerson,
@@ -261,5 +262,60 @@ describe('attendance presentation', () => {
     expect(attendanceProblem(new ApiError(409, 'attendance_card_held', undefined, ''))).toContain(
       '確認後可由新持有人接手',
     );
+  });
+
+  it('lays out an explanation without recomputing anything the server wrote', () => {
+    const explanation: AttendanceExplanationDto = {
+      date: '2026-11-03',
+      dayType: 'FullDay',
+      status: 'Anomaly',
+      reason: null,
+      coverage: 'Unexplained',
+      shortSeconds: 14400,
+      schedule: {
+        dayType: 'FullDay',
+        scheduledStart: '08:30:00',
+        scheduledEnd: '17:30:00',
+        flexStart: '08:00:00',
+        flexEnd: '09:00:00',
+        workHours: 9,
+        breakStart: '12:00:00',
+        breakEnd: '13:00:00',
+      },
+      steps: [
+        { kind: 'Punch', at: '08:12:45', text: '上班刷卡，在彈性時段內。' },
+        { kind: 'Gap', at: null, text: '差 4 小時。' },
+      ],
+      conclusion: '早退：核准的表單還差 4 小時，未補足。',
+      rules: ['彈性上班', '表單補足'],
+    };
+
+    const view = presentExplanation(explanation, [
+      { title: '彈性上班', text: '08:00–09:00 之間上班都不算遲到。' },
+    ]);
+
+    expect(view.schedule).toBe('上班日 · 表定 08:30–17:30 · 彈性 08:00–09:00 · 午休 12:00–13:00');
+    expect(view.steps).toEqual([
+      { kind: 'Punch', time: '08:12:45', text: '上班刷卡，在彈性時段內。' },
+      { kind: 'Gap', time: '', text: '差 4 小時。' },
+    ]);
+    // 有缺口時結果與缺口的顏色跟著補足狀態，與表格同一套。
+    expect(view.badge).toEqual({ label: '未補足', tone: 'danger' });
+    expect(view.tone).toBe('danger');
+    // 還沒讀到的條文只留標題。
+    expect(view.rules).toEqual([
+      { title: '彈性上班', text: '08:00–09:00 之間上班都不算遲到。' },
+      { title: '表單補足', text: '' },
+    ]);
+
+    expect(
+      presentExplanation({
+        ...explanation,
+        status: 'Undetermined',
+        reason: 'DayInProgress',
+        coverage: null,
+        schedule: null,
+      }),
+    ).toMatchObject({ schedule: '上班日', badge: { label: '今日未結算', tone: 'neutral' } });
   });
 });

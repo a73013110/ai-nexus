@@ -36,10 +36,13 @@ import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitNodes } from '@features/admin/organization/unit-tree';
+import { assistantConversation } from '@features/platform/assistant/assistant-conversation';
+import { AssistantPanel } from '@features/platform/assistant/assistant-panel';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { attendanceProblem, presentSchedule } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
 import { GdFormDialog } from '../forms/gd-form-dialog';
+import { RecordExplanation } from './record-explanation';
 import { RecordsPersonGroup, presentGroup } from './records-person-group';
 import {
   RECORD_COVERAGES,
@@ -68,10 +71,12 @@ const DEFAULT_PAGE_SIZE = 20;
  * 查詢列前方切換只看表單未補足或流程中的日子，段首標出每人有幾天要追；
  * 狀態欄以標籤寫當天發生什麼事（正常、遲到、早退、未刷卡…，可並列），顏色跟著補足狀態；補足欄緊鄰表單欄，以標籤寫補足狀態，接著還差多少與缺口時段，
  * 好通知補單或對照流程中假單的起訖。應下班下另列扣表單後的時間，表單欄每張單一張卡片（單號、假別、起訖、流程狀態與目前簽核人）。
+ * 「問助理」以已套用的條件問整段結果（`AssistantPanel`，見 docs/features/attendance-assistant.md），數字由後端算好，回答標出依據。
  */
 @Component({
   selector: 'nx-attendance-records-page',
   imports: [
+    AssistantPanel,
     Checkbox,
     DataTable,
     DataTableColumn,
@@ -83,6 +88,7 @@ const DEFAULT_PAGE_SIZE = 20;
     PendingButton,
     QueryBar,
     QueryField,
+    RecordExplanation,
     RecordsPersonGroup,
     Select,
     RouterLink,
@@ -218,6 +224,16 @@ export class AttendanceRecordsPage {
   });
   readonly rulesError = this.rulesRead.error;
   readonly exporting = action({ message: attendanceProblem });
+  /** 頁內助理：問的是已套用條件的整段結果（與匯出相同），條件改了之後舊的輪次不再當成上下文。 */
+  readonly assistant = assistantConversation({
+    ask: (question, signal) => this.api.assistant(this.filters()!, question, signal),
+    context: () => JSON.stringify(this.filters() ?? null),
+  });
+  readonly suggestions = computed(() =>
+    this.seesOthers()
+      ? ['哪些人還有沒補足的日子？', '流程中的單停在誰那裡？', '誰遲到或早退的天數最多？']
+      : ['我有哪些日子還沒補單？', '我的假單流程停在誰那裡？', '彈性上班怎麼算？'],
+  );
   readonly groups = computed(() => {
     const data = this.records();
     return data ? this.people().map((person) => presentGroup(person, data.today)) : [];

@@ -1,0 +1,220 @@
+// 頁內助理：提問泡泡、回答開頭與輸入框用對話頁的共用樣式（styles/conversation.scss），
+// 這裡只排面板內的節奏、開始畫面、依據清單與動態島的內容。
+:host {
+  display: contents;
+}
+.assistant-scope {
+  min-width: 0;
+  padding: 0.125rem var(--p-space-2);
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--surface-inset);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+// 全螢幕時與對話頁一樣排在閱讀寬度內、置中。
+.assistant,
+.assistant-composer {
+  width: 100%;
+  max-width: var(--reading-width);
+  margin-inline: auto;
+}
+.assistant {
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-6);
+  min-height: 100%;
+  font-size: var(--text-body);
+}
+
+// 開始畫面：與對話首頁同樣的標記與層次，建議問題是安靜的清單列，指到才浮出底色。
+.assistant-intro {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--p-space-2);
+  min-height: 100%;
+  padding-block: var(--p-space-4);
+  h3 {
+    margin: var(--p-space-2) 0 0;
+    font-size: var(--text-heading);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  p {
+    margin: 0 0 var(--p-space-2);
+    color: var(--secondary);
+    font-size: var(--text-caption);
+    line-height: var(--line-ui);
+  }
+  .role-mark {
+    width: 2rem;
+    height: 2rem;
+    font-size: var(--p-font-sm);
+  }
+}
+.assistant-suggestions {
+  display: grid;
+  width: calc(100% + 2 * var(--p-space-3));
+  margin: 0 calc(-1 * var(--p-space-3));
+  padding: 0;
+  list-style: none;
+  button {
+    display: flex;
+    align-items: center;
+    gap: var(--p-space-3);
+    width: 100%;
+    min-height: var(--button-target);
+    padding: var(--p-space-2) var(--p-space-3);
+    border-radius: var(--radius-block);
+    color: var(--ink);
+    font-size: var(--text-caption);
+    text-align: start;
+  }
+  span {
+    flex: 1;
+  }
+  nx-icon {
+    --icon-size: var(--icon-sm);
+    color: var(--muted);
+    rotate: -45deg;
+    opacity: 0;
+    transition: opacity var(--motion) var(--ease);
+  }
+  button:hover nx-icon,
+  button:focus-visible nx-icon {
+    opacity: 1;
+  }
+}
+
+.assistant-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+}
+.assistant-turn {
+  display: grid;
+  gap: var(--p-space-4);
+  scroll-margin-top: var(--p-space-2);
+}
+.assistant-reply {
+  display: grid;
+  gap: var(--p-space-2);
+  min-width: 0;
+  .message-heading {
+    margin-bottom: var(--p-space-1);
+  }
+}
+.assistant-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  line-height: var(--line-ui);
+}
+// 回答下方一列，與對話頁的操作列同樣只有圖示與輕量文字。
+.assistant-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-inline-start: calc(-1 * var(--p-space-2));
+  color: var(--muted);
+  --icon-size: var(--icon-md);
+}
+.assistant-facts-toggle {
+  gap: var(--p-space-1);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  --icon-size: var(--icon-sm);
+}
+.assistant-facts {
+  padding: var(--p-space-3);
+  border-radius: var(--radius-block);
+  background: var(--surface-inset);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  ol {
+    display: grid;
+    gap: var(--p-space-1);
+    margin: var(--p-space-2) 0 0;
+    padding-inline-start: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    line-height: var(--line-ui);
+  }
+  li {
+    padding-inline: var(--p-space-1);
+    border-radius: var(--radius-mark);
+    scroll-margin-block: var(--p-space-4);
+    transition: background-color var(--motion) var(--ease);
+  }
+  li.is-cited {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+}
+.assistant-fact-label {
+  margin-inline-end: var(--p-space-2);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+// 輸入框坐在面板底部，與對話頁同一個外框；模型選單在左下、送出在右下。
+.assistant-composer {
+  flex: none;
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--p-space-3));
+  margin-block-end: var(--p-space-3);
+  textarea {
+    max-height: 8rem;
+  }
+}
+.assistant-model {
+  min-width: 0;
+  --select-trigger-max-width: 12rem;
+}
+
+// 動態島的內容：標記、狀態點與一行字；剛答完時多一行第一句的預覽。
+.assistant-island {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+  .role-mark {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-color: transparent;
+    border-radius: var(--radius-full);
+    background: var(--surface-inset);
+    box-shadow: none;
+  }
+}
+.assistant-island-copy {
+  display: grid;
+  max-width: 16rem;
+  line-height: 1.3;
+  strong {
+    font-weight: 600;
+  }
+}
+.assistant-island-copy,
+.assistant-island-copy > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.assistant-island-stop {
+  --button-target: 2rem;
+  --icon-size: var(--icon-sm);
+  border-radius: var(--radius-full);
+  background: var(--surface-inset);
+}

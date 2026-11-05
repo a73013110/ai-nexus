@@ -36,7 +36,9 @@ public sealed class AttendanceModule : IFeatureModule
         api.MapGroup("/attendance-records").RequireFeature(FeatureCatalog.AttendanceRecords)
             .MapSlice<ListAttendanceRecords>()
             .MapSlice<ListAttendancePeople>()
-            .MapSlice<ExportAttendanceRecords>();
+            .MapSlice<ExportAttendanceRecords>()
+            .MapSlice<ExplainAttendanceDay>()
+            .MapSlice<AskAttendanceAssistant>();
         api.MapGroup("/attendance-rules").RequireFeature(FeatureCatalog.AttendanceRecords)
             .MapSlice<GetAttendanceRules>();
         api.MapGroup("/attendance-forms").RequireFeature(FeatureCatalog.AttendanceRecords)

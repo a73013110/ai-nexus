@@ -11,6 +11,12 @@ public static class Policies
     /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";
 
+    /// <summary>
+    /// 可以選模型的頁面：對話，以及有頁內助理的頁面（出勤紀錄）。模型清單本身已依個人的模型政策過濾，
+    /// 新增頁內助理的頁面時加進 <c>InferenceModule</c> 的註冊。
+    /// </summary>
+    public const string Models = Prefix + "models";
+
     /// <summary>任何可以持有附件的功能：檔案、對話、知識庫或專案。</summary>
     public const string Attachments = Prefix + "attachments";
 

@@ -87,6 +87,24 @@ tr.records-week-start > td {
   flex-wrap: wrap;
   gap: var(--p-space-1);
 }
+// 狀態標籤整組是按鈕（點開判定過程）：平時與純標籤一樣，hover 與開啟時才浮出底色；負邊距抵銷內距，標籤不因此位移。
+.records-explain {
+  display: inline-flex;
+  margin: calc(-1 * var(--p-space-1));
+  padding: var(--p-space-1);
+  border: 0;
+  border-radius: var(--radius-action);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background-color var(--motion) var(--ease);
+  &:hover,
+  &[aria-expanded='true'] {
+    background: var(--hover);
+  }
+}
 .records-gap-head {
   display: flex;
   flex-wrap: wrap;

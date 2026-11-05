@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { generationStatus } from '@core/api/generation-status';
 import { CountBadge, type BadgeTone } from '@shared/ui/count-badge';
 import { EmptyState } from '@shared/ui/empty-state';
+import { FloatingPanel } from '@shared/ui/floating-panel';
 import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
 import { InferenceSignal } from '@shared/ui/inference-signal';
@@ -16,19 +17,101 @@ import { ToastService } from '@shared/ui/toast-service';
 import { ViewScope } from '@shared/browser/view-scope';
 import { LiveDot } from '@shared/ui/live-dot';
 import { JobProgress } from '@features/work/jobs/job-progress';
+import { AssistantConversation } from '@features/platform/assistant/assistant-conversation';
+import { AssistantPanel } from '@features/platform/assistant/assistant-panel';
+import type { ModelsDto } from '@core/api/schema';
+import { ApiError } from '@core/errors/safe-errors';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples, jobStates } from './design-samples';
 
 type IslandSample = 'live' | 'warning' | 'info';
 
+const DESIGN_MODELS = {
+  models: [
+    {
+      id: 'demo',
+      displayName: '示範模型',
+      contextTokens: 32768,
+      supportsImages: false,
+      reasoningEfforts: [],
+      defaultReasoningEffort: 'auto',
+    },
+    {
+      id: 'demo-large',
+      displayName: '示範模型（大）',
+      contextTokens: 131072,
+      supportsImages: true,
+      reasoningEfforts: [],
+      defaultReasoningEffort: 'auto',
+    },
+  ],
+  policy: {
+    allowModelSelection: true,
+    showModelNames: true,
+    defaultModelId: 'demo',
+    maxInputCharacters: 12000,
+  },
+  notice: null,
+} as unknown as ModelsDto;
+
+/** 假的 SSE 回應：依據一次送出，回答每 120 ms 一段。 */
+function designAnswer(signal: AbortSignal) {
+  const events: [string, object][] = [
+    [
+      'grounding',
+      {
+        scope: '2026/10/01–10/31 · 2 人',
+        partial: false,
+        facts: [
+          { label: '查詢範圍', text: '2026/10/01–10/31，今天 10/22。' },
+          {
+            label: '陳雅婷（yating）',
+            text: '已結算 15 天：正常 13 天、早退 2 天；未補足 2 天（共差 3 小時 10 分）。',
+          },
+          {
+            label: '林志明（chihming）',
+            text: '已結算 15 天：正常 14 天、遲到 1 天；流程中 1 天。',
+          },
+          {
+            label: '林志明 10/14（二）',
+            text: '流程中的單 L-2031（特休）停在 黃主任（核准關卡）。',
+          },
+        ],
+      },
+    ],
+    ...[
+      '**陳雅婷**還有 2 天未補足，',
+      '共差 3 小時 10 分 [2]。\n\n',
+      '**林志明**的特休單 L-2031 ',
+      '還在黃主任核准 [4]。',
+    ].map((text): [string, object] => ['delta', { text }]),
+    ['done', { truncated: false }],
+  ];
+  const encoder = new TextEncoder();
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        for (const [event, data] of events) {
+          await new Promise((resolve) => setTimeout(resolve, 120));
+          if (signal.aborted) return controller.error(new DOMException('已停止', 'AbortError'));
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        }
+        controller.close();
+      },
+    }),
+  );
+}
+
 /** 通知、島、徽章、進度與空狀態。 */
 @Component({
   selector: 'nx-design-feedback',
   imports: [
+    AssistantPanel,
     CountBadge,
     DesignExample,
     DesignSection,
     EmptyState,
+    FloatingPanel,
     GenerationIndicator,
     Icon,
     InferenceSignal,
@@ -87,8 +170,25 @@ export class DesignFeedback {
     { tone: 'warning', label: '注意', count: 12 },
     { tone: 'danger', label: '錯誤', count: 3 },
   ];
+  private failing = false;
+  /** 頁內助理的本機範例：不呼叫 AI，依據與回答是寫死的假資料，逐段送出模擬串流。 */
+  readonly assistant = new AssistantConversation({
+    context: () => 'design',
+    models: async () => DESIGN_MODELS,
+    preferredModelId: () => null,
+    ask: async (_, signal) => {
+      if (this.failing) {
+        this.failing = false;
+        throw new ApiError(400, 'assistant_question_invalid');
+      }
+      return designAnswer(signal);
+    },
+  });
   constructor() {
     inject(IslandService).register(this.islandItems);
+  }
+  failNext() {
+    this.failing = true;
   }
   toastSuccess() {
     this.toast.success('變更已儲存', '會套用於此帳號的其他裝置。');

@@ -42,40 +42,6 @@
   transform-origin: 100% 100%;
   animation: prompt-arrive var(--motion-morph) var(--ease-spring);
 }
-.message-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  margin-bottom: var(--p-space-3);
-}
-.message-heading strong {
-  flex: none;
-  white-space: nowrap;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: -0.005em;
-}
-.role-mark {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: var(--icon-2xl);
-  height: var(--icon-2xl);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-icon);
-  background: var(--surface);
-  color: var(--ink);
-  font: 700 var(--p-font-xs) / 1 var(--font-ui);
-  box-shadow: var(--shadow);
-}
-.message-model {
-  min-width: 0;
-  font: var(--p-font-xs) var(--font-code);
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 // 回答下方一列：左邊是操作（只有圖示，名稱在 title 與報讀），右邊是耗時與費用。
 .message-footer {
   display: flex;

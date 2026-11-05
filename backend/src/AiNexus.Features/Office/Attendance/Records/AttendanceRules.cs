@@ -6,8 +6,16 @@ namespace AiNexus.Features.Office.Attendance.Records;
 /// <summary>出勤判定規則的說明：每種日型的上下班時間，加上逐條規則。出勤紀錄頁與 Excel 匯出共用同一份。</summary>
 public sealed record AttendanceRulesDto(IReadOnlyList<AttendanceScheduleDto> Schedules, IReadOnlyList<AttendanceRuleDto> Rules);
 
-/// <summary>一種日型目前的設定（台灣時間）：表定上下班、彈性上班區間與應下班的時數（含午休）。整天放假不判定，沒有這一列。</summary>
-public sealed record AttendanceScheduleDto(AttendanceDayType DayType, TimeOnly ScheduledStart, TimeOnly ScheduledEnd, TimeOnly FlexStart, TimeOnly FlexEnd, double WorkHours);
+/// <summary>
+/// 一種日型目前的設定（台灣時間）：表定上下班、彈性上班區間、應下班的時數（含午休）與午休起訖（沒有午休時為 null）。整天放假不判定，沒有這一列。
+/// </summary>
+public sealed record AttendanceScheduleDto(AttendanceDayType DayType, TimeOnly ScheduledStart, TimeOnly ScheduledEnd, TimeOnly FlexStart, TimeOnly FlexEnd, double WorkHours,
+    TimeOnly? BreakStart, TimeOnly? BreakEnd)
+{
+    /// <summary>某日型的規則；判定說明（<see cref="AttendanceExplanation"/>）與規則面板共用。</summary>
+    public static AttendanceScheduleDto Of(AttendanceDayType type, WorkdayRule rule)
+        => new(type, rule.ScheduledStart, rule.ScheduledEnd, rule.FlexStart, rule.FlexEnd, rule.WorkHours, rule.BreakStart, rule.BreakEnd);
+}
 
 /// <summary>一條規則：短標題與一段說明。</summary>
 public sealed record AttendanceRuleDto(string Title, string Text);
@@ -20,9 +28,25 @@ public sealed record AttendanceRuleDto(string Title, string Text);
 /// </summary>
 public static class AttendanceRules
 {
+    /// <summary>條文的標題：判定說明（<see cref="AttendanceExplanation"/>）以標題指出依據哪幾條，畫面據此對照規則面板的同一條。</summary>
+    public static class Titles
+    {
+        public const string Punches = "上班與下班";
+        public const string Flex = "彈性上班";
+        public const string Late = "遲到";
+        public const string EarlyLeave = "早退";
+        public const string SinglePunch = "只有一筆刷卡";
+        public const string NoPunch = "沒有刷卡";
+        public const string Forms = "假單與出差單";
+        public const string Coverage = "表單補足";
+        public const string CoverageStatus = "補足狀態";
+        public const string DayType = "日型";
+        public const string Undetermined = "無法判定";
+        public const string ListedDays = "列出的日子";
+    }
+
     public static AttendanceRulesDto Describe(WorkdayOptions options)
     {
-        AttendanceScheduleDto Schedule(AttendanceDayType type, WorkdayRule rule) => new(type, rule.ScheduledStart, rule.ScheduledEnd, rule.FlexStart, rule.FlexEnd, rule.WorkHours);
         var full = options.FullDay;
         // 設定驗證保證彈性終點＋時數不跨午夜，所以這兩個例子都落在同一天。
         var earlyArrival = full.FlexStart >= new TimeOnly(0, 10) ? full.FlexStart.AddMinutes(-10) : full.FlexStart;
@@ -34,36 +58,37 @@ public static class AttendanceRules
         var lunch = full.BreakStart is { } breakStart && full.BreakEnd is { } breakEnd ? $"午休 {Time(breakStart)}～{Time(breakEnd)} 不算在內。\n" : "";
 
         return new(
-            [Schedule(AttendanceDayType.FullDay, full), Schedule(AttendanceDayType.MorningOff, options.MorningOff), Schedule(AttendanceDayType.AfternoonOff, options.AfternoonOff)],
+            [AttendanceScheduleDto.Of(AttendanceDayType.FullDay, full), AttendanceScheduleDto.Of(AttendanceDayType.MorningOff, options.MorningOff),
+                AttendanceScheduleDto.Of(AttendanceDayType.AfternoonOff, options.AfternoonOff)],
             [
-                new("上班與下班", "當天最早一筆刷卡是上班，最晚一筆是下班，中間的刷卡不影響判定。\n出勤日依刷卡時間的日期，不看打卡檔的檔名；過了午夜的刷卡算隔天。"),
-                new("彈性上班", "在彈性時段內上班不算遲到。\n應下班＝上班時間＋規定時數（含午休）；早於彈性起點上班，以起點計。\n" +
+                new(Titles.Punches, "當天最早一筆刷卡是上班，最晚一筆是下班，中間的刷卡不影響判定。\n出勤日依刷卡時間的日期，不看打卡檔的檔名；過了午夜的刷卡算隔天。"),
+                new(Titles.Flex, "在彈性時段內上班不算遲到。\n應下班＝上班時間＋規定時數（含午休）；早於彈性起點上班，以起點計。\n" +
                     $"例：上班日 {Time(full.FlexStart)} 前到，應下班 {Time(ExpectedClockOut(earlyArrival, options))}。\n" +
                     $"例：{Time(full.ScheduledStart)} 到，應下班 {Time(ExpectedClockOut(full.ScheduledStart, options))}。"),
-                new("遲到", "晚於彈性終點上班就是遲到，從彈性終點起算。\n遲到時，應下班改為表定下班。\n" +
+                new(Titles.Late, "晚於彈性終點上班就是遲到，從彈性終點起算。\n遲到時，應下班改為表定下班。\n" +
                     $"例：上班日 {Time(lateArrival)} 到，遲到 10 分，應下班 {Time(ExpectedClockOut(lateArrival, options))}。"),
-                new("早退", "早於應下班離開就是早退。\n" + (options.PunchPrecision == PunchPrecision.Minute
+                new(Titles.EarlyLeave, "早於應下班離開就是早退。\n" + (options.PunchPrecision == PunchPrecision.Minute
                     ? $"遲到與早退以整分計：刷卡的秒數先捨去再比（{Time(full.FlexEnd)}:59 到不算遲到）。"
                     : "遲到與早退都以秒計，彈性時段以外沒有寬限。")),
-                new("只有一筆刷卡", "判為異常。\n分不出缺的是上班還是下班，所以不算遲到或早退。"),
-                new("沒有刷卡", "核准的假單或出差單補足當天工時：算請假。\n沒有表單、只請了部分時段，或表單還在流程中：算異常。"),
-                new("假單與出差單", "取公文系統已核准與流程中的表單；與當天有交集就列在當天，跨日、半天都一樣。\n暫存、退回、銷單與退回結案不算。\n退回結案是承辦人把退回的單結案存查，不是核准。"),
-                new("表單補足", "表單只比時數，不比時段。\n" +
+                new(Titles.SinglePunch, "判為異常。\n分不出缺的是上班還是下班，所以不算遲到或早退。"),
+                new(Titles.NoPunch, "核准的假單或出差單補足當天工時：算請假。\n沒有表單、只請了部分時段，或表單還在流程中：算異常。"),
+                new(Titles.Forms, "取公文系統已核准與流程中的表單；與當天有交集就列在當天，跨日、半天都一樣。\n暫存、退回、銷單與退回結案不算。\n退回結案是承辦人把退回的單結案存查，不是核准。"),
+                new(Titles.Coverage, "表單只比時數，不比時段。\n" +
                     $"核准表單的時數，從當天工時（上班日 {Hours(netHours)} 小時）扣掉；剩下的不多於實際上班的時數，就算補足。\n" +
                     $"遲到時，表單至少要抵掉遲到的部分，晚走不抵遲到。\n{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。\n" +
                     $"例：上班日 {Seconds(slightlyLate)} 到、請 {Time(full.ScheduledStart)}～{Time(halfHour)} 的假，" +
                     $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}。\n" +
                     $"例：{Time(lateArrival)} 到、{Time(full.ScheduledEnd)} 走，遲到 10 分，但要 {Span(Short(lateArrival, full.ScheduledEnd, options))}的表單才補足（上班時數少了這麼多）。"),
-                new("補足狀態", "有遲到、早退或異常才標。\n" +
+                new(Titles.CoverageStatus, "有遲到、早退或異常才標。\n" +
                     $"・{Label(GapCoverage.Covered)}：核准的表單就夠\n" +
                     $"・{Label(GapCoverage.Pending)}：加上流程中的表單才夠\n" +
                     $"・{Label(GapCoverage.Unexplained)}：都不夠，並寫出還差多少\n" +
                     "遲到、早退的時間與小計照原本的判定，不因表單改變。"),
-                new("日型", "上班日、上午放假、下午放假與放假，依公文系統的假日行事曆。\n放假整天不判定，刷卡照樣列出。\n行事曆沒有這一天時：週末當放假，平日無法判定。"),
-                new("無法判定", "公文系統連不上或對不到公文帳號時，表單無法取得；沒刷卡的日子列為無法判定，不算異常。\n" +
+                new(Titles.DayType, "上班日、上午放假、下午放假與放假，依公文系統的假日行事曆。\n放假整天不判定，刷卡照樣列出。\n行事曆沒有這一天時：週末當放假，平日無法判定。"),
+                new(Titles.Undetermined, "公文系統連不上或對不到公文帳號時，表單無法取得；沒刷卡的日子列為無法判定，不算異常。\n" +
                     "今天還沒結束時，出勤與異常一律先列為無法判定，也不算遲到。\n" +
                     "今天的刷卡中午先更新，看得到幾點到，應下班依上班時間先算出來；下班晚上才更新。"),
-                new("列出的日子", "只列持有卡的日子。\n到職前、換卡空窗、離職後與未來的日子都不列。"),
+                new(Titles.ListedDays, "只列持有卡的日子。\n到職前、換卡空窗、離職後與未來的日子都不列。"),
             ]);
     }
 
@@ -83,6 +108,16 @@ public static class AttendanceRules
         GapCoverage.Unknown => "表單無法取得",
         _ => "沒有缺口"
     };
+
+    /// <summary>
+    /// 實際的時長，取最大的兩個單位：「45 秒」「25 分 23 秒」「4 小時 40 分」（零的單位不寫）。與畫面遲到早退欄的寫法相同（前端 <c>formatSeconds</c>）。
+    /// </summary>
+    public static string Duration(int seconds)
+    {
+        if (seconds < 60) return $"{Math.Max(seconds, 0)} 秒";
+        var (major, minor, units) = seconds < 3600 ? (seconds / 60, seconds % 60, ("分", "秒")) : (seconds / 3600, seconds % 3600 / 60, ("小時", "分"));
+        return minor > 0 ? $"{major} {units.Item1} {minor} {units.Item2}" : $"{major} {units.Item1}";
+    }
 
     /// <summary>「1 小時 30 分」「40 分」這類時長；說明裡的例子都是整分。</summary>
     private static string Span(int seconds)

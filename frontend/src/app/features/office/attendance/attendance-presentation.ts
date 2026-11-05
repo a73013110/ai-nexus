@@ -1,9 +1,11 @@
 import type {
   AttendanceDayType,
+  AttendanceExplanationDto,
   AttendanceGap,
   AttendanceGapKind,
   AttendanceRecordDto,
   AttendanceReason,
+  AttendanceRuleDto,
   AttendanceScheduleDto,
   AttendanceStatus,
   GapCoverage,
@@ -377,3 +379,53 @@ export function summarizePerson(days: readonly AttendanceRecordDto[]) {
     pending: days.filter((day) => day.coverage === 'Pending').length,
   };
 }
+
+/** 判定說明的結果標籤：有缺口時是補足狀態，否則是當天的狀態（與狀態欄同一種字樣）。 */
+function explanationBadge(explanation: AttendanceExplanationDto): Presented {
+  if (explanation.coverage) return GAP_COVERAGE[explanation.coverage];
+  if (explanation.status === 'Present') return { label: '正常', tone: 'success' };
+  if (explanation.reason === 'DayInProgress') return { label: '今日未結算', tone: 'neutral' };
+  return ATTENDANCE_STATUS[explanation.status] ?? { label: explanation.status, tone: 'neutral' };
+}
+
+/**
+ * 判定說明（後端 `AttendanceExplanation`）的顯示值：文字與數字都由後端依判定寫好，這裡只排版。
+ * - `schedule`：當天日型與規則（「上班日 · 表定 08:30–18:00 · 彈性 08:00–09:00 · 午休 12:00–13:30」）。
+ * - `tone`：結果的顏色，缺口的步驟也用它（已補足綠、流程中黃、未補足紅），與表格同一套。
+ * - `rules`：依據的條文，文字取自頁面已讀到的判定規則；還沒讀到時只有標題。
+ */
+export function presentExplanation(
+  explanation: AttendanceExplanationDto,
+  rules: readonly AttendanceRuleDto[] = [],
+) {
+  const time = (value: string) => value.slice(0, 5);
+  const schedule = explanation.schedule;
+  const badge = explanationBadge(explanation);
+  return {
+    schedule: [
+      ATTENDANCE_DAY_TYPE[explanation.dayType] ?? explanation.dayType,
+      ...(schedule
+        ? [
+            `表定 ${time(schedule.scheduledStart)}–${time(schedule.scheduledEnd)}`,
+            `彈性 ${time(schedule.flexStart)}–${time(schedule.flexEnd)}`,
+            ...(schedule.breakStart && schedule.breakEnd
+              ? [`午休 ${time(schedule.breakStart)}–${time(schedule.breakEnd)}`]
+              : []),
+          ]
+        : []),
+    ].join(' · '),
+    steps: explanation.steps.map((step) => ({
+      kind: step.kind,
+      time: step.at?.slice(0, 8) ?? '',
+      text: step.text,
+    })),
+    badge,
+    tone: badge.tone,
+    conclusion: explanation.conclusion,
+    rules: explanation.rules.map((title) => ({
+      title,
+      text: rules.find((rule) => rule.title === title)?.text ?? '',
+    })),
+  };
+}
+export type PresentedExplanation = ReturnType<typeof presentExplanation>;

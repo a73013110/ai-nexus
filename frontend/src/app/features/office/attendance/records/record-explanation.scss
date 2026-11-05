@@ -1,0 +1,167 @@
+// 判定過程：左欄時間（等寬數字）、中間一條細線串起圓點、右欄說明。圓點的樣子分種類：
+// 刷卡實心、缺口實心並跟著結果的顏色（與表格的補足狀態同一套）、規則推得的時間與表單空心、補充說明只有短線。
+// 顏色只用在缺口與結果上，其餘維持主次文字色，層次靠字重與細線。
+:host {
+  display: contents;
+}
+.record-explanation {
+  --explanation-tone: var(--secondary);
+  --explanation-time: 4.25rem;
+  --explanation-dot: 0.5rem;
+  padding: var(--p-space-4);
+  overflow: auto;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  outline: none;
+}
+.record-explanation-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--p-space-2);
+  margin-bottom: var(--p-space-1);
+}
+.record-explanation-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: var(--line-ui);
+}
+.record-explanation-head p,
+.record-explanation-schedule {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.record-explanation-schedule {
+  margin-bottom: var(--p-space-3);
+  font-size: var(--p-font-xs);
+}
+.record-explanation-steps {
+  position: relative;
+  display: grid;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  &[data-tone='success'] {
+    --explanation-tone: var(--success);
+  }
+  &[data-tone='warning'] {
+    --explanation-tone: var(--warning);
+  }
+  &[data-tone='danger'] {
+    --explanation-tone: var(--danger);
+  }
+  &[data-tone='info'] {
+    --explanation-tone: var(--info);
+  }
+  // 串起圓點的細線：從第一個點的中心到最後一個點的中心附近。
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: 0.7em;
+    inset-inline-start: calc(
+      var(--explanation-time) + var(--p-space-2) + var(--explanation-dot) / 2 - 0.5px
+    );
+    width: 1px;
+    background: var(--line);
+  }
+}
+.record-explanation-steps li {
+  display: grid;
+  grid-template-columns: var(--explanation-time) var(--explanation-dot) minmax(0, 1fr);
+  column-gap: var(--p-space-2);
+  align-items: baseline;
+}
+.record-explanation-steps time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.record-explanation-dot {
+  position: relative;
+  z-index: 1;
+  align-self: start;
+  width: var(--explanation-dot);
+  height: var(--explanation-dot);
+  margin-top: 0.45em;
+  border: 1px solid var(--secondary);
+  border-radius: 50%;
+  background: var(--surface);
+}
+// 刷卡與缺口是事實：時間與說明用主文字色，點實心。
+.record-explanation-steps li:is([data-kind='Punch'], [data-kind='Gap']) {
+  color: var(--ink);
+  .record-explanation-dot {
+    border-color: var(--ink);
+    background: var(--ink);
+  }
+}
+.record-explanation-steps li[data-kind='Gap'] {
+  time {
+    color: var(--explanation-tone);
+    font-weight: 600;
+  }
+  .record-explanation-dot {
+    border-color: var(--explanation-tone);
+    background: var(--explanation-tone);
+  }
+}
+.record-explanation-steps li[data-kind='Note'] .record-explanation-dot {
+  height: 1px;
+  margin-top: 0.8em;
+  border: 0;
+  border-radius: 0;
+  background: var(--secondary);
+}
+.record-explanation-result {
+  display: flex;
+  align-items: baseline;
+  gap: var(--p-space-2);
+  margin-top: var(--p-space-3);
+  padding-top: var(--p-space-3);
+  border-top: 1px solid var(--line);
+  p {
+    margin: 0;
+    color: var(--ink);
+  }
+  nx-status-badge {
+    flex: none;
+  }
+}
+.record-explanation-rules {
+  margin-top: var(--p-space-3);
+  summary {
+    width: fit-content;
+    border-radius: var(--radius-item);
+    cursor: pointer;
+    font-size: var(--p-font-xs);
+  }
+  summary:hover {
+    color: var(--ink);
+  }
+  .info-terms {
+    margin-top: var(--p-space-2);
+  }
+  dt {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  dd {
+    margin: 0;
+    white-space: pre-line;
+  }
+}
+.record-explanation-skeleton {
+  display: grid;
+  gap: var(--p-space-2);
+  padding-block: var(--p-space-1);
+  .skeleton {
+    height: 0.75rem;
+  }
+}
+.record-explanation-error {
+  margin: 0;
+  color: var(--error);
+}

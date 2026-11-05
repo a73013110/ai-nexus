@@ -159,6 +159,18 @@ export class ApiClient {
     return this.send('GET', apiUrl(path, untyped), undefined, untyped);
   }
 
+  /**
+   * 以 POST 開啟事件串流（例如頁內助理的回答）：與 `open` 相同的檢查與 CSRF，回傳原始回應交給 `sseEvents` 讀取。
+   * 串流開始前的失敗（驗證、配額）是一般的錯誤回應，在這裡就丟出 `ApiError`。
+   */
+  stream<P extends ApiPath<'post'>>(path: P, ...[request]: Arguments<Operation<P, 'post'>>) {
+    const untyped = (request ?? {}) as Untyped;
+    return this.send('POST', apiUrl(path, untyped), untyped.body, {
+      ...untyped,
+      headers: { Accept: 'text/event-stream', ...untyped.headers },
+    });
+  }
+
   private async json<T>(method: string, path: string, request?: unknown): Promise<T> {
     const untyped = (request ?? {}) as Untyped;
     const url = apiUrl(path, untyped);

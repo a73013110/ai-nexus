@@ -1,0 +1,244 @@
+@let chat = conversation();
+@let model = chat.model;
+@if (started()) {
+  <nx-floating-panel [title]="title()" [islandLabel]="islandLabel()" [storageKey]="storageKey()">
+    @if (latest()?.scope; as scope) {
+      <span floating-meta class="assistant-scope" [title]="scope">{{ scope }}</span>
+    }
+    @if (chat.exchanges().length) {
+      <button
+        floating-actions
+        type="button"
+        class="icon-button"
+        aria-label="重新開始對話"
+        title="重新開始對話"
+        [disabled]="chat.busy()"
+        (click)="reset()"
+      >
+        <nx-icon name="reset" />
+      </button>
+    }
+
+    <div class="assistant" [attr.aria-busy]="chat.busy()">
+      @if (chat.modelsError(); as error) {
+        <nx-notice tone="warning" [message]="'無法取得模型清單，將使用系統預設模型。' + error" />
+      }
+      @if (!chat.exchanges().length) {
+        <section class="assistant-intro" aria-labelledby="{{ id }}-intro">
+          <span class="role-mark" aria-hidden="true">N</span>
+          <h3 [id]="id + '-intro'">問這一頁的資料</h3>
+          <p>依目前的查詢結果回答。<br />數字由系統計算，回答會標出依據。</p>
+          @if (suggestions().length) {
+            <ul class="assistant-suggestions">
+              @for (suggestion of suggestions(); track suggestion) {
+                <li>
+                  <button type="button" (click)="ask(suggestion)">
+                    <span>{{ suggestion }}</span
+                    ><nx-icon name="arrow" />
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      }
+      @for (turn of chat.exchanges(); track turn.id; let index = $index) {
+        @if (contextChanged(index)) {
+          <p class="assistant-divider" role="separator">查詢條件已變更，以下依新的結果回答</p>
+        }
+        <article
+          class="assistant-turn"
+          [attr.aria-busy]="turn.status === 'waiting' || turn.status === 'streaming'"
+        >
+          <p class="prompt-bubble">{{ turn.question }}</p>
+          <div class="assistant-reply">
+            <header class="message-heading">
+              <span class="role-mark" aria-hidden="true">N</span><strong>AI Nexus</strong>
+              @if (turn.model) {
+                <span class="message-model">{{ turn.model }}</span>
+              }
+            </header>
+            @if (turn.status === 'waiting' || (turn.status === 'streaming' && !turn.answer)) {
+              <nx-generation-indicator
+                [waiting]="turn.status === 'waiting'"
+                label="正在整理這一頁的資料"
+                detail="數字由系統計算，可隨時停止"
+              />
+            } @else if (turn.status === 'streaming') {
+              <nx-streaming-answer
+                [content]="turn.answer"
+                [citations]="turn.facts.length"
+                (cite)="cite(turn, $event)"
+              />
+            } @else if (turn.answer) {
+              <nx-markdown-view
+                [content]="turn.answer"
+                [citations]="turn.facts.length"
+                (cite)="cite(turn, $event)"
+              />
+            }
+            @switch (turn.status) {
+              @case ('stopped') {
+                <p class="assistant-note">已停止回答。</p>
+              }
+              @case ('failed') {
+                <nx-notice [message]="turn.error" />
+              }
+            }
+            @if (turn.truncated) {
+              <p class="assistant-note">回答達到長度上限，後面沒有顯示。</p>
+            }
+            @if (turn.status !== 'waiting' && turn.status !== 'streaming') {
+              @let copied = copy.copied() && copiedTurn() === turn.id;
+              @let open = openFacts().has(turn.id);
+              <footer class="assistant-footer">
+                @if (turn.answer) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="copied ? '已複製' : '複製回答'"
+                    [title]="copied ? '已複製' : '複製'"
+                    (click)="copyAnswer(turn)"
+                  >
+                    <nx-icon [name]="copied ? 'check' : 'copy'" />
+                  </button>
+                }
+                @if (turn.facts.length) {
+                  <button
+                    type="button"
+                    class="quiet-button assistant-facts-toggle"
+                    [attr.aria-expanded]="open"
+                    [attr.aria-controls]="factId(turn, 0)"
+                    (click)="toggleFacts(turn)"
+                  >
+                    <nx-icon name="list" />{{ turn.facts.length }} 筆依據<nx-icon
+                      [name]="open ? 'chevron-up' : 'chevron-down'"
+                    />
+                  </button>
+                }
+              </footer>
+              @if (copied && copy.error()) {
+                <nx-notice [message]="copy.error()" />
+              }
+              @if (open) {
+                <section class="assistant-facts" [id]="factId(turn, 0)" aria-label="依據">
+                  <p class="assistant-note">
+                    由系統計算 · {{ turn.scope }}
+                    @if (turn.partial) {
+                      <br />資料較多，只提供了以下 {{ turn.facts.length }}
+                      項；縮小查詢範圍可以看得更完整。
+                    }
+                  </p>
+                  <ol>
+                    @for (fact of turn.facts; track $index) {
+                      <li
+                        [id]="factId(turn, $index + 1)"
+                        [class.is-cited]="cited()?.turn === turn.id && cited()?.fact === $index + 1"
+                      >
+                        <span class="assistant-fact-label">{{ fact.label }}</span
+                        >{{ fact.text }}
+                      </li>
+                    }
+                  </ol>
+                </section>
+              }
+            }
+          </div>
+        </article>
+      }
+    </div>
+
+    <form
+      floating-footer
+      class="composer assistant-composer"
+      [class.is-busy]="chat.busy()"
+      (submit)="$event.preventDefault(); ask()"
+    >
+      <label class="sr-only" [for]="id + '-question'">提問</label>
+      <textarea
+        #question
+        autofocus
+        rows="1"
+        [id]="id + '-question'"
+        placeholder="問這一頁的資料…"
+        [maxLength]="limit"
+        [value]="draft()"
+        [nxAutosize]="draft()"
+        (input)="draft.set($any($event.target).value)"
+        (keydown)="keydown($event)"
+        (compositionstart)="composing.set(true)"
+        (compositionend)="composing.set(false)"
+      ></textarea>
+      <div class="composer-bottom">
+        @if (model.policy().allowModelSelection && model.models().length > 1) {
+          <nx-select
+            class="assistant-model"
+            appearance="inline"
+            label="選擇模型"
+            [value]="model.modelId()"
+            [options]="model.options()"
+            [loading]="chat.modelsLoading()"
+            [disabled]="chat.busy()"
+            [searchable]="true"
+            [searchFrom]="8"
+            (valueChange)="model.choose($event)"
+          />
+        } @else if (chat.modelName(); as name) {
+          <span class="message-model">{{ name }}</span>
+        } @else {
+          <span></span>
+        }
+        @if (chat.busy()) {
+          <button
+            type="button"
+            class="send-button stop-button"
+            aria-label="停止回答"
+            title="停止回答"
+            (click)="chat.stop()"
+          >
+            <nx-icon name="stop" />
+          </button>
+        } @else {
+          <button
+            type="submit"
+            class="send-button"
+            aria-label="送出提問"
+            title="送出提問"
+            [disabled]="!draft().trim()"
+          >
+            <nx-icon name="arrow" />
+          </button>
+        }
+      </div>
+    </form>
+
+    @let state = island();
+    <span floating-island class="assistant-island" [attr.data-state]="state.state">
+      <span class="role-mark" aria-hidden="true">N</span>
+      @if (state.state === 'busy') {
+        <nx-live-dot tone="info" [live]="true" />
+      } @else if (state.state !== 'idle') {
+        <nx-live-dot tone="info" />
+      }
+      @if (state.state === 'preview') {
+        <span class="assistant-island-copy"
+          ><strong>已回答</strong><span>{{ state.text }}</span></span
+        >
+      } @else {
+        <span>{{ state.text }}</span>
+      }
+    </span>
+    @if (chat.busy()) {
+      <button
+        floating-island-actions
+        type="button"
+        class="icon-button assistant-island-stop"
+        aria-label="停止回答"
+        title="停止回答"
+        (click)="chat.stop()"
+      >
+        <nx-icon name="stop" />
+      </button>
+    }
+  </nx-floating-panel>
+}

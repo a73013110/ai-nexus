@@ -9,6 +9,7 @@ import {
   inject,
   Injector,
   input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -25,7 +26,7 @@ import { highlightWhenVisible } from './code-highlighting';
   changeDetection: ChangeDetectionStrategy.OnPush,
   // 已渲染 Markdown 中的複製按鈕是真正的按鈕；點擊由事件委派處理。
   template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus, @angular-eslint/template/click-events-have-key-events -->
-    <div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+    <div #body class="markdown" [innerHTML]="html()" (click)="clicked($event)"></div>
     @if (widgetError()) {
       <nx-notice tone="warning" message="圖表元件未能載入，以下保留 Mermaid 原始碼。" />
     }
@@ -36,6 +37,9 @@ import { highlightWhenVisible } from './code-highlighting';
 export class MarkdownView {
   readonly content = input.required<string>();
   readonly streaming = input(false);
+  /** 回答可引用的依據數量；大於 0 時 `[n]` 畫成依據按鈕，點擊時以 `cite` 送出編號。 */
+  readonly citations = input(0);
+  readonly cite = output<number>();
   private readonly sanitizer = inject(DomSanitizer);
   private readonly injector = inject(Injector);
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
@@ -48,6 +52,7 @@ export class MarkdownView {
     renderMarkdownWithDiagrams(
       this.streaming() ? completeStreamingInline(this.content()) : this.content(),
       this.streaming(),
+      this.citations(),
     ),
   );
   readonly html = computed(() => this.sanitizer.bypassSecurityTrustHtml(this.rendered().html));
@@ -86,8 +91,11 @@ export class MarkdownView {
       }
     }
   }
-  async copyCode(event: MouseEvent) {
-    const button = event.target instanceof Element ? event.target.closest('.embed-copy') : null,
+  async clicked(event: MouseEvent) {
+    const target = event.target instanceof Element ? event.target : null;
+    const cite = target?.closest('.markdown-cite');
+    if (cite) return this.cite.emit(Number(cite.textContent));
+    const button = target?.closest('.embed-copy'),
       code = button?.closest('.embed')?.querySelector('code');
     if (button && code) await this.copy.copy(code.textContent || '', button);
   }

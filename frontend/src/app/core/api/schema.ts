@@ -1883,6 +1883,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/attendance-records/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExplainAttendanceDay"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/attendance-records/assistant": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AskAttendanceAssistant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance-rules": {
         parameters: {
             query?: never;
@@ -4798,6 +4830,26 @@ export interface components {
             /** Format: uuid */
             projectId: null | string;
         };
+        AssistantEventDto: {
+            text: null | string;
+            scope: null | string;
+            facts: null | components["schemas"]["AssistantFact"][];
+            partial: null | boolean;
+            truncated: null | boolean;
+        };
+        AssistantFact: {
+            label: string;
+            text: string;
+        };
+        AssistantQuestion: {
+            text: string;
+            modelId?: null | string;
+            history?: null | components["schemas"]["AssistantTurn"][];
+        };
+        AssistantTurn: {
+            question: string;
+            answer: string;
+        };
         AttachmentDto: {
             /** Format: uuid */
             id: string;
@@ -4838,6 +4890,28 @@ export interface components {
         };
         /** @enum {unknown} */
         AttendanceDayType: "FullDay" | "MorningOff" | "AfternoonOff" | "DayOff" | "Unknown";
+        AttendanceExplanationDto: {
+            /** Format: date */
+            date: string;
+            dayType: components["schemas"]["AttendanceDayType"];
+            status: components["schemas"]["AttendanceStatus"];
+            reason: null | components["schemas"]["AttendanceReason"];
+            coverage: null | components["schemas"]["GapCoverage"];
+            /** Format: int32 */
+            shortSeconds: number;
+            schedule: null | components["schemas"]["AttendanceScheduleDto"];
+            steps: components["schemas"]["AttendanceExplanationStep"][];
+            conclusion: string;
+            rules: string[];
+        };
+        AttendanceExplanationStep: {
+            kind: components["schemas"]["AttendanceExplanationStepKind"];
+            /** Format: time */
+            at: null | string;
+            text: string;
+        };
+        /** @enum {unknown} */
+        AttendanceExplanationStepKind: "Punch" | "Gap" | "Rule" | "Form" | "Note";
         AttendanceGap: {
             kind: components["schemas"]["AttendanceGapKind"];
             /** Format: date-time */
@@ -4931,6 +5005,10 @@ export interface components {
             flexEnd: string;
             /** Format: double */
             workHours: number;
+            /** Format: time */
+            breakStart: null | string;
+            /** Format: time */
+            breakEnd: null | string;
         };
         /** @enum {unknown} */
         AttendanceStatus: "Present" | "OnLeave" | "Anomaly" | "Undetermined" | "DayOff";
@@ -7890,11 +7968,18 @@ export type AdminUsersDto = components['schemas']['AdminUsersDto'];
 export type ArtifactDto = components['schemas']['ArtifactDto'];
 export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
 export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
+export type AssistantEventDto = components['schemas']['AssistantEventDto'];
+export type AssistantFact = components['schemas']['AssistantFact'];
+export type AssistantQuestion = components['schemas']['AssistantQuestion'];
+export type AssistantTurn = components['schemas']['AssistantTurn'];
 export type AttachmentDto = components['schemas']['AttachmentDto'];
 export type AttachmentPolicyDto = components['schemas']['AttachmentPolicyDto'];
 export type AttachmentStorageDto = components['schemas']['AttachmentStorageDto'];
 export type AttachmentStorageLimitRequest = components['schemas']['AttachmentStorageLimitRequest'];
 export type AttendanceDayType = components['schemas']['AttendanceDayType'];
+export type AttendanceExplanationDto = components['schemas']['AttendanceExplanationDto'];
+export type AttendanceExplanationStep = components['schemas']['AttendanceExplanationStep'];
+export type AttendanceExplanationStepKind = components['schemas']['AttendanceExplanationStepKind'];
 export type AttendanceGap = components['schemas']['AttendanceGap'];
 export type AttendanceGapKind = components['schemas']['AttendanceGapKind'];
 export type AttendancePersonDto = components['schemas']['AttendancePersonDto'];
@@ -10285,6 +10370,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ExplainAttendanceDay: {
+        parameters: {
+            query?: {
+                date?: string;
+                userId?: string;
+                card?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttendanceExplanationDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    AskAttendanceAssistant: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+                userId?: string;
+                card?: string;
+                unitId?: string;
+                includeDaysOff?: boolean;
+                coverage?: components["schemas"]["GapCoverage"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantQuestion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AssistantEventDto"];
+                };
             };
             default: components["responses"]["Problem"];
         };

@@ -23,7 +23,7 @@ data: {"version":1,"sequence":3,"runId":"...","type":"delta","status":"running",
 
 單一程序、單一生成 worker；IIS 不可使用 web garden。GenerationRuns保存ExecutorId與租約，啟動及定期只回收逾期executor的active run，避免其他活躍實例被誤中止。回收失敗也保存查證碼、Trace／Run關聯與安全通知。日誌本身支援多實例補送，並不表示聊天排程已提供全域容量或durable queue。
 
-所有聊天／模型／Context／run endpoints 需要 `feature:chat` 授權，並保留原 owner 驗證。`/me` 回傳有效角色、群組與 features。每個新 request 重查有效 grant；既有串流連線不會因資料庫授權修改自動中斷。
+聊天／Context／run endpoints 需要 `feature:chat` 授權（`/models` 另以 `Policies.Models` 開放給有[頁內助理](page-assistant.md)的頁面），並保留原 owner 驗證。`/me` 回傳有效角色、群組與 features。每個新 request 重查有效 grant；既有串流連線不會因資料庫授權修改自動中斷。
 
 `/models` 回傳 `policy`（allowModelSelection／showModelNames／defaultModelId）與各模型 reasoningEfforts／defaultReasoningEffort。`POST /runs` 的 modelId 可為 null，由系統預設；reasoningEffort 選用，省略則採 profile 預設。鎖定時拒絕其他模型，未支援思考值回 400。隱藏名稱時所有模型 DTO 使用 public alias，客戶端不可假設 ID 等於 provider ID。
 

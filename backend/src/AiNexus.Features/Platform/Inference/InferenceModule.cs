@@ -27,6 +27,7 @@ public sealed class InferenceModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddFeaturePolicy(Policies.Models, FeatureCatalog.Chat, FeatureCatalog.AttendanceRecords);
         services.AddSettings<InferenceOptions, InferenceOptionsValidator>(InferenceOptions.Section)
             .Configure(x => x.RouteProviders());
 
@@ -61,7 +62,7 @@ public sealed class InferenceModule : IFeatureModule
     /// </summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        api.MapGroup("").RequireFeature(FeatureCatalog.Chat)
+        api.MapGroup("").RequireAuthorization(Policies.Models)
             .MapSlice<ListModels>();
         api.MapSlice<GetStatus>()
             .MapSlice<GetEffectiveModelPolicy>();

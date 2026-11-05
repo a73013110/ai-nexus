@@ -29,6 +29,8 @@ import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './s
         class="stream-committed"
         [class.stream-continues]="block.continues"
         [content]="block.content"
+        [citations]="citations()"
+        (cite)="cite.emit($event)"
       />
     }
     @if (fence(); as fence) {
@@ -55,7 +57,13 @@ import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './s
         </div>
       </div>
     } @else {
-      <nx-markdown-view class="stream-frontier" [content]="tail()" [streaming]="true" />
+      <nx-markdown-view
+        class="stream-frontier"
+        [content]="tail()"
+        [streaming]="true"
+        [citations]="citations()"
+        (cite)="cite.emit($event)"
+      />
     }
     <span class="stream-cursor" aria-hidden="true"></span>
     @if (copy.error()) {
@@ -65,6 +73,9 @@ import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './s
 })
 export class StreamingAnswer {
   readonly content = input.required<string>();
+  /** 依據的筆數與點擊，交給每一段 `MarkdownView`（見其 `citations`）。 */
+  readonly citations = input(0);
+  readonly cite = output<number>();
   readonly rendered = output<void>();
   readonly shown = signal('');
   readonly blocks = signal<StreamingBlock[]>([]);

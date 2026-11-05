@@ -11,6 +11,19 @@ describe('Markdown security', () => {
     expect(html).not.toContain('<img');
     expect(html).toContain('［圖片：追蹤］');
   });
+  it('turns [n] into citation buttons only within the given count and keeps [n](url) as a link', () => {
+    const { html } = renderMarkdownWithDiagrams(
+      '早退 2 天 [2]，另見 [9] 與 [1](https://angular.dev)',
+      false,
+      3,
+    );
+    expect(html).toContain(
+      '<button type="button" class="markdown-cite" aria-label="依據 2" title="依據 2">2</button>',
+    );
+    expect(html).toContain('[9]');
+    expect(html).toContain('href="https://angular.dev"');
+    expect(renderMarkdownWithDiagrams('早退 2 天 [2]').html).not.toContain('markdown-cite');
+  });
   it('rejects dangerous schemes and sets safe external link attributes', () => {
     const html = renderMarkdown('[點擊](javascript:alert(1))\n[文件](https://angular.dev)');
     expect(html).not.toContain('href="javascript:');

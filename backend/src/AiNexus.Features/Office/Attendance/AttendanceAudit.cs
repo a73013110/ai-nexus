@@ -7,6 +7,7 @@ public static class AttendanceAudit
 {
     public static readonly AuditAction RecordRead = AuditAction.Access("attendance.record.read", "查詢出勤紀錄");
     public static readonly AuditAction RecordExported = AuditAction.Access("attendance.record.exported", "匯出出勤紀錄");
+    public static readonly AuditAction AssistantRead = AuditAction.Access("attendance.assistant.read", "以助理查詢出勤紀錄");
     public static readonly AuditAction FormRead = AuditAction.Access("attendance.form.read", "檢視假單明細");
 
     public static readonly AuditAction CardRead = AuditAction.Access("attendance.card.read", "查詢卡片");

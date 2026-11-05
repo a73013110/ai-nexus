@@ -1,11 +1,11 @@
 # 出勤紀錄
 
-結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定、刷卡、遲到早退秒數與表單補足狀態，以及當天的假單與出差單；同一組條件可[匯出 Excel](#匯出-excel)。判定見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；形狀見 `contracts/openapi.json` 的 `AttendanceRecordsDto`。
+結論：`GET /api/v1/attendance-records?from=2026-10-01&to=2026-10-31`（頁面 `attendance.records`）回傳資料範圍內每人每天的判定、刷卡、遲到早退秒數與表單補足狀態，及當天的假單與出差單；同一組條件可[匯出 Excel](#匯出-excel)。逐日說明見 [判定過程](attendance-record-explanation.md)，提問見 [出勤助理](attendance-assistant.md)。判定見 [出勤打卡](attendance.md#出勤判定)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)；形狀見 `contracts/openapi.json` 的 `AttendanceRecordsDto`。
 
 ## 查詢
 
-- 起訖是出勤日，都含、必填，最長 366 天（整年含閏年；一次匯出整年或看一個人的整年）；缺一端、顛倒或超過回 400 `attendance_records_range_invalid`。
-- 依人分頁：`offset`、`limit`（預設 20、最多 50），依使用者順序（管理者在使用者頁設定的排序，未排序的人在後、依姓名；見 [手動排序](../architecture/manual-ordering.md)），`total` 是符合條件的人數；一年的區間不分頁會過大，每人的天數不切開。
+- 起訖是出勤日，都含、必填，最長 366 天（整年含閏年）；缺一端、顛倒或超過回 400 `attendance_records_range_invalid`。
+- 依人分頁：`offset`、`limit`（預設 20、最多 50），依使用者順序（管理者在使用者頁設定的排序，未排序的人在後、依姓名；見 [手動排序](../architecture/manual-ordering.md)），`total` 是符合條件的人數；每人的天數不切開。
 - 篩選：`userId`、`card`（沒有帳號的資料，見[名單](#名單)）；`unitId` 是該單位及下層的目前成員。都與資料範圍取交集，範圍外的人只是查不到，不回錯誤。格式不對（卡號過長、分頁超出）回 400 `attendance_records_filter_invalid`。
 - 放假日：沒有刷卡的放假日預設不回傳（只有表單的也是）；`includeDaysOff=true` 才列出。行事曆備註（假日名稱）在 `calendarRemark`。
 - `coverage=Unexplained|Pending`：只列[補足狀態](attendance.md#表單補足)是這個的日子，沒有這種日子的人不列；要先判定整份名單再分頁，`total` 是篩選後的人數。
@@ -23,7 +23,7 @@
 - 查詢期間（到今天為止）持有卡的人：持有期間與某一天有交集，那一天才回傳。到職前、換卡空窗與離職後不列，免得判成沒刷卡。
 - 只有姓名的持有人（新人的卡先以姓名指派）依附在卡號，範圍是 `all` 且沒有單位篩選才列出；同卡同名的期間合併成一列，同名同姓的人不會混在一起，綁上帳號後併入該使用者。
 - 沒有持有期間涵蓋的刷卡不屬於任何人，不在名單；在卡號對應頁以「待指派」處理（見 [出勤打卡](attendance.md#卡片)）。
-- 在出勤紀錄隱藏的卡（見 [出勤打卡](attendance.md#在出勤紀錄隱藏)）只在範圍是 `all` 且沒有指定人員或卡號時略過其持有期間；不是隱私控制，本人與主管照常看得到。指定時照常列出，該人的期間全在隱藏的卡上時 `hidden` 為 true。
+- 在出勤紀錄隱藏的卡（見 [出勤打卡](attendance.md#在出勤紀錄隱藏)）只在範圍是 `all` 且沒有指定人員或卡號時略過其持有期間（不是權限）。指定時照常列出，該人的期間全在隱藏的卡上時 `hidden` 為 true。
 
 ## 邊界狀態
 

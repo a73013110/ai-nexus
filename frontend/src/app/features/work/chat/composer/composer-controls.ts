@@ -5,6 +5,7 @@ import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Select } from '@shared/ui/select';
 import { formatModelName, formatNumber } from '@shared/browser/format';
+import { modelOptions } from '@features/platform/inference/model-choice';
 import { ReasoningChoice } from './reasoning-choice';
 
 const EFFORT_LABELS: Record<string, string> = {
@@ -173,13 +174,7 @@ export class ComposerControls {
           ? '請選擇模型'
           : '沒有可用模型',
   );
-  readonly modelOptions = computed(() =>
-    this.models().map((model) => ({
-      value: model.id,
-      label: formatModelName(model),
-      description: `${formatNumber(model.contextTokens)} Context${model.supportsImages ? ' · 圖片分析' : ''}`,
-    })),
-  );
+  readonly modelOptions = computed(() => modelOptions(this.models()));
   readonly effortOptions = computed(() => [
     { value: 'auto', label: '自動思考' },
     ...(this.selected()?.reasoningEfforts || []).map((value) => ({

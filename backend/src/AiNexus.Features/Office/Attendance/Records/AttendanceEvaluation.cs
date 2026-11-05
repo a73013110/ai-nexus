@@ -36,6 +36,17 @@ public sealed record AttendanceEvaluation(
     /// 只是參考：補足比的是時數不是區間（見 <see cref="AttendanceEvaluator"/>），表單不必蓋在這些時段上，差多少以 <see cref="ShortSeconds"/> 為準。
     /// </summary>
     public IReadOnlyList<AttendanceGap> Gaps { get; init; } = [];
+
+    /// <summary>
+    /// 這天要多少秒的核准表單才補足（0＝沒有缺口）；只給判定說明（<see cref="AttendanceExplanation"/>）用，不進出勤紀錄的回應。今天為 0。
+    /// </summary>
+    public int RequiredSeconds { get; init; }
+
+    /// <summary>實際上班的淨秒數（上班早於彈性起點以起點計、扣午休）；沒刷卡或只有一筆為 0。今天為 0。</summary>
+    public int WorkedSeconds { get; init; }
+
+    /// <summary>核准加流程中的表單抵掉的秒數；減掉 <see cref="AttendanceEvaluation.FormSeconds"/> 就是流程中那一部分。表單無法取得為 0。</summary>
+    public int FiledSeconds { get; init; }
 }
 
 /// <summary>一段缺口：<paramref name="StartsAt"/>～<paramref name="EndsAt"/>（+08:00）。</summary>

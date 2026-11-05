@@ -37,6 +37,11 @@ public static class AttendanceErrors
     /// <summary>出勤紀錄的其他條件不合法：持有人姓名過長、<c>offset</c> 為負，或每頁人數不在 1～50。</summary>
     public static readonly Error RecordsFilterInvalid = Error.Invalid("attendance_records_filter_invalid");
 
+    /// <summary>
+    /// 判定說明找不到這一天：那個人不在資料範圍內、那天沒有持卡，或是未來的日子。三者不分開回報，與名單看不到的人一樣。
+    /// </summary>
+    public static readonly Error RecordNotFound = Error.NotFound("attendance_record_not_found");
+
     /// <summary>匯入紀錄的查詢條件不合法：狀態不明、期間顛倒、每頁筆數不在允許值內，或游標不存在。</summary>
     public static readonly Error ImportFilterInvalid = Error.Invalid("attendance_import_filter_invalid");
 

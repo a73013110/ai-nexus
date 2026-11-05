@@ -82,15 +82,24 @@ export type RecordsGroup = ReturnType<typeof presentGroup>;
               <small class="records-remark" [title]="row.remark">{{ row.remark }}</small>
             }
           </td>
-          <!-- 標籤寫發生什麼事、顏色跟著補足狀態；原因在 title，只有真的無法判定才另寫一行。 -->
+          <!-- 標籤寫發生什麼事、顏色跟著補足狀態；原因在 title，只有真的無法判定才另寫一行。
+               整組標籤是按鈕：點開那一天的判定過程（頁面上唯一的浮層，錨在這裡）。 -->
           <td nxTableColumn="status">
-            <span class="records-badges">
-              @for (status of row.statuses; track status.label) {
-                <nx-status-badge [tone]="status.tone" [attr.title]="row.reason || null">{{
-                  status.label
-                }}</nx-status-badge>
-              }
-            </span>
+            <button
+              type="button"
+              class="records-explain"
+              aria-haspopup="dialog"
+              title="看判定過程"
+              (click)="explain.emit({ anchor: $any($event.currentTarget), date: row.day.date })"
+            >
+              <span class="records-badges">
+                @for (status of row.statuses; track status.label) {
+                  <nx-status-badge [tone]="status.tone" [attr.title]="row.reason || null">{{
+                    status.label
+                  }}</nx-status-badge>
+                }
+              </span>
+            </button>
             @if (row.note) {
               <small class="records-reason">{{ row.note }}</small>
             }
@@ -218,5 +227,7 @@ export class RecordsPersonGroup {
   /** 人員資訊的範本（姓名、標籤、天數），寬版人員欄與手機段首共用，由頁面提供。 */
   readonly info = input.required<TemplateRef<{ $implicit: RecordsGroup }>>();
   readonly openForm = output<{ desNo: string; date: string }>();
+  /** 點了某一天的狀態：頁面在 `anchor` 旁打開那一天的判定過程。 */
+  readonly explain = output<{ anchor: HTMLElement; date: string }>();
   protected readonly near = nearViewport();
 }

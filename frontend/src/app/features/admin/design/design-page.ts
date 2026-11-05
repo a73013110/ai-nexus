@@ -72,6 +72,7 @@ const INDEX = [
       { id: 'design-island', name: '動態島' },
       { id: 'design-badges', name: '狀態與數量' },
       { id: 'design-progress', name: '進度與生成' },
+      { id: 'design-assistant', name: '浮動面板與頁內助理' },
       { id: 'design-popover', name: '資訊浮層與空狀態' },
     ],
   },

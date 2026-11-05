@@ -1,0 +1,205 @@
+@use 'breakpoints' as bp;
+
+// 外框是 manual popover（top layer，不受祖先的 transform、overflow 影響），位置與大小由
+// FloatingPanel 算好寫進 --floating-*，以動態島同一組彈簧過渡；拖動、調整大小時（data-gesture）直接跟手。
+// 面板與島都是絕對定位、沒有 inset，由 flex 對齊放在靠錨那一側的下角：面板內容維持面板的大小，
+// 縮成島時不重排，只被外框裁切後淡出。
+:host {
+  display: contents;
+}
+.ui-floating {
+  --island-height: 2.75rem;
+  position: fixed;
+  inset: 0 auto auto 0;
+  box-sizing: border-box;
+  width: var(--floating-width);
+  height: var(--floating-height);
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  overflow: clip;
+  translate: var(--floating-x) var(--floating-y);
+  justify-content: flex-end;
+  align-items: flex-end;
+  transition:
+    translate var(--motion-morph) var(--ease-spring),
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring),
+    border-radius var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-enter) var(--ease),
+    scale var(--motion-enter) var(--ease-spring);
+  &:popover-open {
+    display: flex;
+  }
+  &[data-side='start'] {
+    justify-content: flex-start;
+  }
+  &[data-gesture] {
+    transition: none;
+  }
+  &[data-mode='full'] {
+    border-width: 0;
+    border-radius: 0;
+  }
+  // 島與 shared/ui/island 同一種膠囊：跟隨頁面主題的半透明表面、細邊與柔和陰影。
+  &[data-mode='island'] {
+    border-radius: calc(var(--island-height) / 2);
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    backdrop-filter: blur(12px) saturate(1.4);
+    &:has(:focus-visible) {
+      outline: 2px solid var(--focus);
+    }
+  }
+}
+@starting-style {
+  .ui-floating:popover-open {
+    opacity: 0;
+    scale: 0.96;
+  }
+}
+
+.ui-floating-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  width: var(--panel-width);
+  height: var(--panel-height);
+  outline: none;
+  transition: opacity var(--motion-fast) var(--ease) calc(var(--motion-morph) * 0.3);
+  [data-mode='full'] > & {
+    width: 100%;
+    height: 100%;
+  }
+  // 先淡出再藏起來（visibility 跳變延到淡出之後），藏起來後不再繪製。
+  [data-mode='island'] > & {
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity var(--motion-fast) var(--ease-exit),
+      visibility 0s var(--motion-fast);
+  }
+}
+
+// 標題列是拖動把手，上緣中間一條短線提示可以拖。
+.ui-floating-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-4) var(--p-space-2) var(--p-space-2) var(--p-space-4);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  &::before {
+    content: '';
+    position: absolute;
+    top: var(--p-space-2);
+    left: calc(50% - 1rem);
+    width: 2rem;
+    height: 0.25rem;
+    border-radius: var(--radius-full);
+    background: var(--line);
+  }
+  &:active {
+    cursor: grabbing;
+  }
+  [data-mode='full'] & {
+    cursor: default;
+    &::before {
+      content: none;
+    }
+  }
+}
+.ui-floating-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-label);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ui-floating-actions {
+  display: flex;
+  margin-inline-start: auto;
+  color: var(--muted);
+}
+.ui-floating-body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--p-space-2) var(--p-space-4) var(--p-space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+// 調整大小的把手貼著左、右、下緣與兩個下角，看不見；指到邊緣時淡淡亮起。
+.ui-floating-edge {
+  position: absolute;
+  inset: var(--p-space-6) auto var(--p-space-6) 0;
+  width: 0.375rem;
+  cursor: ew-resize;
+  touch-action: none;
+  &:hover {
+    background: color-mix(in srgb, var(--focus) 35%, transparent);
+  }
+  &[data-edge='end'] {
+    inset-inline: auto 0;
+  }
+  &[data-edge^='bottom'] {
+    inset: auto var(--p-space-6) 0;
+    width: auto;
+    height: 0.375rem;
+    cursor: ns-resize;
+  }
+  &[data-edge^='bottom-'] {
+    inset-inline: 0 auto;
+    width: var(--p-space-5);
+    height: var(--p-space-5);
+    background: none;
+    cursor: nesw-resize;
+  }
+  &[data-edge='bottom-end'] {
+    inset-inline: auto 0;
+    cursor: nwse-resize;
+  }
+}
+
+.ui-floating-island {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: max-content;
+  height: var(--island-height);
+  padding-inline-end: var(--p-space-1);
+  font-size: var(--p-font-data);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-exit);
+  [data-mode='island'] > & {
+    opacity: 1;
+    transition: opacity var(--motion) var(--ease) calc(var(--motion-morph) * 0.35);
+  }
+}
+.ui-floating-island-open {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  height: 100%;
+  padding: 0 var(--p-space-3) 0 var(--p-space-2);
+  outline: none;
+  &:hover:not(:disabled) {
+    background: none;
+  }
+}
+
+// 手機的面板一律全螢幕（`view`），坐在螢幕鍵盤上；島在底部置中，不拖動也不調整大小。
+@include bp.below(phone) {
+  .ui-floating[data-mode='full'] {
+    height: calc(100dvh - var(--keyboard-inset, 0px));
+  }
+}

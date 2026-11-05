@@ -3975,6 +3975,142 @@
         }
       }
     },
+    "/api/v1/attendance-records/explanation": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "operationId": "ExplainAttendanceDay",
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "card",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttendanceExplanationDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/attendance-records/assistant": {
+      "post": {
+        "tags": [
+          "Attendance"
+        ],
+        "operationId": "AskAttendanceAssistant",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "card",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unitId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "includeDaysOff",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "coverage",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/GapCoverage"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantEventDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/attendance-rules": {
       "get": {
         "tags": [
@@ -11168,6 +11304,107 @@
           }
         }
       },
+      "AssistantEventDto": {
+        "required": [
+          "text",
+          "scope",
+          "facts",
+          "partial",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "scope": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AssistantFact"
+            }
+          },
+          "partial": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "truncated": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
+      "AssistantFact": {
+        "required": [
+          "label",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "AssistantQuestion": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "history": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AssistantTurn"
+            }
+          }
+        }
+      },
+      "AssistantTurn": {
+        "required": [
+          "question",
+          "answer"
+        ],
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
       "AttachmentDto": {
         "required": [
           "id",
@@ -11299,6 +11536,114 @@
           "AfternoonOff",
           "DayOff",
           "Unknown"
+        ]
+      },
+      "AttendanceExplanationDto": {
+        "required": [
+          "date",
+          "dayType",
+          "status",
+          "reason",
+          "coverage",
+          "shortSeconds",
+          "schedule",
+          "steps",
+          "conclusion",
+          "rules"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "dayType": {
+            "$ref": "#/components/schemas/AttendanceDayType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttendanceStatus"
+          },
+          "reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AttendanceReason"
+              }
+            ]
+          },
+          "coverage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GapCoverage"
+              }
+            ]
+          },
+          "shortSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AttendanceScheduleDto"
+              }
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AttendanceExplanationStep"
+            }
+          },
+          "conclusion": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AttendanceExplanationStep": {
+        "required": [
+          "kind",
+          "at",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/AttendanceExplanationStepKind"
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "AttendanceExplanationStepKind": {
+        "enum": [
+          "Punch",
+          "Gap",
+          "Rule",
+          "Form",
+          "Note"
         ]
       },
       "AttendanceGap": {
@@ -11637,7 +11982,9 @@
           "scheduledEnd",
           "flexStart",
           "flexEnd",
-          "workHours"
+          "workHours",
+          "breakStart",
+          "breakEnd"
         ],
         "type": "object",
         "properties": {
@@ -11663,6 +12010,20 @@
           "workHours": {
             "type": "number",
             "format": "double"
+          },
+          "breakStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "breakEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
           }
         }
       },

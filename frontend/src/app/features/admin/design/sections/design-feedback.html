@@ -167,6 +167,45 @@
   }
 </nx-design-section>
 <nx-design-section
+  id="design-assistant"
+  title="浮動面板與頁內助理"
+  api="FloatingPanel · AssistantPanel · assistantConversation"
+  description="浮在頁面上：拖標題列移動、拉邊緣調整大小、全螢幕或縮成動態島，沒有關閉。助理依頁面目前的查詢結果回答，數字由系統計算，以 [n] 標出依據；範例的回答是本機假資料。"
+>
+  <nx-design-example label="FloatingPanel">
+    <button type="button" class="secondary-button" (click)="floatingPanel.open()">
+      開啟浮動面板
+    </button>
+  </nx-design-example>
+  <nx-design-example label="AssistantPanel">
+    <button type="button" class="secondary-button" (click)="assistantPanel.open()">
+      <nx-icon name="chat" />問助理
+    </button>
+  </nx-design-example>
+  <nx-design-example label="失敗">
+    <button type="button" class="secondary-button" (click)="failNext(); assistantPanel.open()">
+      下一個提問失敗
+    </button>
+  </nx-design-example>
+  <nx-assistant-panel
+    #assistantPanel
+    title="示範助理"
+    [conversation]="assistant"
+    [suggestions]="['哪些人還有沒補足的日子？', '流程中的單停在誰那裡？']"
+  />
+  <nx-floating-panel
+    #floatingPanel
+    title="示範面板"
+    islandLabel="示範面板，展開"
+    storageKey="design-floating"
+  >
+    <p class="design-floating-copy">
+      拖標題列移動，靠近邊緣放開會吸附。<br />拉左、右、下緣調整大小；按 Esc 或「－」縮成動態島。
+    </p>
+    <span floating-island>示範面板</span>
+  </nx-floating-panel>
+</nx-design-section>
+<nx-design-section
   id="design-popover"
   title="資訊浮層與空狀態"
   api="InfoPopover · EmptyState"

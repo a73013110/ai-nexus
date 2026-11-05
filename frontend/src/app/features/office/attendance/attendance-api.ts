@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { ApiClient, type ApiQuery } from '@core/api/api-client';
 import type { TableRequestQuery } from '@shared/ui/table-model';
 import type {
+  AssistantQuestion,
   CalendarDayRequest,
   CardAssignmentCreateRequest,
   CardAssignmentUpdateRequest,
@@ -42,6 +43,20 @@ export class AttendanceApi {
   /** 公文系統的一張假單或出差單（出勤紀錄點單號開啟）：內容、簽核流程與附件憑證；範圍外與不存在同樣回 404。 */
   form = (desNo: string, signal?: AbortSignal) =>
     this.api.get('/api/v1/attendance-forms/{desNo}', { path: { desNo }, signal });
+  /**
+   * 一個人一天的判定說明（點狀態欄開啟）：使用者給 `userId`，只有姓名的持有人給 `card`。
+   * 與出勤紀錄同一份資料；範圍外、沒持卡與未來的日子一律回 404。
+   */
+  explanation = (
+    query: ApiQuery<'/api/v1/attendance-records/explanation', 'get'>,
+    signal?: AbortSignal,
+  ) => this.api.get('/api/v1/attendance-records/explanation', { query, signal });
+  /**
+   * 頁內助理：與 `records` 同一組條件（整段、全部人），伺服器依那份結果整理依據交給模型，回答以 SSE 送回。
+   * 回應尚未開始前的失敗（條件不正確、額度、模型）是一般的錯誤回應。
+   */
+  assistant = (query: AttendanceRecordFilters, body: AssistantQuestion, signal: AbortSignal) =>
+    this.api.stream('/api/v1/attendance-records/assistant', { query, body, signal });
   /** 判定規則的說明，時間是伺服器目前的設定值。 */
   rules = (signal?: AbortSignal) => this.api.get('/api/v1/attendance-rules', { signal });
 

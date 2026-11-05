@@ -48,7 +48,7 @@ public static class AttendanceEvaluator
         return result with
         {
             Status = AttendanceStatus.Undetermined, Reason = AttendanceReason.DayInProgress, ClockOut = null, ExpectedClockOut = expected, LateSeconds = 0, EarlyLeaveSeconds = 0,
-            AdjustedClockOut = adjusted, Coverage = null, ShortSeconds = 0, Gaps = []
+            AdjustedClockOut = adjusted, Coverage = null, ShortSeconds = 0, Gaps = [], RequiredSeconds = 0, WorkedSeconds = 0
         };
     }
 
@@ -86,7 +86,8 @@ public static class AttendanceEvaluator
             : GapCoverage.Unexplained;
         var judged = unjudged with
         {
-            FormSeconds = approved, Coverage = coverage, ShortSeconds = coverage is GapCoverage.Unexplained or GapCoverage.Pending ? need - approved : 0
+            FormSeconds = approved, Coverage = coverage, ShortSeconds = coverage is GapCoverage.Unexplained or GapCoverage.Pending ? need - approved : 0,
+            RequiredSeconds = need, WorkedSeconds = shift.Worked(inAt, outAt), FiledSeconds = filed ?? 0
         };
 
         if (inAt is null || outAt is null)
@@ -117,7 +118,7 @@ public static class AttendanceEvaluator
 
     /// <summary>一天套上一種日型的規則：彈性區間、表定下班、午休與淨工時（時數扣午休）。</summary>
     /// <remarks>設定驗證保證午休在彈性終點之後、最早的應下班之前，所以不看表單時 <see cref="ClockOutWith"/> 與舊系統的「上班＋時數」相同。</remarks>
-    private sealed class Shift(DateOnly date, WorkdayRule rule)
+    internal sealed class Shift(DateOnly date, WorkdayRule rule)
     {
         private readonly DateTimeOffset? breakStart = rule.BreakStart is { } start ? TaipeiTime.At(date, start) : null;
         private readonly DateTimeOffset? breakEnd = rule.BreakEnd is { } end ? TaipeiTime.At(date, end) : null;
@@ -142,9 +143,15 @@ public static class AttendanceEvaluator
         public int Need(DateTimeOffset? clockIn, DateTimeOffset? clockOut)
         {
             if (clockIn is not { } inAt || clockOut is not { } outAt) return NetWork;
-            var worked = NetSeconds(Max(inAt, FlexStart), outAt);
-            return Math.Min(NetWork, Math.Max(LateNet(inAt), NetWork - worked));
+            return Math.Min(NetWork, Math.Max(LateNet(inAt), NetWork - Worked(inAt, outAt)));
         }
+
+        /// <summary>實際上班的淨秒數：早於彈性起點以起點計、扣午休；沒刷卡或只有一筆（兩者相同）為 0。</summary>
+        public int Worked(DateTimeOffset? clockIn, DateTimeOffset? clockOut)
+            => clockIn is { } inAt && clockOut is { } outAt ? NetSeconds(Max(inAt, FlexStart), outAt) : 0;
+
+        /// <summary>一天該上的淨工時（全天 9.5 小時扣午休 1.5 小時＝8 小時）；判定說明也要寫出來。</summary>
+        public int NetWorkSeconds => NetWork;
 
         /// <summary>
         /// 抵掉 <paramref name="formSeconds"/> 秒表單後的應下班：從上班（早於彈性起點以起點計）起再上滿剩下的淨工時，跳過午休。
@@ -201,7 +208,7 @@ public static class AttendanceEvaluator
     }
 
     /// <summary>日型的上下班規則；整天放假與不知道日型沒有規則。</summary>
-    private static WorkdayRule? RuleOf(AttendanceDayType type, WorkdayOptions rules) => type switch
+    internal static WorkdayRule? RuleOf(AttendanceDayType type, WorkdayOptions rules) => type switch
     {
         AttendanceDayType.FullDay => rules.FullDay,
         AttendanceDayType.MorningOff => rules.MorningOff,
@@ -231,7 +238,7 @@ public static class AttendanceEvaluator
     }
 
     /// <summary>判定用的刷卡時間：整分時捨去秒數（+08:00 是整點時差，本地與 UTC 捨去結果相同）。</summary>
-    private static DateTimeOffset? Judged(DateTimeOffset? punch, PunchPrecision precision)
+    internal static DateTimeOffset? Judged(DateTimeOffset? punch, PunchPrecision precision)
         => precision == PunchPrecision.Minute && punch is { } value ? value.AddTicks(-(value.Ticks % TimeSpan.TicksPerMinute)) : punch;
 
     /// <summary>以秒計、不足一秒捨去。</summary>
