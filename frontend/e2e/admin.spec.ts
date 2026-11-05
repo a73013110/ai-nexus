@@ -821,6 +821,9 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
     .poll(() => menuLevel(page, null))
     .toEqual(["總覽", "AI 工作台", "檔案庫", "協作", "系統管理"]);
   await page.unroute("**/api/v1/admin/navigation-items/order");
+  // 還原的換位動畫與錯誤提示進場還在動時，Playwright 判定按鈕不穩定而重試，第四次以 block: 'start'
+  // 捲動表格；之後拖曳量到的列就在捲動區外，指標停在頂緣會觸發自動捲動，放到錯的位置。
+  await settleEntrance(page);
 
   // 列的選單：不用拖曳也能跨層（觸控與指標都適用）。
   await page
@@ -846,6 +849,9 @@ test("選單以鍵盤、選單或拖曳在同層與跨層移動，一次送出�
 
   // 拖曳到某列的上半：插到它之前。
   const drag = async (target: Locator, ratio: number) => {
+    // 座標是畫面位置：等換位動畫結束，且目標列要在表格的捲動區內，否則指標會落到別列或觸發自動捲動。
+    await settleEntrance(page);
+    await expect(target).toBeInViewport();
     const handle = (await files.boundingBox())!;
     const box = (await target.boundingBox())!;
     await page.mouse.move(
