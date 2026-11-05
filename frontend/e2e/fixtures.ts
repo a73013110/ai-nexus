@@ -484,7 +484,6 @@ export class ApiFixture {
   readonly messageConversation = new Map<string, string>();
   userId = randomUUID();
   settings = {
-    readingFontSize: 15,
     readingLineHeight: 1.2,
     density: "comfortable",
     sidebarWidth: 240,
@@ -502,6 +501,7 @@ export class ApiFixture {
     theme: "light",
     reducedMotion: false,
     defaultModelId: "fixture:8b",
+    textScale: 100,
   };
   posts = 0;
   generated = 0;

@@ -84,7 +84,7 @@
   padding-bottom: calc(2.75rem + 2 * var(--p-space-3));
 }
 .viewer-tooled .reader-text {
-  padding-top: max(var(--viewer-tools-clearance), clamp(20px, 4vw, 48px));
+  padding-top: max(var(--viewer-tools-clearance), clamp(var(--p-space-5), 4vw, var(--p-space-12)));
 }
 .viewer-tooled:not(.viewer-image) .reader-original {
   padding-top: var(--viewer-tools-clearance);
@@ -118,9 +118,9 @@
   display: grid;
   justify-items: center;
   align-content: start;
-  gap: 16px;
+  gap: var(--p-space-4);
   min-height: 100%;
-  padding: 24px;
+  padding: var(--p-space-6);
 }
 .reader-original canvas {
   display: block;
@@ -132,7 +132,7 @@
   min-height: 0;
   align-content: stretch;
   align-items: center;
-  padding: 16px;
+  padding: var(--p-space-4);
 }
 .viewer-image img {
   grid-area: 1/1;
@@ -160,9 +160,9 @@
   opacity: 0;
 }
 .reader-text {
-  width: min(900px, 100%);
+  width: min(56.25rem, 100%);
   margin: 0 auto;
-  padding: clamp(20px, 4vw, 48px);
+  padding: clamp(var(--p-space-5), 4vw, var(--p-space-12));
 }
 .reader-text pre {
   font-size: var(--text-body);
@@ -174,9 +174,9 @@
 .reader-text-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
+  gap: var(--p-space-3);
+  margin-bottom: var(--p-space-5);
+  padding-bottom: var(--p-space-3);
   border-bottom: 1px solid var(--line);
   font-size: var(--text-caption);
   color: var(--secondary);
@@ -193,9 +193,9 @@
     width: 6rem;
   }
   .reader-original {
-    padding: 12px;
+    padding: var(--p-space-3);
   }
   .viewer-image .reader-original {
-    padding: 8px;
+    padding: var(--p-space-2);
   }
 }

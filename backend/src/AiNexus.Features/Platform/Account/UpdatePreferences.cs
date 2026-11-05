@@ -11,15 +11,19 @@ using FluentValidation;
 
 namespace AiNexus.Features.Platform.Account;
 
-/// <summary>驗證順序固定：先檢查主題，再由 handler 檢查模型 ID 長度與伺服器是否核准該模型。</summary>
+/// <summary>驗證順序固定：先檢查主題與文字大小，再由 handler 檢查模型 ID 長度與伺服器是否核准該模型。</summary>
 internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 {
-    public override Error Problem => AccountErrors.InvalidTheme;
+    public override Error Problem => AccountErrors.InvalidAppearance;
 
-    public PreferencesValidator() => RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode(RuleCode.Unknown);
+    public PreferencesValidator()
+    {
+        RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode(RuleCode.Unknown);
+        RuleFor(x => x.TextScale).Must(UpdatePreferences.ValidTextScale).WithErrorCode(RuleCode.Range);
+    }
 }
 
-/// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>
+/// <summary>儲存使用者的主題、動畫、文字大小與預設模型偏好。</summary>
 internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation models) : IEndpointSlice
 {
     private const int MaxModelIdLength = 160;
@@ -40,10 +44,13 @@ internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation model
 
     public static bool ValidTheme(string? theme) => theme is "light" or "dark" or "system";
 
+    /// <summary>前端只提供這個範圍內的檔位；超過 130% 時窄螢幕的側欄與對話框放不下。</summary>
+    public static bool ValidTextScale(int scale) => scale is >= 100 and <= 130;
+
     /// <summary>檢查並把 <paramref name="value"/> 套用到已追蹤的使用者，但不儲存；失敗時不改動任何值。</summary>
     public static Result<PreferencesDto> Apply(User user, PreferencesDto value, ModelPresentation models)
     {
-        if (!ValidTheme(value.Theme)) return AccountErrors.InvalidTheme;
+        if (!ValidTheme(value.Theme) || !ValidTextScale(value.TextScale)) return AccountErrors.InvalidAppearance;
         if (value.DefaultModelId?.Length > MaxModelIdLength) return AccountErrors.InvalidModel;
         string? model = null;
         if (value.DefaultModelId is not null)
@@ -54,6 +61,7 @@ internal sealed class UpdatePreferences(AppDbContext db, ModelPresentation model
         }
         user.Preferences.Theme = value.Theme;
         user.Preferences.ReducedMotion = value.ReducedMotion;
+        user.Preferences.TextScale = value.TextScale;
         user.Preferences.DefaultModelId = model;
         return models.Preferences(user.Preferences);
     }

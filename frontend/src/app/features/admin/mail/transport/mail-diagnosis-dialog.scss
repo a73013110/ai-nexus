@@ -4,15 +4,15 @@ code {
 }
 .diagnosis-steps {
   display: grid;
-  gap: 6px;
+  gap: 0.375rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .diagnosis-steps > li {
   display: grid;
-  gap: 4px;
-  padding: 8px 12px;
+  gap: var(--p-space-1);
+  padding: var(--p-space-2) var(--p-space-3);
   background: var(--canvas);
   border-radius: var(--radius-block);
   font-size: var(--text-caption);
@@ -34,7 +34,7 @@ code {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: var(--p-space-2);
 }
 .diagnosis-elapsed {
   margin-left: auto;
@@ -44,9 +44,9 @@ code {
 .diagnosis-capabilities {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.375rem;
   margin: 0;
 }
 dd code + code {
-  margin-left: 6px;
+  margin-left: 0.375rem;
 }

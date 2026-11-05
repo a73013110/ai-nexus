@@ -202,7 +202,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   windows_account_required: 'Windows 帳號資料不完整。',
   ad_binding_conflict: 'AD 身分與已連結帳號不一致，請聯絡管理員。',
   login_method_disabled: '此使用者已停用，或未允許 AD 驗證。',
-  invalid_theme: '請選擇淺色、深色或跟隨系統。',
+  invalid_appearance: '外觀設定不在可選範圍內，請重新選擇。',
   invalid_model: '模型識別碼過長。',
   model_not_allowed: '偏好的模型未經伺服器核准。',
   ad_sid_required: 'AD 帳號缺少 SID，無法建立工作區。',

@@ -5,7 +5,7 @@
 .knowledge-file-label {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--p-space-3);
   overflow-wrap: anywhere;
 }
 .knowledge-file-label strong {

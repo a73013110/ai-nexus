@@ -18,15 +18,15 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
       return [
         {
           target: `${host} nx-appearance-tab .appearance-workspace`,
-          title: '主題與動態效果',
-          description: '主題可跟隨作業系統；減少動態效果會保留狀態提示，只省掉進場與持續動畫。',
+          title: '主題、文字大小與動態效果',
+          description:
+            '主題可跟隨作業系統。\n文字大小會連同間距放大整個介面。\n減少動態效果會保留狀態提示，只省掉進場與持續動畫。',
           side: 'bottom',
         },
         {
           target: `${host} nx-appearance-tab .appearance-reading`,
           title: '調整閱讀版面',
-          description:
-            '字級、行距、內容寬度與訊息密度，只影響對話與文件正文；一般介面維持固定字級。\n側欄寬度讓長對話名稱好讀。',
+          description: '行距、內容寬度與訊息密度只影響對話與文件正文。\n側欄寬度讓長對話名稱好讀。',
         },
         {
           target: `${host} nx-appearance-tab .reading-preview`,

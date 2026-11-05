@@ -12,6 +12,10 @@
   white-space: nowrap;
   border: 0;
 }
+html {
+  // 以百分比疊在瀏覽器預設字級上，使用者在瀏覽器調的字級仍然有效。
+  font-size: calc(100% * var(--text-scale));
+}
 html,
 body {
   margin: 0;

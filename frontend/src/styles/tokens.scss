@@ -199,6 +199,8 @@
   --danger-text: var(--p-white);
   --font-ui: 'Segoe UI', 'Microsoft JhengHei UI', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-code: 'Cascadia Code', ui-monospace, monospace;
+  // 個人設定的文字大小倍率（ThemeService、boot.js 寫在根元素）；根字級乘上它，rem 寫的字級與間距一起縮放。
+  --text-scale: 1;
   --text-caption: var(--p-font-sm);
   --text-label: var(--p-font-label);
   --text-ui: var(--p-font-base);

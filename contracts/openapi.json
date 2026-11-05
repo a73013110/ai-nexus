@@ -18323,7 +18323,8 @@
         "required": [
           "theme",
           "reducedMotion",
-          "defaultModelId"
+          "defaultModelId",
+          "textScale"
         ],
         "type": "object",
         "properties": {
@@ -18338,6 +18339,10 @@
               "null",
               "string"
             ]
+          },
+          "textScale": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -22810,11 +22815,6 @@
         "properties": {
           "appearance": {
             "$ref": "#/components/schemas/PreferencesDto"
-          },
-          "readingFontSize": {
-            "type": "integer",
-            "format": "int32",
-            "default": 15
           },
           "readingLineHeight": {
             "type": "number",

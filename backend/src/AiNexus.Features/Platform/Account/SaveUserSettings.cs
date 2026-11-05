@@ -17,7 +17,6 @@ internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 
     public UserSettingsValidator()
     {
-        RuleFor(x => x.ReadingFontSize).InclusiveBetween(12, 24);
         RuleFor(x => x.ReadingLineHeight).Must(x => double.IsFinite(x) && x is >= 1 and <= 2.2).WithErrorCode(RuleCode.Range);
         RuleFor(x => x.SidebarWidth).InclusiveBetween(240, 360);
         RuleFor(x => x.Density).Must(x => x is "comfortable" or "compact").WithErrorCode(RuleCode.Unknown);

@@ -50,7 +50,7 @@ public sealed class ModelVisibilityTests
     {
         await using var factory = new AppFactory(inference: options => options.ShowModelNames = false);
         using var client = await factory.SignedInAsync();
-        var saved = await client.PutAsJsonAsync("/api/v1/preferences", new PreferencesDto("dark", true, "model-1"));
+        var saved = await client.PutAsJsonAsync("/api/v1/preferences", new PreferencesDto("dark", true, "model-1", 100));
         saved.EnsureSuccessStatusCode();
         Assert.Equal("model-1", (await saved.Content.ReadFromJsonAsync<PreferencesDto>())!.DefaultModelId);
         Assert.DoesNotContain("test-model", await client.GetStringAsync("/api/v1/me"));

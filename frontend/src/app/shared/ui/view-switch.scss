@@ -120,7 +120,7 @@
   width: 100%;
 }
 :host(.ui-view-switch-segment) button {
-  min-height: calc(var(--button-target) - 4px);
+  min-height: calc(var(--button-target) - 0.25rem);
   font-size: var(--view-switch-button-font-size, var(--text-caption));
 }
 // Touch keeps every option at the full target; the track grows around it.

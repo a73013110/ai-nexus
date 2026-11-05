@@ -7,7 +7,7 @@
   height: 100dvh;
   min-height: 31rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(21.25rem, 1fr);
   color: var(--ink);
   background: var(--canvas);
 }
@@ -16,7 +16,7 @@
   align-items: center;
   justify-items: start;
   min-height: 0;
-  padding: var(--login-gutter) clamp(28px, 5vw, 80px);
+  padding: var(--login-gutter) clamp(1.75rem, 5vw, 5rem);
   overflow: auto;
 }
 .login-panel[hidden] {
@@ -27,7 +27,7 @@
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
 }
 .login-content {
-  width: min(100%, 360px);
+  width: min(100%, 22.5rem);
   animation: panel-arrive 600ms var(--ease) both;
 }
 // A rejected password shakes the form once; the two names restart it on the next rejection.
@@ -40,7 +40,7 @@
 h2 {
   font-size: var(--p-font-2xl);
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 var(--p-space-2);
 }
 .login-description {
   color: var(--secondary);
@@ -90,7 +90,7 @@ h2 {
 form {
   display: flex;
   flex-direction: column;
-  gap: max(6px, var(--login-space) / 3);
+  gap: max(0.375rem, var(--login-space) / 3);
 }
 label {
   font-size: var(--text-label);
@@ -98,12 +98,12 @@ label {
 }
 input {
   width: 100%;
-  padding: 11px 14px;
+  padding: 0.6875rem 0.875rem;
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--control-line);
   border-radius: var(--radius-field);
-  min-height: 46px;
+  min-height: 2.875rem;
   transition:
     border-color var(--motion) var(--ease),
     box-shadow var(--motion) var(--ease);
@@ -116,7 +116,7 @@ input:focus {
   position: relative;
 }
 .login-password input {
-  padding-inline-end: calc(var(--button-target) + 4px);
+  padding-inline-end: calc(var(--button-target) + var(--p-space-1));
 }
 // Edge draws its own reveal button; the page's toggle replaces it.
 .login-password input::-ms-reveal {
@@ -130,7 +130,7 @@ input:focus {
 }
 .login-field-hint,
 .login-caps {
-  margin: 0 0 6px;
+  margin: 0 0 0.375rem;
   color: var(--secondary);
   font-size: var(--text-caption);
 }
@@ -141,8 +141,8 @@ input:focus {
 }
 .login-retry {
   width: 100%;
-  min-height: 46px;
-  margin-top: 10px;
+  min-height: 2.875rem;
+  margin-top: 0.625rem;
 }
 .login-privacy {
   margin: var(--login-space) 0 0;
@@ -165,7 +165,7 @@ input:focus {
   }
   .login-panel {
     justify-items: center;
-    padding: 20px 24px;
+    padding: var(--p-space-5) var(--p-space-6);
   }
   .login-workspace[data-stage='welcome'] {
     grid-template: minmax(0, 1fr) / minmax(0, 1fr);
@@ -178,7 +178,7 @@ input:focus {
       grid-template-rows: 88px minmax(0, 1fr);
     }
     .login-panel {
-      padding: 12px 20px;
+      padding: var(--p-space-3) var(--p-space-5);
     }
   }
 }

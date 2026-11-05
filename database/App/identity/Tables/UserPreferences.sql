@@ -3,7 +3,6 @@ CREATE TABLE [identity].[UserPreferences] (
     [Theme]                  NVARCHAR (12)    NOT NULL,
     [ReducedMotion]          BIT              NOT NULL,
     [DefaultModelId]         NVARCHAR (160)   NULL,
-    [ReadingFontSize]        INT              DEFAULT ((15)) NOT NULL,
     [ReadingLineHeight]      FLOAT (53)       DEFAULT ((1.2000000000000000e+000)) NOT NULL,
     [Density]                NVARCHAR (16)    DEFAULT (N'comfortable') NOT NULL,
     [SidebarWidth]           INT              DEFAULT ((240)) NOT NULL,
@@ -13,7 +12,9 @@ CREATE TABLE [identity].[UserPreferences] (
     [SaveLocalDrafts]        BIT              DEFAULT (CONVERT([bit],(1))) NOT NULL,
     [NotifyOnCompletion]     BIT              NOT NULL,
     [DefaultReasoningEffort] NVARCHAR (16)    DEFAULT (N'auto') NOT NULL,
+    [TextScale]              INT              CONSTRAINT [df_UserPreferences_TextScale] DEFAULT ((100)) NOT NULL,
     CONSTRAINT [PK_UserPreferences] PRIMARY KEY CLUSTERED ([UserId] ASC),
+    CONSTRAINT [ck_UserPreferences_TextScale] CHECK ([TextScale]>=(100) AND [TextScale]<=(130)),
     CONSTRAINT [FK_UserPreferences_Users_UserId] FOREIGN KEY ([UserId]) REFERENCES [identity].[Users] ([Id]) ON DELETE CASCADE
 );
 
@@ -55,11 +56,6 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否在�
 
 GO
 
-EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'對話文字大小，以 CSS px 的偏好值記錄。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'UserPreferences', @level2type = N'COLUMN', @level2name = N'ReadingFontSize';
-
-
-GO
-
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'對話閱讀行高倍率。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'UserPreferences', @level2type = N'COLUMN', @level2name = N'ReadingLineHeight';
 
 
@@ -81,6 +77,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否在�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'側欄寬度偏好。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'UserPreferences', @level2type = N'COLUMN', @level2name = N'SidebarWidth';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'全站文字大小百分比（100–130），套用在根元素字級，介面字級與間距一起縮放。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'UserPreferences', @level2type = N'COLUMN', @level2name = N'TextScale';
 
 
 GO

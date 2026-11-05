@@ -2,8 +2,8 @@
 :host {
   align-self: center;
   width: 100%;
-  min-height: 46px;
-  margin-top: 14px;
+  min-height: 2.875rem;
+  margin-top: 0.875rem;
   overflow: hidden;
   white-space: nowrap;
   transition:
@@ -16,7 +16,7 @@
   cursor: progress;
 }
 :host([data-phase='success']):disabled {
-  width: 46px;
+  width: 2.875rem;
   padding-inline: 0;
   border-radius: 50%;
   opacity: 1;

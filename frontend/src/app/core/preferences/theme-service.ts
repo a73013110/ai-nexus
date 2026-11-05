@@ -2,12 +2,14 @@ import { computed, effect, Injectable, signal, untracked } from '@angular/core';
 import { mediaQuery } from '@shared/browser/media-query';
 import type { PreferencesDto } from '../api/schema';
 
+/** 外觀偏好（主題、動態效果、文字大小）的唯一套用處；也把會影響第一幀的值存給 `boot.js`。 */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   readonly preferences = signal<PreferencesDto>({
     theme: 'system',
     reducedMotion: false,
     defaultModelId: null,
+    textScale: 100,
   });
   private readonly dark = mediaQuery('(prefers-color-scheme: dark)');
   private readonly systemReduced = mediaQuery('(prefers-reduced-motion: reduce)');
@@ -31,6 +33,7 @@ export class ThemeService {
           theme: local.theme,
           reducedMotion: !!local.reducedMotion,
           defaultModelId: null,
+          textScale: typeof local.textScale === 'number' ? local.textScale : 100,
         });
     } catch {
       /* 外觀是選用的；儲存可能被政策停用。 */
@@ -43,14 +46,20 @@ export class ThemeService {
     try {
       localStorage.setItem(
         'ai-nexus.appearance',
-        JSON.stringify({ theme: value.theme, reducedMotion: value.reducedMotion }),
+        JSON.stringify({
+          theme: value.theme,
+          reducedMotion: value.reducedMotion,
+          textScale: value.textScale,
+        }),
       );
     } catch {}
   }
   private render() {
     const value = this.preferences();
-    document.documentElement.dataset['theme'] =
+    const root = document.documentElement;
+    root.dataset['theme'] =
       value.theme === 'system' ? (this.dark() ? 'dark' : 'light') : value.theme;
-    document.documentElement.dataset['reducedMotion'] = String(value.reducedMotion);
+    root.dataset['reducedMotion'] = String(value.reducedMotion);
+    root.style.setProperty('--text-scale', String(value.textScale / 100));
   }
 }

@@ -111,12 +111,12 @@
 .tour-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 0.375rem;
   margin-right: auto;
 }
 .tour-dots i {
-  width: 6px;
-  height: 6px;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--ink) 20%, transparent);
   transition:
@@ -124,7 +124,7 @@
     background-color var(--motion) var(--ease);
 }
 .tour-dots i.current {
-  width: 20px;
+  width: 1.25rem;
   background: var(--ink);
 }
 .quiet-button:disabled {

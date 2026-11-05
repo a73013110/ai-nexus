@@ -203,11 +203,7 @@ export class ChatStore {
       // 帳號與設定一起載入；這裡的帳號對進行中的執行是最新的。
       const me = await this.session.load(true);
       if (!me || !current()) return;
-      this.themes.apply({
-        theme: me.preferences.theme ?? 'system',
-        reducedMotion: me.preferences.reducedMotion ?? false,
-        defaultModelId: me.preferences.defaultModelId ?? null,
-      });
+      this.themes.apply(me.preferences);
       if (!this.hasChatAccess()) {
         this.ready.set(false);
         this.error.set('你的角色目前沒有對話功能，請聯絡管理員。');

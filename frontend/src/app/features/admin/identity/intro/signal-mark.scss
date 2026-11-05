@@ -56,7 +56,7 @@
 .signal-replay {
   position: absolute;
   right: var(--login-gutter);
-  bottom: calc(var(--login-gutter) - 12px);
+  bottom: calc(var(--login-gutter) - var(--p-space-3));
   pointer-events: auto;
   border: 1px solid var(--control-line);
   border-radius: 50%;
@@ -64,7 +64,7 @@
 }
 @include bp.below(narrow) {
   .signal-replay {
-    right: 18px;
-    bottom: 18px;
+    right: 1.125rem;
+    bottom: 1.125rem;
   }
 }

@@ -1,6 +1,6 @@
 // 第一幀之前執行：index.html 的 <head> 以同源檔案載入（CSP `script-src 'self'` 不允許 inline）。
 // 只做兩件畫面一出現就要成立的事，其餘交給 Angular：
-// 1. 套用外觀偏好，深色主題重新載入時不先閃一幀淺色；鍵名與判斷同 ThemeService，它啟動後接手。
+// 1. 套用外觀偏好，重新載入時不先閃一幀淺色或原尺寸文字；鍵名與判斷同 ThemeService，它啟動後接手。
 // 2. 上一頁換身分時（IdentityVeil.cover）留下的遮罩在這一頁第一幀就蓋上，工作區畫好後由 IdentityVeil 淡出。
 (() => {
   const root = document.documentElement;
@@ -18,6 +18,8 @@
         ? 'dark'
         : 'light';
   root.dataset.reducedMotion = String(!!appearance?.reducedMotion);
+  if (typeof appearance?.textScale === 'number')
+    root.style.setProperty('--text-scale', String(appearance.textScale / 100));
   try {
     const veil = JSON.parse(sessionStorage.getItem('ai-nexus.identity-veil') ?? 'null');
     sessionStorage.removeItem('ai-nexus.identity-veil');

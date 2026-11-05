@@ -11,7 +11,7 @@ describe('settingsTour', () => {
   it('opens with the categories and ends with saving on saved tabs', () => {
     expect(titles({ tab: 'appearance' })).toEqual([
       '切換設定分類',
-      '主題與動態效果',
+      '主題、文字大小與動態效果',
       '調整閱讀版面',
       '即時預覽',
       '預覽後再儲存',

@@ -473,7 +473,7 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
       class="design-markdown"
       title="內容閱讀"
       api="MarkdownView · CodeBlock"
-      description="聊天、文件與成果共用同一套閱讀元件；字級與行距跟隨個人設定。"
+      description="聊天、文件與成果共用同一套閱讀元件；文字大小與行距跟隨個人設定。"
       [stacked]="true"
     >
       <nx-markdown-view [content]="markdown" />

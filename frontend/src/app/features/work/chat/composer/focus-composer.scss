@@ -1,6 +1,6 @@
 .platform-dialog.focus-composer-dialog[data-size] {
   --dialog-width: calc(var(--reading-width) + 2 * var(--dialog-padding) + 2px);
-  height: min(720px, calc(100dvh - 3rem));
+  height: min(45rem, calc(100dvh - 3rem));
 }
 .platform-dialog.focus-composer-dialog .dialog-body {
   // The editor fills the body and scrolls itself: no gutter eating into the reading width.

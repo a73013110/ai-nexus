@@ -16,14 +16,14 @@ code {
 }
 .audit-changes {
   display: grid;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--p-space-2);
+  margin: var(--p-space-2) 0;
 }
 .audit-changes > div {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 12px;
-  padding: 10px 12px;
+  grid-template-columns: 8.125rem minmax(0, 1fr);
+  gap: var(--p-space-3);
+  padding: 0.625rem var(--p-space-3);
   background: var(--canvas);
   border-radius: var(--radius-block);
 }
@@ -35,7 +35,7 @@ code {
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--p-space-2);
   flex-wrap: wrap;
   font-size: var(--text-caption);
   overflow-wrap: anywhere;
@@ -49,7 +49,7 @@ code {
 @include bp.below(narrow) {
   .audit-changes > div {
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: var(--p-space-1);
   }
 }
 .audit-changes dd.audit-feature-change {

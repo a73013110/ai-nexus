@@ -47,7 +47,7 @@
   display: block;
   font-weight: 400;
   font-size: var(--text-caption);
-  margin-top: 4px;
+  margin-top: var(--p-space-1);
 }
 @media (prefers-reduced-motion: reduce) {
   .generation-matrix i,

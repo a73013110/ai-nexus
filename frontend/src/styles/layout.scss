@@ -5,15 +5,15 @@
 // projected into the frame; everything else belongs to the owning component.
 .skip-link {
   position: fixed;
-  left: 20px;
-  top: -80px;
+  left: var(--p-space-5);
+  top: -5rem;
   z-index: 100;
-  padding: 12px 20px;
+  padding: var(--p-space-3) var(--p-space-5);
   background: var(--surface);
   border: 1px solid var(--line);
 }
 .skip-link:focus {
-  top: 12px;
+  top: var(--p-space-3);
 }
 .workbench {
   display: grid;

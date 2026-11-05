@@ -34,7 +34,7 @@ public sealed class ConversationHistoryTests
         (await client.PatchAsJsonAsync($"/api/v1/conversations/{conversation.Id}", new RenameConversationRequest("會議紀錄"))).EnsureSuccessStatusCode();
         Assert.Single((await client.GetFromJsonAsync<List<ConversationDto>>("/api/v1/conversations?search=會議"))!);
         Assert.Empty((await client.GetFromJsonAsync<List<ConversationDto>>("/api/v1/conversations?search=不存在"))!);
-        var preference = new PreferencesDto("dark", true, "test-model");
+        var preference = new PreferencesDto("dark", true, "test-model", 100);
         (await client.PutAsJsonAsync("/api/v1/preferences", preference)).EnsureSuccessStatusCode();
         Assert.Equal(preference, (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Preferences);
         (await client.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();

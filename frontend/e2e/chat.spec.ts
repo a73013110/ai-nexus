@@ -8,11 +8,11 @@ import {
   expectViewportContained,
 } from "./fixtures";
 
-test("對話開場沿用共用卡片與操作密度，手機及深色保留閱讀設定", async ({
+test("對話開場沿用共用卡片與操作密度，手機及深色保留文字大小", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
-  fixture.settings.readingFontSize = 20;
+  fixture.preferences.textScale = 120;
   fixture.preferences.theme = "system";
   await fixture.attach(page);
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
@@ -22,15 +22,15 @@ test("對話開場沿用共用卡片與操作密度，手機及深色保留閱�
     name: "對話起點",
     exact: true,
   });
-  await expect(start).toHaveCSS("font-size", "13px");
-  await expect(suggestions).toHaveCSS("font-size", "13px");
-  await expect(page.locator("#composer")).toHaveCSS("font-size", "20px");
+  await expect(start).toHaveCSS("font-size", "15.6px");
+  await expect(suggestions).toHaveCSS("font-size", "15.6px");
+  await expect(page.locator("#composer")).toHaveCSS("font-size", "18px");
   for (const viewport of [
     { width: 1280, height: 768 },
     { width: 375, height: 812 },
   ]) {
     await page.setViewportSize(viewport);
-    await expect(start.getByRole("heading")).toHaveCSS("font-size", "24px");
+    await expect(start.getByRole("heading")).toHaveCSS("font-size", "28.8px");
     expect((await start.boundingBox())!.height).toBeLessThan(
       viewport.width === 375 ? 400 : 220,
     );

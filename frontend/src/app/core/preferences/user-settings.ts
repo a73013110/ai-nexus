@@ -5,8 +5,7 @@ import { ThemeService } from './theme-service';
 import { AuthService } from '../auth/auth-service';
 
 export const defaultSettings = (): UserSettingsDto => ({
-  appearance: { theme: 'system', reducedMotion: false, defaultModelId: null },
-  readingFontSize: 15,
+  appearance: { theme: 'system', reducedMotion: false, defaultModelId: null, textScale: 100 },
   readingLineHeight: 1.2,
   density: 'comfortable',
   sidebarWidth: 240,
@@ -78,7 +77,6 @@ export class UserSettingsService {
   }
   private render(value: UserSettingsDto) {
     const root = document.documentElement;
-    root.style.setProperty('--text-body', `${value.readingFontSize / 16}rem`);
     root.style.setProperty('--line-reading', String(value.readingLineHeight));
     root.style.setProperty(
       '--sidebar-width',

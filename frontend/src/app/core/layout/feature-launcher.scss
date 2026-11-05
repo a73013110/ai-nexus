@@ -66,7 +66,7 @@
 }
 // 格子的外框；圖示、名稱、圖釘與徽章的排列在 NavigationEntry。
 .workspace-icons > * {
-  min-height: 52px;
+  min-height: 3.25rem;
   padding: var(--p-space-1);
   border-radius: var(--radius-item);
   color: var(--secondary);

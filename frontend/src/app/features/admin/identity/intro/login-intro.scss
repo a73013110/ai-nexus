@@ -58,7 +58,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(100%, 560px);
+  width: min(100%, 35rem);
   height: 100%;
   margin-inline-start: auto;
   padding: calc(var(--login-gutter) + 3.5rem) var(--login-gutter) calc(var(--login-gutter) + 4.5rem);
@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 0.75em;
-  margin: 0 0 18px;
+  margin: 0 0 1.125rem;
   font-size: var(--text-caption);
   color: var(--secondary);
   letter-spacing: 0.06em;
@@ -115,7 +115,7 @@ h1 {
   line-height: 1.45;
   font-weight: 400;
   letter-spacing: 0.035em;
-  margin: 0 0 24px;
+  margin: 0 0 var(--p-space-6);
 }
 h1 em {
   font-style: normal;
@@ -176,7 +176,7 @@ h1 em {
     font-size: 2.5rem;
   }
   .login-brand {
-    top: 20px;
+    top: var(--p-space-5);
     font-size: var(--p-font-xl);
     gap: var(--p-space-1);
   }
@@ -185,7 +185,7 @@ h1 em {
   }
   .login-intro-copy {
     position: absolute;
-    bottom: 12px;
+    bottom: var(--p-space-3);
     left: var(--login-gutter);
   }
   .intro-eyebrow {
@@ -214,7 +214,7 @@ h1 em {
     }
     h1 {
       font-size: 2rem;
-      margin-bottom: 12px;
+      margin-bottom: var(--p-space-3);
     }
   }
 }

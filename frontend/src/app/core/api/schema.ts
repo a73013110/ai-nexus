@@ -6624,6 +6624,8 @@ export interface components {
             theme: string;
             reducedMotion: boolean;
             defaultModelId: null | string;
+            /** Format: int32 */
+            textScale: number;
         };
         PresenceReceipt: {
             enabled: boolean;
@@ -7859,11 +7861,6 @@ export interface components {
         };
         UserSettingsDto: {
             appearance: components["schemas"]["PreferencesDto"];
-            /**
-             * Format: int32
-             * @default 15
-             */
-            readingFontSize: number;
             /**
              * Format: double
              * @default 1.2

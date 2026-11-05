@@ -36,7 +36,7 @@ import { covers } from './attendance-cards-store';
       flex-wrap: wrap;
       align-items: center;
       gap: var(--p-space-1) var(--p-space-2);
-      padding: 8px 12px;
+      padding: var(--p-space-2) var(--p-space-3);
       background: var(--canvas);
       border-radius: var(--radius-block);
       font-size: var(--text-caption);

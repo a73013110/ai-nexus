@@ -23,7 +23,7 @@
 .ui-approval-meter {
   display: flex;
   flex: 1;
-  height: 4px;
+  height: 0.25rem;
   overflow: hidden;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--line) 70%, var(--surface));
@@ -57,8 +57,8 @@
 .ui-approval-step:not(:last-child)::before {
   content: '';
   position: absolute;
-  top: calc(var(--approval-mark) + 4px);
-  bottom: 4px;
+  top: calc(var(--approval-mark) + var(--p-space-1));
+  bottom: var(--p-space-1);
   left: calc(0.75rem - 1px);
   width: 2px;
   background: var(--line);
@@ -86,8 +86,8 @@
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 [data-state='current'] > .ui-approval-mark > i {
-  width: 6px;
-  height: 6px;
+  width: 0.375rem;
+  height: 0.375rem;
   border-radius: 50%;
   background: var(--accent);
 }

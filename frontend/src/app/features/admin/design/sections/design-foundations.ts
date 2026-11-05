@@ -127,7 +127,7 @@ export class DesignFoundations {
     {
       token: '--text-body',
       use: '閱讀正文（個人設定）',
-      sample: '正文預設 15px，字級、行距與寬度可在個人設定調整。',
+      sample: '正文預設 15px，文字大小、行距與寬度可在個人設定調整。',
       className: 'design-reading',
     },
     { token: '--text-ui', use: '緊湊操作', sample: '傳達下一個動作', className: '' },

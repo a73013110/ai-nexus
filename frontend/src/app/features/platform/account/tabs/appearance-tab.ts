@@ -5,7 +5,7 @@ import { SettingsStore } from '../settings-store';
 const pixels = (values: number[]) =>
   values.map((value) => ({ value: String(value), label: `${value} px` }));
 
-/** 主題、動態效果與閱讀版面；字級、行距與寬度只影響對話與文件正文，附即時預覽。 */
+/** 主題、動態效果、全站文字大小與閱讀版面；行距與寬度只影響對話與文件正文，附即時預覽。 */
 @Component({
   selector: 'nx-appearance-tab',
   imports: [SettingGroup, SettingRow],
@@ -20,6 +20,13 @@ const pixels = (values: number[]) =>
         (valueChange)="store.appearance('theme', $event)"
       />
       <nx-setting-row
+        label="文字大小"
+        description="整個介面的文字與間距一起放大。"
+        [options]="textScales"
+        [value]="'' + store.draft().appearance.textScale"
+        (valueChange)="store.appearance('textScale', +$event)"
+      />
+      <nx-setting-row
         label="減少動態效果"
         description="保留狀態提示，減少進場和持續動畫。"
         [checked]="store.draft().appearance.reducedMotion"
@@ -27,13 +34,6 @@ const pixels = (values: number[]) =>
       />
     </nx-setting-group>
     <nx-setting-group class="appearance-reading" heading="閱讀與版面">
-      <nx-setting-row
-        label="對話字級"
-        description="對話正文與訊息輸入使用相同字級。"
-        [options]="fontSizes"
-        [value]="'' + store.draft().readingFontSize"
-        (valueChange)="store.update('readingFontSize', +$event)"
-      />
       <nx-setting-row
         label="正文行距"
         description="為長篇內容保留清楚的行間空間。"
@@ -80,7 +80,11 @@ export class AppearanceTab {
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  readonly fontSizes = pixels([12, 13, 14, 15, 16, 17, 18, 20, 22, 24]);
+  // 範圍與伺服器的 UpdatePreferences.ValidTextScale 一致。
+  readonly textScales = [100, 110, 120, 130].map((scale) => ({
+    value: String(scale),
+    label: scale === 100 ? '標準' : `${scale}%`,
+  }));
   readonly lineHeights = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((ratio) => ({
     value: String(ratio),
     label: `${ratio} 倍`,

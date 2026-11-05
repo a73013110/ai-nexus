@@ -26,26 +26,26 @@ test("personal settings preview, cancel, save and reload account preferences", a
   await page.locator(".reading-preview").scrollIntoViewIfNeeded();
   await settleEntrance(page);
   await chooseSelect(page, "主題", "深色");
-  await chooseSelect(page, "對話字級", "20 px");
+  await chooseSelect(page, "文字大小", "120%");
   await expect(page.locator(".reading-preview p")).toHaveCSS(
     "font-size",
-    "20px",
+    "18px",
   );
-  expect(fixture.settings.readingFontSize).toBe(15);
+  expect(fixture.preferences.textScale).toBe(100);
   await page.getByRole("button", { name: "還原", exact: true }).click();
   await expect(page.locator(".reading-preview p")).toHaveCSS(
     "font-size",
     "15px",
   );
   await chooseSelect(page, "主題", "深色");
-  await chooseSelect(page, "對話字級", "20 px");
+  await chooseSelect(page, "文字大小", "120%");
   await page.getByRole("button", { name: "儲存變更" }).click();
   await expect(
     page
       .getByRole("dialog", { name: "個人設定", exact: true })
       .getByRole("status"),
   ).toContainText("已儲存");
-  expect(fixture.settings.readingFontSize).toBe(20);
+  expect(fixture.preferences.textScale).toBe(120);
   const settings = page.getByRole("dialog", { name: "個人設定", exact: true });
   await settings.locator(".settings-body").evaluate((element) => {
     element.scrollTop = element.scrollHeight;
@@ -65,7 +65,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
   await openSettings(page);
   await expect(page.locator(".reading-preview p")).toHaveCSS(
     "font-size",
-    "20px",
+    "18px",
   );
   await page.getByRole("button", { name: "對話", exact: true }).click();
   await page.getByRole("switch", { name: "按 Enter 送出" }).click();
@@ -118,7 +118,7 @@ test("custom dropdown supports keyboard, light dismissal and mobile layout", asy
   await expect(theme).toHaveAttribute("aria-expanded", "false");
   await page.setViewportSize({ width: 375, height: 812 });
   await expectCompactSurfaces(page.locator(".settings-layout"));
-  await chooseSelect(page, "對話字級", "18 px");
+  await chooseSelect(page, "文字大小", "130%");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -132,11 +132,9 @@ test("custom dropdown supports keyboard, light dismissal and mobile layout", asy
   ).toBeVisible();
 });
 
-test("每個設定分類共用緊湊卡片，閱讀偏好不放大操作介面", async ({ page }) => {
+test("每個設定分類共用緊湊卡片，最大文字仍不超出畫面", async ({ page }) => {
   const fixture = new ApiFixture();
-  fixture.settings.readingFontSize = 20;
   await fixture.attach(page);
-  await page.goto("/settings");
   const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
   const sections = [
     "外觀與閱讀",
@@ -147,25 +145,34 @@ test("每個設定分類共用緊湊卡片，閱讀偏好不放大操作介面",
     "使用狀況",
     "鍵盤快捷鍵",
   ];
-  for (const width of [1440, 375]) {
-    await page.setViewportSize({ width, height: width === 375 ? 812 : 1000 });
-    for (const section of sections) {
-      await dialog.getByRole("button", { name: section, exact: true }).click();
-      await expect(
-        dialog.getByRole("heading", { name: section, exact: true }),
-      ).toBeVisible();
-      await expectCompactSurfaces(dialog.locator(".settings-layout"));
-      await expect(dialog.locator(".settings-page-header h1")).toHaveCSS(
-        "font-size",
-        "24px",
-      );
-      await expectViewportContained(page);
-      await settleEntrance(page);
+  // 標準字級檢查緊湊尺度；130% 時整個介面等比例放大，只要求不超出畫面。
+  for (const scale of [100, 130]) {
+    fixture.preferences.textScale = scale;
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto("/settings");
+    for (const width of [1440, 375]) {
+      await page.setViewportSize({ width, height: width === 375 ? 812 : 1000 });
+      for (const section of sections) {
+        await dialog
+          .getByRole("button", { name: section, exact: true })
+          .click();
+        await expect(
+          dialog.getByRole("heading", { name: section, exact: true }),
+        ).toBeVisible();
+        if (scale === 100)
+          await expectCompactSurfaces(dialog.locator(".settings-layout"));
+        await expect(dialog.locator(".settings-page-header h1")).toHaveCSS(
+          "font-size",
+          scale === 100 ? "24px" : "31.2px",
+        );
+        await expectViewportContained(page);
+        await settleEntrance(page);
+      }
     }
   }
 });
 
-test("settings stay over the current conversation, preserve scroll and draft, and support 12px with line height one", async ({
+test("settings stay over the current conversation, preserve scroll and draft, and support the largest text size with line height one", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -189,7 +196,7 @@ test("settings stay over the current conversation, preserve scroll and draft, an
     url = page.url();
   const dialog = await openSettings(page);
   expect(page.url()).toBe(url);
-  await chooseSelect(page, "對話字級", "12 px");
+  await chooseSelect(page, "文字大小", "130%");
   await chooseSelect(page, "正文行距", "1 倍");
   await dialog.getByRole("button", { name: "儲存變更", exact: true }).click();
   await expect(dialog.getByRole("status")).toContainText("已儲存");
@@ -199,7 +206,7 @@ test("settings stay over the current conversation, preserve scroll and draft, an
   expect(fixture.posts).toBe(1);
   await expect(page.locator(".message:not(.user)")).toHaveCSS(
     "font-size",
-    "12px",
+    "19.5px",
   );
   // Font changes naturally alter document height; a plain open/close must preserve the resulting position exactly.
   const afterFont = await viewport.evaluate((el) => el.scrollTop);

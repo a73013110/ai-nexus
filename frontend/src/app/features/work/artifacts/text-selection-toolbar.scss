@@ -12,7 +12,7 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
-  max-width: calc(100vw - 24px);
+  max-width: calc(100vw - 1.5rem);
   animation: panel-arrive var(--motion-fast) var(--ease);
 }
 .paragraph-float > button {

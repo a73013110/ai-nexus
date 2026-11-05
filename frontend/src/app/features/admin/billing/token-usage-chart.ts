@@ -141,7 +141,7 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
     }
     .token-controls nx-select:first-child {
       flex: 1;
-      min-width: 180px;
+      min-width: 11.25rem;
     }
     .token-totals {
       display: flex;
@@ -172,8 +172,8 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
     meter {
       display: block;
       width: 100%;
-      min-width: 60px;
-      height: 4px;
+      min-width: 3.75rem;
+      height: 0.25rem;
       margin-top: 0.4rem;
     }
   `,

@@ -18,7 +18,7 @@
 :host(.is-tile) {
   flex-direction: column;
   justify-content: center;
-  gap: 5px;
+  gap: 0.3125rem;
 }
 :host(.is-icon) {
   justify-content: center;
@@ -67,7 +67,7 @@
 :host(.is-tile) .entry-external {
   position: absolute;
   top: var(--p-space-1);
-  left: calc(50% + 8px);
+  left: calc(50% + var(--p-space-2));
 }
 :host(.is-row) .entry-external {
   margin-left: auto;

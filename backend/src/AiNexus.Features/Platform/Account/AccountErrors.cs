@@ -4,7 +4,7 @@ namespace AiNexus.Features.Platform.Account;
 
 internal static class AccountErrors
 {
-    public static readonly Error InvalidTheme = Error.Invalid("invalid_theme");
+    public static readonly Error InvalidAppearance = Error.Invalid("invalid_appearance");
     public static readonly Error InvalidModel = Error.Invalid("invalid_model");
     public static readonly Error ModelNotAllowed = Error.Invalid("model_not_allowed");
     /// <summary>步升驗證碼要寄到已驗證的信箱；沒有時只能用密碼。</summary>

@@ -110,11 +110,11 @@ const MAX_TEXT = 64000;
       height: 2.5rem;
     }
     .source-skeleton .is-text {
-      height: 240px;
+      height: 15rem;
     }
     textarea {
       resize: vertical;
-      min-height: 240px;
+      min-height: 15rem;
       font-family: var(--font-code);
       font-size: var(--text-body);
       line-height: var(--line-reading);

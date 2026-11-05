@@ -6,7 +6,7 @@
 // 兩欄（分類＋內容）用固定高度：換分頁時對話框不跟著內容長短縮放，儲存列也一直在底緣。
 // 標題與關閉鈕由 SettingsPage 自己提供。
 .platform-dialog.settings-dialog {
-  height: min(760px, var(--dialog-max-height));
+  height: min(47.5rem, var(--dialog-max-height));
 }
 @include bp.below(phone) {
   .settings-dialog {

@@ -83,7 +83,7 @@ describe('api client reads', () => {
     expect(fetch).toHaveBeenCalledOnce();
 
     await api.put('/api/v1/preferences', {
-      body: { theme: 'system', reducedMotion: false, defaultModelId: null },
+      body: { theme: 'system', reducedMotion: false, defaultModelId: null, textScale: 100 },
     });
     await api.reference('/api/v1/models');
     expect(fetch).toHaveBeenCalledTimes(3);

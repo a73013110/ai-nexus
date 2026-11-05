@@ -45,7 +45,7 @@ iframe {
   position: absolute;
   left: var(--p-space-3);
   bottom: var(--p-space-3);
-  padding: 4px 10px;
+  padding: var(--p-space-1) 0.625rem;
   border: 1px solid var(--line);
   border-radius: var(--radius-full);
   background: var(--surface);

@@ -4,11 +4,11 @@
 h2 {
   font-size: var(--p-font-2xl);
   font-weight: 600;
-  margin: 0 0 8px;
+  margin: 0 0 var(--p-space-2);
 }
 .login-description {
   color: var(--secondary);
-  margin: 0 0 var(--login-space, 24px);
+  margin: 0 0 var(--login-space, var(--p-space-6));
   font-size: var(--text-ui);
 }
 .identity-list {
@@ -98,6 +98,6 @@ h2 {
 }
 .identity-back {
   width: 100%;
-  min-height: 46px;
-  margin-top: var(--login-space, 24px);
+  min-height: 2.875rem;
+  margin-top: var(--login-space, var(--p-space-6));
 }

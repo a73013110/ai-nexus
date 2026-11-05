@@ -26,7 +26,7 @@ function deferred<T>() {
 const me = (features: string[]) => ({
   id: 'u1',
   activeRunId: null,
-  preferences: { theme: 'system', reducedMotion: false, defaultModelId: 'b' },
+  preferences: { theme: 'system', reducedMotion: false, defaultModelId: 'b', textScale: 100 },
   access: { features: features.map((id) => ({ id, name: id })) },
 });
 const catalog = {
