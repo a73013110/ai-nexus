@@ -1,9 +1,5 @@
 @use 'breakpoints' as bp;
 
-:host {
-  display: grid;
-  gap: var(--p-space-6);
-}
 .design-swatches {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

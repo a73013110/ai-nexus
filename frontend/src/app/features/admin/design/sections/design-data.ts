@@ -115,10 +115,6 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
-    :host {
-      display: grid;
-      gap: var(--p-space-6);
-    }
     .design-data-workspace nx-view-switch {
       margin-bottom: 0;
     }

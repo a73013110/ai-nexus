@@ -1,17 +1,14 @@
 @use 'breakpoints' as bp;
 
-// 側欄索引：分組標題對齊側欄的標籤欄，選取 chip 只有一個，滑到目前位置的區段。
+// 側欄索引：目前分類的標題對齊側欄的標籤欄，選取 chip 只有一個，滑到目前位置的區段。
 .design-index {
   padding-bottom: var(--p-space-2);
   h2 {
-    margin: var(--p-space-3) 0 var(--p-space-1);
+    margin: var(--p-space-1) 0;
     padding-inline: var(--p-space-2);
     color: var(--muted);
     font-size: var(--text-caption);
     font-weight: 500;
-  }
-  h2:first-child {
-    margin-top: var(--p-space-1);
   }
   ul {
     position: relative;
@@ -65,29 +62,27 @@
 .page-actions nx-view-switch {
   margin: 0;
 }
-.design-preview {
+// 欄寬不隨頁籤列撐開：手機上頁籤列自己橫向捲動，預覽不跟著超出畫面。
+.design-workbench {
   display: grid;
-  gap: var(--p-space-8);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--p-space-4);
+}
+.design-preview {
   padding: var(--p-space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-surface);
   background: var(--canvas);
   color: var(--ink);
 }
-.design-preview > section {
+// 分類元件（nx-design-foundations 等）的區段版面統一在這裡；欄寬不被不換行的範例撐開。
+.design-preview > * {
   display: grid;
-  gap: var(--p-space-4);
-}
-.design-preview > section > h2 {
-  margin: 0;
-  padding-bottom: var(--p-space-2);
-  border-bottom: 1px solid var(--line);
-  font-size: var(--p-font-lg);
-  font-weight: 600;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--p-space-6);
 }
 @include bp.below(phone) {
   .design-preview {
     padding: var(--p-space-3);
-    gap: var(--p-space-6);
   }
 }

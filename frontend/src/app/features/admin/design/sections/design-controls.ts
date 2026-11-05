@@ -47,10 +47,6 @@ import { DesignSamples } from './design-samples';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
-    :host {
-      display: grid;
-      gap: var(--p-space-6);
-    }
     .design-buttons {
       display: flex;
       flex-wrap: wrap;

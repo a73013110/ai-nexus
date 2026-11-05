@@ -1,20 +1,18 @@
 <ng-template nxSidebarPanel>
   <nav class="design-index" aria-label="元件索引">
-    @for (group of index; track group.name) {
-      <h2>{{ group.name }}</h2>
-      <ul nxSlidingIndicator='[aria-current="true"]'>
-        @for (section of group.sections; track section.id) {
-          <li>
-            <a
-              [href]="'#' + section.id"
-              [attr.aria-current]="current() === section.id ? 'true' : null"
-              (click)="go($event, section.id)"
-              >{{ section.name }}</a
-            >
-          </li>
-        }
-      </ul>
-    }
+    <h2>{{ groupLabel() }}</h2>
+    <ul nxSlidingIndicator='[aria-current="true"]'>
+      @for (section of sections(); track section.id) {
+        <li>
+          <a
+            [href]="'#' + section.id"
+            [attr.aria-current]="current() === section.id ? 'true' : null"
+            (click)="go($event, section)"
+            >{{ section.title }}</a
+          >
+        </li>
+      }
+    </ul>
   </nav>
 </ng-template>
 <nx-feature-page
@@ -37,31 +35,69 @@
       ><button notice-actions type="button" (click)="load()">重新載入</button>
     </nx-notice>
   } @else if (session.has('design')) {
-    <div #preview class="design-preview" [attr.data-theme]="theme()">
-      <section aria-labelledby="design-foundations-title">
-        <h2 id="design-foundations-title">基礎</h2>
-        <nx-design-foundations (exportTokens)="exportTokens()" />
-      </section>
-      <section aria-labelledby="design-controls-title">
-        <h2 id="design-controls-title">操作與選取</h2>
-        <nx-design-controls />
-      </section>
-      <section aria-labelledby="design-forms-title">
-        <h2 id="design-forms-title">表單</h2>
-        <nx-design-forms />
-      </section>
-      <section aria-labelledby="design-feedback-title">
-        <h2 id="design-feedback-title">回饋</h2>
-        <nx-design-feedback />
-      </section>
-      <section aria-labelledby="design-data-title">
-        <h2 id="design-data-title">資料與內容</h2>
-        <nx-design-data [theme]="theme()" />
-      </section>
-      <section aria-labelledby="design-charts-title">
-        <h2 id="design-charts-title">資料視覺化</h2>
-        <nx-design-charts />
-      </section>
+    <div class="design-workbench">
+      <nx-tabs
+        #tabs
+        label="範例分類"
+        [items]="groups"
+        [value]="group()"
+        (valueChange)="select($event)"
+      />
+      <!-- 只渲染目前分類；每類各自一個延遲載入的 chunk，切換時才下載。 -->
+      <div
+        #preview
+        class="design-preview"
+        role="tabpanel"
+        [id]="tabs.panelId(group())"
+        [attr.aria-labelledby]="tabs.tabId(group())"
+        [attr.data-theme]="theme()"
+        [nxViewMotion]="group()"
+      >
+        @switch (group()) {
+          @case ('foundations') {
+            @defer (on immediate) {
+              <nx-design-foundations (exportTokens)="exportTokens()" />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+          @case ('controls') {
+            @defer (on immediate) {
+              <nx-design-controls />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+          @case ('forms') {
+            @defer (on immediate) {
+              <nx-design-forms />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+          @case ('feedback') {
+            @defer (on immediate) {
+              <nx-design-feedback />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+          @case ('data') {
+            @defer (on immediate) {
+              <nx-design-data [theme]="theme()" />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+          @case ('charts') {
+            @defer (on immediate) {
+              <nx-design-charts />
+            } @placeholder {
+              <p role="status">正在載入範例…</p>
+            }
+          }
+        }
+      </div>
     </div>
   }
 </nx-feature-page>

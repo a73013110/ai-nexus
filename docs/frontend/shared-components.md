@@ -4,7 +4,7 @@
 
 ## 先找有沒有
 
-- 索引是 `/admin/design` 的側欄（[`design-page.ts`](../../frontend/src/app/features/admin/design/design-page.ts) 的 `INDEX`）；原始碼在 `frontend/src/app/shared/ui/`。
+- 索引是 `/admin/design`：頁籤分類（[`design-page.ts`](../../frontend/src/app/features/admin/design/design-page.ts) 的 `GROUPS`），側欄列出該類範例；原始碼在 `frontend/src/app/shared/ui/`。
 - 依賴某個模組 API 的共用元件放在該模組，例如選人的 [`person-picker.ts`](../../frontend/src/app/features/work/collaboration/person-picker.ts)。
 
 ## 什麼時候抽
@@ -29,7 +29,7 @@
 
 ## 完成的條件
 
-- `/admin/design` 有範例：一個 `DesignSection`，涵蓋空、載入、停用、錯誤等狀態；資料用本機假資料與虛構姓名，不呼叫 API。
+- `/admin/design` 有範例：一個 `DesignSection`，放進所屬分類的檔案（`sections/design-<分類>.ts`），涵蓋空、載入、停用、錯誤等狀態；資料用本機假資料與虛構姓名，不呼叫 API。區段渲染後自行登記到側欄索引，不另維護清單。
 - 有 spec 涵蓋鍵盤與無障礙名稱（combobox、listbox、option 等角色）。
 - 是表單控制項時，加進 `frontend/eslint.config.js` 的 `label-has-associated-control` 清單。
 - [表單](forms.md) 或 [共用介面模式](ui-patterns.md) 補一句何時用它。

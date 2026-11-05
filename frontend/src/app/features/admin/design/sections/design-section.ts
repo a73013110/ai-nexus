@@ -1,9 +1,18 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  ElementRef,
+  inject,
+  input,
+} from '@angular/core';
+import { DesignIndex } from './design-index';
 
 /**
  * 元件工作台的一筆：標題列（名稱、一行用途、來源元件），
- * 與一個有框的舞台，舞台中放即時範例。以 `[design-notes]` 投影的說明放在舞台下方，
- * 頁面的索引連結到 `id`。
+ * 與一個有框的舞台，舞台中放即時範例。以 `[design-notes]` 投影的說明放在舞台下方。
+ * 渲染後以 `id`＋`title` 登記到 `DesignIndex`，側欄索引因此不必另外維護。
  */
 @Component({
   selector: 'nx-design-section',
@@ -76,6 +85,14 @@ export class DesignSection {
   readonly api = input('');
   /** 範例每行一個，而不是並排換行。 */
   readonly stacked = input(false);
+
+  constructor() {
+    const index = inject(DesignIndex);
+    const element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+    // 渲染後才登記：此時已接上文件，索引才能依文件位置排序。
+    afterNextRender(() => index.add({ id: this.id(), title: this.title(), element }));
+    inject(DestroyRef).onDestroy(() => index.remove(element));
+  }
 }
 
 /** 舞台內有標籤的範例：上方是變體名稱，下方是即時元件。 */

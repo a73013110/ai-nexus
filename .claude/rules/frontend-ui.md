@@ -26,6 +26,6 @@ paths:
 
 ## 共用元件（[共用元件](../../docs/frontend/shared-components.md)）
 
-- 寫 UI 前先看 `/admin/design` 的索引（`frontend/src/app/features/admin/design/design-page.ts`）與 `frontend/src/app/shared/ui/`，有就用。
+- 寫 UI 前先看 `/admin/design`（依頁籤分類，側欄列出該類範例）與 `frontend/src/app/shared/ui/`，有就用。
 - 正要寫的選擇器（選人、選部門、選檔案…）或列樣式在別處已有類似的：抽成共用元件，全站搜尋既有用法一次換完，刪掉舊樣式，e2e 選取器跟著改。
 - 新共用元件同一次要有：`/admin/design` 範例（本機假資料、虛構姓名）、spec、文件一句用法；表單控制項加進 `frontend/eslint.config.js` 的 label 控制項清單。

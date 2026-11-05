@@ -40,9 +40,9 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
+    /* 區段直接排進操作與選取的版面，不另成一層。 */
     :host {
-      display: grid;
-      gap: var(--p-space-6);
+      display: contents;
     }
     ul {
       display: grid;

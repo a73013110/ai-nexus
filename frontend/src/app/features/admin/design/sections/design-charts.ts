@@ -54,10 +54,6 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
-    :host {
-      display: grid;
-      gap: var(--p-space-6);
-    }
     nx-design-example {
       flex: 1 1 14rem;
     }
