@@ -420,6 +420,8 @@ test("island rows keep one height, with or without an action, so every row lines
   await page.getByRole("button", { name: "緊急警告", exact: true }).click();
   const rows = page.locator("#design-island .island-item");
   await expect(rows).toHaveCount(2);
+  // 進場時整個島從 scale(0.6) 放大：外框位置跟著縮放，下面加回的內距與行高卻是未縮放的值，要等動畫結束再量。
+  await settleEntrance(page);
   const layout = await page
     .locator("#design-island nx-island")
     .evaluate((island) => {
