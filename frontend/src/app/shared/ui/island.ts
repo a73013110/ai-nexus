@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Icon } from './icon';
-import { InferenceSignal } from './inference-signal';
+import { AiMark } from './ai-mark';
 import { IslandService, type IslandItem } from './island-service';
 import { IssueCode } from './issue-code';
 import { morphSize } from './morph-size';
@@ -28,7 +28,7 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
  */
 @Component({
   selector: 'nx-island',
-  imports: [Icon, InferenceSignal, IssueCode, NgTemplateOutlet, RouterLink],
+  imports: [AiMark, Icon, IssueCode, NgTemplateOutlet, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './island.scss',
   host: { '[attr.data-mode]': 'mode()', '(keydown.escape)': 'escape($event)' },
@@ -127,7 +127,7 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
     }
     <ng-template #glyph let-item>
       @if (item.tone === 'live') {
-        <nx-inference-signal class="island-glyph" [active]="true" [subtle]="true" />
+        <nx-ai-mark class="island-glyph" state="working" />
       } @else {
         <nx-icon class="island-glyph" [name]="item.icon" />
       }

@@ -7,13 +7,9 @@
   [docked]="true"
   [busy]="chat.busy()"
 >
-  <span
-    floating-mark
-    class="ai-orb assistant-mark"
-    aria-hidden="true"
-    [attr.data-state]="chat.busy() ? 'busy' : null"
-    >N</span
-  >
+  <span floating-mark class="ai-orb assistant-mark" [attr.data-state]="chat.busy() ? 'busy' : null"
+    ><nx-ai-mark [state]="chat.busy() ? 'working' : 'idle'"
+  /></span>
   @if (page(); as name) {
     <span floating-meta class="assistant-scope" [title]="name">{{ name }}</span>
   }
@@ -66,7 +62,7 @@
           <p class="prompt-bubble">{{ turn.question }}</p>
           <div class="assistant-reply">
             <header class="message-heading">
-              <span class="role-mark" aria-hidden="true">N</span><strong>AI Nexus</strong>
+              <span class="role-mark"><nx-ai-mark /></span><strong>AI Nexus</strong>
               @if (turn.model) {
                 <span class="message-model">{{ turn.model }}</span>
               }
@@ -230,7 +226,9 @@
   @let state = island();
   <!-- 平常只有圓鈕；回答中、剛答完，或指標／鍵盤停在島上時才露出文字。 -->
   <span floating-island class="assistant-island" [attr.data-state]="state.state">
-    <span class="ai-orb" aria-hidden="true" [attr.data-state]="state.state">N</span>
+    <span class="ai-orb" [attr.data-state]="state.state"
+      ><nx-ai-mark [state]="state.state === 'busy' ? 'working' : 'idle'"
+    /></span>
     @if (state.state === 'preview') {
       <span class="assistant-island-text assistant-island-copy"
         ><strong>已回答</strong><span>{{ state.text }}</span></span

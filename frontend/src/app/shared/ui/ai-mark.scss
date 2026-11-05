@@ -1,0 +1,100 @@
+:host {
+  display: inline-block;
+  flex: none;
+  width: var(--icon-size, var(--icon-xl));
+  height: var(--icon-size, var(--icon-xl));
+  color: var(--activity);
+  vertical-align: middle;
+}
+svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+circle {
+  fill: currentColor;
+}
+.ai-mark-edges {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.45;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+// 一輪（--motion-mark）：停 → 沿邊走到下一頂點 → 收成一排、連線淡出 → 由左到右依序跳起 → 展回三角。
+// 位移量由元件依幾何算好放在 --hop／--row／--order。減少動態時（motion.scss）動畫直接跳到終點，
+// 每個點都停在頂點上，仍是完整的三角。
+:host([data-state='working']) {
+  .ai-mark-node {
+    animation: mark-travel var(--motion-mark) ease-in-out infinite;
+  }
+  circle {
+    animation: mark-hop var(--motion-mark) ease-in-out infinite;
+    animation-delay: calc(var(--order) * var(--motion-mark) * 0.06);
+  }
+  .ai-mark-edges {
+    animation: mark-edges var(--motion-mark) ease-in-out infinite;
+  }
+}
+:host([data-state='idle']) .ai-mark-node {
+  animation: mark-drift calc(var(--motion-mark) * 4) ease-in-out infinite;
+}
+:host([data-state='waiting']) svg {
+  animation: mark-breathe var(--motion-waiting) ease-in-out infinite;
+}
+
+@keyframes mark-travel {
+  0%,
+  14% {
+    translate: 0 0;
+  }
+  32%,
+  40% {
+    translate: var(--hop);
+  }
+  52%,
+  90% {
+    translate: var(--row);
+  }
+  100% {
+    translate: var(--hop);
+  }
+}
+@keyframes mark-hop {
+  0%,
+  58%,
+  70%,
+  100% {
+    translate: 0 0;
+  }
+  64% {
+    translate: 0 -3.5px;
+  }
+}
+@keyframes mark-edges {
+  0%,
+  40%,
+  100% {
+    opacity: 1;
+  }
+  50%,
+  90% {
+    opacity: 0;
+  }
+}
+@keyframes mark-drift {
+  0%,
+  82% {
+    translate: 0 0;
+  }
+  100% {
+    translate: var(--hop);
+  }
+}
+@keyframes mark-breathe {
+  50% {
+    opacity: 0.4;
+  }
+}

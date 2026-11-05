@@ -10,6 +10,7 @@ import {
   type Signal,
 } from '@angular/core';
 import type { MessageDto } from '@core/api/schema';
+import { AiMark } from '@shared/ui/ai-mark';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
@@ -29,6 +30,7 @@ const idle: Signal<string> = signal('').asReadonly();
 @Component({
   selector: 'nx-chat-message',
   imports: [
+    AiMark,
     Icon,
     Notice,
     MessageContent,
@@ -56,7 +58,7 @@ const idle: Signal<string> = signal('').asReadonly();
     <!-- 提問的泡泡已經表明是誰；只有回答標出作者與模型。 -->
     @if (message().role === 'assistant') {
       <header class="message-heading">
-        <span class="role-mark" aria-hidden="true">N</span><strong>AI Nexus</strong>
+        <span class="role-mark"><nx-ai-mark /></span><strong>AI Nexus</strong>
         @if (showModelNames() && message().modelId) {
           <span class="message-model">{{ modelName(message()) }}</span>
         }

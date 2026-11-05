@@ -114,15 +114,15 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
     await expect(indicator.locator(".generation-indicator")).not.toHaveClass(
       /is-waiting/,
     );
-    // Each of the nine matrix dots runs the wave, and a light band crosses the title.
-    expect(await activeLoops(indicator)).toBe(10);
-    // The island's signal runs two pulses, and the same band crosses its label.
-    expect(await activeLoops(header)).toBe(3);
+    // AiMark 工作中：三個點各自換位與跳起、連線淡出淡入（7 個迴圈），標題另有一道光帶。
+    expect(await activeLoops(indicator)).toBe(8);
+    // 島上是同一個標記，標籤也有同一道光帶。
+    expect(await activeLoops(header)).toBe(8);
     // The busy composer only lets a faint glint travel along its hairline.
     expect(await activeLoops(page.locator(".composer"))).toBe(1);
     await expect(page.locator("nx-island [role='status']")).toHaveCount(1);
     await expect(indicator.locator("[role='status']")).toHaveCount(0);
-    await expect(indicator.locator(".generation-matrix")).toHaveAttribute(
+    await expect(indicator.locator("nx-ai-mark")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -202,10 +202,8 @@ for (const preference of ["system", "personal"] as const) {
     await expect(indicator).toContainText("正在準備回答");
     expect(await activeLoops(indicator)).toBe(0);
     expect(await activeLoops(page.locator("nx-island .island"))).toBe(0);
-    await expect(indicator.locator(".generation-matrix i").first()).toHaveCSS(
-      "opacity",
-      "1",
-    );
+    // 迴圈跳到終點：連線完整顯示，三角不缺邊。
+    await expect(indicator.locator(".ai-mark-edges")).toHaveCSS("opacity", "1");
     await page.getByRole("button", { name: "停止生成", exact: true }).click();
     await expect(indicator).toHaveCount(0);
   });

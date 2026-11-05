@@ -203,10 +203,9 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect.poll(() => fixture.lastRequest?.reasoningEffort).toBe("high");
   await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
-  await expect(page.locator(".signal-flow").first()).toHaveCSS(
-    "animation-name",
-    "signal-transit",
-  );
+  await expect(
+    page.locator("nx-ai-mark[data-state='working'] .ai-mark-node").first(),
+  ).not.toHaveCSS("animation-name", "none");
   await settleEntrance(page);
 });
 

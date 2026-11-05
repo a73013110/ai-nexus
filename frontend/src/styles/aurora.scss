@@ -1,4 +1,4 @@
-// 助理的識別：藏青圓核＋青綠光環的圓鈕（.ai-orb）、回答中的流光文字（.ai-shimmer）。
+// 助理的識別：藏青圓核＋青綠光環的圓鈕（.ai-orb，內放白色 AiMark）、回答中的流光文字（.ai-shimmer）。
 // 顏色是主題權杖 --aurora-*（tokens.scss）；面板回答中的邊緣柔光在 FloatingPanel（data-busy）。
 // 放全域：島、面板標題共用。迴圈動畫遇到減少動態（motion.scss）會停在第一格。
 @property --aurora-angle {
@@ -18,9 +18,13 @@
   border-radius: 50%;
   background: radial-gradient(circle at 32% 26%, var(--aurora-3), var(--aurora-core) 70%);
   color: #fff;
-  font: 700 calc(var(--orb-size) * 0.4) / 1 var(--font-ui);
   box-shadow: 0 0 calc(var(--orb-size) * 0.3) color-mix(in srgb, var(--aurora-2) 30%, transparent);
   transition: box-shadow var(--motion) var(--ease);
+  // 圓鈕是品牌色底，標記改用白色（AiMark 預設是 --activity）。
+  > nx-ai-mark {
+    --icon-size: 60%;
+    color: inherit;
+  }
   // 光環：只留圓核外 1.5px 的一圈，青綠到藍慢慢轉。
   &::before {
     content: '';

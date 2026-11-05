@@ -5,29 +5,9 @@
   padding: var(--p-space-4) 0 var(--p-space-5);
   color: var(--secondary);
 }
-// A 3×3 dot matrix in ink (after the instrument displays of Teenage Engineering and Nothing):
-// a wave lifts the dots along the diagonal while the model prepares. Queued runs drop the wave
-// and breathe as one slow, dim grid, so waiting reads differently from working.
-.generation-matrix {
-  --dot: 0.3125rem;
-  display: grid;
-  grid-template-columns: repeat(3, var(--dot));
-  place-content: center;
-  gap: 0.1875rem;
-  flex: none;
-  width: var(--generation-indicator-size);
-  height: var(--generation-indicator-size);
-}
-.generation-matrix i {
-  width: var(--dot);
-  height: var(--dot);
-  border-radius: 50%;
-  background-color: var(--activity-rest);
-  animation: matrix-wave var(--motion-generation) var(--ease) infinite;
-  animation-delay: calc(var(--step) * 120ms);
-}
-.is-waiting .generation-matrix i {
-  animation: matrix-idle var(--motion-waiting) ease-in-out infinite;
+// 排隊與工作中由 AiMark 的狀態區分：排隊只呼吸，工作中才換位、跳動。
+.generation-mark {
+  --icon-size: var(--generation-indicator-size);
 }
 .generation-label {
   font-size: var(--text-label);
@@ -50,14 +30,10 @@
   margin-top: var(--p-space-1);
 }
 @media (prefers-reduced-motion: reduce) {
-  .generation-matrix i,
   .generation-title {
     animation: none !important;
   }
 }
-:host-context([data-reduced-motion='true']) {
-  .generation-matrix i,
-  .generation-title {
-    animation: none !important;
-  }
+:host-context([data-reduced-motion='true']) .generation-title {
+  animation: none !important;
 }

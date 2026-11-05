@@ -227,10 +227,10 @@ test("production controls support keyboard selection, disabled options and dialo
   await page.getByRole("button", { name: "播放狀態示範" }).click();
   expect(
     await page
-      .locator(".signal-flow")
+      .locator("nx-ai-mark[data-state='working'] .ai-mark-node")
       .first()
-      .evaluate((el) => getComputedStyle(el).animationName),
-  ).toBe("none");
+      .evaluate((el) => getComputedStyle(el).animationDuration),
+  ).toBe("0s");
   await expect(page.locator("nx-job-progress")).toContainText("處理完成");
   expect(fixture.posts).toBe(0);
 });

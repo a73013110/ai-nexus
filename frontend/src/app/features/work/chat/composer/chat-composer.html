@@ -15,7 +15,7 @@
     }
     @if (store.attachments.uploading()) {
       <div class="upload-status" role="status">
-        <nx-inference-signal [active]="true" />{{
+        <nx-ai-mark state="working" />{{
           store.attachments.processingLabel() || '正在上傳與讀取附件…'
         }}
       </div>

@@ -214,6 +214,8 @@
   --motion-signal: 1800ms;
   --motion-generation: 2100ms;
   --motion-waiting: 2800ms;
+  // AiMark 工作中的一輪：換位、收成一排、依序跳起、展回三角。
+  --motion-mark: 2600ms;
   --motion-stagger: 70ms;
   --motion-panel: 240ms;
   --motion-morph: 460ms;

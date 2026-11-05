@@ -130,7 +130,7 @@
 <nx-design-section
   id="design-progress"
   title="進度與生成"
-  api="JobProgress · InferenceSignal · GenerationIndicator"
+  api="JobProgress · AiMark · GenerationIndicator"
   description="進度只顯示伺服器的真實階段；未知總量用不定進度，不做假百分比。"
   [stacked]="true"
 >
@@ -151,13 +151,13 @@
     </button>
   </div>
   <nx-job-progress [job]="samples.demo()" />
+  <div class="design-row">
+    @for (mark of markStates; track mark.state) {
+      <span class="design-mark-state"><nx-ai-mark [state]="mark.state" />{{ mark.label }}</span>
+    }
+  </div>
   @if (generation(); as current) {
     <div class="design-row">
-      <span class="inference-status"
-        ><nx-inference-signal [active]="true" [subtle]="true" /><span>{{
-          current.label
-        }}</span></span
-      >
       <nx-generation-indicator
         [waiting]="current.phase === 'queued'"
         [label]="current.label"

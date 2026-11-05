@@ -21,6 +21,7 @@ import { isSubmitKey } from '@shared/browser/submit-key';
 import { uniqueId } from '@shared/browser/unique-id';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { StreamingAnswer } from '@shared/markdown/streaming-answer';
+import { AiMark } from '@shared/ui/ai-mark';
 import { FloatingPanel, type FloatingMode } from '@shared/ui/floating-panel';
 import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
@@ -46,6 +47,7 @@ const PREVIEW_MS = 2600;
 @Component({
   selector: 'nx-assistant-panel',
   imports: [
+    AiMark,
     Autosize,
     FloatingPanel,
     GenerationIndicator,

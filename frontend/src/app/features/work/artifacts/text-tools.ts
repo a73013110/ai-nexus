@@ -25,7 +25,7 @@ import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { Icon } from '@shared/ui/icon';
 import { PendingButton } from '@shared/ui/pending-button';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { InferenceSignal } from '@shared/ui/inference-signal';
+import { AiMark } from '@shared/ui/ai-mark';
 import { formatNumber } from '@shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
@@ -43,7 +43,7 @@ import { routeOf } from '@core/api/catalog';
     Icon,
     PendingButton,
     ViewSwitch,
-    InferenceSignal,
+    AiMark,
   ],
   providers: [ViewScope, CopyFeedback, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -147,7 +147,7 @@ import { routeOf } from '@core/api/catalog';
             }
             @if (generating.pending()) {
               <p class="upload-status" role="status">
-                <nx-inference-signal [active]="true" />模型正在處理選取段落…<button
+                <nx-ai-mark state="working" />模型正在處理選取段落…<button
                   class="quiet-button"
                   (click)="stop()"
                 >

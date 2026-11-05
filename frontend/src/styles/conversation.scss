@@ -144,8 +144,12 @@
   border-radius: var(--radius-icon);
   background: var(--surface);
   color: var(--ink);
-  font: 700 var(--p-font-xs) / 1 var(--font-ui);
   box-shadow: var(--shadow);
+  // 作者標記是身分不是活動：用墨色、保持靜止；生成中的動態交給 GenerationIndicator 與島。
+  > nx-ai-mark {
+    --icon-size: var(--icon-md);
+    color: inherit;
+  }
 }
 .message-model {
   min-width: 0;

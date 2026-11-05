@@ -2,7 +2,7 @@ import { Notice } from '@shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { JobDto } from '@core/api/schema';
 import { isActive } from '@core/api/generation-status';
-import { InferenceSignal } from '@shared/ui/inference-signal';
+import { AiMark } from '@shared/ui/ai-mark';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { jobFailure, jobStatus } from './job-kind';
 
@@ -12,14 +12,14 @@ import { jobFailure, jobStatus } from './job-kind';
  */
 @Component({
   selector: 'nx-job-progress',
-  imports: [Notice, InferenceSignal, StatusBadge],
+  imports: [AiMark, Notice, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './job-progress.scss',
   template: `<div class="job-progress" [attr.data-status]="job().status">
     <div class="job-stage">
       <span class="job-stage-label">
         @if (active()) {
-          <nx-inference-signal [active]="true" />
+          <nx-ai-mark state="working" />
         }
         <span>{{ job().stage }}</span></span
       >

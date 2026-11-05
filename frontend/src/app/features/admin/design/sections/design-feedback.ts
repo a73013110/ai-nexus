@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { generationStatus } from '@core/api/generation-status';
+import { AiMark, type AiMarkState } from '@shared/ui/ai-mark';
 import { CountBadge, type BadgeTone } from '@shared/ui/count-badge';
 import { EmptyState } from '@shared/ui/empty-state';
 import { FloatingPanel } from '@shared/ui/floating-panel';
 import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
-import { InferenceSignal } from '@shared/ui/inference-signal';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Island } from '@shared/ui/island';
 import { IslandService, type IslandItem } from '@shared/ui/island-service';
@@ -106,6 +106,7 @@ function designAnswer(signal: AbortSignal) {
 @Component({
   selector: 'nx-design-feedback',
   imports: [
+    AiMark,
     AssistantPanel,
     CountBadge,
     DesignExample,
@@ -114,7 +115,6 @@ function designAnswer(signal: AbortSignal) {
     FloatingPanel,
     GenerationIndicator,
     Icon,
-    InferenceSignal,
     InfoPopover,
     JobProgress,
     LiveDot,
@@ -134,6 +134,12 @@ export class DesignFeedback {
   private readonly scope = inject(ViewScope);
   private burst = 0;
   readonly states = jobStates;
+  readonly markStates: { state: AiMarkState; label: string }[] = [
+    { state: 'rest', label: '靜止' },
+    { state: 'idle', label: '待命' },
+    { state: 'working', label: '工作中' },
+    { state: 'waiting', label: '排隊中' },
+  ];
   readonly generation = computed(() => generationStatus(this.samples.demo().status, false));
   /** 頁面開啟期間島會顯示所有已登記的內容，因此這裡只用本地範例。 */
   readonly islandItems = signal<IslandItem[]>([]);

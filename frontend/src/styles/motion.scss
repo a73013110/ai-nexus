@@ -23,25 +23,6 @@
     transform: scaleX(0.9);
   }
 }
-// The generation matrix: each dot lifts in turn along the diagonal, so a wave crosses the grid.
-@keyframes matrix-wave {
-  0%,
-  60%,
-  100% {
-    background-color: var(--activity-rest);
-    transform: scale(0.78);
-  }
-  22% {
-    background-color: var(--activity);
-    transform: scale(1);
-  }
-}
-// Queued runs: the whole grid breathes together, slow and dim, so waiting never reads as work.
-@keyframes matrix-idle {
-  50% {
-    background-color: color-mix(in srgb, var(--activity) 38%, transparent);
-  }
-}
 // A light band crosses text or a hairline painted with a 300%-wide sheen (--activity-sheen).
 @keyframes sheen-pass {
   from {

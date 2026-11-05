@@ -22,7 +22,7 @@ import { Autosize } from '@shared/browser/autosize';
 import { isSubmitKey } from '@shared/browser/submit-key';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { Icon } from '@shared/ui/icon';
-import { InferenceSignal } from '@shared/ui/inference-signal';
+import { AiMark } from '@shared/ui/ai-mark';
 import { Island } from '@shared/ui/island';
 import { IslandService } from '@shared/ui/island-service';
 import { Notice } from '@shared/ui/notice';
@@ -70,7 +70,7 @@ const SUGGESTIONS = [
     FocusComposer,
     FormField,
     Icon,
-    InferenceSignal,
+    AiMark,
     KnowledgePicker,
     LibraryPicker,
     Island,

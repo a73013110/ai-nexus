@@ -10,7 +10,7 @@
 | 送出中 | 按鈕觸發的寫入、匯出、測試、重試 | 按鈕圖示換成轉圈並改字，擋重複送出 | `button[nxPending]`、`button[nxRefresh]` |
 | 長工作 | 有真實進度的工作 | 確定進度條，或不定進度加階段文字 | `JobProgress`、動態島 |
 
-生成與串流（`GenerationIndicator`、`InferenceSignal`、動態島）是另一套語彙，見 [動效](motion.md#生成與登入)。
+生成與串流（`GenerationIndicator`、`AiMark`、動態島）是另一套語彙，見 [動效](motion.md#生成與登入)。
 
 ## 讀取狀態從哪來
 

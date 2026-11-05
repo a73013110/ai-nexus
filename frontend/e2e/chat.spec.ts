@@ -639,10 +639,10 @@ test("signal motion respects reduced motion and Markdown export follows the visi
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("匯出測試");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
-  await expect(page.locator(".signal-flow").first()).toHaveCSS(
-    "animation-name",
-    "none",
-  );
+  // 減少動態時迴圈立刻跳到終點，標記停在完整的三角。
+  await expect(
+    page.locator("nx-ai-mark[data-state='working'] .ai-mark-node").first(),
+  ).toHaveCSS("animation-duration", "0s");
   await page.getByRole("button", { name: "對話操作", exact: true }).click();
   await expect(
     page.getByRole("menuitem", { name: "匯出 Markdown" }),

@@ -13,7 +13,7 @@
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens。
 - 材質、受光漸層、分層陰影與狀態光暈依 [質感](materials.md) 使用；不用多色相漸層、漸層文字、彩色發光、彩色側邊線與透視網格。低層次表面共用 `--surface-subtle`。
-- 模型活動（生成光點矩陣、`InferenceSignal`、串流游標、生成中的外框與轉圈）一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光。不用多彩漸層，避免「AI 炫光」的廉價感；完成與成功仍用 `--signal`／`--success`。
+- 模型活動只用一個圖形 `AiMark`，它與串流游標、生成中的外框與轉圈一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光，只有助理圓鈕放在品牌色底上。完成與成功仍用 `--signal`／`--success`。
 - 建議 chip（如對話起點）：透明底、1px `--control-line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 
