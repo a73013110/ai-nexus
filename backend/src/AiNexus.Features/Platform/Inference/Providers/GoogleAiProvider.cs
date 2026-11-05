@@ -2,6 +2,7 @@ using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 
@@ -82,12 +83,17 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
             generation["thinkingConfig"] = new { thinkingLevel = parameters.ReasoningEffort };
         }
 
-        request.Content = JsonContent.Create(new
+        var body = new Dictionary<string, object?>
         {
-            contents = messages.Where(x => x.Role != "system").Select(x => new { role = x.Role == "assistant" ? "model" : "user", parts = Parts(x) }),
-            systemInstruction = new { parts = new[] { new { text = parameters.SystemPrompt } } },
-            generationConfig = generation
-        });
+            ["contents"] = Contents(messages),
+            ["systemInstruction"] = new { parts = new[] { new { text = parameters.SystemPrompt } } },
+            ["generationConfig"] = generation
+        };
+        if (parameters.Tools is { Count: > 0 } tools)
+        {
+            body["tools"] = new[] { new { functionDeclarations = tools.Select(x => new { name = x.Name, description = x.Description, parametersJsonSchema = x.Parameters }) } };
+        }
+        request.Content = JsonContent.Create(body);
 
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         RequireSuccess(response);
@@ -131,6 +137,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                     }
 
                     var text = new StringBuilder();
+                    List<InferenceToolCall>? calls = null;
                     if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
                     {
                         var candidate = candidates[0];
@@ -138,7 +145,15 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                         {
                             foreach (var part in parts.EnumerateArray())
                             {
-                                if (!(part.TryGetProperty("thought", out var thought) && thought.GetBoolean()) && part.TryGetProperty("text", out var value))
+                                if (part.TryGetProperty("functionCall", out var call))
+                                {
+                                    var arguments = call.TryGetProperty("args", out var args) && args.ValueKind == JsonValueKind.Object
+                                        ? JsonNode.Parse(args.GetRawText())!.AsObject()
+                                        : [];
+                                    var signature = part.TryGetProperty("thoughtSignature", out var mark) ? mark.GetString() : null;
+                                    (calls ??= []).Add(new(call.GetProperty("name").GetString() ?? "", arguments, signature));
+                                }
+                                else if (!(part.TryGetProperty("thought", out var thought) && thought.GetBoolean()) && part.TryGetProperty("text", out var value))
                                 {
                                     text.Append(value.GetString());
                                 }
@@ -156,9 +171,9 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                         }
                     }
 
-                    if (text.Length > 0 || hasUsage)
+                    if (text.Length > 0 || hasUsage || calls is not null)
                     {
-                        yield return new InferenceChunk(text.ToString(), false, input, output, null, cached, reasoning);
+                        yield return new InferenceChunk(text.ToString(), false, input, output, null, cached, reasoning, calls);
                     }
                 }
 
@@ -184,8 +199,39 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         yield return new InferenceChunk("", true, input, output, finishReason, cached, reasoning);
     }
 
+    /// <summary>
+    /// Gemini 的 contents：system 另放，assistant 是 model；工具結果是 user 的 functionResponse，
+    /// 同一輪呼叫多個工具時結果要併成一則（與模型那一則的 functionCall 一一對應）。
+    /// </summary>
+    private static List<object> Contents(IReadOnlyList<InferenceMessage> messages)
+    {
+        var contents = new List<object>();
+        List<object>? responses = null;
+        foreach (var message in messages.Where(x => x.Role != "system"))
+        {
+            if (message.Role == "tool")
+            {
+                if (responses is null) contents.Add(new { role = "user", parts = responses = [] });
+                responses.Add(new { functionResponse = new { name = message.ToolName, response = new { content = message.Content } } });
+                continue;
+            }
+            responses = null;
+            contents.Add(new { role = message.Role == "assistant" ? "model" : "user", parts = Parts(message) });
+        }
+        return contents;
+    }
+
     private static IReadOnlyList<object> Parts(InferenceMessage message)
     {
+        if (message.ToolCalls is { Count: > 0 } calls)
+        {
+            List<object> requested = message.Content.Length > 0 ? [new { text = message.Content }] : [];
+            requested.AddRange(calls.Select(x => x.Signature is { } signature
+                ? (object)new { functionCall = new { name = x.Name, args = x.Arguments }, thoughtSignature = signature }
+                : new { functionCall = new { name = x.Name, args = x.Arguments } }));
+            return requested;
+        }
+
         var parts = new List<object>();
         foreach (var image in message.Images ?? [])
         {

@@ -9,6 +9,9 @@
 }
 .ui-floating {
   --island-height: 2.75rem;
+  --morph: var(--motion-morph) var(--ease-spring);
+  // 無邊框：一圈極淡的墨色描邊加多層柔影，像 macOS 的浮動視窗。
+  --floating-ring: 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
   position: fixed;
   inset: 0 auto auto 0;
   box-sizing: border-box;
@@ -16,43 +19,73 @@
   height: var(--floating-height);
   margin: 0;
   padding: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-surface);
+  border: 0;
+  border-radius: var(--radius-floating);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: var(--shadow-floating);
+  box-shadow: var(--floating-ring), var(--shadow-floating);
   overflow: clip;
   translate: var(--floating-x) var(--floating-y);
-  justify-content: flex-end;
-  align-items: flex-end;
+  justify-content: end;
+  align-items: end;
+  // 進場的 opacity、scale 放最前面：常駐的島剛出現時只留這兩項（見 FloatingPanel 的 `settling`）。
   transition:
-    translate var(--motion-morph) var(--ease-spring),
-    width var(--motion-morph) var(--ease-spring),
-    height var(--motion-morph) var(--ease-spring),
-    border-radius var(--motion-morph) var(--ease-spring),
     opacity var(--motion-enter) var(--ease),
-    scale var(--motion-enter) var(--ease-spring);
+    scale var(--motion-enter) var(--ease-spring),
+    translate var(--morph),
+    width var(--morph),
+    height var(--morph),
+    border-radius var(--morph);
   &:popover-open {
     display: flex;
   }
   &[data-side='start'] {
-    justify-content: flex-start;
+    justify-content: start;
+  }
+  // 常駐在頂端中央的島：面板與島對齊上緣中間，展開時從島往下長、縮小時往上收回。
+  &[data-dock] {
+    justify-content: center;
+    align-items: start;
   }
   &[data-gesture] {
     transition: none;
   }
+  // 內容在工作（例：助理回答中）：內緣泛起青綠到藍的柔光，呼吸只動 opacity，不重繪陰影。
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+      inset 0 0 0 1.5px color-mix(in srgb, var(--aurora-1) 60%, transparent),
+      inset 0 0 1.25rem color-mix(in srgb, var(--aurora-2) 22%, transparent),
+      inset 0 0 2.5rem color-mix(in srgb, var(--aurora-3) 14%, transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-enter) var(--ease);
+  }
+  &[data-busy]:not([data-mode='island'])::after {
+    animation: floating-breathe var(--motion-generation) var(--ease) infinite alternate;
+  }
   &[data-mode='full'] {
-    border-width: 0;
     border-radius: 0;
   }
-  // 島與 shared/ui/island 同一種膠囊：跟隨頁面主題的半透明表面、細邊與柔和陰影。
+  // 島：跟隨頁面主題的半透明膠囊，同樣的淡描邊與柔影。
   &[data-mode='island'] {
     border-radius: calc(var(--island-height) / 2);
-    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    background: color-mix(in srgb, var(--surface) 85%, transparent);
     backdrop-filter: blur(12px) saturate(1.4);
     &:has(:focus-visible) {
       outline: 2px solid var(--focus);
     }
+  }
+}
+@keyframes floating-breathe {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
   }
 }
 @starting-style {
@@ -84,49 +117,52 @@
   }
 }
 
-// 標題列是拖動把手，上緣中間一條短線提示可以拖。
+// 整列是拖動把手；標題與按鈕收在中間一顆與島同形的膠囊，展開時看起來就是島長大。
 .ui-floating-header {
-  position: relative;
   display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-4) var(--p-space-2) var(--p-space-2) var(--p-space-4);
+  justify-content: center;
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-1);
   cursor: grab;
   touch-action: none;
   user-select: none;
-  &::before {
-    content: '';
-    position: absolute;
-    top: var(--p-space-2);
-    left: calc(50% - 1rem);
-    width: 2rem;
-    height: 0.25rem;
-    border-radius: var(--radius-full);
-    background: var(--line);
-  }
   &:active {
     cursor: grabbing;
   }
   [data-mode='full'] & {
     cursor: default;
-    &::before {
-      content: none;
-    }
   }
 }
-.ui-floating-title {
+.ui-floating-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  box-sizing: border-box;
   min-width: 0;
+  max-width: 100%;
+  height: 2.25rem;
+  padding-inline: 0.25rem 0.125rem;
+  border-radius: var(--radius-full);
+  background: var(--surface-inset);
+}
+.ui-floating-title {
+  flex: none;
   margin: 0;
-  overflow: hidden;
+  // 沒有投影標記時標題打頭，補上與膠囊圓邊的距離。
+  &:first-child {
+    margin-inline-start: var(--p-space-2);
+  }
   font-size: var(--text-label);
   font-weight: 600;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .ui-floating-actions {
   display: flex;
-  margin-inline-start: auto;
   color: var(--muted);
+  --button-target: 2rem;
+  --icon-size: var(--icon-sm);
+  .icon-button {
+    border-radius: var(--radius-full);
+  }
 }
 .ui-floating-body {
   flex: 1;
@@ -175,7 +211,6 @@
   gap: var(--p-space-1);
   width: max-content;
   height: var(--island-height);
-  padding-inline-end: var(--p-space-1);
   font-size: var(--p-font-data);
   white-space: nowrap;
   opacity: 0;
@@ -184,13 +219,18 @@
     opacity: 1;
     transition: opacity var(--motion) var(--ease) calc(var(--motion-morph) * 0.35);
   }
+  // 常駐的島置中、往兩側長：內容貼著左緣，變寬時標記跟著左緣滑過去，不會先被裁掉。
+  [data-dock] > & {
+    inset-inline-start: 0;
+  }
 }
 .ui-floating-island-open {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
   height: 100%;
-  padding: 0 var(--p-space-3) 0 var(--p-space-2);
+  // 左右只留讓圓形標記貼齊膠囊的邊距；文字自己的留白由投影內容決定。
+  padding: 0 calc((var(--island-height) - 2rem) / 2);
   outline: none;
   &:hover:not(:disabled) {
     background: none;

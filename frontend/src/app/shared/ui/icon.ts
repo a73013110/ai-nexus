@@ -95,6 +95,7 @@ import {
   Clock,
   RotateCcw,
   Network,
+  Sparkles,
 } from 'lucide';
 
 // 語意名稱讓業務範本不依賴圖示供應商。
@@ -188,6 +189,7 @@ const icons: Record<string, IconNode> = {
   'expand-all': ChevronsUpDown,
   'collapse-all': ChevronsDownUp,
   clock: Clock,
+  suggestion: Sparkles,
 };
 /** `nx-icon` 不需功能套件即可繪製的名稱；API 的選單圖示不認得時會退回備用。 */
 export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(icons));

@@ -34,7 +34,7 @@ markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
     !env?.['streaming'] && label !== 'text' ? ` data-language="${escape(label)}"` : '';
   return `<div class="embed embed-code">${codeEmbedBar(label)}<pre class="embed-body"><code${deferred}>${escape(token.content)}</code></pre></div>`;
 };
-// 依據編號（頁內助理的「早退 2 天 [3]」）：只在呼叫端給了依據數量時才認，`[3](網址)` 仍是連結，
+// 依據編號（助理的「早退 2 天 [3]」）：只在呼叫端給了依據數量時才認，`[3](網址)` 仍是連結，
 // 超出數量的編號照原文顯示，不變成指向不存在依據的按鈕。點擊由 `MarkdownView` 以 `.markdown-cite` 委派。
 markdown.inline.ruler.before('link', 'citation', (state, silent) => {
   const citations = Number(state.env?.['citations'] ?? 0);

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using AiNexus.Features.Platform.Inference;
 
@@ -17,6 +18,12 @@ public sealed class TestProvider : IInferenceProvider
     public int MaxConcurrent;
     private readonly List<(int Calls, TaskCompletionSource Signal)> callWaiters = [];
     public IReadOnlyList<InferenceMessage> LastMessages { get; private set; } = [];
+
+    /// <summary>模型拿到工具時依序回傳的工具呼叫（每輪一組），用完後照常回答。</summary>
+    public ConcurrentQueue<InferenceToolCall[]> ToolCalls { get; } = new();
+
+    /// <summary>每次呼叫交給模型的工具名稱（沒有工具時是空的），依呼叫順序。</summary>
+    public ConcurrentQueue<string[]> OfferedTools { get; } = new();
 
     /// <summary>供應商被呼叫 <paramref name="calls"/> 次後即完成，讓測試不必輪詢 <see cref="Calls"/>。</summary>
     public Task WhenCalledAsync(int calls = 1)
@@ -47,9 +54,17 @@ public sealed class TestProvider : IInferenceProvider
         LastMessages = messages;
         LastParameters = parameters;
         LastModel = model;
+        OfferedTools.Enqueue([.. (parameters.Tools ?? []).Select(x => x.Name)]);
         try
         {
             if (Fail) throw new HttpRequestException("fixture failure");
+            if (parameters.Tools is { Count: > 0 } && ToolCalls.TryDequeue(out var requested))
+            {
+                await Task.Delay(DelayMs, ct);
+                yield return new InferenceChunk("", ToolCalls: requested);
+                yield return new InferenceChunk("", true, 123, 6, "STOP", CachedInputTokens: 0, ReasoningTokens: 0);
+                yield break;
+            }
             if (Empty)
             {
                 await Task.Delay(DelayMs, ct);

@@ -1,40 +1,53 @@
 @let chat = conversation();
 @let model = chat.model;
-@if (started()) {
-  <nx-floating-panel [title]="title()" [islandLabel]="islandLabel()" [storageKey]="storageKey()">
-    @if (latest()?.scope; as scope) {
-      <span floating-meta class="assistant-scope" [title]="scope">{{ scope }}</span>
-    }
-    @if (chat.exchanges().length) {
-      <button
-        floating-actions
-        type="button"
-        class="icon-button"
-        aria-label="重新開始對話"
-        title="重新開始對話"
-        [disabled]="chat.busy()"
-        (click)="reset()"
-      >
-        <nx-icon name="reset" />
-      </button>
-    }
-
+<nx-floating-panel
+  [title]="title"
+  [islandLabel]="islandLabel()"
+  storageKey="assistant"
+  [docked]="true"
+  [busy]="chat.busy()"
+>
+  <span
+    floating-mark
+    class="ai-orb assistant-mark"
+    aria-hidden="true"
+    [attr.data-state]="chat.busy() ? 'busy' : null"
+    >N</span
+  >
+  @if (page(); as name) {
+    <span floating-meta class="assistant-scope" [title]="name">{{ name }}</span>
+  }
+  @if (started() && chat.exchanges().length) {
+    <button
+      floating-actions
+      type="button"
+      class="icon-button"
+      aria-label="重新開始對話"
+      title="重新開始對話"
+      [disabled]="chat.busy()"
+      (click)="reset()"
+    >
+      <nx-icon name="reset" />
+    </button>
+  }
+  @if (started()) {
     <div class="assistant" [attr.aria-busy]="chat.busy()">
       @if (chat.modelsError(); as error) {
         <nx-notice tone="warning" [message]="'無法取得模型清單，將使用系統預設模型。' + error" />
       }
       @if (!chat.exchanges().length) {
         <section class="assistant-intro" aria-labelledby="{{ id }}-intro">
-          <span class="role-mark" aria-hidden="true">N</span>
-          <h3 [id]="id + '-intro'">問這一頁的資料</h3>
-          <p>依目前的查詢結果回答。<br />數字由系統計算，回答會標出依據。</p>
+          <hgroup>
+            <h3 [id]="id + '-intro'">{{ page() ? '問「' + page() + '」的任何事' : '問助理' }}</h3>
+            <p>依畫面資料回答，數字由系統計算。</p>
+          </hgroup>
           @if (suggestions().length) {
-            <ul class="assistant-suggestions">
+            <ul class="assistant-suggestions" aria-label="建議問題">
               @for (suggestion of suggestions(); track suggestion) {
                 <li>
                   <button type="button" (click)="ask(suggestion)">
-                    <span>{{ suggestion }}</span
-                    ><nx-icon name="arrow" />
+                    <nx-icon name="suggestion" /><span>{{ suggestion }}</span
+                    ><nx-icon name="chevron" />
                   </button>
                 </li>
               }
@@ -44,7 +57,7 @@
       }
       @for (turn of chat.exchanges(); track turn.id; let index = $index) {
         @if (contextChanged(index)) {
-          <p class="assistant-divider" role="separator">查詢條件已變更，以下依新的結果回答</p>
+          <p class="assistant-divider" role="separator">頁面或條件已變更，以下依新的資料回答</p>
         }
         <article
           class="assistant-turn"
@@ -61,7 +74,7 @@
             @if (turn.status === 'waiting' || (turn.status === 'streaming' && !turn.answer)) {
               <nx-generation-indicator
                 [waiting]="turn.status === 'waiting'"
-                label="正在整理這一頁的資料"
+                [label]="turn.activity ?? '正在整理這一頁的資料'"
                 detail="數字由系統計算，可隨時停止"
               />
             } @else if (turn.status === 'streaming') {
@@ -123,7 +136,7 @@
               @if (open) {
                 <section class="assistant-facts" [id]="factId(turn, 0)" aria-label="依據">
                   <p class="assistant-note">
-                    由系統計算 · {{ turn.scope }}
+                    由系統計算 · {{ turn.scopes.join(' · ') }}
                     @if (turn.partial) {
                       <br />資料較多，只提供了以下 {{ turn.facts.length }}
                       項；縮小查詢範圍可以看得更完整。
@@ -147,7 +160,8 @@
         </article>
       }
     </div>
-
+  }
+  @if (started()) {
     <form
       floating-footer
       class="composer assistant-composer"
@@ -160,7 +174,7 @@
         autofocus
         rows="1"
         [id]="id + '-question'"
-        placeholder="問這一頁的資料…"
+        placeholder="問這一頁的任何事…"
         [maxLength]="limit"
         [value]="draft()"
         [nxAutosize]="draft()"
@@ -211,34 +225,32 @@
         }
       </div>
     </form>
+  }
 
-    @let state = island();
-    <span floating-island class="assistant-island" [attr.data-state]="state.state">
-      <span class="role-mark" aria-hidden="true">N</span>
-      @if (state.state === 'busy') {
-        <nx-live-dot tone="info" [live]="true" />
-      } @else if (state.state !== 'idle') {
-        <nx-live-dot tone="info" />
-      }
-      @if (state.state === 'preview') {
-        <span class="assistant-island-copy"
-          ><strong>已回答</strong><span>{{ state.text }}</span></span
-        >
-      } @else {
-        <span>{{ state.text }}</span>
-      }
-    </span>
-    @if (chat.busy()) {
-      <button
-        floating-island-actions
-        type="button"
-        class="icon-button assistant-island-stop"
-        aria-label="停止回答"
-        title="停止回答"
-        (click)="chat.stop()"
+  @let state = island();
+  <!-- 平常只有圓鈕；回答中、剛答完，或指標／鍵盤停在島上時才露出文字。 -->
+  <span floating-island class="assistant-island" [attr.data-state]="state.state">
+    <span class="ai-orb" aria-hidden="true" [attr.data-state]="state.state">N</span>
+    @if (state.state === 'preview') {
+      <span class="assistant-island-text assistant-island-copy"
+        ><strong>已回答</strong><span>{{ state.text }}</span></span
       >
-        <nx-icon name="stop" />
-      </button>
+    } @else if (state.state === 'busy') {
+      <span class="assistant-island-text ai-shimmer">{{ state.text }}</span>
+    } @else if (peek()) {
+      <span class="assistant-island-text">{{ state.text }}</span>
     }
-  </nx-floating-panel>
-}
+  </span>
+  @if (chat.busy()) {
+    <button
+      floating-island-actions
+      type="button"
+      class="icon-button assistant-island-stop"
+      aria-label="停止回答"
+      title="停止回答"
+      (click)="chat.stop()"
+    >
+      <nx-icon name="stop" />
+    </button>
+  }
+</nx-floating-panel>

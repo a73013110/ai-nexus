@@ -6,6 +6,7 @@ import { bindHotkeys } from '@shared/browser/hotkeys';
 import { CommandPalette, type Command } from '@shared/ui/command-palette';
 import { ProductTour } from '@shared/ui/product-tour';
 import { Toaster } from '@shared/ui/toaster';
+import { AssistantHost } from '@features/platform/assistant/assistant-host';
 import { NavigationPreferences } from './navigation-preferences';
 import { navigationIcon, navigationNodes, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
@@ -22,7 +23,14 @@ import { WorkspaceSidebar } from './workspace-sidebar';
  */
 @Component({
   selector: 'nx-workspace-shell',
-  imports: [RouterOutlet, NgTemplateOutlet, WorkspaceSidebar, CommandPalette, Toaster],
+  imports: [
+    RouterOutlet,
+    NgTemplateOutlet,
+    WorkspaceSidebar,
+    CommandPalette,
+    Toaster,
+    AssistantHost,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'workbench' },
   template: `<aside
@@ -36,6 +44,7 @@ import { WorkspaceSidebar } from './workspace-sidebar';
       <router-outlet />
     </div>
     <nx-command-palette [commands]="commands()" (selected)="run($event)" />
+    <nx-assistant-host />
     <nx-toaster />`,
 })
 export class WorkspaceShell {

@@ -1,4 +1,4 @@
-// 頁內助理：提問泡泡、回答開頭與輸入框用對話頁的共用樣式（styles/conversation.scss），
+// 助理：提問泡泡、回答開頭與輸入框用對話頁的共用樣式（styles/conversation.scss），
 // 這裡只排面板內的節奏、開始畫面、依據清單與動態島的內容。
 :host {
   display: contents;
@@ -21,71 +21,89 @@
   max-width: var(--reading-width);
   margin-inline: auto;
 }
+// 直向 flex：子項寬度固定是面板寬，流程圖、寬表格、長程式碼與網址只在自己的區塊裡捲動或縮放，
+// 不撐出整個面板的水平捲軸；開始畫面以 flex: 1 撐滿高度。
 .assistant {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: var(--p-space-6);
   min-height: 100%;
   font-size: var(--text-body);
 }
 
-// 開始畫面：與對話首頁同樣的標記與層次，建議問題是安靜的清單列，指到才浮出底色。
+// 開始畫面：問句在上，建議問題在下貼近輸入框；身分由標題列的圓鈕表示，這裡不再放標記。
 .assistant-intro {
+  flex: 1;
   display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: var(--p-space-2);
-  min-height: 100%;
-  padding-block: var(--p-space-4);
+  align-content: space-between;
+  gap: var(--p-space-6);
+  padding-block: var(--p-space-2);
+  hgroup {
+    display: grid;
+    gap: var(--p-space-1);
+  }
   h3 {
-    margin: var(--p-space-2) 0 0;
+    margin: 0;
     font-size: var(--text-heading);
     font-weight: 600;
     letter-spacing: -0.01em;
   }
   p {
-    margin: 0 0 var(--p-space-2);
+    margin: 0;
     color: var(--secondary);
     font-size: var(--text-caption);
-    line-height: var(--line-ui);
-  }
-  .role-mark {
-    width: 2rem;
-    height: 2rem;
-    font-size: var(--p-font-sm);
   }
 }
+.assistant-mark {
+  --orb-size: 1.75rem;
+}
+// 建議問題是一組分組清單（iOS inset grouped）：同一塊底色、列間細線、左圖示右箭頭，一看就是可以按的列。
 .assistant-suggestions {
-  display: grid;
-  width: calc(100% + 2 * var(--p-space-3));
-  margin: 0 calc(-1 * var(--p-space-3));
+  margin: 0;
   padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-block);
+  background: var(--surface-inset);
   list-style: none;
+  li {
+    position: relative;
+  }
+  // 列間細線從圖示後開始，與 iOS 的分隔線一樣不切過圖示。
+  li + li::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto calc(var(--p-space-3) + var(--icon-sm) + var(--p-space-2));
+    height: 1px;
+    background: var(--line);
+    pointer-events: none;
+  }
   button {
     display: flex;
     align-items: center;
-    gap: var(--p-space-3);
+    gap: var(--p-space-2);
     width: 100%;
     min-height: var(--button-target);
     padding: var(--p-space-2) var(--p-space-3);
-    border-radius: var(--radius-block);
+    border-radius: 0;
     color: var(--ink);
     font-size: var(--text-caption);
     text-align: start;
+    --icon-size: var(--icon-sm);
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--ink) 5%, transparent);
+    }
+    &:focus-visible {
+      outline-offset: -2px;
+    }
   }
   span {
     flex: 1;
   }
-  nx-icon {
-    --icon-size: var(--icon-sm);
-    color: var(--muted);
-    rotate: -45deg;
-    opacity: 0;
-    transition: opacity var(--motion) var(--ease);
+  nx-icon:first-child {
+    color: var(--aurora-2);
   }
-  button:hover nx-icon,
-  button:focus-visible nx-icon {
-    opacity: 1;
+  nx-icon:last-child {
+    color: var(--muted);
   }
 }
 
@@ -106,11 +124,13 @@
 }
 .assistant-turn {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--p-space-4);
   scroll-margin-top: var(--p-space-2);
 }
 .assistant-reply {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--p-space-2);
   min-width: 0;
   .message-heading {
@@ -184,20 +204,17 @@
   --select-trigger-max-width: 12rem;
 }
 
-// 動態島的內容：標記、狀態點與一行字；剛答完時多一行第一句的預覽。
+// 動態島的內容：極光圓鈕，需要時在右邊露出一行字；剛答完時多一行第一句的預覽。
 .assistant-island {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
   min-width: 0;
-  .role-mark {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-color: transparent;
-    border-radius: var(--radius-full);
-    background: var(--surface-inset);
-    box-shadow: none;
-  }
+}
+.assistant-island-text {
+  padding-inline-end: var(--p-space-2);
+  white-space: nowrap;
+  animation: assistant-reveal var(--motion-enter) var(--ease) both;
 }
 .assistant-island-copy {
   display: grid;
@@ -215,6 +232,13 @@
 .assistant-island-stop {
   --button-target: 2rem;
   --icon-size: var(--icon-sm);
+  margin-inline-end: 0.3125rem;
   border-radius: var(--radius-full);
   background: var(--surface-inset);
+}
+@keyframes assistant-reveal {
+  from {
+    opacity: 0;
+    translate: -0.25rem 0;
+  }
 }

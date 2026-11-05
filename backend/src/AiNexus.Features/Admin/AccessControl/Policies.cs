@@ -12,8 +12,8 @@ public static class Policies
     public const string Text = Prefix + "text";
 
     /// <summary>
-    /// 可以選模型的頁面：對話，以及有頁內助理的頁面（出勤紀錄）。模型清單本身已依個人的模型政策過濾，
-    /// 新增頁內助理的頁面時加進 <c>InferenceModule</c> 的註冊。
+    /// 可以選模型的頁面：對話，以及有助理工具的功能（出勤紀錄）。模型清單本身已依個人的模型政策過濾，
+    /// 新增助理工具的功能時加進 <c>InferenceModule</c> 的註冊。
     /// </summary>
     public const string Models = Prefix + "models";
 

@@ -13,7 +13,8 @@ public static class MessageCost
     public static long Estimate(IReadOnlyList<InferenceMessage> messages) => messages.Sum(Of) + 128;
 
     /// <summary>估算單則訊息（含文本內容與圖片）的 Token 消耗。</summary>
-    public static long Of(InferenceMessage message) => Of(message.Content) + (message.Images ?? []).Sum(x => (long)x.EstimatedTokens);
+    public static long Of(InferenceMessage message) => Of(message.Content) + (message.Images ?? []).Sum(x => (long)x.EstimatedTokens)
+        + (message.ToolCalls ?? []).Sum(x => (long)Of(x.Name + x.Arguments.ToJsonString()));
 
     /// <summary>依據文字 UTF-8 位元組長度加 32 tokens framing 估算。</summary>
     public static int Of(string value) => Encoding.UTF8.GetByteCount(value) + 32;

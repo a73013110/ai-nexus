@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Platform.Errors;
@@ -107,5 +108,41 @@ public sealed class GoogleAiProviderTests
             response.Content.Headers.ContentType = new("text/event-stream"); return response;
         }));
         await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "describe", [new(Guid.NewGuid(), "image/png", bytes, 4096)])], new(8192, 512, .6, "system", SupportsImages: true), CancellationToken.None)) { }
+    }
+
+    [Fact]
+    public async Task ToolsAreFunctionDeclarationsAndResultsOfOneRoundShareOneTurn()
+    {
+        string? payload = null;
+        var provider = Provider(new StubHttpHandler(request =>
+        {
+            payload = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("data: {\"candidates\":[{\"content\":{\"parts\":[{\"functionCall\":{\"name\":\"rules\",\"args\":{}},\"thoughtSignature\":\"sig-2\"}]},\"finishReason\":\"STOP\"}]}\n\n")
+            };
+            response.Content.Headers.ContentType = new("text/event-stream"); return response;
+        }));
+        InferenceMessage[] messages =
+        [
+            new("user", "問"),
+            new("assistant", "", ToolCalls: [new("lookup", new JsonObject { ["date"] = "2026-11-03" }, "sig-1"), new("rules", [])]),
+            new("tool", "結果一", ToolName: "lookup"),
+            new("tool", "結果二", ToolName: "rules")
+        ];
+        var chunks = new List<InferenceChunk>();
+        await foreach (var chunk in provider.StreamAsync("gemini", messages, new(8192, 512, .6, "system", Tools: [new("lookup", "查詢", new JsonObject { ["type"] = "object" })]), CancellationToken.None))
+            chunks.Add(chunk);
+
+        var call = Assert.Single(chunks.SelectMany(x => x.ToolCalls ?? []));
+        Assert.Equal(("rules", "sig-2"), (call.Name, call.Signature));
+        using var json = JsonDocument.Parse(payload!);
+        Assert.Equal("lookup", json.RootElement.GetProperty("tools")[0].GetProperty("functionDeclarations")[0].GetProperty("name").GetString());
+        var contents = json.RootElement.GetProperty("contents");
+        Assert.Equal(3, contents.GetArrayLength());
+        var asked = contents[1].GetProperty("parts")[0];
+        Assert.Equal(("lookup", "sig-1"), (asked.GetProperty("functionCall").GetProperty("name").GetString(), asked.GetProperty("thoughtSignature").GetString()));
+        var answered = contents[2].GetProperty("parts");
+        Assert.Equal(["lookup", "rules"], answered.EnumerateArray().Select(x => x.GetProperty("functionResponse").GetProperty("name").GetString()));
     }
 }

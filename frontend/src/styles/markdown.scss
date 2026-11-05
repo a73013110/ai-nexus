@@ -87,7 +87,8 @@
   margin: var(--p-space-8) 0;
 }
 // 表格放在內嵌區塊裡橫向捲動：外框與圓角交給 .embed，表格本身只畫列與列之間的線。
-.embed-table {
+// 要寫成 .embed.embed-table：embeds.scss 在後面載入，.embed 的 overflow: clip 會蓋掉單一 class，寬表格被切掉。
+.embed.embed-table {
   overflow-x: auto;
 }
 .markdown table {

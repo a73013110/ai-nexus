@@ -44,6 +44,15 @@ export function defaultPlacement(viewport: Size): FloatingPlacement {
   };
 }
 
+/** 常駐在頂端中央的島第一次展開：同樣寬 400、高最多 640，置中貼頂，從島往下長。 */
+export function centeredPlacement(viewport: Size): FloatingPlacement {
+  return {
+    ...defaultPlacement(viewport),
+    side: 'start',
+    inline: Math.max(0, (viewport.width - 400) / 2),
+  };
+}
+
 /** 以中心點較靠近的那一側為錨。 */
 export function anchorOf(rect: Rect, viewport: Size): Anchor {
   const end = rect.x + rect.width / 2 > viewport.width / 2;

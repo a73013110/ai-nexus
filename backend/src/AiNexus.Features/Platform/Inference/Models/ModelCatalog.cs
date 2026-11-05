@@ -127,26 +127,27 @@ public sealed partial class ModelCatalog(
 
     private async Task<ModelDefinition> ResolveAsync(ModelDefinition profile, IReadOnlySet<string> installed, CancellationToken ct)
     {
-        var images = profile.SupportsImages;
+        var (images, tools) = (profile.SupportsImages, profile.SupportsTools);
         if (profile.Provider == "ollama" && installed.Contains(profile.Id))
         {
             try
             {
-                // 設定檔沒有強制覆寫時，才向 Ollama 查詢是否支援圖片；覆寫值優先
+                // 設定檔沒有強制覆寫時，才向 Ollama 查詢是否支援圖片；覆寫值優先。工具要設定允許、模型範本也支援才用
                 var capabilities = await router.For(profile.Provider).CapabilitiesAsync(profile.NativeId, ct);
                 images = profile.ImageCapabilityOverride != false && (capabilities?.SupportsImages ?? profile.ImageCapabilityOverride ?? false);
+                tools = profile.SupportsTools && capabilities?.SupportsTools == true;
             }
             catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or ExternalServiceException)
             {
                 issues.Report(error, InferenceErrors.ProviderCapabilityUnavailable, LogLevel.Warning);
-                images = false;
+                (images, tools) = (false, false);
             }
         }
 
-        return Copy(profile, images);
+        return Copy(profile, images, tools);
     }
 
-    private static ModelDefinition Copy(ModelDefinition profile, bool images) => new ModelDefinition
+    private static ModelDefinition Copy(ModelDefinition profile, bool images, bool tools) => new ModelDefinition
     {
         Id = profile.Id,
         Provider = profile.Provider,
@@ -158,15 +159,18 @@ public sealed partial class ModelCatalog(
         SupportsUsage = profile.SupportsUsage,
         SupportsImages = images,
         ImageCapabilityOverride = profile.ImageCapabilityOverride,
+        SupportsTools = tools,
         ReasoningControl = profile.ReasoningControl,
         ReasoningEfforts = profile.ReasoningEfforts,
         DefaultReasoningEffort = profile.DefaultReasoningEffort
     };
 
-    private static ModelDefinition Current(ModelDefinition profile, Snapshot snapshot) =>
-        Copy(profile, profile.Provider == "ollama"
-            ? profile.ImageCapabilityOverride != false && (snapshot.Profiles.GetValueOrDefault(profile.Id)?.SupportsImages ?? false)
-            : profile.SupportsImages);
+    private static ModelDefinition Current(ModelDefinition profile, Snapshot snapshot)
+    {
+        if (profile.Provider != "ollama") return Copy(profile, profile.SupportsImages, profile.SupportsTools);
+        var probed = snapshot.Profiles.GetValueOrDefault(profile.Id);
+        return Copy(profile, profile.ImageCapabilityOverride != false && (probed?.SupportsImages ?? false), probed?.SupportsTools ?? false);
+    }
 
     /// <summary>
     /// 取得目前系統組態中已設定的模型清單（包含動態更新後的功能特性）。

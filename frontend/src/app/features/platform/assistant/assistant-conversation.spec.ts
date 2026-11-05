@@ -53,12 +53,56 @@ describe('AssistantConversation', () => {
     expect(turn).toMatchObject({
       question: '誰還沒補足？',
       answer: '王小明未補足 [1]。',
-      scope: '10/01–10/31 · 2 人',
+      scopes: ['10/01–10/31 · 2 人'],
+      activity: null,
       status: 'done',
     });
     expect(turn.facts).toHaveLength(1);
     expect(ask.mock.calls[0][0]).toEqual({ text: '誰還沒補足？', modelId: 'large', history: [] });
     expect(chat.busy()).toBe(false);
+  });
+
+  it('shows the running tool and appends its facts after the page facts', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const chat = conversation(async () => {
+      const body = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const send = (event: string, data: object) =>
+            controller.enqueue(
+              new TextEncoder().encode(`event: ${event}
+data: ${JSON.stringify(data)}
+
+`),
+            );
+          send('grounding', { scope: '畫面', facts: [{ label: '王小明', text: '未補足 1 天。' }] });
+          send('tool', { tool: '查詢判定過程' });
+          await gate;
+          send('grounding', {
+            scope: '判定',
+            facts: [{ label: '王小明 10/21', text: '缺 1 小時。' }],
+            partial: true,
+          });
+          send('delta', { text: '缺 1 小時 [2]。' });
+          send('done', { truncated: false });
+          controller.close();
+        },
+      });
+      return new Response(body);
+    });
+
+    const asking = chat.ask('為什麼？');
+    await vi.waitFor(() => expect(chat.exchanges()[0].activity).toBe('查詢判定過程'));
+    release();
+    await asking;
+
+    expect(chat.exchanges()[0]).toMatchObject({
+      scopes: ['畫面', '判定'],
+      activity: null,
+      partial: true,
+      answer: '缺 1 小時 [2]。',
+    });
+    expect(chat.exchanges()[0].facts.map((fact) => fact.label)).toEqual(['王小明', '王小明 10/21']);
   });
 
   it('sends only finished turns asked under the same query as history', async () => {

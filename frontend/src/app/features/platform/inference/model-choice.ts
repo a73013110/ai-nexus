@@ -2,7 +2,7 @@ import { computed, signal } from '@angular/core';
 import type { ModelDto, ModelPolicyDto, ModelsDto } from '@core/api/schema';
 import { formatModelName, formatNumber } from '@shared/browser/format';
 
-/** `nx-select` 的模型選項：名稱與上下文大小（支援圖片時註明）。對話與頁內助理同一種寫法。 */
+/** `nx-select` 的模型選項：名稱與上下文大小（支援圖片時註明）。對話與助理同一種寫法。 */
 export const modelOptions = (models: readonly ModelDto[]) =>
   models.map((model) => ({
     value: model.id,
@@ -12,7 +12,7 @@ export const modelOptions = (models: readonly ModelDto[]) =>
 
 /**
  * 可用模型（`/models`，已依個人的模型政策過濾）與目前選的模型、思考強度。
- * 對話的 `ChatModels` 與頁內助理各有一份：在助理換模型不會改到對話正在用的模型。
+ * 對話的 `ChatModels` 與助理各有一份：在助理換模型不會改到對話正在用的模型。
  */
 export class ModelChoice {
   readonly models = signal<ModelDto[]>([]);

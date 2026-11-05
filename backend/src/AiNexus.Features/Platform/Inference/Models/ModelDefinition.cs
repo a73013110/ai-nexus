@@ -23,6 +23,12 @@ public sealed class ModelDefinition
     [ConfigurationKeyName("SupportsImages")]
     public bool? ImageCapabilityOverride { get; set; }
 
+    /// <summary>
+    /// 可以交給模型呼叫工具（助理查畫面以外的資料）。預設不用：模型不支援時供應商會拒絕整個請求。
+    /// Ollama 另外要 <c>/api/show</c> 回報 <c>tools</c>（模型的範本支援）才算數。
+    /// </summary>
+    public bool SupportsTools { get; set; }
+
     public string ReasoningControl { get; set; } = "none";
     public List<string> ReasoningEfforts { get; set; } = [];
     public string DefaultReasoningEffort { get; set; } = "auto";

@@ -1899,22 +1899,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/attendance-records/assistant": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["AskAttendanceAssistant"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/attendance-rules": {
         parameters: {
             query?: never;
@@ -2262,6 +2246,22 @@ export interface paths {
         put: operations["SetLocalLogin"];
         post?: never;
         delete: operations["DisableLocalLogin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/assistant/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AskAssistant"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4093,6 +4093,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/repositories/{owner}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReadRepository"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{owner}/{name}/tree": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReadRepositoryTree"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/repositories/{owner}/{name}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ReadRepositoryFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/repositories/reviews/{id}": {
         parameters: {
             query?: never;
@@ -4151,54 +4199,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["PostRepositoryReviewComment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/repositories/{owner}/{name}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadRepository"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/repositories/{owner}/{name}/tree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadRepositoryTree"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/repositories/{owner}/{name}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["ReadRepositoryFile"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4832,6 +4832,7 @@ export interface components {
         };
         AssistantEventDto: {
             text: null | string;
+            tool: null | string;
             scope: null | string;
             facts: null | components["schemas"]["AssistantFact"][];
             partial: null | boolean;
@@ -4845,6 +4846,8 @@ export interface components {
             text: string;
             modelId?: null | string;
             history?: null | components["schemas"]["AssistantTurn"][];
+            page?: null | string;
+            view?: unknown;
         };
         AssistantTurn: {
             question: string;
@@ -10399,39 +10402,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    AskAttendanceAssistant: {
-        parameters: {
-            query?: {
-                from?: string;
-                to?: string;
-                userId?: string;
-                card?: string;
-                unitId?: string;
-                includeDaysOff?: boolean;
-                coverage?: components["schemas"]["GapCoverage"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssistantQuestion"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": components["schemas"]["AssistantEventDto"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     GetAttendanceRules: {
         parameters: {
             query?: never;
@@ -11133,6 +11103,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountSecurityChangeDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    AskAssistant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantQuestion"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AssistantEventDto"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -13461,6 +13456,84 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    ReadRepository: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryDetailDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ReadRepositoryTree: {
+        parameters: {
+            query: {
+                commit: string;
+                path?: string;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryTreeDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ReadRepositoryFile: {
+        parameters: {
+            query: {
+                commit: string;
+                path: string;
+            };
+            header?: never;
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryFileDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     ReadRepositoryReview: {
         parameters: {
             query?: never;
@@ -13552,84 +13625,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RepositoryReviewDto"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ReadRepository: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                owner: string;
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RepositoryDetailDto"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ReadRepositoryTree: {
-        parameters: {
-            query: {
-                commit: string;
-                path?: string;
-            };
-            header?: never;
-            path: {
-                owner: string;
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RepositoryTreeDto"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    ReadRepositoryFile: {
-        parameters: {
-            query: {
-                commit: string;
-                path: string;
-            };
-            header?: never;
-            path: {
-                owner: string;
-                name: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RepositoryFileDto"];
                 };
             };
             default: components["responses"]["Problem"];

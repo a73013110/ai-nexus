@@ -5,7 +5,7 @@ using static AiNexus.Features.Office.Attendance.Records.AttendanceRules;
 namespace AiNexus.Features.Office.Attendance.Records;
 
 /// <summary>
-/// 一天的判定說明：結論是怎麼一步步得出的（刷卡、應下班、上班時數、表單）。出勤紀錄點開狀態時顯示，之後頁內助理也以它為事實來源。
+/// 一天的判定說明：結論是怎麼一步步得出的（刷卡、應下班、上班時數、表單）。出勤紀錄點開狀態時顯示，助理的工具也以它為事實來源。
 /// <paramref name="Schedule"/> 是當天日型的規則（放假與日型未知為 null）；<paramref name="Steps"/> 依推論順序排列；<paramref name="Conclusion"/> 是一句結論；
 /// <paramref name="Rules"/> 是依據的條文標題（<see cref="AttendanceRules.Titles"/>），畫面據此列出規則說明的同一條。狀態、補足與差額同出勤紀錄，畫面用來上色。
 /// </summary>

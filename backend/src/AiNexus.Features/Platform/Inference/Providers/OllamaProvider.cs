@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace AiNexus.Features.Platform.Inference.Providers;
 
@@ -49,7 +50,8 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
             return null;
         }
 
-        return new(capabilities.EnumerateArray().Any(x => x.GetString() == "vision"));
+        var names = capabilities.EnumerateArray().Select(x => x.GetString()).ToHashSet();
+        return new(names.Contains("vision"), names.Contains("tools"));
     }
 
     /// <summary>
@@ -64,12 +66,7 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
         var payload = new Dictionary<string, object?>
         {
             ["model"] = model,
-            ["messages"] = messages.Select(x => new
-            {
-                role = x.Role,
-                content = x.Content,
-                images = (x.Images ?? []).Select(i => Convert.ToBase64String(i.Data ?? throw new InvalidDataException("Image data missing."))).ToArray()
-            }),
+            ["messages"] = messages.Select(Message),
             ["stream"] = true,
             ["options"] = new
             {
@@ -80,6 +77,11 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
             // keep_alive 設為 5 分鐘，連續對話時不必每次重新載入模型
             ["keep_alive"] = "5m"
         };
+
+        if (parameters.Tools is { Count: > 0 } tools)
+        {
+            payload["tools"] = tools.Select(x => new { type = "function", function = new { name = x.Name, description = x.Description, parameters = x.Parameters } });
+        }
 
         // 根據模型組態設定思考/推理（Reasoning）控制參數
         if (parameters.ReasoningControl == "ollama-toggle" && parameters.ReasoningEffort != "auto")
@@ -118,9 +120,9 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
                 throw new InvalidDataException("Provider reported an error.");
             }
 
-            var text = root.TryGetProperty("message", out var message) && message.TryGetProperty("content", out var content)
-                ? content.GetString() ?? ""
-                : "";
+            var hasMessage = root.TryGetProperty("message", out var message);
+            var text = hasMessage && message.TryGetProperty("content", out var content) ? content.GetString() ?? "" : "";
+            var calls = hasMessage && message.TryGetProperty("tool_calls", out var requested) ? ToolCalls(requested) : null;
             var done = root.TryGetProperty("done", out var end) && end.GetBoolean();
             var inputTokens = root.TryGetProperty("prompt_eval_count", out var input) ? input.GetInt64() : (long?)null;
             var outputTokens = root.TryGetProperty("eval_count", out var output) ? output.GetInt64() : (long?)null;
@@ -132,7 +134,7 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
                     ? "MAX_TOKENS"
                     : "STOP";
 
-            yield return new InferenceChunk(text, done, inputTokens, outputTokens, finish, CachedInputTokens: done ? 0 : null);
+            yield return new InferenceChunk(text, done, inputTokens, outputTokens, finish, CachedInputTokens: done ? 0 : null, ToolCalls: calls);
             if (done)
             {
                 completed = true;
@@ -144,5 +146,33 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
         {
             throw new InvalidDataException("Provider stream ended without completion.");
         }
+    }
+
+    private static Dictionary<string, object?> Message(InferenceMessage message)
+    {
+        var item = new Dictionary<string, object?>
+        {
+            ["role"] = message.Role,
+            ["content"] = message.Content,
+            ["images"] = (message.Images ?? []).Select(i => Convert.ToBase64String(i.Data ?? throw new InvalidDataException("Image data missing."))).ToArray()
+        };
+        if (message.ToolCalls is { Count: > 0 } calls)
+            item["tool_calls"] = calls.Select(x => new { function = new { name = x.Name, arguments = x.Arguments } });
+        if (message.ToolName is { } tool) item["tool_name"] = tool;
+        return item;
+    }
+
+    /// <summary>Ollama 的 <c>tool_calls</c>：arguments 是物件；格式不對時當成協定錯誤，不猜。</summary>
+    private static IReadOnlyList<InferenceToolCall> ToolCalls(JsonElement calls)
+    {
+        if (calls.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Provider returned malformed tool calls.");
+        return [.. calls.EnumerateArray().Select(call =>
+        {
+            var function = call.GetProperty("function");
+            var arguments = function.TryGetProperty("arguments", out var value) && value.ValueKind == JsonValueKind.Object
+                ? JsonNode.Parse(value.GetRawText())!.AsObject()
+                : [];
+            return new InferenceToolCall(function.GetProperty("name").GetString() ?? "", arguments);
+        })];
     }
 }

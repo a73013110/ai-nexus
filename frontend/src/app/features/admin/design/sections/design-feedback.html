@@ -168,9 +168,9 @@
 </nx-design-section>
 <nx-design-section
   id="design-assistant"
-  title="浮動面板與頁內助理"
+  title="浮動面板與助理"
   api="FloatingPanel · AssistantPanel · assistantConversation"
-  description="浮在頁面上：拖標題列移動、拉邊緣調整大小、全螢幕或縮成動態島，沒有關閉。助理依頁面目前的查詢結果回答，數字由系統計算，以 [n] 標出依據；範例的回答是本機假資料。"
+  description="浮在頁面上：拖標題列移動、拉邊緣調整大小、全螢幕或縮成動態島，沒有關閉。助理常駐在頂端中央的島，點一下往下展開；依所在頁面的資料回答，以 [n] 標出依據。範例的回答是本機假資料。"
 >
   <nx-design-example label="FloatingPanel">
     <button type="button" class="secondary-button" (click)="floatingPanel.open()">
@@ -178,9 +178,7 @@
     </button>
   </nx-design-example>
   <nx-design-example label="AssistantPanel">
-    <button type="button" class="secondary-button" (click)="assistantPanel.open()">
-      <nx-icon name="chat" />問助理
-    </button>
+    <button type="button" class="secondary-button" (click)="assistantPanel.open()">展開助理</button>
   </nx-design-example>
   <nx-design-example label="失敗">
     <button type="button" class="secondary-button" (click)="failNext(); assistantPanel.open()">
@@ -189,7 +187,7 @@
   </nx-design-example>
   <nx-assistant-panel
     #assistantPanel
-    title="示範助理"
+    page="元件"
     [conversation]="assistant"
     [suggestions]="['哪些人還有沒補足的日子？', '流程中的單停在誰那裡？']"
   />
@@ -202,7 +200,7 @@
     <p class="design-floating-copy">
       拖標題列移動，靠近邊緣放開會吸附。<br />拉左、右、下緣調整大小；按 Esc 或「－」縮成動態島。
     </p>
-    <span floating-island>示範面板</span>
+    <span floating-island class="design-floating-island">示範面板</span>
   </nx-floating-panel>
 </nx-design-section>
 <nx-design-section

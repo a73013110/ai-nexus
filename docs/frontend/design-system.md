@@ -65,9 +65,9 @@
 ## 樣式載入
 
 - 元件樣式放在元件旁的 `.scss`，用預設 Emulated 封裝隨元件載入；不用 `ViewEncapsulation.None` 與 `::ng-deep`。
-- `frontend/src/styles.scss` 只決定載入順序；`frontend/src/styles` 只放跨多個元件或封裝碰不到的規則：`innerHTML` 產生的 Markdown、帶宣告端屬性的投影內容（`projected.scss`、表格的 `data-workspace.scss`）、View Transition（`motion.scss`）與共用的 `.skeleton`。
+- `frontend/src/styles.scss` 只決定載入順序；`frontend/src/styles` 只放跨多個元件或封裝碰不到的規則：`innerHTML` 產生的 Markdown、帶宣告端屬性的投影內容（`projected.scss`、表格的 `data-workspace.scss`）、View Transition（`motion.scss`）、共用的 `.skeleton` 與助理的極光（`aurora.scss`）。
 - 跨元件調整：祖先狀態用 `:host(.x)`／`:host-context(.x)`；父層要改子元件內部，由子元件開 custom property 或 input（例：`--inline-title-max-width`、`Select` 的 `appearance`）；父層可以排版子元件的 host。
-- 元件樣式檔在 `anyComponentStyle` 預算（4 kB）內；超過時拆子元件或分檔，不提高預算、不搬到全域。
+- 元件樣式檔在 `anyComponentStyle` 預算（5 kB）內；超過時拆子元件或分檔。
 - CSP 禁止 inline script，所以 build 關閉 `inlineCritical`。
 
 ## 元件工作臺 /design

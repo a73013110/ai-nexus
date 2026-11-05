@@ -171,7 +171,7 @@ export class DesignFeedback {
     { tone: 'danger', label: '錯誤', count: 3 },
   ];
   private failing = false;
-  /** 頁內助理的本機範例：不呼叫 AI，依據與回答是寫死的假資料，逐段送出模擬串流。 */
+  /** 助理的本機範例：不呼叫 AI，依據與回答是寫死的假資料，逐段送出模擬串流。 */
   readonly assistant = new AssistantConversation({
     context: () => 'design',
     models: async () => DESIGN_MODELS,

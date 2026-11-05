@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anchorOf,
+  centeredPlacement,
   collapseTo,
   expandFrom,
   FLOATING_LIMITS,
@@ -14,6 +15,15 @@ import {
 const viewport = { width: 1200, height: 800 };
 
 describe('floating geometry', () => {
+  it('centers the docked panel under the top of the window', () => {
+    expect(rectOf(centeredPlacement(viewport), viewport)).toEqual({
+      x: 400,
+      y: 16,
+      width: 400,
+      height: 640,
+    });
+  });
+
   it('keeps the side it was anchored to when the window resizes', () => {
     const placement = {
       ...anchorOf({ x: 784, y: 16, width: 400, height: 600 }, viewport),

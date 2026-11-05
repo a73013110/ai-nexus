@@ -14,6 +14,16 @@ class Host {
   readonly panel = viewChild.required(FloatingPanel);
 }
 
+@Component({
+  imports: [FloatingPanel],
+  template: `<nx-floating-panel title="助理" islandLabel="助理，展開" [docked]="true">
+    <span floating-island>助理</span>
+  </nx-floating-panel>`,
+})
+class DockedHost {
+  readonly panel = viewChild.required(FloatingPanel);
+}
+
 const pointer = (type: string, x: number, y: number) =>
   new MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y });
 
@@ -51,7 +61,7 @@ describe('FloatingPanel', () => {
     const labels = [...host.querySelectorAll('.ui-floating-actions button')].map((button) =>
       button.getAttribute('aria-label'),
     );
-    expect(labels).toEqual(['全螢幕', '縮小成動態島']);
+    expect(labels).toEqual(['縮小成動態島', '全螢幕']);
 
     host.querySelector<HTMLButtonElement>('[aria-label="縮小成動態島"]')!.click();
     await fixture.whenStable();
@@ -65,6 +75,39 @@ describe('FloatingPanel', () => {
     await fixture.whenStable();
     expect(panel.mode()).toBe('panel');
     expect(layer.style.getPropertyValue('--floating-x')).toBe('608px');
+  });
+
+  it('docks the island at the top center and grows the panel down from it', async () => {
+    const fixture = TestBed.createComponent(DockedHost);
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const panel = fixture.componentInstance.panel();
+    const host = fixture.nativeElement as HTMLElement;
+    const layer = host.querySelector<HTMLElement>('.ui-floating')!;
+    expect(panel.mode()).toBe('island');
+    expect(layer.dataset['dock']).toBe('top');
+    expect(layer.style.getPropertyValue('--floating-y')).toBe('16px');
+
+    // 指到島上時讓呼叫端露出說明；常駐的島不能拖。
+    const island = host.querySelector<HTMLButtonElement>('.ui-floating-island-open')!;
+    island.parentElement!.dispatchEvent(new MouseEvent('pointerenter'));
+    expect(panel.peek()).toBe(true);
+    island.parentElement!.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(panel.peek()).toBe(false);
+    island.dispatchEvent(pointer('pointerdown', 512, 30));
+    island.dispatchEvent(pointer('pointermove', 300, 300));
+    await fixture.whenStable();
+    expect(layer.hasAttribute('data-gesture')).toBe(false);
+
+    island.click();
+    await fixture.whenStable();
+    expect(panel.mode()).toBe('panel');
+    expect(layer.style.getPropertyValue('--floating-x')).toBe('312px');
+    expect(layer.style.getPropertyValue('--floating-y')).toBe('16px');
+
+    panel.minimize();
+    await fixture.whenStable();
+    expect(layer.style.getPropertyValue('--floating-y')).toBe('16px');
   });
 
   it('steps back on Escape: full screen to panel, then panel to island', async () => {
@@ -114,6 +157,9 @@ describe('FloatingPanel', () => {
     const edge = host.querySelector('.ui-floating-edge[data-edge="start"]')!;
     edge.dispatchEvent(pointer('pointerdown', 608, 300));
     edge.dispatchEvent(pointer('pointermove', 508, 300));
+    await fixture.whenStable();
+    // 拖到一半內容就跟著變大，不等放開。
+    expect(layer.style.getPropertyValue('--panel-width')).toBe('500px');
     edge.dispatchEvent(pointer('pointerup', 508, 300));
     await fixture.whenStable();
     expect(layer.style.getPropertyValue('--floating-width')).toBe('500px');

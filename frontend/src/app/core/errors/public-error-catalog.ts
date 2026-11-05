@@ -1,5 +1,6 @@
 // 固定的公開操作提示；與 PublicErrorCatalog.cs 保持同步。
 export const publicErrorHints: Readonly<Record<string, string>> = {
+  assistant_unavailable: '目前沒有可以用助理查詢的功能；需要時請聯絡系統管理員開通。',
   assistant_question_invalid: '提問不正確：請輸入 500 字以內的問題後再送出。',
   attachment_limit: '附件數量超過單則訊息上限，或包含重複的附件。',
   https_required: '此工作區需要 HTTPS 安全連線。',

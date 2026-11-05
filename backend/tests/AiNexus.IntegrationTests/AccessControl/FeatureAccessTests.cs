@@ -60,7 +60,7 @@ public sealed class FeatureAccessTests
         Assert.DoesNotContain((await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "chat");
         foreach (var route in new[] { "conversations", $"conversations/{conversation.Id}" })
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/v1/{route}")).StatusCode);
-        // 模型清單也開放給有頁內助理的頁面：只停用對話時，出勤紀錄仍可選模型。
+        // 模型清單也開放給有助理工具的功能：只停用對話時，出勤紀錄仍可選模型。
         Assert.Equal(target == "feature" ? HttpStatusCode.OK : HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/models")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "hello", "test-model"))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await PostRun(client, new(conversation.Id, "test-model", "hello", null, null))).StatusCode);

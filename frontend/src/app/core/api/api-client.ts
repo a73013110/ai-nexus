@@ -160,7 +160,7 @@ export class ApiClient {
   }
 
   /**
-   * 以 POST 開啟事件串流（例如頁內助理的回答）：與 `open` 相同的檢查與 CSRF，回傳原始回應交給 `sseEvents` 讀取。
+   * 以 POST 開啟事件串流（例如助理的回答）：與 `open` 相同的檢查與 CSRF，回傳原始回應交給 `sseEvents` 讀取。
    * 串流開始前的失敗（驗證、配額）是一般的錯誤回應，在這裡就丟出 `ApiError`。
    */
   stream<P extends ApiPath<'post'>>(path: P, ...[request]: Arguments<Operation<P, 'post'>>) {

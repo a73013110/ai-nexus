@@ -89,3 +89,7 @@ nx-notice {
   color: var(--secondary);
   line-height: var(--line-ui);
 }
+// 島的按鈕只留貼齊圓邊的邊距，文字自己補左右留白。
+.design-floating-island {
+  padding-inline: var(--p-space-2);
+}

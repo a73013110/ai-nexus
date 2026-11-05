@@ -3291,30 +3291,6 @@
       }
     },
     "/api/v1/quality/sets/{id}": {
-      "delete": {
-        "tags": [
-          "Quality"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      },
       "get": {
         "tags": [
           "Quality"
@@ -3381,6 +3357,30 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Quality"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "$ref": "#/components/responses/Problem"
@@ -4013,94 +4013,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AttendanceExplanationDto"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      }
-    },
-    "/api/v1/attendance-records/assistant": {
-      "post": {
-        "tags": [
-          "Attendance"
-        ],
-        "operationId": "AskAttendanceAssistant",
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "date"
-            }
-          },
-          {
-            "name": "userId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "card",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "unitId",
-            "in": "query",
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "includeDaysOff",
-            "in": "query",
-            "schema": {
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "coverage",
-            "in": "query",
-            "schema": {
-              "$ref": "#/components/schemas/GapCoverage"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AssistantQuestion"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/AssistantEventDto"
                 }
               }
             }
@@ -5183,6 +5095,39 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AccountSecurityChangeDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/assistant/questions": {
+      "post": {
+        "tags": [
+          "Assistant"
+        ],
+        "operationId": "AskAssistant",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantEventDto"
                 }
               }
             }
@@ -8390,30 +8335,6 @@
       }
     },
     "/api/v1/projects/{id}": {
-      "delete": {
-        "tags": [
-          "Projects"
-        ],
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "No Content"
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      },
       "get": {
         "tags": [
           "Projects"
@@ -8480,6 +8401,30 @@
                 }
               }
             }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Projects"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "default": {
             "$ref": "#/components/responses/Problem"
@@ -9147,152 +9092,6 @@
         }
       }
     },
-    "/api/v1/repositories/reviews/{id}": {
-      "get": {
-        "tags": [
-          "Repositories"
-        ],
-        "operationId": "ReadRepositoryReview",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RepositoryReviewDetailDto"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      }
-    },
-    "/api/v1/repositories/reviews/{id}/cancel": {
-      "post": {
-        "tags": [
-          "Repositories"
-        ],
-        "operationId": "CancelRepositoryReview",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobDto"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      }
-    },
-    "/api/v1/repositories/reviews/{id}/retry": {
-      "post": {
-        "tags": [
-          "Repositories"
-        ],
-        "operationId": "RetryRepositoryReview",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobDto"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      }
-    },
-    "/api/v1/repositories/reviews/{id}/comment": {
-      "post": {
-        "tags": [
-          "Repositories"
-        ],
-        "operationId": "PostRepositoryReviewComment",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PostRepositoryReviewCommentRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RepositoryReviewDto"
-                }
-              }
-            }
-          },
-          "default": {
-            "$ref": "#/components/responses/Problem"
-          }
-        }
-      }
-    },
     "/api/v1/repositories/{owner}/{name}": {
       "get": {
         "tags": [
@@ -9437,6 +9236,152 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RepositoryFileDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/reviews/{id}": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "ReadRepositoryReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepositoryReviewDetailDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/reviews/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "CancelRepositoryReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/reviews/{id}/retry": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "RetryRepositoryReview",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/repositories/reviews/{id}/comment": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "PostRepositoryReviewComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostRepositoryReviewCommentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepositoryReviewDto"
                 }
               }
             }
@@ -11307,6 +11252,7 @@
       "AssistantEventDto": {
         "required": [
           "text",
+          "tool",
           "scope",
           "facts",
           "partial",
@@ -11315,6 +11261,12 @@
         "type": "object",
         "properties": {
           "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tool": {
             "type": [
               "null",
               "string"
@@ -11387,7 +11339,14 @@
             "items": {
               "$ref": "#/components/schemas/AssistantTurn"
             }
-          }
+          },
+          "page": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "view": { }
         }
       },
       "AssistantTurn": {
@@ -23091,6 +23050,9 @@
     },
     {
       "name": "Account"
+    },
+    {
+      "name": "Assistant"
     },
     {
       "name": "Inference"

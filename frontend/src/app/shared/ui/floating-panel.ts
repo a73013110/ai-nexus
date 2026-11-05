@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -19,8 +20,10 @@ import { bringToFront, ownsEscape } from '../browser/top-layer';
 import { uniqueId } from '../browser/unique-id';
 import {
   anchorOf,
+  centeredPlacement,
   collapseTo,
   defaultPlacement,
+  FLOATING_LIMITS,
   expandFrom,
   moved,
   place,
@@ -64,7 +67,10 @@ interface Stored {
  * 浮在頁面上、不擋操作的面板：拖標題列移動（放開時靠近邊緣會吸附）、拉左右下緣調整大小、
  * 放大成全螢幕，或縮成動態島（以彈簧變形收進角落的膠囊，點一下長回原處）。沒有關閉，
  * 開過之後一直留在頁面上，離開頁面才消失。手機上面板佔滿畫面，島在底部置中，不能拖動。
- * 位置與大小依 `storageKey` 記在瀏覽器；內容由呼叫端投影：標題旁 `[floating-meta]`、
+ * `docked` 時一開始就是島、常駐在畫面頂端中央（全站入口），縮小一律回到那裡，島不能拖；
+ * 面板從島往下長出來，仍可拖動與調整大小。
+ * 標題、按鈕收在標題列中間一顆與島同形的膠囊裡，展開時看起來就是島長大。
+ * 位置與大小依 `storageKey` 記在瀏覽器；內容由呼叫端投影：標題前的標記 `[floating-mark]`、標題旁 `[floating-meta]`、
  * 按鈕 `[floating-actions]`、底部 `[floating-footer]`、島 `[floating-island]` 與 `[floating-island-actions]`。
  */
 @Component({
@@ -78,13 +84,16 @@ interface Stored {
     class="ui-floating"
     [attr.data-mode]="view()"
     [attr.data-side]="side()"
+    [attr.data-dock]="home() ? 'top' : null"
     [attr.data-gesture]="gesture() ? '' : null"
+    [attr.data-busy]="busy() ? '' : null"
+    [style.transition-property]="settling() ? 'opacity, scale' : null"
     [style.--floating-x]="frame().x + 'px'"
     [style.--floating-y]="frame().y + 'px'"
     [style.--floating-width]="frame().width + 'px'"
     [style.--floating-height]="frame().height + 'px'"
-    [style.--panel-width]="panel().width + 'px'"
-    [style.--panel-height]="panel().height + 'px'"
+    [style.--panel-width]="content().width + 'px'"
+    [style.--panel-height]="content().height + 'px'"
     (pointermove)="track($event)"
     (pointerup)="finish($event)"
     (pointercancel)="finish($event)"
@@ -96,32 +105,35 @@ interface Stored {
       [inert]="mode() === 'island'"
     >
       <header class="ui-floating-header" (pointerdown)="begin($event, 'move')">
-        <h2 class="ui-floating-title" [id]="id + '-title'">{{ title() }}</h2>
-        <ng-content select="[floating-meta]" />
-        <span class="ui-floating-actions">
-          <ng-content select="[floating-actions]" />
-          @if (!phone()) {
+        <div class="ui-floating-heading">
+          <ng-content select="[floating-mark]" />
+          <h2 class="ui-floating-title" [id]="id + '-title'">{{ title() }}</h2>
+          <ng-content select="[floating-meta]" />
+          <span class="ui-floating-actions">
+            <ng-content select="[floating-actions]" />
             <button
               type="button"
               class="icon-button"
-              [attr.aria-label]="mode() === 'full' ? '還原大小' : '全螢幕'"
-              [title]="mode() === 'full' ? '還原大小' : '全螢幕'"
-              [attr.aria-pressed]="mode() === 'full'"
-              (click)="toggleFull()"
+              aria-label="縮小成動態島"
+              title="縮小（Esc）"
+              (click)="minimize()"
             >
-              <nx-icon [name]="mode() === 'full' ? 'minimize' : 'maximize'" />
+              <nx-icon name="minus" />
             </button>
-          }
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="縮小成動態島"
-            title="縮小（Esc）"
-            (click)="minimize()"
-          >
-            <nx-icon name="minus" />
-          </button>
-        </span>
+            @if (!phone()) {
+              <button
+                type="button"
+                class="icon-button"
+                [attr.aria-label]="mode() === 'full' ? '還原大小' : '全螢幕'"
+                [title]="mode() === 'full' ? '還原大小' : '全螢幕'"
+                [attr.aria-pressed]="mode() === 'full'"
+                (click)="toggleFull()"
+              >
+                <nx-icon [name]="mode() === 'full' ? 'minimize' : 'maximize'" />
+              </button>
+            }
+          </span>
+        </div>
       </header>
       <div class="ui-floating-body"><ng-content /></div>
       <ng-content select="[floating-footer]" />
@@ -141,6 +153,8 @@ interface Stored {
       class="ui-floating-island"
       [inert]="mode() !== 'island'"
       (pointerdown)="begin($event, 'move')"
+      (pointerenter)="hovered.set(true)"
+      (pointerleave)="hovered.set(false)"
     >
       <button
         #islandButton
@@ -148,6 +162,8 @@ interface Stored {
         class="ui-floating-island-open"
         [attr.aria-label]="islandLabel()"
         (click)="expand()"
+        (focus)="focused.set($any($event.target).matches(':focus-visible'))"
+        (blur)="focused.set(false)"
       >
         <ng-content select="[floating-island]" />
       </button>
@@ -158,23 +174,38 @@ interface Stored {
 })
 export class FloatingPanel {
   readonly title = input.required<string>();
-  /** 動態島的可存取名稱與狀態播報，例：「出勤助理，正在回答」。 */
+  /** 動態島的可存取名稱與狀態播報，例：「助理，正在回答」。 */
   readonly islandLabel = input.required<string>();
   /** 記住位置與大小的鍵；不給就每次從預設位置（右上）開。 */
   readonly storageKey = input<string | null>(null);
+  /** 常駐在頂端中央的島（見類別說明）。 */
+  readonly docked = input(false);
+  /** 內容正在工作（例：助理回答中）：面板內緣泛起柔光。 */
+  readonly busy = input(false);
   readonly id = uniqueId('nx-floating');
+  readonly hovered = signal(false);
+  readonly focused = signal(false);
+  /** 指標停在島上或鍵盤移到島上：呼叫端可藉此在島上多露出說明文字。 */
+  readonly peek = computed(() => this.mode() === 'island' && (this.hovered() || this.focused()));
   readonly edges = EDGES;
   private readonly state = signal<FloatingMode>('hidden');
   readonly mode = this.state.asReadonly();
   /** 手機：面板佔滿畫面、島在底部置中，不拖動也不調整大小。 */
   readonly phone = mediaQuery(below('phone'));
   readonly resizable = computed(() => this.mode() === 'panel' && !this.phone());
+  /** 島固定在頂端中央：常駐且不在手機（手機的島在底部的拇指區）。 */
+  readonly home = computed(() => this.docked() && !this.phone());
   private readonly viewport = signal<Size>(viewportSize());
   private readonly placement = signal<FloatingPlacement>(defaultPlacement(viewportSize()));
   private readonly anchor = signal<Anchor | null>(null);
   /** 拖動或調整大小中，指標下的矩形；放開後回到依錨計算的位置。 */
   private readonly live = signal<Rect | null>(null);
   readonly gesture = computed(() => !!this.live());
+  /**
+   * 常駐的島剛出現：島的寬度要顯示後才量得到，量到之前只做進場淡入，
+   * 位置與大小直接到位，不從預設寬度變形過去。
+   */
+  readonly settling = signal(false);
   private readonly layer = viewChild.required<ElementRef<HTMLElement>>('layer');
   private readonly islandButton = viewChild.required<ElementRef<HTMLElement>>('islandButton');
   private readonly islandSize = morphSize(() => this.island()?.nativeElement);
@@ -182,17 +213,28 @@ export class FloatingPanel {
   private readonly injector = inject(Injector);
   /** 縮小前是面板還是全螢幕；點島時回到那裡。 */
   private restoreTo: 'panel' | 'full' = 'panel';
+  private located = false;
   private pointer: Gesture | null = null;
 
   /** 面板（非全螢幕）在目前視窗裡的位置；縮成島時內容維持這個大小，只被外框裁切。 */
   readonly panel = computed(() => rectOf(this.placement(), this.viewport()));
+  /** 面板內容的大小：拖動或調整大小中跟著指標，內容即時重排，不等放開。 */
+  readonly content = computed<Size>(() => {
+    const live = this.live();
+    return live && this.mode() !== 'island' ? live : this.panel();
+  });
   readonly islandRect = computed(() => {
     const size = this.islandSize() ?? ISLAND_FALLBACK,
       viewport = this.viewport();
     // 手機的島固定在底部置中（拇指區），不記位置。
-    if (this.phone())
+    if (this.phone() || this.docked())
       return place(
-        { side: 'start', inline: (viewport.width - size.width) / 2, edge: 'bottom', block: 16 },
+        {
+          side: 'start',
+          inline: (viewport.width - size.width) / 2,
+          edge: this.phone() ? 'bottom' : 'top',
+          block: FLOATING_LIMITS.margin,
+        },
         size,
         viewport,
       );
@@ -207,18 +249,19 @@ export class FloatingPanel {
     const live = this.live();
     if (live) return live;
     const view = this.view();
-    if (view === 'island') return this.islandRect();
+    if (view === 'island' || (view === 'hidden' && this.docked())) return this.islandRect();
     if (view === 'full') return { x: 0, y: 0, ...this.viewport() };
     return this.panel();
   });
-  /** 島與面板內容收向哪一側。 */
+  /** 島與面板內容收向哪一側（常駐的島收向中間，見 `data-dock`）。 */
   readonly side = computed(() =>
     this.frame().x + this.frame().width / 2 > this.viewport().width / 2 ? 'end' : 'start',
   );
 
   constructor() {
     const destroyRef = inject(DestroyRef);
-    let frame = 0;
+    let frame = 0,
+      settle = 0;
     const resize = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => this.viewport.set(viewportSize()));
@@ -234,8 +277,26 @@ export class FloatingPanel {
     };
     window.addEventListener('resize', resize);
     document.addEventListener('keydown', escape);
+    // 常駐的島一建立就出現；面板第一次展開時才決定位置（見 `locate`）。
+    afterNextRender(
+      () => {
+        if (!this.docked()) return;
+        this.settling.set(true);
+        this.state.set('island');
+        this.layer().nativeElement.showPopover?.();
+      },
+      { injector: this.injector },
+    );
+    // 量到島的寬度並寫進樣式後，隔兩個畫格（確定已套用）才恢復變形過渡。
+    effect(() => {
+      if (!this.settling() || !this.islandSize()?.width) return;
+      settle = requestAnimationFrame(() => {
+        settle = requestAnimationFrame(() => this.settling.set(false));
+      });
+    });
     destroyRef.onDestroy(() => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(settle);
       window.removeEventListener('resize', resize);
       document.removeEventListener('keydown', escape);
       const layer = this.layer().nativeElement;
@@ -247,12 +308,7 @@ export class FloatingPanel {
   open() {
     const layer = this.layer().nativeElement;
     if (this.mode() === 'hidden') {
-      // 第一次開啟才決定位置：元件建立時的視窗大小可能已經變了。
-      const viewport = viewportSize();
-      const stored = this.restore();
-      this.viewport.set(viewport);
-      this.placement.set(stored?.placement ?? defaultPlacement(viewport));
-      this.anchor.set(stored?.island ?? null);
+      this.locate();
       this.state.set('panel');
       layer.showPopover?.();
       this.focusPanel();
@@ -272,14 +328,19 @@ export class FloatingPanel {
     if (!focused || focused === document.body || this.layer().nativeElement.contains(focused))
       this.focusAfterRender(() => this.islandButton().nativeElement);
     this.restoreTo = mode === 'full' && !this.phone() ? 'full' : 'panel';
-    this.anchor.set(collapseTo(this.panel(), this.viewport()));
+    if (!this.docked()) this.anchor.set(collapseTo(this.panel(), this.viewport()));
     this.state.set('island');
     this.save();
   }
 
   expand() {
     if (this.mode() !== 'island') return;
-    this.placement.set(expandFrom(this.islandRect(), this.placement(), this.viewport()));
+    // 常駐的島第一次展開才讀記住的位置；之後回到上次放的地方，由島變形過去。
+    if (this.docked()) {
+      if (!this.located) this.locate();
+    } else this.placement.set(expandFrom(this.islandRect(), this.placement(), this.viewport()));
+    // 島展開後變 inert，收不到 pointerleave：先清掉，下次縮小不會一出現就露出說明。
+    this.hovered.set(false);
     this.state.set(this.restoreTo);
     this.save();
     this.focusPanel();
@@ -294,6 +355,7 @@ export class FloatingPanel {
   begin(event: PointerEvent, kind: Gesture['kind']) {
     const mode = this.mode();
     if (event.button !== 0 || this.phone() || mode === 'full' || mode === 'hidden') return;
+    if (mode === 'island' && this.docked()) return;
     const target = event.target as Element;
     if (kind === 'move' && target.closest('button, a, input, textarea, select, [role="combobox"]'))
       if (target.closest('.ui-floating-island-open') !== this.islandButton().nativeElement) return;
@@ -346,6 +408,19 @@ export class FloatingPanel {
       this.live.set(null);
     });
     this.save();
+  }
+
+  /** 第一次開啟才決定位置：元件建立時的視窗大小可能已經變了。 */
+  private locate() {
+    const viewport = viewportSize();
+    const stored = this.restore();
+    this.located = true;
+    this.viewport.set(viewport);
+    this.placement.set(
+      stored?.placement ??
+        (this.docked() ? centeredPlacement(viewport) : defaultPlacement(viewport)),
+    );
+    this.anchor.set(this.docked() ? null : (stored?.island ?? null));
   }
 
   private focusPanel() {

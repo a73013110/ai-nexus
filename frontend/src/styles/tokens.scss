@@ -59,6 +59,11 @@
   --info: var(--focus);
   --success: var(--signal);
   --warning: var(--p-amber-700);
+  // 助理的識別（圓鈕與光環、回答中的面板邊緣柔光，見 aurora.scss）：專案的藏青、青綠與藍。
+  --aurora-core: var(--p-navy-700);
+  --aurora-1: var(--p-teal-300);
+  --aurora-2: var(--p-teal-700);
+  --aurora-3: var(--p-blue-600);
   // Model activity (generating, thinking) is monochrome: it moves in luminance, never in hue.
   // A sheen passes from --secondary up to --ink; resting marks sit at --activity-rest.
   --activity: var(--ink);
@@ -174,6 +179,7 @@
   --p-radius-sm: 0.25rem;
   --p-radius-md: 0.375rem;
   --p-radius-lg: 0.75rem;
+  --p-radius-xl: 1.125rem;
   --p-radius-pill: 999px;
   // 形狀依元件類型，不依所在頁面（docs/frontend/shapes.md）；元件只用這一層，
   // 不直接用 --p-radius-*（scripts/tests/Styles.Tests.ps1 檢查）。
@@ -183,6 +189,7 @@
   --radius-item: var(--p-radius-md);
   --radius-block: var(--p-radius-md);
   --radius-surface: var(--p-radius-lg);
+  --radius-floating: var(--p-radius-xl);
   --radius-mark: var(--p-radius-sm);
   --radius-data: var(--p-radius-xs);
   --radius-icon: 25%;
@@ -348,6 +355,8 @@
   --info: var(--focus);
   --success: var(--signal);
   --warning: var(--p-amber-300);
+  --aurora-2: var(--p-sky-100);
+  --aurora-3: var(--p-sky-200);
   // Redeclared so a dark preview zone resolves them against its own --ink.
   --activity: var(--ink);
   --activity-rest: color-mix(in srgb, var(--ink) 18%, transparent);

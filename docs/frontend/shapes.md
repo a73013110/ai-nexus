@@ -1,6 +1,6 @@
 # 形狀
 
-結論：圓角只看**元件是什麼**，不看它放在哪一頁。按得下去的動作都是膠囊，收集值的欄位、清單列與內嵌區塊是 6px，浮層 12px，資源卡片 20px。角色定義在 [`tokens.scss`](../../frontend/src/styles/tokens.scss) 的 `--radius-*`，元件只用角色；`scripts/tests/Styles.Tests.ps1` 擋下 `--p-radius-*`、寫死的長度與在元件裡改寫角色。
+結論：圓角只看**元件是什麼**，不看它放在哪一頁。按得下去的動作都是膠囊，收集值的欄位、清單列與內嵌區塊是 6px，浮層 12px，浮動面板 18px，資源卡片 20px。角色定義在 [`tokens.scss`](../../frontend/src/styles/tokens.scss) 的 `--radius-*`，元件只用角色；`scripts/tests/Styles.Tests.ps1` 擋下 `--p-radius-*`、寫死的長度與在元件裡改寫角色。
 
 ## 角色
 
@@ -11,6 +11,7 @@
 | `--radius-item` | 6px | 清單列、選單與 select 選項、側欄導覽、分頁標籤與底線 `ViewSwitch` 的按鈕 |
 | `--radius-block` | 6px | 內嵌區塊：程式碼、預覽、`Notice`、表單 fieldset、`ChoiceGroups`、小型 tooltip |
 | `--radius-surface` | 12px | 浮層、選單面板、對話框、toast、composer、`QueryBar`、選項卡片 |
+| `--radius-floating` | 18px | 浮在頁面上、可拖動的 `FloatingPanel`（助理） |
 | `--tile-radius`／`--tile-inner-radius` | 20px／14px | 資源表面（總覽、`Panel`、`ResourceCard`）與其內層 |
 | `--radius-full` | 膠囊 | badge、chip、計數、switch、meter、捲軸 |
 | `--radius-mark` | 4px | kbd、行內 code、勾選框、骨架 |

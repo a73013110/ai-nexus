@@ -1,4 +1,5 @@
 using AiNexus.Features.Office.Attendance;
+using AiNexus.Features.Office.Attendance.Assistant;
 using AiNexus.Features.Office.Attendance.Forms;
 using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Features.Platform.Gd;
@@ -6,7 +7,7 @@ using AiNexus.Platform.Time;
 
 namespace AiNexus.UnitTests.Attendance;
 
-/// <summary>出勤紀錄交給頁內助理的事實：與畫面同一份資料，重要的在前（放不下時從後面捨去），逐日的結論與判定說明同一句。</summary>
+/// <summary>出勤交給助理的事實：與畫面同一份資料，重要的在前（放不下時從後面捨去），逐日的結論與判定說明同一句。</summary>
 public sealed class AttendanceAssistantTests
 {
     private static readonly WorkdayOptions Rules = new();
@@ -42,9 +43,9 @@ public sealed class AttendanceAssistantTests
                 Day(22, At(22, 8, 30), null)),
             Person("Carol", Day(19, At(19, 8, 30), At(19, 18, 0))));
 
-        var grounding = AttendanceAssistant.Ground(records, Rules);
+        var grounding = AttendanceAssistant.Records(records, Rules);
 
-        Assert.Equal(("出勤紀錄", "2026/10/19–10/22 · 2 人"), (grounding.Subject, grounding.Scope));
+        Assert.Equal("2026/10/19–10/22 · 2 人", grounding.Scope);
         var labels = grounding.Facts.Select(x => x.Label).ToList();
         Assert.Equal("查詢範圍", labels[0]);
         var rules = AttendanceRules.Describe(Rules).Rules.Count;
@@ -58,4 +59,26 @@ public sealed class AttendanceAssistantTests
         Assert.EndsWith("流程中的單 L-9（特休）停在 林主任（核准關卡）。", late, StringComparison.Ordinal);
         Assert.StartsWith("沒有刷卡。", grounding.Facts[^2].Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ADayExplanationStartsWithTheConclusionAndEndsWithTheRulesItRelied()
+    {
+        var day = Day(20, At(20, 9, 40), At(20, 18, 0));
+        var person = Person("Bob", day);
+        var explanation = AttendanceExplanation.Explain(person, day, Rules, Today);
+
+        var result = AttendanceAssistant.Explanation(person, explanation, Rules);
+
+        Assert.Equal("Bob 10/20（二）", result.Scope);
+        Assert.Equal(("Bob 10/20（二）", "結論：" + explanation.Conclusion), (result.Facts[0].Label, result.Facts[0].Text));
+        Assert.Equal(explanation.Steps.Count, result.Facts.Count(x => x.Label.StartsWith("Bob", StringComparison.Ordinal)) - 1);
+        Assert.Equal(explanation.Rules.Select(x => "規則：" + x).Order(), result.Facts.Where(x => x.Label.StartsWith("規則：", StringComparison.Ordinal)).Select(x => x.Label).Order());
+    }
+
+    [Theory]
+    [InlineData("bob", true)]
+    [InlineData("BOB", true)]
+    [InlineData("Bo", false)]
+    public void PeopleAreMatchedByTheirWholeAccountOrName(string text, bool matches)
+        => Assert.Equal(matches, AttendanceAssistant.Matches(Person("Bob"), text));
 }

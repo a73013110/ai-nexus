@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using AiNexus.Features.Platform.Inference;
 using AiNexus.Features.Platform.Inference.Providers;
 
@@ -62,6 +63,44 @@ public sealed class OllamaProviderTests
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{\"models\":[{\"name\":\"real:8b\"}]}") });
         })) { BaseAddress = new Uri("http://fixture.test/") };
         Assert.Contains("real:8b", await new OllamaProvider(client).InstalledModelsAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ToolsUseTheNativeFunctionFormatAndToolCallsComeBackParsed()
+    {
+        string? sent = null;
+        using var client = new HttpClient(new FixtureHandler(async request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/api/show")
+                return new(HttpStatusCode.OK) { Content = new StringContent("{\"capabilities\":[\"completion\",\"tools\"]}") };
+            sent = await request.Content!.ReadAsStringAsync();
+            return new(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"message\":{\"content\":\"\",\"tool_calls\":[{\"function\":{\"name\":\"lookup\",\"arguments\":{\"date\":\"2026-11-03\"}}}]},\"done\":false}\n{\"message\":{\"content\":\"\"},\"done\":true}\n")
+            };
+        })) { BaseAddress = new Uri("http://fixture.test/") };
+        var provider = new OllamaProvider(client);
+        Assert.True((await provider.CapabilitiesAsync("tool-model", CancellationToken.None))!.SupportsTools);
+
+        var schema = new JsonObject { ["type"] = "object" };
+        InferenceMessage[] messages =
+        [
+            new("user", "問"),
+            new("assistant", "", ToolCalls: [new("lookup", new JsonObject { ["date"] = "2026-11-02" })]),
+            new("tool", "結果", ToolName: "lookup")
+        ];
+        var chunks = new List<InferenceChunk>();
+        await foreach (var chunk in provider.StreamAsync("tool-model", messages, new(8192, 512, .6, "", Tools: [new("lookup", "查詢", schema)]), CancellationToken.None))
+            chunks.Add(chunk);
+
+        var call = Assert.Single(chunks.SelectMany(x => x.ToolCalls ?? []));
+        Assert.Equal(("lookup", "2026-11-03"), (call.Name, call.Arguments["date"]!.GetValue<string>()));
+        using var payload = JsonDocument.Parse(sent!);
+        var tool = payload.RootElement.GetProperty("tools")[0];
+        Assert.Equal(("function", "lookup"), (tool.GetProperty("type").GetString(), tool.GetProperty("function").GetProperty("name").GetString()));
+        var history = payload.RootElement.GetProperty("messages");
+        Assert.Equal("2026-11-02", history[1].GetProperty("tool_calls")[0].GetProperty("function").GetProperty("arguments").GetProperty("date").GetString());
+        Assert.Equal(("tool", "lookup"), (history[2].GetProperty("role").GetString(), history[2].GetProperty("tool_name").GetString()));
     }
 
     private sealed class FixtureHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler) : HttpMessageHandler

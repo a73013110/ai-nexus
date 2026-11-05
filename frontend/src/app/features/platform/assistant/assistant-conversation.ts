@@ -15,11 +15,11 @@ import { formatModelName } from '@shared/browser/format';
 /** 與後端 `AssistantQuestionValidator` 相同的上限；超過的先在這裡截掉，不讓整個提問被拒。 */
 export const ASSISTANT_LIMITS = { question: 500, answer: 4000, turns: 6 } as const;
 
-/** 頁面接上助理的方式：提問連同頁面「目前」的查詢條件送到該頁的助理端點。 */
+/** 助理的對話怎麼送出：提問連同所在頁面「目前」的條件送到助理端點。 */
 export interface AssistantSource {
-  /** 送出提問，回傳 SSE 回應（`grounding` → `delta`… → `done`）。 */
+  /** 送出提問，回傳 SSE 回應（`grounding`、`tool`、`delta`…、`done`）。 */
   ask(question: AssistantQuestion, signal: AbortSignal): Promise<Response>;
-  /** 目前查詢條件的鍵；條件改了，之前的輪次只留在畫面上，不再當成上下文送出。 */
+  /** 目前頁面與查詢條件的鍵；換了頁或改了條件，之前的輪次只留在畫面上，不再當成上下文送出。 */
   context(): string;
   /** 可用模型（已依個人的模型政策過濾）。 */
   models(): Promise<ModelsDto>;
@@ -29,7 +29,10 @@ export interface AssistantSource {
 
 export type AssistantStatus = 'waiting' | 'streaming' | 'done' | 'stopped' | 'failed';
 
-/** 一問一答。`facts` 是伺服器交給模型的依據，回答裡的 `[n]` 就是 `facts[n-1]`。 */
+/**
+ * 一問一答。`facts` 是伺服器交給模型的依據（畫面資料與每次查詢的結果依序接在一起），回答裡的 `[n]` 就是 `facts[n-1]`；
+ * `scopes` 是每份資料的範圍說明，`activity` 是正在執行的查詢（例：「查詢判定過程」）。
+ */
 export interface AssistantExchange {
   readonly id: number;
   readonly question: string;
@@ -37,7 +40,8 @@ export interface AssistantExchange {
   /** 回答的模型名稱；政策不顯示模型名稱時為 null。 */
   readonly model: string | null;
   readonly answer: string;
-  readonly scope: string | null;
+  readonly scopes: readonly string[];
+  readonly activity: string | null;
   readonly facts: readonly AssistantFact[];
   readonly partial: boolean;
   readonly truncated: boolean;
@@ -46,8 +50,8 @@ export interface AssistantExchange {
 }
 
 /**
- * 頁內助理的對話狀態：只在記憶體，離開頁面就沒有。模型選擇是自己的一份（`ModelChoice`），不影響對話頁。
- * 同時只有一個提問在跑；先前輪次只送已完成、查詢條件相同的最近幾輪。
+ * 助理的對話狀態：只在記憶體，重新整理就沒有。模型選擇是自己的一份（`ModelChoice`），不影響對話頁。
+ * 同時只有一個提問在跑；先前輪次只送已完成、頁面與條件相同的最近幾輪。
  */
 export class AssistantConversation {
   readonly model = new ModelChoice();
@@ -95,7 +99,8 @@ export class AssistantConversation {
         context,
         model: null,
         answer: '',
-        scope: null,
+        scopes: [],
+        activity: null,
         facts: [],
         partial: false,
         truncated: false,
@@ -115,25 +120,29 @@ export class AssistantConversation {
       );
       for await (const { event, data } of sseEvents<AssistantEventDto>(response, controller.signal))
         if (event === 'grounding')
-          this.patch(id, () => ({
-            scope: data.scope,
-            facts: data.facts ?? [],
-            partial: !!data.partial,
+          this.patch(id, (turn) => ({
+            scopes: data.scope ? [...turn.scopes, data.scope] : turn.scopes,
+            facts: [...turn.facts, ...(data.facts ?? [])],
+            partial: turn.partial || !!data.partial,
             status: 'streaming',
           }));
+        else if (event === 'tool')
+          this.patch(id, () => ({ activity: data.tool, status: 'streaming' }));
         else if (event === 'delta' && data.text)
-          this.patch(id, (turn) => ({ answer: turn.answer + data.text }));
+          this.patch(id, (turn) => ({ answer: turn.answer + data.text, activity: null }));
         else if (event === 'done')
-          this.patch(id, () => ({ truncated: !!data.truncated, status: 'done' }));
+          this.patch(id, () => ({ truncated: !!data.truncated, status: 'done', activity: null }));
       // 連線在 `done` 之前結束：留下已收到的部分，標成中斷。
       this.patch(id, (turn) =>
-        turn.status === 'done' ? {} : { status: 'failed', error: '回答中斷，請再問一次。' },
+        turn.status === 'done'
+          ? {}
+          : { status: 'failed', activity: null, error: '回答中斷，請再問一次。' },
       );
     } catch (error) {
       this.patch(id, () =>
         controller.signal.aborted || isCancellation(error)
-          ? { status: 'stopped' }
-          : { status: 'failed', error: safeMessage(error) },
+          ? { status: 'stopped', activity: null }
+          : { status: 'failed', activity: null, error: safeMessage(error) },
       );
     } finally {
       if (this.controller === controller) this.controller = null;
@@ -171,8 +180,8 @@ export class AssistantConversation {
 }
 
 /**
- * 在元件的注入脈絡建立頁內助理：模型清單取自 `/models`、預設模型取自個人偏好，元件銷毀時停止進行中的回答。
- * 頁面只需給提問的端點與目前查詢條件的鍵。
+ * 在元件的注入脈絡建立助理的對話：模型清單取自 `/models`、預設模型取自個人偏好，元件銷毀時停止進行中的回答。
+ * 呼叫端只需給送出提問的方式與目前條件的鍵。
  */
 export function assistantConversation(
   source: Pick<AssistantSource, 'ask' | 'context'>,

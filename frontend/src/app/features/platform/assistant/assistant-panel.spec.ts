@@ -37,7 +37,7 @@ const reply = () =>
 @Component({
   imports: [AssistantPanel],
   template: `<nx-assistant-panel
-    title="出勤助理"
+    page="出勤紀錄"
     [conversation]="chat"
     [suggestions]="['誰還沒補足？']"
   />`,
@@ -82,11 +82,20 @@ describe('AssistantPanel', () => {
   async function open() {
     const fixture = TestBed.createComponent(Host);
     fixture.detectChanges();
-    // 開啟前不建立面板。
-    expect(fixture.nativeElement.querySelector('.ui-floating')).toBeNull();
-    fixture.componentInstance.panel().open();
     await fixture.whenStable();
-    return { fixture, host: fixture.nativeElement as HTMLElement };
+    // 島常駐，但第一次展開前不建立面板內容。
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.querySelector('.ui-floating[data-mode="island"]')).not.toBeNull();
+    expect(host.querySelector('textarea')).toBeNull();
+    // 平常只有圓鈕，指到才露出要問哪一頁。
+    const island = host.querySelector<HTMLElement>('.ui-floating-island')!;
+    expect(host.querySelector('.assistant-island-text')).toBeNull();
+    island.dispatchEvent(new MouseEvent('pointerenter'));
+    await fixture.whenStable();
+    expect(host.querySelector('.assistant-island-text')?.textContent).toBe('問「出勤紀錄」');
+    host.querySelector<HTMLButtonElement>('.ui-floating-island-open')!.click();
+    await fixture.whenStable();
+    return { fixture, host };
   }
 
   it('asks a suggestion and cites the fact the answer points to', async () => {
@@ -133,7 +142,7 @@ describe('AssistantPanel', () => {
     host.querySelector<HTMLButtonElement>('[aria-label="縮小成動態島"]')!.click();
     await fixture.whenStable();
     const island = host.querySelector('.ui-floating-island-open')!;
-    expect(island.getAttribute('aria-label')).toBe('出勤助理，正在回答…');
+    expect(island.getAttribute('aria-label')).toBe('助理，正在回答…');
     expect(host.querySelector('.assistant-island-stop')).not.toBeNull();
 
     finish();

@@ -9,6 +9,7 @@ import {
   inject,
   Injector,
   input,
+  linkedSignal,
   signal,
   untracked,
   viewChild,
@@ -20,10 +21,9 @@ import { isSubmitKey } from '@shared/browser/submit-key';
 import { uniqueId } from '@shared/browser/unique-id';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { StreamingAnswer } from '@shared/markdown/streaming-answer';
-import { FloatingPanel } from '@shared/ui/floating-panel';
+import { FloatingPanel, type FloatingMode } from '@shared/ui/floating-panel';
 import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
-import { LiveDot } from '@shared/ui/live-dot';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
 import {
@@ -36,10 +36,12 @@ import {
 const PREVIEW_MS = 2600;
 
 /**
- * 頁內助理：浮在頁面上的 `FloatingPanel`，可拖動、調整大小、全螢幕或縮成動態島；
- * 縮成島時島上顯示回答進度，答完短暫展開預覽第一句。提問、回答與輸入框沿用對話頁的外觀
- * （`styles/conversation.scss`、`StreamingAnswer`）。回答依頁面目前的查詢結果，數字由系統計算；
- * `[n]` 點下去展開該輪的依據並標出第 n 筆。對話狀態由頁面以 `assistantConversation` 建立後傳入。
+ * 助理面板：常駐在畫面頂端中央的極光圓鈕（`FloatingPanel` 的 `docked`），指到時露出「問『頁面』」，
+ * 點一下往下長成面板，可拖動、調整大小、全螢幕，縮小回到頂端；縮著時圓鈕上顯示回答進度與正在查的資料，
+ * 答完短暫預覽第一句，沒看的留一顆亮點。
+ * 提問、回答與輸入框沿用對話頁的外觀（`styles/conversation.scss`、`StreamingAnswer`）。
+ * 回答依所在頁面的畫面資料，需要時由後端的工具再查，數字由系統計算；`[n]` 點下去展開該輪的依據並標出第 n 筆。
+ * 全站由 `AssistantHost` 放一個；對話狀態由呼叫端以 `assistantConversation` 建立後傳入。
  */
 @Component({
   selector: 'nx-assistant-panel',
@@ -48,7 +50,6 @@ const PREVIEW_MS = 2600;
     FloatingPanel,
     GenerationIndicator,
     Icon,
-    LiveDot,
     MarkdownView,
     Notice,
     Select,
@@ -61,11 +62,11 @@ const PREVIEW_MS = 2600;
 })
 export class AssistantPanel {
   readonly conversation = input.required<AssistantConversation>();
-  readonly title = input('助理');
+  /** 所在頁面的名稱（標題旁顯示）；沒有時為 null。 */
+  readonly page = input<string | null>(null);
   /** 還沒提問時列出的建議問題，點一下直接送出。 */
   readonly suggestions = input<readonly string[]>([]);
-  /** 位置與大小記在瀏覽器的鍵；各頁的助理共用同一個位置。 */
-  readonly storageKey = input('assistant');
+  readonly title = '助理';
   readonly limit = ASSISTANT_LIMITS.question;
   readonly id = uniqueId('nx-assistant');
   readonly draft = signal('');
@@ -76,9 +77,12 @@ export class AssistantPanel {
   readonly copiedTurn = signal<number | null>(null);
   readonly copy = inject(CopyFeedback);
   private readonly settings = inject(UserSettingsService);
-  /** 第一次開啟才建立面板：頁面載入時不付出輸入框、模型選單等的成本。 */
-  readonly started = signal(false);
   private readonly floating = viewChild(FloatingPanel);
+  /** 第一次展開才建立面板內容：島常駐，但輸入框、模型選單等等到要用才付出成本。 */
+  readonly started = linkedSignal<FloatingMode, boolean>({
+    source: () => this.floating()?.mode() ?? 'hidden',
+    computation: (mode, previous) => !!previous?.value || mode === 'panel' || mode === 'full',
+  });
   private readonly input = viewChild<ElementRef<HTMLTextAreaElement>>('question');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -87,10 +91,16 @@ export class AssistantPanel {
   private readonly unread = signal<AssistantExchange | null>(null);
   readonly preview = signal(false);
   readonly latest = computed(() => this.conversation().exchanges().at(-1) ?? null);
+  /** 指標或鍵盤停在島上：閒置的圓鈕露出「問『頁面』」，未讀時露出「已回答 · 查看」。 */
+  readonly peek = computed(() => !!this.floating()?.peek());
   readonly island = computed(() => {
-    if (this.conversation().busy()) return { state: 'busy', text: '正在回答…' } as const;
+    if (this.conversation().busy())
+      return { state: 'busy', text: (this.latest()?.activity ?? '正在回答') + '…' } as const;
     const unread = this.unread();
-    if (!unread) return { state: 'idle', text: this.title() } as const;
+    if (!unread) {
+      const page = this.page();
+      return { state: 'idle', text: page ? `問「${page}」` : '問助理' } as const;
+    }
     const failed = unread.status !== 'done';
     if (this.preview() && !failed)
       return { state: 'preview', text: excerpt(unread.answer) } as const;
@@ -104,10 +114,14 @@ export class AssistantPanel {
         : island.state === 'preview'
           ? `已回答：${island.text}`
           : island.text;
-    return `${this.title()}，${text}`;
+    return `${this.title}，${text}`;
   });
 
   constructor() {
+    // 第一次展開才載入模型清單（失敗後再展開會重試）。
+    effect(() => {
+      if (this.started()) untracked(() => void this.conversation().prepare());
+    });
     // 縮成島時一輪結束：記成未讀並短暫預覽；展開面板就算看過了。
     let previous: AssistantExchange | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -136,15 +150,9 @@ export class AssistantPanel {
     });
   }
 
+  /** 展開面板（範例頁與測試用；使用者點島展開）。 */
   open() {
-    void this.conversation().prepare();
-    const floating = this.floating();
-    if (floating) {
-      floating.open();
-      return;
-    }
-    this.started.set(true);
-    afterNextRender(() => this.floating()?.open(), { injector: this.injector });
+    this.floating()?.open();
   }
 
   ask(text = this.draft()) {

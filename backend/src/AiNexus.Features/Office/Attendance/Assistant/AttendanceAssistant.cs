@@ -1,31 +1,35 @@
 using System.Globalization;
+using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Features.Platform.Assistant;
 using AiNexus.Platform.Time;
 
-namespace AiNexus.Features.Office.Attendance.Records;
+namespace AiNexus.Features.Office.Attendance.Assistant;
 
 /// <summary>
-/// 出勤紀錄交給頁內助理的資料（純函式）：與畫面同一份查詢結果，只把它寫成模型讀得懂、可以逐條引用的事實。
+/// 出勤交給助理的資料（純函式）：把查詢結果寫成模型讀得懂、可以逐條引用的事實。三個工具共用：
+/// <see cref="AttendanceRecordsTool"/>（名單）、<see cref="AttendanceDayTool"/>（一天的判定過程）、<see cref="AttendanceRulesTool"/>（規則）。
 /// 數字與判定都來自 <see cref="AttendanceEvaluator"/>（逐日的結論由 <see cref="AttendanceExplanation"/> 寫），這裡不另算一套。
-/// 依重要性排序，模型放不下時從後面捨去：範圍與資料來源 → 規則 → 每人彙總 → 逐日明細（未補足、流程中、其他異常、已補足）。
-/// 沒有缺口的正常日只算進彙總，不逐日列出。
 /// </summary>
 public static class AttendanceAssistant
 {
-    private const string Subject = "出勤紀錄";
-
-    private const string Guidance = """
+    /// <summary>出勤工具共用的回答規則（系統指令只寫一次）。</summary>
+    public const string Guidance = """
+        出勤：
         - 「未補足」是有遲到、早退或未刷卡的缺口，核准的表單不夠抵；「流程中」是表單還在簽核，核准後就補足；「已補足」是核准的表單已抵完。
-        - 問到某一天為什麼是這個結果，照那一天的事實與「規則：」開頭的條文說明；問到怎麼補，說明缺多少時數、要補哪一種表單，不替使用者送單。
+        - 問到某一天為什麼是這個結果，照那一天的判定過程與「規則：」開頭的條文說明；問到怎麼補，說明缺多少時數、要補哪一種表單，不替使用者送單。
         - 今天還沒結算，不評論今天的出勤。
-        - 問到不在資料裡的人或日期，先說明查詢範圍，再建議調整頁面上的區間、單位或人員。
+        - 問到不在資料裡的人或日期，先說明查詢範圍，再建議換條件查。
         """;
 
-    public static AssistantGrounding Ground(AttendanceRecordsDto records, WorkdayOptions options)
+    /// <summary>
+    /// 名單：依重要性排序，模型放不下時從後面捨去：範圍與資料來源 → 規則 → 每人彙總 → 逐日明細（未補足、流程中、其他異常、已補足）。
+    /// 沒有缺口的正常日只算進彙總，不逐日列出。
+    /// </summary>
+    public static AssistantToolResult Records(AttendanceRecordsDto records, WorkdayOptions options)
     {
         var people = records.People;
         List<AssistantFact> facts = [new("查詢範圍", Range(records))];
-        facts.AddRange(AttendanceRules.Describe(options).Rules.Select(x => new AssistantFact("規則：" + x.Title, x.Text.ReplaceLineEndings(" "))));
+        facts.AddRange(Rules(options));
         facts.AddRange(people.Select(x => new AssistantFact(Name(x), Summary(x, records.Today))));
 
         var days = people
@@ -35,9 +39,28 @@ public static class AttendanceAssistant
             .Select(x => new AssistantFact($"{x.person.DisplayName} {Date(x.day.Date)}", Day(x.person, x.day, options, records.Today)));
         facts.AddRange(days);
 
-        var scope = $"{records.From:yyyy/MM/dd}–{records.To:MM/dd} · {records.Total} 人";
-        return new(Subject, scope, Guidance, facts);
+        return new($"{records.From:yyyy/MM/dd}–{records.To:MM/dd} · {records.Total} 人", facts);
     }
+
+    /// <summary>一個人一天的判定過程：結論在前，接著依推論順序的每一步，最後是依據的規則條文。</summary>
+    public static AssistantToolResult Explanation(AttendancePersonDto person, AttendanceExplanationDto explanation, WorkdayOptions options)
+    {
+        var subject = $"{person.DisplayName} {Date(explanation.Date)}";
+        List<AssistantFact> facts = [new(subject, "結論：" + explanation.Conclusion)];
+        facts.AddRange(explanation.Steps.Select(step =>
+            new AssistantFact(step.At is { } at ? $"{subject} {at.ToString("HH:mm:ss", CultureInfo.InvariantCulture)}" : subject, step.Text)));
+        facts.AddRange(Rules(options).Where(rule => explanation.Rules.Any(title => rule.Label == "規則：" + title)));
+        return new(subject, facts);
+    }
+
+    public static IEnumerable<AssistantFact> Rules(WorkdayOptions options)
+        => AttendanceRules.Describe(options).Rules.Select(x => new AssistantFact("規則：" + x.Title, x.Text.ReplaceLineEndings(" ")));
+
+    /// <summary>模型給的人：帳號、姓名或卡號，完全相同才算（不分大小寫）；名單上可能有同名的人，由呼叫端處理。</summary>
+    public static bool Matches(AttendancePersonDto person, string text)
+        => string.Equals(person.Account, text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(person.DisplayName, text, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(person.CardNumber, text, StringComparison.OrdinalIgnoreCase);
 
     private static string Range(AttendanceRecordsDto records)
     {

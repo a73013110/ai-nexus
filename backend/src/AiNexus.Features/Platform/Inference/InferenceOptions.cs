@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Nodes;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Configuration;
 using Microsoft.Extensions.Options;
@@ -93,10 +94,29 @@ public sealed class OllamaProviderOptions : ProviderOptions
 public sealed partial class InferenceOptionsValidator : IValidateOptions<InferenceOptions>;
 
 public sealed record InferenceImage(Guid AttachmentId, string ContentType, byte[]? Data, int EstimatedTokens);
-public sealed record InferenceMessage(string Role, string Content, IReadOnlyList<InferenceImage>? Images = null);
-public sealed record GenerationParameters(int ContextTokens, int MaxOutputTokens, double Temperature, string SystemPrompt, string ReasoningEffort = "auto", string ReasoningControl = "none", bool SupportsImages = false);
-public sealed record InferenceChunk(string Text, bool Done = false, long? InputTokens = null, long? OutputTokens = null, string? FinishReason = null, long? CachedInputTokens = null, long? ReasoningTokens = null);
-public sealed record ModelCapabilities(bool SupportsImages);
+
+/// <summary>
+/// 一則交給模型的訊息。模型要求呼叫工具的那一則是 <c>assistant</c>、帶 <paramref name="ToolCalls"/>；
+/// 工具的結果是 <c>tool</c>、<paramref name="ToolName"/> 是哪個工具（同一輪呼叫多個時依序排在一起）。
+/// </summary>
+public sealed record InferenceMessage(string Role, string Content, IReadOnlyList<InferenceImage>? Images = null,
+    IReadOnlyList<InferenceToolCall>? ToolCalls = null, string? ToolName = null);
+
+/// <summary>可以交給模型呼叫的工具：<paramref name="Parameters"/> 是參數的 JSON Schema（type 為 object）。</summary>
+public sealed record InferenceTool(string Name, string Description, JsonObject Parameters);
+
+/// <summary>模型要求的一次工具呼叫。<paramref name="Signature"/> 是供應商要求下一輪原樣帶回的不透明值（Gemini 的 thoughtSignature）。</summary>
+public sealed record InferenceToolCall(string Name, JsonObject Arguments, string? Signature = null);
+
+/// <summary>一次生成的參數；<paramref name="Tools"/> 有值時模型可以改回傳工具呼叫（只交給 <see cref="ModelDefinition.SupportsTools"/> 的模型）。</summary>
+public sealed record GenerationParameters(int ContextTokens, int MaxOutputTokens, double Temperature, string SystemPrompt, string ReasoningEffort = "auto", string ReasoningControl = "none", bool SupportsImages = false,
+    IReadOnlyList<InferenceTool>? Tools = null);
+
+/// <summary>串流的一段；<paramref name="ToolCalls"/> 是模型這一輪要求的工具呼叫（通常在最後一段之前送一次）。</summary>
+public sealed record InferenceChunk(string Text, bool Done = false, long? InputTokens = null, long? OutputTokens = null, string? FinishReason = null, long? CachedInputTokens = null, long? ReasoningTokens = null,
+    IReadOnlyList<InferenceToolCall>? ToolCalls = null);
+
+public sealed record ModelCapabilities(bool SupportsImages, bool SupportsTools = false);
 
 public interface IInferenceProvider
 {

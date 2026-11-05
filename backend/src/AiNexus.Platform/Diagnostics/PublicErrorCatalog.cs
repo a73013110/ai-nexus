@@ -10,6 +10,7 @@ public static class PublicErrorCatalog
     private static readonly IReadOnlyDictionary<string, string> Hints = new Dictionary<string, string>
     {
         ["account_changed"] = "帳號設定已在其他地方變更，請重新整理後再試。",
+        ["assistant_unavailable"] = "目前沒有可以用助理查詢的功能；需要時請聯絡系統管理員開通。",
         ["assistant_question_invalid"] = "提問不正確：請輸入 500 字以內的問題後再送出。",
         ["attachment_limit"] = "附件數量超過單則訊息上限，或包含重複的附件。",
         ["directory_changed"] = "預覽後使用者資料已有變動，這位使用者未寫入；請重新預覽。",

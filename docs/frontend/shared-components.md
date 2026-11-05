@@ -15,9 +15,9 @@
 
 ## 放哪裡
 
-- 不依賴 API、不含業務規則：`shared/ui/`（一元件一檔，樣式放旁邊的 `.scss`，在 4 kB 預算內）。
-- 需要某模組的 API 或查詢狀態：放該模組資料夾並由呼叫端以 `@features` 別名引用；查詢狀態由呼叫端建立後傳入（例：`directorySearch` → `PersonPicker` 的 `search`、`assistantConversation` → [頁內助理](../architecture/page-assistant.md)的 `AssistantPanel`），元件只負責呈現與鍵盤。
-- 與 AI 對答的外觀（輸入框 `.composer`、`.send-button`、提問 `.prompt-bubble`、回答開頭 `.message-heading`）在 [`conversation.scss`](../../frontend/src/styles/conversation.scss)，對話頁與頁內助理共用，不在元件裡另寫。
+- 不依賴 API、不含業務規則：`shared/ui/`（一元件一檔，樣式放旁邊的 `.scss`，在 5 kB 預算內）。
+- 需要某模組的 API 或查詢狀態：放該模組資料夾並由呼叫端以 `@features` 別名引用；查詢狀態由呼叫端建立後傳入（例：`directorySearch` → `PersonPicker` 的 `search`、`assistantConversation` → [助理](../architecture/assistant.md)的 `AssistantPanel`），元件只負責呈現與鍵盤。
+- 與 AI 對答的外觀（輸入框 `.composer`、`.send-button`、提問 `.prompt-bubble`、回答開頭 `.message-heading`）在 [`conversation.scss`](../../frontend/src/styles/conversation.scss)，對話頁與助理共用，不在元件裡另寫。
 - 共用元件不接管驗證或寫入，選取結果以 output 交給呼叫端；編輯對話框的草稿狀態用 `DraftEditor`（[表單](forms.md#未儲存的變更)）。
 
 ## 現有的選擇器

@@ -36,8 +36,7 @@ import { TimeRangePicker } from '@shared/ui/time-range-picker';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { OrganizationApi } from '@features/admin/organization/organization-api';
 import { unitNodes } from '@features/admin/organization/unit-tree';
-import { assistantConversation } from '@features/platform/assistant/assistant-conversation';
-import { AssistantPanel } from '@features/platform/assistant/assistant-panel';
+import { AssistantPages } from '@features/platform/assistant/assistant-pages';
 import { AttendanceApi, type AttendanceRecordFilters } from '../attendance-api';
 import { attendanceProblem, presentSchedule } from '../attendance-presentation';
 import { attendanceRecordsTour } from '../attendance-tour';
@@ -71,12 +70,11 @@ const DEFAULT_PAGE_SIZE = 20;
  * 查詢列前方切換只看表單未補足或流程中的日子，段首標出每人有幾天要追；
  * 狀態欄以標籤寫當天發生什麼事（正常、遲到、早退、未刷卡…，可並列），顏色跟著補足狀態；補足欄緊鄰表單欄，以標籤寫補足狀態，接著還差多少與缺口時段，
  * 好通知補單或對照流程中假單的起訖。應下班下另列扣表單後的時間，表單欄每張單一張卡片（單號、假別、起訖、流程狀態與目前簽核人）。
- * 「問助理」以已套用的條件問整段結果（`AssistantPanel`，見 docs/features/attendance-assistant.md），數字由後端算好，回答標出依據。
+ * 頁面向全站助理登記已套用的條件（`AssistantPages`，見 docs/features/attendance-assistant.md），數字由後端算好，回答標出依據。
  */
 @Component({
   selector: 'nx-attendance-records-page',
   imports: [
-    AssistantPanel,
     Checkbox,
     DataTable,
     DataTableColumn,
@@ -224,11 +222,6 @@ export class AttendanceRecordsPage {
   });
   readonly rulesError = this.rulesRead.error;
   readonly exporting = action({ message: attendanceProblem });
-  /** 頁內助理：問的是已套用條件的整段結果（與匯出相同），條件改了之後舊的輪次不再當成上下文。 */
-  readonly assistant = assistantConversation({
-    ask: (question, signal) => this.api.assistant(this.filters()!, question, signal),
-    context: () => JSON.stringify(this.filters() ?? null),
-  });
   readonly suggestions = computed(() =>
     this.seesOthers()
       ? ['哪些人還有沒補足的日子？', '流程中的單停在誰那裡？', '誰遲到或早退的天數最多？']
@@ -240,6 +233,12 @@ export class AttendanceRecordsPage {
   });
 
   constructor() {
+    // 助理問的是已套用條件的整段結果（與匯出相同）；工具的參數與查詢端點同名。
+    inject(AssistantPages).provide({
+      feature: 'attendance.records',
+      view: () => this.filters() ?? null,
+      suggestions: () => this.suggestions(),
+    });
     // 每次套用條件都換一個新參考（表格回到第一頁重讀）；「本月」以套用當下的台北日期換算。
     effect(() => {
       const query = this.query.applied();
