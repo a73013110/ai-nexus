@@ -22,6 +22,9 @@ public sealed partial class SchemaChangeWatch(
     // 啟動時先等一下：發版後第一次啟動要做的事很多，異動晚幾分鐘發現沒有差別。
     public static readonly TimeSpan StartDelay = TimeSpan.FromMinutes(10);
 
+    // 結構異動是整個資料庫的狀態，沒有單一資料列可指，目標 id 一律空 GUID。
+    private const string Target = "schema-changes";
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
@@ -50,15 +53,21 @@ public sealed partial class SchemaChangeWatch(
     {
         using var scope = scopes.CreateScope();
         var changes = await scope.ServiceProvider.GetRequiredService<SchemaChangeReader>().ListAsync(ct);
-        if (changes.Count == 0) return 0;
+        var notifications = scope.ServiceProvider.GetRequiredService<NotificationService>();
+        if (changes.Count == 0)
+        {
+            // 異動已回收或還原，之前的提醒不必再等人點掉。
+            await notifications.ResolveAsync(Target, Guid.Empty, ct);
+            return 0;
+        }
 
         var key = "schema-changes:" + Fingerprint(changes);
         var holders = await scope.ServiceProvider.GetRequiredService<AccessService>().HoldersAsync(FeatureCatalog.Releases, ct);
-        var notifications = scope.ServiceProvider.GetRequiredService<NotificationService>();
         var body = $"有 {changes.Count} 個物件與這一版應有的結構不同，可能是在正式機直接修改。請到版本頁確認，並回收到開發庫。";
         foreach (var holder in holders)
         {
-            await notifications.PublishAsync(holder, key, "releases.schema_changed", "info", "資料庫結構有異動", body, "schema-changes", Guid.Empty, ct);
+            await notifications.PublishAsync(
+                new NotificationMessage(holder, key, "releases.schema_changed", "info", "資料庫結構有異動", body, Target, Guid.Empty), ct);
         }
         await scope.ServiceProvider.GetRequiredService<AppDbContext>().SaveChangesAsync(ct);
         LogChangesFound(logger, changes.Count);

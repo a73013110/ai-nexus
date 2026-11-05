@@ -1,12 +1,12 @@
 import { isCancellation, safeMessage } from '@core/errors/safe-errors';
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
-import { Router } from '@angular/router';
-import type { NotificationDto } from '@core/api/schema';
+import { NavigationEnd, Router } from '@angular/router';
+import type { NotificationDto, NotificationTargetDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { WorkspaceLayout } from '@core/layout/workspace-layout';
 import { action } from '@shared/browser/action';
 import type { NavigationBadgeMap } from '@core/layout/navigation-badges';
-import { notificationFeature, notificationUrl } from './notification-target';
+import { notificationFeature, notificationUrl, showsTarget } from './notification-target';
 import { NotificationsApi } from './notifications-api';
 
 @Injectable({ providedIn: 'root' })
@@ -34,7 +34,7 @@ export class NotificationStore {
   /** 通知中心的分頁：伺服器收件匣，或此分頁的提示歷史。 */
   readonly view = signal<'inbox' | 'session'>('inbox');
   /**
-   * 側欄徽章：已載入的通知中，每個功能的未讀數（例：完成的對話記在對話）。只算目前載入的最新一頁，
+   * 側欄徽章：已載入的通知中，每個功能的未讀數（例：失敗的對話記在對話）。只算目前載入的最新一頁，
    * 輪詢會更新；更早的未讀不在其中，未讀總數仍以鈴鐺（伺服器的計數）為準。
    */
   readonly featureBadges = computed<NavigationBadgeMap>(() => {
@@ -57,7 +57,27 @@ export class NotificationStore {
   private seen = new Set<string>();
   private primed = false;
   private latest = 0;
+  /** 使用者正在看的網址；分頁在背景時為 `null`，沒在看就不算讀過。 */
+  private readonly viewing = signal<string | null>(null);
+  /** 正在標為已讀的目的地（`kind:id`），避免輪詢在回應前重送。 */
+  private readonly readingTargets = new Set<string>();
   constructor() {
+    const view = () =>
+      this.viewing.set(document.visibilityState === 'visible' ? this.router.url : null);
+    const navigated = this.router.events.subscribe((event) => {
+      if (event instanceof NavigationEnd) view();
+    });
+    document.addEventListener('visibilitychange', view);
+    view();
+    // 看過就算讀過：通知指向的畫面正在眼前（剛打開，或在畫面上時才送達），不必再回通知中心點掉。
+    effect(() => {
+      const url = this.viewing();
+      if (!url) return;
+      const shown = this.items().filter(
+        (item) => !item.readAt && showsTarget(url, item.target, item.version),
+      );
+      untracked(() => shown.forEach((item) => void this.readTarget(item.target)));
+    });
     effect(() => {
       const owner = this.session.me()?.id ?? '',
         generation = this.session.auth.generation();
@@ -87,6 +107,8 @@ export class NotificationStore {
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.timer);
       this.controller?.abort();
+      navigated.unsubscribe();
+      document.removeEventListener('visibilitychange', view);
     });
   }
   /** 帳號與登入世代都沒變；換人時 effect 已重設狀態，晚到的結果一律丟棄。 */
@@ -119,11 +141,11 @@ export class NotificationStore {
       const page = await this.api.list(this.unreadOnly(), before, this.controller.signal);
       if (!valid()) return;
       for (const item of page.items) {
+        // 自己發起的事完成時排入即已讀，仍要依個人設定跳出瀏覽器通知，所以不看 readAt。
         if (
           !more &&
           this.primed &&
           !this.seen.has(item.id) &&
-          !item.readAt &&
           Date.parse(item.createdAt) >= this.latest
         )
           this.browserNotify(item);
@@ -174,20 +196,6 @@ export class NotificationStore {
   close() {
     this.opened.set(false);
   }
-  completed(id: string) {
-    return this.items().some(
-      (item) =>
-        item.target.kind === 'conversation' &&
-        item.target.id === id &&
-        item.type === 'conversation.completed' &&
-        !item.readAt,
-    );
-  }
-  readConversation(id: string) {
-    for (const item of this.items())
-      if (item.target.kind === 'conversation' && item.target.id === id && !item.readAt)
-        void this.read(item);
-  }
   /** 這個寫入（`read:<id>`、`dismiss:<id>`、`all`）正在進行。 */
   isWorking(key: string) {
     return this.writing.pendingFor(key);
@@ -198,22 +206,47 @@ export class NotificationStore {
       key: `read:${item.id}`,
     });
     if (!outcome.ok) return false;
-    const unread = this.items().some((row) => row.id === item.id && !row.readAt);
-    const readAt = new Date().toISOString();
-    this.items.update((rows) =>
-      rows
-        .map((row) => (row.id === item.id ? { ...row, readAt } : row))
-        .filter((row) => !this.unreadOnly() || !row.readAt),
-    );
-    if (unread) this.unread.update((value) => Math.max(0, value - 1));
+    this.markedRead((row) => row.id === item.id);
     return true;
   }
+  /** 開啟通知指向的畫面；到了畫面上就由「看過就算讀過」標為已讀，跳轉失敗則維持未讀。 */
   async activate(item: NotificationDto) {
     const destination = notificationUrl(item.target, item.version);
-    if (!destination || !(await this.read(item))) return;
+    if (!destination) return;
     this.close();
     this.layout.closeMobile();
     await this.router.navigateByUrl(destination);
+  }
+  /** 自動發生，不顯示轉圈或錯誤；失敗時下一次輪詢或換頁會再試。 */
+  private async readTarget(target: NotificationTargetDto) {
+    const key = `${target.kind}:${target.id}`;
+    if (this.readingTargets.has(key)) return;
+    this.readingTargets.add(key);
+    const current = this.guard();
+    try {
+      await this.api.readTarget(target);
+      if (current())
+        this.markedRead((row) => row.target.kind === target.kind && row.target.id === target.id);
+    } catch {
+      /* 盡力而為：通知維持未讀，之後再試。 */
+    } finally {
+      this.readingTargets.delete(key);
+    }
+  }
+  /** 伺服器已標為已讀後同步本地列表與未讀數，不必整頁重讀。 */
+  private markedRead(which: (row: NotificationDto) => boolean) {
+    const readAt = new Date().toISOString();
+    let marked = 0;
+    this.items.update((rows) =>
+      rows
+        .map((row) => {
+          if (row.readAt || !which(row)) return row;
+          marked++;
+          return { ...row, readAt };
+        })
+        .filter((row) => !this.unreadOnly() || !row.readAt),
+    );
+    this.unread.update((value) => Math.max(0, value - marked));
   }
   async readAll() {
     const through = this.items()[0]?.createdAt;

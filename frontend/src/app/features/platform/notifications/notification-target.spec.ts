@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { notificationFeature, notificationUrl } from './notification-target';
+import { notificationFeature, notificationUrl, showsTarget } from './notification-target';
 
 describe('typed notification destinations', () => {
   const id = '01234567-89ab-4cde-8000-0123456789ab';
@@ -21,5 +21,12 @@ describe('typed notification destinations', () => {
     expect(notificationUrl({ kind: 'https://external.invalid', id })).toBeNull();
     for (const invalid of ['', '../settings', 'https://external.invalid', id + '?redirect=1'])
       expect(notificationUrl({ kind: 'conversation', id: invalid })).toBeNull();
+  });
+  it('recognises the destination on screen even when the page adds its own state', () => {
+    expect(showsTarget(`/work/chat/${id}`, { kind: 'conversation', id })).toBe(true);
+    expect(showsTarget(`/work/jobs?tab=failed&job=${id}#log`, { kind: 'task', id })).toBe(true);
+    expect(showsTarget('/work/jobs', { kind: 'task', id })).toBe(false);
+    expect(showsTarget(`/work/chat/${id}/x`, { kind: 'conversation', id })).toBe(false);
+    expect(showsTarget(`/work/sharing/${id}`, { kind: 'share', id }, 2)).toBe(false);
   });
 });

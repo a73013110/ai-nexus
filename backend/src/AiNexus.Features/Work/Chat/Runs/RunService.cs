@@ -126,16 +126,10 @@ public sealed partial class RunService(
         var notificationMessage = status == RunStates.Failed ? Issues.Message(run.IssueCode) : title;
 
         await notifications.PublishAsync(
-            run.OwnerId,
-            "run:" + run.Id,
-            "conversation." + status,
-            notificationTone,
-            notificationTitle,
-            notificationMessage,
-            "conversation",
-            run.ConversationId,
-            ct,
-            run.IssueCode);
+            new NotificationMessage(run.OwnerId, "run:" + run.Id, "conversation." + status, notificationTone,
+                notificationTitle, notificationMessage, "conversation", run.ConversationId)
+            { IssueCode = run.IssueCode, OwnAction = true },
+            ct);
 
         await db.SaveChangesAsync(ct);
         signals.Notify(run.Id);

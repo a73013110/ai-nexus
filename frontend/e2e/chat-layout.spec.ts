@@ -435,37 +435,6 @@ test("a running conversation keeps its sidebar signal when another conversation 
   core.hold = true;
   core.partialAnswer = "";
   await core.attach(page);
-  const noticeId = randomUUID();
-  let read = false;
-  await page.route("**/api/v1/notifications**", (route) => {
-    if (route.request().method() === "POST") {
-      read = true;
-      return route.fulfill({ status: 204 });
-    }
-    const run = core.runs[0],
-      done = run?.status === "completed";
-    return route.fulfill({
-      json: {
-        items: done
-          ? [
-              {
-                id: noticeId,
-                version: 1,
-                type: "conversation.completed",
-                severity: "success",
-                title: "回答已完成",
-                body: "先處理這份分析",
-                target: { kind: "conversation", id: run.conversationId },
-                createdAt: new Date().toISOString(),
-                readAt: read ? new Date().toISOString() : null,
-              },
-            ]
-          : [],
-        unread: done && !read ? 1 : 0,
-        hasMore: false,
-      },
-    });
-  });
   await page.goto("/work/chat");
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
@@ -503,10 +472,10 @@ test("a running conversation keeps its sidebar signal when another conversation 
     delta: null,
     errorCode: null,
   });
+  // 完成時使用者在看別的對話：歷史列留下完成記號（不靠通知未讀），打開就消失。
   await expect(page.locator(".history-state.is-running")).toHaveCount(0);
   await expect(page.locator(".history-complete")).toBeVisible();
   await page.locator(".history-row").getByRole("link").click();
-  await expect.poll(() => read).toBe(true);
   await expect(page.locator(".history-complete")).toHaveCount(0);
 });
 

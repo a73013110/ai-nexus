@@ -87,7 +87,7 @@
                 <nx-icon class="history-state is-running" name="loading" /><span class="sr-only"
                   >正在產生回答 ·
                 </span>
-              } @else if (notifications.completed(conversation.id)) {
+              } @else if (store.run.unseen().has(conversation.id)) {
                 <nx-icon class="history-state history-complete" name="check" /><span class="sr-only"
                   >回答已完成 ·
                 </span>

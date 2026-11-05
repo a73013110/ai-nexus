@@ -27,3 +27,19 @@ export function notificationUrl(target: NotificationTargetDto, version = 1): str
     return null;
   return routeOf(destination.feature) + destination.suffix(encodeURIComponent(target.id));
 }
+
+/**
+ * 這個網址正顯示通知的目的地：路徑相同，且目的地要求的查詢參數都在（頁面可以另有自己的參數）。
+ * 使用者正在看的目的地，通知就算讀過。
+ */
+export function showsTarget(url: string, target: NotificationTargetDto, version = 1): boolean {
+  const destination = notificationUrl(target, version);
+  if (!destination) return false;
+  // 只借 URL 解析路徑與查詢，網域無關。
+  const wanted = new URL(destination, 'http://app'),
+    current = new URL(url, 'http://app');
+  return (
+    wanted.pathname === current.pathname &&
+    [...wanted.searchParams].every(([key, value]) => current.searchParams.get(key) === value)
+  );
+}

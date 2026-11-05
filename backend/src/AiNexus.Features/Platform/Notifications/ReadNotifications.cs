@@ -21,7 +21,7 @@ internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadN
     public ReadNotificationsRequestValidator() => RuleFor(x => x.Through).NotEmpty();
 }
 
-/// <summary>將使用者的通知標為已讀：截止時間（含）之前的全部，或單一 id。</summary>
+/// <summary>將使用者的通知標為已讀：截止時間（含）之前的全部、單一 id，或指向同一目標的全部。</summary>
 internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes)
@@ -32,17 +32,24 @@ internal sealed class ReadNotifications(AppDbContext db, TimeProvider clock) : I
         routes.MapPost("/{id:guid}/read", (Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
             handler.OneAsync(user.Id, id, ct))
             .NotAudited("使用者自己的通知").WithName("ReadNotification");
+        // 使用者打開了通知指向的畫面：看過就算讀過，含不在已載入那一頁的較舊通知。
+        routes.MapPost("/targets/{kind}/{id:guid}/read", (string kind, Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
+            handler.TargetAsync(user.Id, kind, id, ct))
+            .NotAudited("使用者自己的通知").WithName("ReadNotificationTarget");
     }
 
     public Task<Result> ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => MarkReadAsync(owner, x => x.CreatedAt <= through, ct);
 
     public Task<Result> OneAsync(Guid owner, Guid id, CancellationToken ct) => MarkReadAsync(owner, x => x.Id == id, ct);
 
+    public Task<Result> TargetAsync(Guid owner, string kind, Guid id, CancellationToken ct) =>
+        MarkReadAsync(owner, x => x.TargetKind == kind && x.TargetId == id, ct);
+
     // 只更新收件匣中仍未讀的列，已讀時間不會被重複呼叫覆寫。
     private async Task<Result> MarkReadAsync(Guid owner, Expression<Func<Notification, bool>> which, CancellationToken ct)
     {
-        await db.Notifications.Inbox(owner)
-            .Where(x => x.ReadAt == null).Where(which).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+        await db.Notifications.Unread().Where(x => x.OwnerId == owner).Where(which)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
         return Result.Success;
     }
 }

@@ -51,15 +51,62 @@ public sealed class ListNotificationsTests
         var conversation = await CreateConversation(owner); var run = await CreateRun(owner, conversation.Id, "回答完成後通知"); await WaitForTerminal(owner, run.Id);
         var notifications = (await owner.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!;
         var completion = Assert.Single(notifications.Items); Assert.Equal("conversation.completed", completion.Type); Assert.Equal(new("conversation", conversation.Id), completion.Target);
+        // 自己送出的提問完成只留紀錄，不計入未讀。
+        Assert.NotNull(completion.ReadAt); Assert.Equal(0, notifications.Unread);
         var user = (await reader.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var response = await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user])); response.EnsureSuccessStatusCode();
         var share = (await response.Content.ReadFromJsonAsync<ShareDto>())!;
-        var received = Assert.Single((await reader.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Items);
-        Assert.Equal(new("share", share.Id), received.Target);
+        var inbox = (await reader.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!;
+        var received = Assert.Single(inbox.Items);
+        Assert.Equal(new("share", share.Id), received.Target); Assert.Null(received.ReadAt); Assert.Equal(1, inbox.Unread);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.ChangeTracker.Clear();
         var row = await db.Notifications.SingleAsync(x => x.Id == completion.Id);
-        await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(row.OwnerId, row.EventKey, row.Type, row.Severity, row.Title, row.Body, row.TargetKind, row.TargetId, CancellationToken.None);
+        await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(
+            new NotificationMessage(row.OwnerId, row.EventKey, row.Type, row.Severity, row.Title, row.Body, row.TargetKind, row.TargetId), CancellationToken.None);
         await db.SaveChangesAsync(); Assert.Equal(2, await db.Notifications.CountAsync());
+    }
+
+    [Fact]
+    public async Task OnlyWhatNeedsAttentionStaysUnreadUntilSeenSupersededOrExpired()
+    {
+        await using var factory = new AppFactory();
+        using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        var owner = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var other = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        Guid task = Guid.NewGuid(), share = Guid.NewGuid();
+        async Task PublishAsync(Guid to, string key, string severity, string kind, Guid id, bool own)
+        {
+            using var scope = factory.Services.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(
+                new NotificationMessage(to, key, "test", severity, "標題", "內容", kind, id) { OwnAction = own }, CancellationToken.None);
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().SaveChangesAsync();
+        }
+        async Task<int> UnreadAsync(HttpClient client) => (await client.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Unread;
+
+        // 自己發起的：成功不提醒，失敗提醒；重試成功後前一次的失敗跟著改為已讀。
+        await PublishAsync(owner, "job:1", "success", "task", Guid.NewGuid(), own: true);
+        Assert.Equal(0, await UnreadAsync(alice));
+        await PublishAsync(owner, "job:2:1", "error", "task", task, own: true);
+        Assert.Equal(1, await UnreadAsync(alice));
+        await PublishAsync(owner, "job:2:2", "success", "task", task, own: true);
+        Assert.Equal(0, await UnreadAsync(alice));
+
+        // 別人給的：提醒到打開目標為止；只影響自己的通知。
+        await PublishAsync(owner, "share:a", "info", "share", share, own: false);
+        await PublishAsync(other, "share:b", "info", "share", share, own: false);
+        Assert.Equal(1, await UnreadAsync(alice));
+        (await alice.PostAsync($"/api/v1/notifications/targets/share/{share}/read", null)).EnsureSuccessStatusCode();
+        Assert.Equal(0, await UnreadAsync(alice)); Assert.Equal(1, await UnreadAsync(bob));
+
+        // 放超過一週的未讀自動改為已讀。
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Notifications.Where(x => x.OwnerId == other)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow - NotificationExpiryWorker.UnreadFor - TimeSpan.FromHours(1)));
+        }
+        Assert.Equal(1, await ActivatorUtilities.CreateInstance<NotificationExpiryWorker>(factory.Services).ExpireAsync(CancellationToken.None));
+        Assert.Equal(0, await UnreadAsync(bob));
     }
 }

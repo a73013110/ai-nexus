@@ -97,7 +97,8 @@ internal sealed class CreateShare(AppDbContext db, IActiveUsers activeUsers, Res
 
         foreach (var recipient in request.RecipientIds)
         {
-            await notifications.PublishAsync(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id, ct);
+            await notifications.PublishAsync(
+                new NotificationMessage(recipient, "share:" + share.Id, "share.received", "info", "收到新的分享", title, "share", share.Id), ct);
         }
 
         await db.SaveChangesAsync(ct);

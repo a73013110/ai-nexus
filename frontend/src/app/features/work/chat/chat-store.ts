@@ -1,5 +1,4 @@
 import { ApiError, safeMessage } from '@core/errors/safe-errors';
-import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { WorkspaceApi } from '@core/api/workspace-api';
@@ -38,7 +37,6 @@ export const PENDING_MESSAGE_PREFIX = 'pending:';
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
-  private readonly notifications = inject(NotificationStore);
   private readonly api = inject(WorkspaceApi);
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
@@ -294,7 +292,7 @@ export class ChatStore {
         this.messages.set(detail.messages as MessageDto[]);
       }, 'conversation-title');
       if (version !== this.selectionVersion) return;
-      this.notifications.readConversation(id);
+      this.run.seen(id);
       if (this.hasKnowledgeAccess()) await this.knowledge.load(id);
       if (version !== this.selectionVersion) return;
       await this.restoreDraft(id);
@@ -558,10 +556,9 @@ export class ChatStore {
       if (this.selected()?.id === run.conversationId) this.adopt(detail);
       conversation = detail.conversation as ConversationDto;
     }
-    this.run.settle(run);
+    this.run.settle(run, this.selected()?.id === run.conversationId);
     // 其他對話的執行在這裡沒有新副本，所以它的列需要伺服器的列表。
     await (conversation ? this.showInHistory(conversation) : this.refreshHistory());
-    if (current()) await this.notifications.refresh();
   }
 
   async savePreferences(value: PreferencesDto) {

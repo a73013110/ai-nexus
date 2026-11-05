@@ -39,6 +39,7 @@
 | 3409 / 3410 | `attendance.calendar_write_failed` / `attendance.calendar_commit_failed` | `Attendance/Gd/GdCalendarWriter.cs` |
 | 3411 | `database.external_query_rejected` | 同上 |
 | 3500 / 3501 / 3502 | `releases.schema_changes_read` / `releases.schema_changes_found` / `releases.schema_check_failed` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatch.cs` |
+| 3600 | `notifications.expiry_failed` | `Notifications/NotificationExpiryWorker.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |

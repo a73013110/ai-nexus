@@ -5,7 +5,8 @@ import type { RunDto } from '@core/api/schema';
 import { RunStream, type StreamObserver } from '@core/stream/run-stream';
 import { ChatRun } from './chat-run';
 
-const run = (id: string, status = 'running') => ({ id, status, content: '' }) as RunDto;
+const run = (id: string, status = 'running') =>
+  ({ id, status, content: '', conversationId: `c-${id}` }) as RunDto;
 
 function setup(
   follow: (run: RunDto, signal: AbortSignal, observer: StreamObserver) => Promise<RunDto>,
@@ -60,5 +61,18 @@ describe('chat run', () => {
     await expect(chat.follow(run('r1'), vi.fn())).rejects.toBeInstanceOf(ApiError);
     expect(chat.connection()).toBe('disconnected');
     expect(chat.live()).toBeNull();
+  });
+
+  it('marks answers finished while the user looked elsewhere until they open them', () => {
+    const chat = setup(async (current) => current);
+    chat.settle(run('r1', 'completed'));
+    chat.settle(run('r2', 'failed'), false);
+    chat.settle(run('r3', 'completed'), false);
+    expect([...chat.unseen()]).toEqual(['c-r3']);
+    chat.seen('c-r3');
+    expect(chat.unseen().size).toBe(0);
+    chat.settle(run('r4', 'completed'), false);
+    chat.reset();
+    expect(chat.unseen().size).toBe(0);
   });
 });

@@ -179,16 +179,12 @@ public sealed partial class BackgroundJobWorker(
                 _ => ("info", "背景任務已取消"),
             };
             await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(
-                final.OwnerId,
-                $"job:{id}:{final.Attempt}",
-                "task." + final.Status,
-                level,
-                title,
-                final.Status == RunStates.Failed ? final.ErrorMessage ?? Issues.Message(final.IssueCode) : final.Label,
-                isRepositoryReview ? "repository-review" : "task",
-                isRepositoryReview ? final.SubjectId : final.Id,
-                CancellationToken.None,
-                final.IssueCode);
+                new NotificationMessage(final.OwnerId, $"job:{id}:{final.Attempt}", "task." + final.Status, level, title,
+                    final.Status == RunStates.Failed ? final.ErrorMessage ?? Issues.Message(final.IssueCode) : final.Label,
+                    isRepositoryReview ? "repository-review" : "task",
+                    isRepositoryReview ? final.SubjectId : final.Id)
+                { IssueCode = final.IssueCode, OwnAction = true },
+                CancellationToken.None);
             await db.SaveChangesAsync(CancellationToken.None);
         }
         await completion.CommitAsync(CancellationToken.None);

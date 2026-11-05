@@ -350,8 +350,11 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.route("**/api/v1/notifications**", (route) => {
     const url = new URL(route.request().url());
     if (route.request().method() === "POST") {
-      const row = items.find((x) => url.pathname.includes(x.id));
-      if (row) row.readAt = new Date().toISOString();
+      // 單則已讀，或打開目的地後指向它的全部已讀。
+      const target = `/targets/${items[0].target.kind}/${items[0].target.id}/read`;
+      for (const row of items)
+        if (url.pathname.includes(row.id) || url.pathname.endsWith(target))
+          row.readAt ??= new Date().toISOString();
       return route.fulfill({ status: 204 });
     }
     if (route.request().method() === "DELETE") {

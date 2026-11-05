@@ -21,7 +21,6 @@ import { MenuPanel } from '@shared/ui/menu-panel';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ViewSwitch } from '@shared/ui/view-switch';
-import { NotificationStore } from '@features/platform/notifications/notification-store';
 import {
   conversationMenu,
   type ConversationAction,
@@ -50,7 +49,6 @@ export class ChatSidebar {
   readonly routeOf = routeOf;
   readonly store = inject(ChatStore);
   readonly conversations = inject(ChatConversations);
-  readonly notifications = inject(NotificationStore);
   private readonly morph = inject(ViewMorph);
   private readonly scope = inject(ViewScope);
   readonly action = output<{ conversation: ConversationDto; action: ConversationAction }>();

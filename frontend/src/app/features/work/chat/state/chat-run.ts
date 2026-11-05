@@ -11,6 +11,11 @@ export class ChatRun {
   readonly text = signal('');
   readonly connection = signal<'connected' | 'reconnecting' | 'disconnected'>('connected');
   readonly stopping = signal(false);
+  /**
+   * 使用者在看別的對話時完成回答的對話；歷史列顯示完成記號，打開就消失。只記在這個分頁：
+   * 完成本身不進通知未讀，這個記號是「回來看結果」的唯一提示。
+   */
+  readonly unseen = signal<ReadonlySet<string>>(new Set());
   private subscription: AbortController | null = null;
 
   /**
@@ -49,9 +54,22 @@ export class ChatRun {
     this.text.set(final.content);
   }
 
-  settle(run: RunDto) {
+  /** `viewing`：結束時使用者正在看這個對話；沒在看而且完成了，就留下完成記號。 */
+  settle(run: RunDto, viewing = true) {
     if (this.live()?.id === run.id) this.live.set(null);
     this.connection.set('connected');
+    if (!viewing && run.status === 'completed')
+      this.unseen.update((ids) => new Set(ids).add(run.conversationId));
+  }
+
+  /** 使用者打開了這個對話，完成記號功成身退。 */
+  seen(conversationId: string) {
+    if (!this.unseen().has(conversationId)) return;
+    this.unseen.update((ids) => {
+      const rest = new Set(ids);
+      rest.delete(conversationId);
+      return rest;
+    });
   }
 
   reset() {
@@ -59,5 +77,6 @@ export class ChatRun {
     this.stopping.set(false);
     this.live.set(null);
     this.text.set('');
+    this.unseen.set(new Set());
   }
 }

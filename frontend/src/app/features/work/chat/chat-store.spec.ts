@@ -5,7 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WorkspaceApi } from '@core/api/workspace-api';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { NotificationStore } from '@features/platform/notifications/notification-store';
 import { DraftRepository } from '@core/preferences/draft-repository';
 import { ThemeService } from '@core/preferences/theme-service';
 import { defaultSettings, UserSettingsService } from '@core/preferences/user-settings';
@@ -75,7 +74,6 @@ function setup(features = ['chat']) {
       },
       { provide: UserSettingsService, useValue: { value: signal(defaultSettings()) } },
       { provide: ThemeService, useValue: { apply: vi.fn() } },
-      { provide: NotificationStore, useValue: {} },
       { provide: ProjectsApi, useValue: {} },
       { provide: RunStream, useValue: {} },
       { provide: ConversationsApi, useValue: { labels: vi.fn(async () => ['工作']) } },

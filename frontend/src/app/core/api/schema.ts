@@ -2379,6 +2379,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notifications/targets/{kind}/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReadNotificationTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/notifications/{id}": {
         parameters: {
             query?: never;
@@ -11293,6 +11309,28 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ReadNotificationTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
                 id: string;
             };
             cookie?: never;

@@ -88,16 +88,10 @@ public sealed class RunLeaseRecovery(
             audit.Record(ChatAudit.RunRecovered, run.OwnerId, id, result: ChatErrors.ExecutorLost.Code).IssueCode = run.IssueCode;
 
             await notifications.PublishAsync(
-                run.OwnerId,
-                "run:" + run.Id,
-                "conversation.failed",
-                "error",
-                "AI 回答未完成",
-                Issues.Message(run.IssueCode),
-                "conversation",
-                run.ConversationId,
-                ct,
-                run.IssueCode);
+                new NotificationMessage(run.OwnerId, "run:" + run.Id, "conversation.failed", "error",
+                    "AI 回答未完成", Issues.Message(run.IssueCode), "conversation", run.ConversationId)
+                { IssueCode = run.IssueCode, OwnAction = true },
+                ct);
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

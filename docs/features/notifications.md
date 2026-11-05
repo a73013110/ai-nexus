@@ -33,19 +33,24 @@
 | `share` | `/work/sharing/{id}` | 收件者／寄件者、來源功能、期限、撤銷狀態 |
 | `repository-review` | `/work/repositories?review={id}` | Review owner、repositories 功能、目前 Gitea 權限 |
 
-`notification-target.ts` 是唯一 URL 轉換邊界，拒絕未知種類／版本及非法 ID。點整列與「查看內容」相同（列內按鈕與選取文字除外）；鍵盤走「查看內容」，「標為已讀」與移除是各自的按鈕。開啟先保存已讀，再關閉通知與手機側欄並跳轉。背景任務與 review 使用共用 `ResourceTarget` 定位與移動鍵盤焦點，僅在指定資源首次出現時執行，輪詢不重設閱讀位置。目標失效由功能頁顯示錯誤，不得回退成其他資源內容。
+`notification-target.ts` 是唯一 URL 轉換邊界，拒絕未知種類／版本及非法 ID。點整列與「查看內容」相同（列內按鈕與選取文字除外）；鍵盤走「查看內容」，「標為已讀」與移除是各自的按鈕。開啟只關閉通知與手機側欄並跳轉，到達目的地才算已讀。背景任務與 review 使用共用 `ResourceTarget` 定位與移動鍵盤焦點，僅在指定資源首次出現時執行，輪詢不重設閱讀位置。目標失效由功能頁顯示錯誤，不得回退成其他資源內容。
+
+## 何時算未讀
+
+未讀只留給需要收件者處理的事：自己發起的事（`OwnAction`）只有失敗提醒；同一目標的新結果取代舊的未讀；分頁可見且網址顯示目標就算讀過；來源恢復就撤下（`ResolveAsync`）；7 天後自動已讀。理由與邊界寫在 `NotificationService`、`NotificationStore`、`NotificationExpiryWorker`。
 
 ## 事件與提交
 
-| 事件 | 去重 key | 目標 |
-| --- | --- | --- |
-| `conversation.completed`／`conversation.failed`／`conversation.cancelled` | `run:{runId}` | conversation |
-| `task.completed`／`task.failed`／`task.cancelled` | `job:{jobId}:{attempt}` | task；程式碼 review 使用 repository-review |
-| `share.received` | `share:{shareId}`，每位收件者各一則 | share |
+| 事件 | 去重 key | 目標 | 未讀 |
+| --- | --- | --- | --- |
+| `conversation.completed`／`conversation.failed`／`conversation.cancelled` | `run:{runId}` | conversation | 只有 failed |
+| `task.completed`／`task.failed`／`task.cancelled` | `job:{jobId}:{attempt}` | task；程式碼 review 使用 repository-review | 只有 failed |
+| `share.received` | `share:{shareId}`，每位收件者各一則 | share | 是 |
+| `releases.schema_changed` | `schema-changes:{清單雜湊}` | schema-changes | 是 |
 
 通知與來源狀態使用同一 transaction。`PublishAsync` 加入 tracked entity，由呼叫者 SaveChanges／commit。Job 結束先丟棄尚未 checkpoint 的 tracked 修改，再以租約 token 限制 terminal update，原子提交通知。失去租約或 host shutdown 不發布錯誤完成事件；重試的每個 attempt 可有獨立通知。
 
-對話 spinner 來自 app 根層 ChatStore 的 live run，切換對話仍繼續。未讀的 `conversation.completed` 顯示完成圖示，開啟對話後標為已讀。
+對話 spinner 來自 app 根層 ChatStore 的 live run，切換對話仍繼續。在看別的對話時完成的回答由 `ChatRun.unseen` 在歷史列標記，只記在該分頁。
 
 ## API、分頁及同步
 
@@ -56,6 +61,7 @@
 | `GET /notifications?unread=false&before={id}` | 每頁最多 50 筆，回 `{ items, unread, hasMore }`；unread 是全通知匣未讀數 |
 | `POST /notifications/{id}/read` | 單則已讀，204 |
 | `POST /notifications/read`，body `{ through }` | 將 `createdAt <= through` 標為已讀；使用清單最新時間，不清除較晚事件 |
+| `POST /notifications/targets/{kind}/{id}/read` | 指向該目標的全部已讀，204 |
 | `DELETE /notifications/{id}` | 從清單及未讀數隱藏，204 |
 
 排序 `createdAt DESC, id DESC`，cursor 同時比較時間及 ID，避免同時事件跳頁。Cursor 必須屬於登入者且未移除，失效回 400，可重新整理。開啟通知中心取得最新一頁；載入較舊頁後輪詢合併最新資料並保留較舊列。登入／切換身分取消舊請求、清空通知及去重狀態；非同步結果檢查帳號及 auth generation。前景每 8 秒、背景每 30 秒更新，未登入停止；錯誤保留重試入口，不當成空清單。
@@ -71,6 +77,6 @@
 
 ## 瀏覽器與擴充
 
-瀏覽器通知沿用個人設定及瀏覽器授權。初次載入既有事件不彈通知；頁面在背景、有授權且有新事件才顯示，點擊使用同一 typed target。瀏覽器不支援一般 Notification constructor 時，通知中心仍可用。沒有 Push subscription／service worker，關閉所有網頁後不提供系統推播。
+瀏覽器通知沿用個人設定及瀏覽器授權。初次載入既有事件不彈通知；頁面在背景、有授權且有新事件才顯示（含排入即已讀的），點擊使用同一 typed target。瀏覽器不支援一般 Notification constructor 時，通知中心仍可用。沒有 Push subscription／service worker，關閉所有網頁後不提供系統推播。
 
 新增事件在狀態提交處呼叫共用 publisher，沿用既有目標。新增目標同步更新後端 whitelist、前端 registry、功能深連結與授權測試，不在 publisher 寫任意 URL。結構變更提高 version 並保持舊通知可讀。未來郵件／Push 可消費同一 durable event，投遞狀態應另表保存，不改變已讀語意、不在 SQL transaction 呼叫外部服務。
