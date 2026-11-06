@@ -48,8 +48,27 @@
   &[data-edge='top'] {
     align-items: start;
   }
+  // 手勢中（指標擷取在外框上）游標整片一致，不因經過按鈕、邊緣、頁面內容而換掉。
   &[data-gesture] {
     transition: none;
+  }
+  @each $gesture,
+    $cursor
+      in (
+        move: grabbing,
+        start: ew-resize,
+        end: ew-resize,
+        bottom: ns-resize,
+        bottom-start: nesw-resize,
+        bottom-end: nwse-resize
+      )
+  {
+    &[data-gesture='#{$gesture}'] {
+      &,
+      * {
+        cursor: $cursor;
+      }
+    }
   }
   // 內容在工作（例：助理回答中）：內緣泛起青綠到藍的柔光，呼吸只動 opacity，不重繪陰影。
   &::after {

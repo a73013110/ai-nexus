@@ -5,6 +5,7 @@ import {
   collapseTo,
   expandFrom,
   FLOATING_LIMITS,
+  gripOf,
   moved,
   place,
   rectOf,
@@ -64,7 +65,11 @@ describe('floating geometry', () => {
 
   it('drags inside the window and snaps to an edge only when released near it', () => {
     const start = { x: 400, y: 100, width: 300, height: 400 };
-    expect(moved(start, -900, 0, viewport).x).toBe(0);
+    const grip = gripOf(start, 550, 300);
+    expect(grip).toEqual({ x: 0.5, y: 0.5 });
+    expect(moved(start, grip, -350, 300, viewport).x).toBe(0);
+    // 拖動中變窄：按住的相對位置仍在指標下。
+    expect(moved({ width: 100, height: 400 }, grip, 550, 300, viewport)).toMatchObject({ x: 500 });
     expect(snapped({ ...start, x: 30 }, viewport).x).toBe(16);
     expect(snapped({ ...start, x: 870 }, viewport).x).toBe(884);
     expect(snapped(start, viewport)).toEqual(start);

@@ -121,12 +121,17 @@ describe('FloatingPanel', () => {
 
   it('lets the docked island move, remembers it and grows the panel from its corner', async () => {
     const { fixture, panel, layer, island } = await docked();
+    island.parentElement!.dispatchEvent(new MouseEvent('pointerenter'));
     island.dispatchEvent(pointer('pointerdown', 512, 30));
     island.dispatchEvent(pointer('pointermove', 900, 700));
     await fixture.whenStable();
-    expect(layer.hasAttribute('data-gesture')).toBe(true);
+    expect(layer.dataset['gesture']).toBe('move');
+    // 拖的是按下時的樣子：指標暫時落在島外也不收起說明；放開後依指標實際位置校正。
+    island.parentElement!.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(panel.peek()).toBe(true);
     island.dispatchEvent(pointer('pointerup', 900, 700));
     await fixture.whenStable();
+    expect(panel.peek()).toBe(false);
     // 放開時靠近右下角，吸附到邊距。
     expect(layer.style.getPropertyValue('--floating-x')).toBe('848px');
     expect(layer.style.getPropertyValue('--floating-y')).toBe('712px');

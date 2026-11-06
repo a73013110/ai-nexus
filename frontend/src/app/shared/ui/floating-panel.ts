@@ -24,6 +24,7 @@ import {
   collapseTo,
   defaultPlacement,
   expandFrom,
+  gripOf,
   moved,
   place,
   placementOf,
@@ -32,6 +33,7 @@ import {
   snapped,
   type Anchor,
   type FloatingPlacement,
+  type Grip,
   type Rect,
   type ResizeEdge,
   type Size,
@@ -54,6 +56,8 @@ interface Gesture {
   x: number;
   y: number;
   start: Rect;
+  /** 按住的是外框的哪一點；拖動中這一點留在指標下（見 `moved`）。 */
+  grip: Grip;
   moved: boolean;
 }
 
@@ -84,7 +88,7 @@ interface Stored {
     [attr.data-mode]="view()"
     [attr.data-side]="side()"
     [attr.data-edge]="edge()"
-    [attr.data-gesture]="gesture() ? '' : null"
+    [attr.data-gesture]="gesture()"
     [attr.data-busy]="busy() ? '' : null"
     [style.transition-property]="settling() ? 'opacity, scale' : null"
     [style.--floating-x]="frame().x + 'px'"
@@ -149,8 +153,8 @@ interface Stored {
       class="ui-floating-island"
       [inert]="mode() !== 'island'"
       (pointerdown)="begin($event, 'move')"
-      (pointerenter)="hovered.set(true)"
-      (pointerleave)="hovered.set(false)"
+      (pointerenter)="hover(true)"
+      (pointerleave)="hover(false)"
     >
       <button
         #islandButton
@@ -192,9 +196,21 @@ export class FloatingPanel {
   private readonly viewport = signal<Size>(viewportSize());
   private readonly placement = signal<FloatingPlacement>(defaultPlacement(viewportSize()));
   private readonly anchor = signal<Anchor | null>(null);
-  /** 拖動或調整大小中，指標下的矩形；放開後回到依錨計算的位置。 */
-  private readonly live = signal<Rect | null>(null);
-  readonly gesture = computed(() => !!this.live());
+  /** 開始拖動或調整大小後的手勢與指標位置；放開後清掉，回到依錨計算的位置。 */
+  private readonly drag = signal<{ gesture: Gesture; x: number; y: number } | null>(null);
+  /** 手勢中指標下的矩形。拖島時以島目前量到的大小計算：拖動中島上的文字變長變短，按住的點仍在指標下。 */
+  private readonly live = computed<Rect | null>(() => {
+    const drag = this.drag();
+    if (!drag) return null;
+    const { gesture, x, y } = drag,
+      viewport = this.viewport();
+    if (gesture.kind !== 'move')
+      return resized(gesture.start, gesture.kind, x - gesture.x, y - gesture.y, viewport);
+    const size = this.mode() === 'island' ? (this.islandSize() ?? ISLAND_FALLBACK) : gesture.start;
+    return moved(size, gesture.grip, x, y, viewport);
+  });
+  /** 進行中的手勢（`data-gesture`）：外框以對應的游標顯示，期間不做變形過渡。 */
+  readonly gesture = computed(() => this.drag()?.gesture.kind ?? null);
   /**
    * 常駐的島剛出現：島的寬度要顯示後才量得到，量到之前只做進場淡入，
    * 位置與大小直接到位，不從預設寬度變形過去。
@@ -336,6 +352,14 @@ export class FloatingPanel {
     if (mode === 'panel' || mode === 'full') this.state.set(mode === 'full' ? 'panel' : 'full');
   }
 
+  /**
+   * 指標進出島。手勢中不更新：拖的是按下時看到的那個島（露出說明的就維持露出），
+   * 不因指標暫時落在島外而收起、讓按住的點跑到指標外；放開時再依指標實際位置校正（`finish`）。
+   */
+  hover(over: boolean) {
+    if (!this.pointer) this.hovered.set(over);
+  }
+
   /** 標題列與島拖動、邊緣調整大小；按鈕與欄位上不開始（島上的開啟鈕例外，沒拖動就是點擊）。 */
   begin(event: PointerEvent, kind: Gesture['kind']) {
     const mode = this.mode();
@@ -345,23 +369,25 @@ export class FloatingPanel {
       if (target.closest('.ui-floating-island-open') !== this.islandButton().nativeElement) return;
     event.stopPropagation();
     this.listen();
+    const start = this.frame();
     this.pointer = {
       kind,
       pointer: event.pointerId,
       x: event.clientX,
       y: event.clientY,
-      start: this.frame(),
-      moved: kind !== 'move',
+      start,
+      grip: gripOf(start, event.clientX, event.clientY),
+      moved: false,
     };
     // 調整大小一按下就算開始；拖動要先移動一段距離，否則是點擊。
     if (kind !== 'move') {
       event.preventDefault();
-      this.live.set(this.frame());
+      this.engage(event);
     }
   }
 
-  // 不用指標擷取：擷取中放開時 click 會改派給外框，島上的開啟鈕就收不到點擊。
-  // 改在手勢期間聽 window，指標一下子移出外框（快速拖動）也跟得上。
+  // 手勢期間聽 window：還沒超過 SLOP 前不擷取指標（擷取中放開，click 會改派給外框，
+  // 島上的開啟鈕就收不到點擊），而這段期間指標一下子移出外框也跟得上。
   private listen() {
     this.unlisten?.();
     const track = (event: PointerEvent) => this.track(event);
@@ -377,19 +403,23 @@ export class FloatingPanel {
     };
   }
 
+  /**
+   * 手勢正式開始：擷取指標到外框，之後游標一律是外框的（`data-gesture`），
+   * 經過頁面上的連結、文字也不會換游標或觸發它們的 hover。
+   */
+  private engage(event: PointerEvent) {
+    const gesture = this.pointer!;
+    gesture.moved = true;
+    this.layer().nativeElement.setPointerCapture?.(event.pointerId);
+    this.drag.set({ gesture, x: event.clientX, y: event.clientY });
+  }
+
   private track(event: PointerEvent) {
     const gesture = this.pointer;
     if (!gesture || event.pointerId !== gesture.pointer) return;
-    const dx = event.clientX - gesture.x,
-      dy = event.clientY - gesture.y;
-    if (!gesture.moved && Math.hypot(dx, dy) < SLOP) return;
-    gesture.moved = true;
-    const viewport = this.viewport();
-    this.live.set(
-      gesture.kind === 'move'
-        ? moved(gesture.start, dx, dy, viewport)
-        : resized(gesture.start, gesture.kind, dx, dy, viewport),
-    );
+    if (gesture.moved) this.drag.set({ gesture, x: event.clientX, y: event.clientY });
+    else if (Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) >= SLOP)
+      this.engage(event);
   }
 
   private finish(event: PointerEvent) {
@@ -397,6 +427,9 @@ export class FloatingPanel {
     if (!gesture || event.pointerId !== gesture.pointer) return;
     this.pointer = null;
     this.unlisten?.();
+    // 手勢中沒有更新 hover：依指標現在是否在島上校正一次。
+    if (this.mode() === 'island')
+      this.hovered.set(!!this.island()?.nativeElement.matches(':hover'));
     const live = this.live();
     if (!gesture.moved || !live) return;
     if (gesture.kind === 'move') swallowClick();
@@ -407,7 +440,7 @@ export class FloatingPanel {
         this.placement.set(
           placementOf(gesture.kind === 'move' ? snapped(live, viewport) : live, viewport),
         );
-      this.live.set(null);
+      this.drag.set(null);
     });
     this.save();
   }

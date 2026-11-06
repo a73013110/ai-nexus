@@ -105,12 +105,27 @@ export function rectOf(placement: FloatingPlacement, viewport: Size): Rect {
   );
 }
 
-/** 拖動中：整個矩形留在視窗內。 */
-export function moved(start: Rect, dx: number, dy: number, viewport: Size): Rect {
+/** 按下時指標落在矩形內的相對位置（左上 0、右下 1）。 */
+export interface Grip {
+  x: number;
+  y: number;
+}
+
+export function gripOf(rect: Rect, x: number, y: number): Grip {
+  return { x: (x - rect.x) / rect.width, y: (y - rect.y) / rect.height };
+}
+
+/**
+ * 拖動中：按住的那一點留在指標下，整個矩形留在視窗內。以相對位置而不是位移量計算，
+ * 拖動中內容改變大小（例：島上的狀態文字變長變短）時，指標仍落在原本按住的地方。
+ */
+export function moved(size: Size, grip: Grip, x: number, y: number, viewport: Size): Rect {
+  const { width, height } = size;
   return {
-    ...start,
-    x: clamp(start.x + dx, 0, viewport.width - start.width),
-    y: clamp(start.y + dy, 0, viewport.height - start.height),
+    x: clamp(x - grip.x * width, 0, viewport.width - width),
+    y: clamp(y - grip.y * height, 0, viewport.height - height),
+    width,
+    height,
   };
 }
 
