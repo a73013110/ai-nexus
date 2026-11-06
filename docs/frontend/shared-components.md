@@ -26,6 +26,7 @@
 - 由管理者決定先後的列表直接在表格上排序：`nxSortableRows`＋`nx-sort-handle`＋`nx-sort-rank`，規則見 [手動排序](../architecture/manual-ordering.md)。
 - 表格的排序、欄位篩選與分頁用 [`table-model.ts`](../../frontend/src/app/shared/ui/table-model.ts) 的表格模型＋`th[nxHeader]`，已套用條件的 chip 用 `ChipList`；規則見 [資料工作區](data-workspace.md)。
 - 下拉面板一律經 [`anchored-popover.ts`](../../frontend/src/app/shared/browser/anchored-popover.ts) 開關：給 `trigger`，按觸發鈕關閉不會被輕關閉後又打開；選擇器另給 `closeOnFocusOut`（Tab 離開即關）。選擇器常被欄位 `<label>` 包住，它保證點面板的空白或文字不會被 label 轉成觸發鈕的 click，焦點也不會落到面板外。
+- 可換月的日曆（`MonthCalendar`、`DateTimePicker`）在格子上以滾輪換月，一律掛 [`wheel-step.ts`](../../frontend/src/app/shared/browser/wheel-step.ts) 的 `nxWheelStep`（累積觸控板捲動、換完短暫冷卻）；新的日曆也用它，不自己處理 `wheel`。
 
 ## 完成的條件
 

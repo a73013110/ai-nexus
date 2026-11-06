@@ -20,7 +20,7 @@ function setup() {
 }
 
 describe('DateTimePicker', () => {
-  it('turns the month with the wheel, one notch per month, without scrolling the panel', () => {
+  it('turns the month with the wheel without scrolling the panel', () => {
     const { fixture, month, wheel } = setup();
     fixture.componentInstance.view.set({
       year: 2026,
@@ -35,16 +35,8 @@ describe('DateTimePicker', () => {
 
     expect(wheel(100, 1000).defaultPrevented).toBe(true);
     expect(month()).toBe('2026 年 4 月');
-    // 換月後 150ms 內的捲動（觸控板的慣性）不再換。
-    wheel(100, 1050);
-    expect(month()).toBe('2026 年 4 月');
     wheel(-100, 1300);
     expect(month()).toBe('2026 年 3 月');
-    // 觸控板的小幅捲動累積到門檻才換。
-    wheel(-30, 1600);
-    expect(month()).toBe('2026 年 3 月');
-    wheel(-40, 1620);
-    expect(month()).toBe('2026 年 2 月');
   });
 
   it('marks the weekend columns and the days outside the month', () => {

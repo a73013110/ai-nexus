@@ -236,6 +236,23 @@ describe('MonthCalendar', () => {
     expect(cell('2026-10-10').querySelector('.calendar-mark')).toBeNull();
   });
 
+  it('turns the month with the wheel and keeps the focused day', async () => {
+    const { fixture, host, root, cell } = setup();
+    const wheel = async (deltaY: number, timeStamp: number) => {
+      const event = new WheelEvent('wheel', { deltaY, cancelable: true, bubbles: true });
+      Object.defineProperty(event, 'timeStamp', { value: timeStamp });
+      root.querySelector('[role="grid"]')!.dispatchEvent(event);
+      await fixture.whenStable();
+      return event;
+    };
+    expect((await wheel(100, 1000)).defaultPrevented).toBe(true);
+    expect(host.month()).toBe('2026-11');
+    cell('2026-11-20').focus();
+    await wheel(-100, 1300);
+    expect(host.month()).toBe('2026-10');
+    expect(document.activeElement).toBe(cell('2026-10-20'));
+  });
+
   it('changes month from its header', async () => {
     const { fixture, host, root } = setup();
     const [today, previous] = root.querySelectorAll<HTMLButtonElement>('.calendar-nav button');

@@ -80,7 +80,7 @@
     role="grid"
     [attr.aria-labelledby]="id + '-month'"
     (keydown)="calendarKey($event)"
-    (wheel)="wheelMonth($event)"
+    (nxWheelStep)="wheelMonth($event)"
   >
     <thead>
       <tr>

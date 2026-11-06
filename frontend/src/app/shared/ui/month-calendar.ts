@@ -16,6 +16,7 @@ import {
   output,
 } from '@angular/core';
 import { currentDay, localDateKey } from '../browser/calendar-day';
+import { WheelStep } from '../browser/wheel-step';
 import type { BadgeTone } from './count-badge';
 import { Icon } from './icon';
 
@@ -161,11 +162,12 @@ export class CalendarDayTemplate<T extends CalendarDay = CalendarDay> {
  * （`days` 的 `marks` 圓點，或 `nxCalendarDay` 範本）。不含任何業務規則。
  * 鍵盤依 grid 模式：方向鍵移動、Home／End 到週首尾、PageUp／PageDown 換月（Shift 換年）、
  * Enter／Space 選取；移出本月會改 `month`（`monthChange`）並把焦點留在新月份的那一天。
+ * 在格子上捲動滾輪也換月（`WheelStep`），焦點在日期上時與 PageUp／PageDown 相同。
  * 宿主是 `month-calendar` 容器，呼叫端可用 `@container month-calendar (width < 36rem)` 精簡自己的範本。
  */
 @Component({
   selector: 'nx-month-calendar',
-  imports: [Icon, NgTemplateOutlet],
+  imports: [Icon, NgTemplateOutlet, WheelStep],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './month-calendar.scss',
   host: { '[class.is-interactive]': 'interactive()' },
@@ -202,6 +204,7 @@ export class CalendarDayTemplate<T extends CalendarDay = CalendarDay> {
       [attr.aria-label]="label() + '，' + title()"
       [attr.aria-readonly]="interactive() ? null : true"
       [attr.aria-busy]="busy() || loading() || null"
+      (nxWheelStep)="wheel($event)"
     >
       <div class="calendar-weekdays" role="row">
         @for (weekday of weekdays(); track weekday.index) {
@@ -416,6 +419,14 @@ export class MonthCalendar {
     if (!target) return;
     event.preventDefault();
     this.moveTo(target);
+  }
+  /** 焦點在某一天時跟著換到新月份的同一天，否則那一格被換掉，焦點會掉到頁面上。 */
+  wheel(step: number) {
+    const focused = this.host.nativeElement.contains(document.activeElement)
+      ? (document.activeElement as HTMLElement).dataset['date']
+      : undefined;
+    if (focused) this.moveTo(addMonths(focused, step));
+    else this.shift(step);
   }
   private moveTo(date: string) {
     this.pendingFocus = true;

@@ -16,6 +16,7 @@ import { Field } from './field';
 import { Select } from './select';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
+import { WheelStep } from '../browser/wheel-step';
 import { formatDateTimeInput } from '../browser/format';
 import {
   calendarDate,
@@ -30,7 +31,7 @@ import {
 /** 邊界上的 ISO 公曆牆上時間值；日曆與語系只影響顯示。 */
 @Component({
   selector: 'nx-date-time-picker',
-  imports: [Icon, Field, Select],
+  imports: [Icon, Field, Select, WheelStep],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './date-time-picker.html',
   styleUrl: './date-time-picker.scss',
@@ -122,9 +123,6 @@ export class DateTimePicker {
   readonly opened = this.popover.opened;
   private returnFocus: HTMLElement | null = null;
   private lastEmitted = '';
-  /** 滾輪換月：累積的捲動量與上次換月的時間（見 `wheelMonth`）。 */
-  private wheelDelta = 0;
-  private wheelTurnedAt = -Infinity;
   constructor() {
     effect(() => {
       const value = this.value();
@@ -263,21 +261,10 @@ export class DateTimePicker {
     this.close();
     this.editor().nativeElement.focus({ preventScroll: true });
   }
-  /**
-   * 在日曆格上捲動滾輪換月（往下是下個月）。滑鼠一格約 100px 換一個月；觸控板的捲動量小而連續，
-   * 累積到門檻才換，且換完 150ms 內不再換，免得輕輕一滑就跳好幾個月。按著 Ctrl 是縮放，橫向捲動不處理。
-   */
-  wheelMonth(event: WheelEvent) {
-    if (event.ctrlKey || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-    event.preventDefault();
-    if (event.timeStamp - this.wheelTurnedAt < 150) return;
-    const unit = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : event.deltaMode ? 400 : 1;
-    this.wheelDelta += event.deltaY * unit;
-    if (Math.abs(this.wheelDelta) < 60) return;
+  /** 在日曆格上捲動滾輪換月（`WheelStep`）。 */
+  wheelMonth(step: number) {
     const focusedDay = (document.activeElement as HTMLElement | null)?.dataset['date'];
-    this.shiftMonth(Math.sign(this.wheelDelta));
-    this.wheelDelta = 0;
-    this.wheelTurnedAt = event.timeStamp;
+    this.shiftMonth(step);
     // 焦點在日期上時跟著換月，否則原本的日期按鈕被換掉，焦點會掉到頁面上。
     if (focusedDay) this.focusDay();
   }
