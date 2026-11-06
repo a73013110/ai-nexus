@@ -16,7 +16,12 @@ class Host {
 
 @Component({
   imports: [FloatingPanel],
-  template: `<nx-floating-panel title="助理" islandLabel="助理，展開" [docked]="true">
+  template: `<nx-floating-panel
+    title="助理"
+    islandLabel="助理，展開"
+    storageKey="assistant"
+    [docked]="true"
+  >
     <span floating-island>助理</span>
   </nx-floating-panel>`,
 })
@@ -77,27 +82,31 @@ describe('FloatingPanel', () => {
     expect(layer.style.getPropertyValue('--floating-x')).toBe('608px');
   });
 
-  it('docks the island at the top center and grows the panel down from it', async () => {
+  async function docked() {
     const fixture = TestBed.createComponent(DockedHost);
     fixture.detectChanges();
     await fixture.whenStable();
-    const panel = fixture.componentInstance.panel();
     const host = fixture.nativeElement as HTMLElement;
-    const layer = host.querySelector<HTMLElement>('.ui-floating')!;
+    return {
+      fixture,
+      panel: fixture.componentInstance.panel(),
+      layer: host.querySelector<HTMLElement>('.ui-floating')!,
+      island: host.querySelector<HTMLButtonElement>('.ui-floating-island-open')!,
+    };
+  }
+
+  it('docks the island at the top center and grows the panel down from it', async () => {
+    const { fixture, panel, layer, island } = await docked();
     expect(panel.mode()).toBe('island');
-    expect(layer.dataset['dock']).toBe('top');
+    expect(layer.dataset['side']).toBe('center');
+    expect(layer.dataset['edge']).toBe('top');
     expect(layer.style.getPropertyValue('--floating-y')).toBe('16px');
 
-    // 指到島上時讓呼叫端露出說明；常駐的島不能拖。
-    const island = host.querySelector<HTMLButtonElement>('.ui-floating-island-open')!;
+    // 指到島上時讓呼叫端露出說明。
     island.parentElement!.dispatchEvent(new MouseEvent('pointerenter'));
     expect(panel.peek()).toBe(true);
     island.parentElement!.dispatchEvent(new MouseEvent('pointerleave'));
     expect(panel.peek()).toBe(false);
-    island.dispatchEvent(pointer('pointerdown', 512, 30));
-    island.dispatchEvent(pointer('pointermove', 300, 300));
-    await fixture.whenStable();
-    expect(layer.hasAttribute('data-gesture')).toBe(false);
 
     island.click();
     await fixture.whenStable();
@@ -108,6 +117,43 @@ describe('FloatingPanel', () => {
     panel.minimize();
     await fixture.whenStable();
     expect(layer.style.getPropertyValue('--floating-y')).toBe('16px');
+  });
+
+  it('lets the docked island move, remembers it and grows the panel from its corner', async () => {
+    const { fixture, panel, layer, island } = await docked();
+    island.dispatchEvent(pointer('pointerdown', 512, 30));
+    island.dispatchEvent(pointer('pointermove', 900, 700));
+    await fixture.whenStable();
+    expect(layer.hasAttribute('data-gesture')).toBe(true);
+    island.dispatchEvent(pointer('pointerup', 900, 700));
+    await fixture.whenStable();
+    // 放開時靠近右下角，吸附到邊距。
+    expect(layer.style.getPropertyValue('--floating-x')).toBe('848px');
+    expect(layer.style.getPropertyValue('--floating-y')).toBe('712px');
+    expect(JSON.parse(localStorage.getItem('ai-nexus.floating.assistant')!).island).toEqual({
+      side: 'end',
+      inline: 16,
+      edge: 'bottom',
+      block: 16,
+    });
+
+    panel.expand();
+    await fixture.whenStable();
+    expect(layer.dataset['edge']).toBe('bottom');
+    expect(layer.style.getPropertyValue('--floating-x')).toBe('608px');
+    expect(layer.style.getPropertyValue('--floating-y')).toBe('112px');
+    // 面板拖到別處再縮小：島回到自己的位置，不跟著面板。
+    const header = layer.querySelector('.ui-floating-header')!;
+    header.dispatchEvent(pointer('pointerdown', 700, 130));
+    header.dispatchEvent(pointer('pointermove', 400, 300));
+    header.dispatchEvent(pointer('pointerup', 400, 300));
+    panel.minimize();
+    await fixture.whenStable();
+    expect(layer.style.getPropertyValue('--floating-x')).toBe('848px');
+
+    fixture.destroy();
+    const again = await docked();
+    expect(again.layer.style.getPropertyValue('--floating-y')).toBe('712px');
   });
 
   it('steps back on Escape: full screen to panel, then panel to island', async () => {

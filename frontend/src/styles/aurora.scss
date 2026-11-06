@@ -1,55 +1,23 @@
-// 助理的識別：藏青圓核＋青綠光環的圓鈕（.ai-orb，內放白色 AiMark）、回答中的流光文字（.ai-shimmer）。
-// 顏色是主題權杖 --aurora-*（tokens.scss）；面板回答中的邊緣柔光在 FloatingPanel（data-busy）。
+// 助理的識別：三色節點的圓鈕（.ai-orb，內放 AiMark）、回答中的流光文字（.ai-shimmer）。
+// 圓鈕本身沒有底色與光環：島與面板標題的膠囊就是它的底，顏色只在三個節點（--ai-node-*）。
+// 其餘顏色是主題權杖 --aurora-*（tokens.scss）；面板回答中的邊緣柔光在 FloatingPanel（data-busy）。
 // 放全域：島、面板標題共用。迴圈動畫遇到減少動態（motion.scss）會停在第一格。
-@property --aurora-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-
 .ai-orb {
   --orb-size: 2rem;
+  --ai-mark-node-1: var(--ai-node-1);
+  --ai-mark-node-2: var(--ai-node-2);
+  --ai-mark-node-3: var(--ai-node-3);
   position: relative;
   flex: none;
   display: inline-grid;
   place-items: center;
   width: var(--orb-size);
   height: var(--orb-size);
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 26%, var(--aurora-3), var(--aurora-core) 70%);
-  color: #fff;
-  box-shadow: 0 0 calc(var(--orb-size) * 0.3) color-mix(in srgb, var(--aurora-2) 30%, transparent);
-  transition: box-shadow var(--motion) var(--ease);
-  // 圓鈕是品牌色底，標記改用白色（AiMark 預設是 --activity）。
+  // 連線用 AiMark 的 currentColor：灰階退到節點後面，不和三個顏色搶。
+  color: var(--muted);
   > nx-ai-mark {
-    --icon-size: 60%;
+    --icon-size: 62%;
     color: inherit;
-  }
-  // 光環：只留圓核外 1.5px 的一圈，青綠到藍慢慢轉。
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -1.5px;
-    padding: 1.5px;
-    border-radius: inherit;
-    background: conic-gradient(
-      from var(--aurora-angle),
-      var(--aurora-1),
-      var(--aurora-2),
-      var(--aurora-3),
-      var(--aurora-1)
-    );
-    mask:
-      linear-gradient(#000 0 0) content-box exclude,
-      linear-gradient(#000 0 0);
-    animation: aurora-spin 8s linear infinite;
-  }
-  // 回答中：光環快轉、外光放大。
-  &[data-state='busy'] {
-    box-shadow: 0 0 calc(var(--orb-size) * 0.6) color-mix(in srgb, var(--aurora-1) 45%, transparent);
-    &::before {
-      animation-duration: 1.2s;
-    }
   }
   // 縮著時答完、還沒看：右上角一顆亮點。
   &[data-state='unread']::after {
@@ -78,11 +46,6 @@
   animation: aurora-sweep 1.8s linear infinite;
 }
 
-@keyframes aurora-spin {
-  to {
-    --aurora-angle: 360deg;
-  }
-}
 @keyframes aurora-sweep {
   from {
     background-position: 100% 0;

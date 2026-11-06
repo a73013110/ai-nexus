@@ -59,8 +59,10 @@
   --info: var(--focus);
   --success: var(--signal);
   --warning: var(--p-amber-700);
-  // 助理的識別（圓鈕與光環、回答中的面板邊緣柔光，見 aurora.scss）：專案的藏青、青綠與藍。
-  --aurora-core: var(--p-navy-700);
+  // 助理的識別（圓鈕的三個節點、回答中的面板邊緣柔光與流光文字，見 aurora.scss）：專案的藏青、青綠與藍。
+  --ai-node-1: var(--p-teal-700);
+  --ai-node-2: var(--p-blue-600);
+  --ai-node-3: var(--p-navy-700);
   --aurora-1: var(--p-teal-300);
   --aurora-2: var(--p-teal-700);
   --aurora-3: var(--p-blue-600);
@@ -361,6 +363,9 @@
   --warning: var(--p-amber-300);
   --aurora-2: var(--p-sky-100);
   --aurora-3: var(--p-sky-200);
+  --ai-node-1: var(--p-teal-300);
+  --ai-node-2: var(--p-sky-100);
+  --ai-node-3: var(--p-silver-50);
   // Redeclared so a dark preview zone resolves them against its own --ink.
   --activity: var(--ink);
   --activity-rest: color-mix(in srgb, var(--ink) 18%, transparent);

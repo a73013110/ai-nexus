@@ -75,10 +75,10 @@
   - 持有對話（`assistantConversation`），送出時帶上目前頁面與條件。
   - 換頁或改條件後，舊輪次留在畫面上，但不再當上下文送出。
 - [`AssistantPanel`](../../frontend/src/app/features/platform/assistant/assistant-panel.ts) 是 `docked` 的 [`FloatingPanel`](../../frontend/src/app/shared/ui/floating-panel.ts)：
-  - 島是常駐在頂端中央的極光圓鈕（手機在底部），指到才露出「問『頁面』」。點一下往下長成面板，標題是同形的膠囊；可拖動、調整大小、全螢幕，縮小回到頂端。
+  - 島是常駐的三色節點圓鈕，預設在頂端中央（手機在底部），可拖到別處並記在瀏覽器；指到才露出「問『頁面』」。點一下從島所在的那一側長成面板，標題是同形的膠囊；可拖動、調整大小、全螢幕，縮小回到島的位置。
   - 第一次展開才建立面板內容。
   - 圓鈕上顯示回答進度與正在查的工具，答完短暫預覽第一句，沒看的留一顆亮點。
-  - 圓鈕與流光在 `styles/aurora.scss`，顏色是主題權杖 `--aurora-*`（藏青、青綠、藍）；回答中面板內緣的柔光是 `FloatingPanel` 的 `busy`。
+  - 圓鈕與流光在 `styles/aurora.scss`：圓鈕沒有底色，顏色只在 `AiMark` 的三個節點（`--ai-node-*`）；流光與回答中面板內緣的柔光（`FloatingPanel` 的 `busy`）用 `--aurora-*`。
 - 提問、回答與輸入框和對話頁同一套（`frontend/src/styles/conversation.scss`、`StreamingAnswer`）。
 - 模型選擇是自己的一份（`ModelChoice`），換模型不影響對話頁。
 - 範例在 `/admin/design` 的「回饋 › 浮動面板與助理」。

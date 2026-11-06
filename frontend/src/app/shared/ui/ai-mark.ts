@@ -37,7 +37,8 @@ const EDGES = `M${VERTICES.map(([x, y]) => `${x} ${y}`).join('L')}Z`;
 
 /**
  * AI 的識別：三個互連的節點。模型活動（生成、附件處理、背景工作）與助理圓鈕都用它，
- * 不另畫訊號或光點。大小跟 `--icon-size`（同 `nx-icon`），顏色預設 `--activity`、可由 `color` 覆寫。
+ * 不另畫訊號或光點。大小跟 `--icon-size`（同 `nx-icon`），顏色預設 `--activity`、可由 `color` 覆寫；
+ * 個別節點可由 `--ai-mark-node-1..3` 上色（助理圓鈕用，見 `styles/aurora.scss`）。
  */
 @Component({
   selector: 'nx-ai-mark',

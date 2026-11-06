@@ -2,6 +2,7 @@
  * 浮動面板（`FloatingPanel`）的位置與大小，全是純函式。座標以視窗左上為原點、單位 px。
  * 位置記的是「貼著哪一側、離那一側多遠」（`Anchor`），視窗變大變小時仍貼著同一側，
  * 不會因為存的是絕對座標而漂到畫面中間；動態島長大時也往遠離那一側的方向長。
+ * 放在水平中間的（吸附到中線）記成 `center`，視窗變寬時仍在中間。
  */
 
 export interface Size {
@@ -15,8 +16,11 @@ export interface Rect extends Size {
 }
 
 export interface Anchor {
-  /** 水平方向貼著左（start）或右（end），`inline` 是與那一邊的距離。 */
-  side: 'start' | 'end';
+  /**
+   * 水平方向貼著左（start）或右（end），`inline` 是與那一邊的距離；
+   * `center` 對齊視窗中線，`inline` 是中心點偏離中線的距離（往右為正）。
+   */
+  side: 'start' | 'center' | 'end';
   inline: number;
   /** 垂直方向貼著上（top）或下（bottom），`block` 是與那一邊的距離。 */
   edge: 'top' | 'bottom';
@@ -44,24 +48,26 @@ export function defaultPlacement(viewport: Size): FloatingPlacement {
   };
 }
 
-/** 常駐在頂端中央的島第一次展開：同樣寬 400、高最多 640，置中貼頂，從島往下長。 */
-export function centeredPlacement(viewport: Size): FloatingPlacement {
-  return {
-    ...defaultPlacement(viewport),
-    side: 'start',
-    inline: Math.max(0, (viewport.width - 400) / 2),
-  };
+/** 貼著上緣或下緣、水平置中的錨（常駐的島：桌面在頂端，手機在底部的拇指區）。 */
+export function centered(edge: Anchor['edge']): Anchor {
+  return { side: 'center', inline: 0, edge, block: FLOATING_LIMITS.margin };
 }
 
-/** 以中心點較靠近的那一側為錨。 */
+/** 以中心點較靠近的那一側為錨；中心點離中線不到吸附距離就以中線為錨。 */
 export function anchorOf(rect: Rect, viewport: Size): Anchor {
-  const end = rect.x + rect.width / 2 > viewport.width / 2;
+  const offset = rect.x + rect.width / 2 - viewport.width / 2;
   const bottom = rect.y + rect.height / 2 > viewport.height / 2;
+  const vertical = {
+    edge: bottom ? 'bottom' : 'top',
+    block: bottom ? viewport.height - rect.y - rect.height : rect.y,
+  } as const;
+  if (Math.abs(offset) < FLOATING_LIMITS.snap)
+    return { side: 'center', inline: offset, ...vertical };
+  const end = offset > 0;
   return {
     side: end ? 'end' : 'start',
     inline: end ? viewport.width - rect.x - rect.width : rect.x,
-    edge: bottom ? 'bottom' : 'top',
-    block: bottom ? viewport.height - rect.y - rect.height : rect.y,
+    ...vertical,
   };
 }
 
@@ -72,7 +78,12 @@ export function placementOf(rect: Rect, viewport: Size): FloatingPlacement {
 /** 依錨放到目前的視窗，超出邊緣（含 `margin`）就推回來。 */
 export function place(anchor: Anchor, size: Size, viewport: Size): Rect {
   const { margin } = FLOATING_LIMITS;
-  const x = anchor.side === 'end' ? viewport.width - anchor.inline - size.width : anchor.inline;
+  const x =
+    anchor.side === 'end'
+      ? viewport.width - anchor.inline - size.width
+      : anchor.side === 'center'
+        ? (viewport.width - size.width) / 2 + anchor.inline
+        : anchor.inline;
   const y = anchor.edge === 'bottom' ? viewport.height - anchor.block - size.height : anchor.block;
   return {
     x: clamp(x, margin, viewport.width - size.width - margin),
@@ -103,14 +114,16 @@ export function moved(start: Rect, dx: number, dy: number, viewport: Size): Rect
   };
 }
 
-/** 放開時：離邊緣不到 `snap` 就貼齊到 `margin`，放在中間就停在原處。 */
+/** 放開時：離邊緣不到 `snap` 就貼齊到 `margin`，水平方向離中線不到 `snap` 就置中，其餘停在原處。 */
 export function snapped(rect: Rect, viewport: Size): Rect {
   const { margin, snap } = FLOATING_LIMITS;
   const toward = (start: number, size: number, extent: number) =>
     start < snap ? margin : extent - start - size < snap ? extent - size - margin : start;
+  const middle = (viewport.width - rect.width) / 2;
+  const x = toward(rect.x, rect.width, viewport.width);
   return {
     ...rect,
-    x: toward(rect.x, rect.width, viewport.width),
+    x: x === rect.x && Math.abs(rect.x - middle) < snap ? middle : x,
     y: toward(rect.y, rect.height, viewport.height),
   };
 }
@@ -151,11 +164,17 @@ export function collapseTo(panel: Rect, viewport: Size): Anchor {
   };
 }
 
+/** 從島長出面板：對齊島所錨定的那一側與那一緣（頂端的島往下長、右下的島往左上長、置中的往兩側長）。 */
 export function expandFrom(island: Rect, panel: Size, viewport: Size): FloatingPlacement {
-  const end = island.x + island.width / 2 > viewport.width / 2;
+  const { side, edge } = anchorOf(island, viewport);
   const rect = {
-    x: end ? island.x + island.width - panel.width : island.x,
-    y: island.y + island.height - panel.height,
+    x:
+      side === 'end'
+        ? island.x + island.width - panel.width
+        : side === 'center'
+          ? island.x + (island.width - panel.width) / 2
+          : island.x,
+    y: edge === 'bottom' ? island.y + island.height - panel.height : island.y,
     width: panel.width,
     height: panel.height,
   };

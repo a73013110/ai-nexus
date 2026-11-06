@@ -2,8 +2,8 @@
 
 // 外框是 manual popover（top layer，不受祖先的 transform、overflow 影響），位置與大小由
 // FloatingPanel 算好寫進 --floating-*，以動態島同一組彈簧過渡；拖動、調整大小時（data-gesture）直接跟手。
-// 面板與島都是絕對定位、沒有 inset，由 flex 對齊放在靠錨那一側的下角：面板內容維持面板的大小，
-// 縮成島時不重排，只被外框裁切後淡出。
+// 面板與島都是絕對定位、沒有 inset，由 flex 對齊到島錨定的側與緣（data-side／data-edge）：
+// 面板內容維持面板的大小，縮成島時不重排，只被外框裁切後淡出；展開時看起來是從島長出來。
 :host {
   display: contents;
 }
@@ -42,9 +42,10 @@
   &[data-side='start'] {
     justify-content: start;
   }
-  // 常駐在頂端中央的島：面板與島對齊上緣中間，展開時從島往下長、縮小時往上收回。
-  &[data-dock] {
+  &[data-side='center'] {
     justify-content: center;
+  }
+  &[data-edge='top'] {
     align-items: start;
   }
   &[data-gesture] {
@@ -219,8 +220,8 @@
     opacity: 1;
     transition: opacity var(--motion) var(--ease) calc(var(--motion-morph) * 0.35);
   }
-  // 常駐的島置中、往兩側長：內容貼著左緣，變寬時標記跟著左緣滑過去，不會先被裁掉。
-  [data-dock] > & {
+  // 置中的島往兩側長：內容貼著左緣，變寬時標記跟著左緣滑過去，不會先被裁掉。
+  [data-side='center'] > & {
     inset-inline-start: 0;
   }
 }

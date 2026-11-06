@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   anchorOf,
-  centeredPlacement,
+  centered,
   collapseTo,
   expandFrom,
   FLOATING_LIMITS,
@@ -15,13 +15,18 @@ import {
 const viewport = { width: 1200, height: 800 };
 
 describe('floating geometry', () => {
-  it('centers the docked panel under the top of the window', () => {
-    expect(rectOf(centeredPlacement(viewport), viewport)).toEqual({
-      x: 400,
-      y: 16,
-      width: 400,
-      height: 640,
+  it('keeps a centered anchor on the middle line when the window resizes', () => {
+    const size = { width: 160, height: 40 };
+    expect(place(centered('top'), size, viewport)).toEqual({ x: 520, y: 16, ...size });
+    expect(place(centered('top'), size, { width: 1600, height: 900 }).x).toBe(720);
+    // 中心點離中線不到吸附距離：以中線為錨，記偏移；再遠就貼左右。
+    expect(anchorOf({ x: 540, y: 16, ...size }, viewport)).toEqual({
+      side: 'center',
+      inline: 20,
+      edge: 'top',
+      block: 16,
     });
+    expect(anchorOf({ x: 300, y: 16, ...size }, viewport).side).toBe('start');
   });
 
   it('keeps the side it was anchored to when the window resizes', () => {
@@ -63,6 +68,8 @@ describe('floating geometry', () => {
     expect(snapped({ ...start, x: 30 }, viewport).x).toBe(16);
     expect(snapped({ ...start, x: 870 }, viewport).x).toBe(884);
     expect(snapped(start, viewport)).toEqual(start);
+    // 放在中線附近就置中。
+    expect(snapped({ ...start, x: 430 }, viewport).x).toBe(450);
   });
 
   it('resizes from the dragged edge while the opposite edge stays put', () => {
@@ -88,5 +95,13 @@ describe('floating geometry', () => {
     // 島被拖到左上：面板從島的角落往下長，推回視窗內。
     const moved = expandFrom({ x: 16, y: 16, width: 160, height: 40 }, panel, viewport);
     expect(rectOf(moved, viewport)).toEqual({ x: 16, y: 16, width: 400, height: 600 });
+    // 頂端置中的島：面板置中、從島的上緣往下長。
+    const top = place(centered('top'), { width: 160, height: 40 }, viewport);
+    expect(rectOf(expandFrom(top, panel, viewport), viewport)).toEqual({
+      x: 400,
+      y: 16,
+      width: 400,
+      height: 600,
+    });
   });
 });

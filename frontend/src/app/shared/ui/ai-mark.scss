@@ -12,8 +12,12 @@ svg {
   height: 100%;
   overflow: visible;
 }
-circle {
-  fill: currentColor;
+// 三個節點各有一個可覆寫的顏色（`--ai-mark-node-1..3`，依頂點順序：上、右下、左下），預設單色。
+// 顏色跟著節點走：換位時三個顏色一起沿邊轉。
+@for $index from 1 through 3 {
+  .ai-mark-node:nth-of-type(#{$index}) circle {
+    fill: var(--ai-mark-node-#{$index}, currentColor);
+  }
 }
 .ai-mark-edges {
   fill: none;

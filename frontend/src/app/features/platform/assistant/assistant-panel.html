@@ -7,7 +7,7 @@
   [docked]="true"
   [busy]="chat.busy()"
 >
-  <span floating-mark class="ai-orb assistant-mark" [attr.data-state]="chat.busy() ? 'busy' : null"
+  <span floating-mark class="ai-orb assistant-mark"
     ><nx-ai-mark [state]="chat.busy() ? 'working' : 'idle'"
   /></span>
   @if (page(); as name) {
