@@ -118,6 +118,11 @@ form.dialog-form {
 .dialog-title h2 {
   max-width: 100%;
 }
+// 標題旁的狀態徽章是方框，對齊標題字的中線而不是基線：字比標題小一截，基線對齊會讓方框往下掉。
+// 細節（small）是文字，仍沿用基線。
+.dialog-title > [dialog-title] {
+  align-self: center;
+}
 // 標題與選用的第二行（dialog-subtitle）；沒有第二行時與單獨的 .dialog-title 一樣。
 .dialog-heading {
   display: flex;
