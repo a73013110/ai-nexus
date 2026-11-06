@@ -43,8 +43,9 @@ public sealed class AttendanceCoverageTests
         var person = Assert.Single((await GetAsync(client, "from=2026-10-19&to=2026-10-21")).People, x => x.UserId == bob);
 
         var covered = Day(person, 19);
-        Assert.Equal((186, GapCoverage.Covered, 0, 1800), (covered.LateSeconds, covered.Coverage, covered.ShortSeconds, covered.FormSeconds));
-        Assert.Equal(At(19, 18, 3, 6), covered.AdjustedClockOut);
+        // appsettings 判定到整分：09:03:06 以 09:03 比，遲到 3 分、扣表單後 18:03 可走。
+        Assert.Equal((180, GapCoverage.Covered, 0, 1800), (covered.LateSeconds, covered.Coverage, covered.ShortSeconds, covered.FormSeconds));
+        Assert.Equal(At(19, 18, 3), covered.AdjustedClockOut);
         var pending = Day(person, 20);
         Assert.Equal((2400, GapCoverage.Pending, 4200, 0), (pending.LateSeconds, pending.Coverage, pending.ShortSeconds, pending.FormSeconds));
         var form = Assert.Single(pending.Forms);

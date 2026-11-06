@@ -66,7 +66,7 @@ public static class AttendanceEvaluator
     public static AttendanceEvaluation Evaluate(AttendanceDay day, WorkdayOptions rules)
     {
         var (clockIn, clockOut) = Punches(day.FirstPunch, day.LastPunch);
-        // 只有一筆刷卡仍看到秒的原值：整分比對只是放寬遲到早退，同一分鐘內刷兩次還是兩筆。
+        // 只有一筆刷卡仍看到秒的原值：整分只用在比遲到早退（上班捨秒是放寬，下班捨秒反而多算早退），同一分鐘內刷兩次還是兩筆。
         var (inAt, outAt) = (Judged(clockIn, rules.PunchPrecision), Judged(clockOut, rules.PunchPrecision));
         var unjudged = new AttendanceEvaluation(day.Date, day.DayType, AttendanceStatus.Undetermined, null, clockIn, clockOut, null, 0, 0, day.FormState);
 
