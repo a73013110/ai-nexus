@@ -13,6 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { below } from '../browser/breakpoints';
+import { exitFinished } from '../browser/exit-motion';
 import { mediaQuery } from '../browser/media-query';
 import { bringToFront, ownsEscape } from '../browser/top-layer';
 import { Icon } from './icon';
@@ -165,7 +166,7 @@ export class DetailDrawer {
     this.returnFocus = null;
     // 宿主會在 `closed` 時清空內容，所以要等退場完成；這段期間重新開啟會取消它。
     const dialog = this.dialog().nativeElement;
-    void Promise.allSettled(dialog.getAnimations().map((item) => item.finished)).then(() => {
+    void exitFinished(dialog).then(() => {
       if (this.destroyed || dialog.open) return;
       this.wide.set(false);
       this.closed.emit();

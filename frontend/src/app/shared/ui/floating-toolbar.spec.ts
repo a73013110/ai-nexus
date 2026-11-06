@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TRANSIENT_HOLD_MS } from '../browser/motion-tokens';
 import { FloatingToolbar } from './floating-toolbar';
 import { IdleChrome } from './idle-chrome';
 
@@ -29,7 +30,7 @@ function setup() {
     fixture.detectChanges();
     return element.getAttribute('data-chrome');
   };
-  const idle = (ms = 2000) => {
+  const idle = (ms = TRANSIENT_HOLD_MS) => {
     fixture.detectChanges();
     vi.advanceTimersByTime(ms);
     return state();

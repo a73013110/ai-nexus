@@ -3,6 +3,12 @@
  * 正式建置會壓縮 CSS（`240ms` 變成 `.24s`），而本機開發不壓縮，單位讀錯只會在正式機現形；
  * 一律經過這裡換算，見 docs/frontend/script-reads-css.md。
  */
+/**
+ * 暫時出現的介面停留多久才自己收回：閒置的檢視工具與標題列（`IdleChrome`）、「已複製」等按鈕回饋。
+ * 一處定義，各處收回的節奏一致；收回本身的動效仍用 `--motion*`。要讀內容的預覽（例如助理的回答摘要）另計。
+ */
+export const TRANSIENT_HOLD_MS = 1500;
+
 export type MotionDurationToken = `--motion${'' | `-${string}`}`;
 export type MotionEasingToken = `--ease${'' | `-${string}`}`;
 

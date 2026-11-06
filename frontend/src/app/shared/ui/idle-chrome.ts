@@ -11,6 +11,7 @@ import {
   untracked,
   type Signal,
 } from '@angular/core';
+import { TRANSIENT_HOLD_MS } from '../browser/motion-tokens';
 
 /** 指標離 chrome 多近（px）算進入喚回區；區外的移動是閱讀，不喚回。 */
 const REACH = 24;
@@ -37,7 +38,7 @@ interface Part {
 @Directive({ selector: '[nxIdleChrome]', exportAs: 'nxIdleChrome' })
 export class IdleChrome {
   /** 閒置多久後淡出（毫秒）。 */
-  readonly delay = input(2000, { alias: 'nxIdleChromeDelay' });
+  readonly delay = input(TRANSIENT_HOLD_MS, { alias: 'nxIdleChromeDelay' });
   readonly shown = signal(true);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly parts = new Set<Part>();

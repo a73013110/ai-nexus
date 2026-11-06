@@ -64,9 +64,9 @@
   transition:
     width var(--motion-morph) var(--ease-spring),
     height var(--motion-morph) var(--ease-spring),
-    opacity var(--motion-panel) var(--ease-exit),
-    scale var(--motion-panel) var(--ease-exit),
-    translate var(--motion-panel) var(--ease-exit);
+    opacity var(--motion) var(--ease-exit),
+    scale var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit);
 }
 :host([data-chrome='hidden']) .floating-toolbar::after {
   content: '';

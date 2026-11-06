@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TRANSIENT_HOLD_MS } from '../browser/motion-tokens';
 import { IdleChrome, IdleChromePart } from './idle-chrome';
 
 @Component({
@@ -42,7 +43,7 @@ function setup() {
     fixture.detectChanges();
     return bar.getAttribute('data-chrome');
   };
-  const idle = (ms = 2000) => {
+  const idle = (ms = TRANSIENT_HOLD_MS) => {
     fixture.detectChanges();
     vi.advanceTimersByTime(ms);
     return state();
@@ -61,7 +62,7 @@ describe('IdleChrome', () => {
   it('shows on open and fades after the idle delay', () => {
     const { state, idle } = setup();
     expect(state()).toBe('shown');
-    expect(idle(1999)).toBe('shown');
+    expect(idle(TRANSIENT_HOLD_MS - 1)).toBe('shown');
     expect(idle(1)).toBe('hidden');
   });
 

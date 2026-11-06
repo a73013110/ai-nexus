@@ -263,7 +263,7 @@ import { DesignSamples } from './design-samples';
       id="design-floating-toolbar"
       title="浮動工具列"
       api="FloatingToolbar"
-      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 2 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。放大的檢視器標題列遵循同一規則。"
+      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 1.5 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。放大的檢視器標題列遵循同一規則。"
     >
       <div
         class="design-floating"

@@ -5,8 +5,9 @@
 ## 原則
 
 - 時長用 `--motion*`、曲線用 `--ease*`；JS 動畫經 `motionTiming()` 讀，不自己解析（[從程式讀 CSS 值](script-reads-css.md)）。
+- 退場一律 `--motion`＋`--ease-exit`；會自己收回的介面（閒置的檢視工具、「已複製」）停留 `TRANSIENT_HOLD_MS`（`motion-tokens.ts`），不各自寫秒數。
 - 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈、按下時微縮（`scale: 0.97`）。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
-- 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`、`@starting-style` 與 `transition-behavior: allow-discrete` 只是加分，不支援時直接切換。
+- 漸進增強：View Transitions、`linear()`、`interpolate-size`、`@starting-style`、`allow-discrete` 不支援時直接切換。
 
 ## 共享元素
 
@@ -18,10 +19,10 @@
 
 - `shared/ui/island.ts`：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded），以「－」縮回（同 `FloatingPanel`，也可按 Esc）。展開後不會多出內容（只有一則、沒有 `message`、`action`、`link`）時 pill 只是狀態、不能點開。
 - 會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。
-- 跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 `morphSize`（`shared/ui/morph-size.ts`）量測內容後用彈簧過渡，不依賴 `interpolate-size`。
+- 狀態由 tone 色與邊框表示；寬高由 `morphSize`（`shared/ui/morph-size.ts`）量測內容後用彈簧過渡。
 - `IslandService` 預設是根實例（composer）；元件在 `providers` 自備一份就有獨立的島。文件檢視器以此把處理進度與錯誤浮在內容底部，不與底下 composer 的提示混在一起。
 - `FloatingToolbar` 用同一套變形：膠囊隨模式切換、展開搜尋或多出搜尋結果列彈簧變寬變高；閒置時縮小淡出，喚回時彈回。
-- `FloatingPanel` 縮小也是這種膠囊：外框以彈簧收進面板下緣的角落，內容不重排、裁切後淡出；島可拖，點一下從島錨定的那一側與那一緣長出（頂端的往下、底部的往上）；`docked` 的島預設在頂端中央、拖動後記住，縮小回到島而不跟著面板。
+- `FloatingPanel` 縮小也是這種膠囊：外框以彈簧收進角落，內容裁切後淡出；島可拖，點一下從錨定的那一緣長出；`docked` 的島預設在頂端中央、拖動後記住。
 
 ## 通知（toast）
 
@@ -32,19 +33,19 @@
 - 關閉：關閉鈕、Esc（焦點移到下一則或回到原處）、向右滑或甩動。帶動作的 toast 預設 8 秒。
 - 圖層是 manual popover；被之後開的圖層蓋住時，新 toast 重新進入 top layer、顯示在最上面（modal 開著時受 inert，無法點）。
 - 背景任務結束的 toast 規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
-- 螢幕閱讀器只聽兩個常駐 live region（polite／danger 用 assertive），不重複朗讀卡片；換帳號時清空。
+- 螢幕閱讀器只聽兩個常駐 live region（danger 用 assertive）；換帳號時清空。
 
 ### 本次工作階段紀錄
 
 - 已定案的 toast 另記在 `ToastService.history`（最近 20 則，只在記憶體，重新整理或換帳號清空）；進行中的定案才記，同一 `id` 只算一則。
-- 併入通知中心而不另做清單：入口仍是鈴鐺，不多一個浮動按鈕；「本次工作階段」（`ToastHistory`）與通知匣分 tab，不計入未讀，重複也不必去重。
+- 併入通知中心（鈴鐺）的「本次工作階段」tab（`ToastHistory`），不另做浮動按鈕、不計入未讀、不去重。
 - 動作只執行一次（toast 或紀錄任一處），所以動作在 toast 離開後仍要有效（導覽或伺服器會再檢查的操作）。
 
 ## 對話框
 
 - 置中對話框的動效都在 `.platform-dialog`（[結構](ui-patterns.md#對話框與抽屜)），元件只覆寫尺寸。
 - 開啟時由下方小幅位移＋微縮彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 留在 top layer）；手機 sheet 見 [手機](mobile.md)。
-- 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點。
+- 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點；宿主等 `exitFinished()`（`exit-motion.ts`）才清空內容，不帶著空白退場。
 - 尺寸跟著內容：`nxCompactDialog` 內建 `FrameMotion`，`nxViewMotion` 換檢視（例：頁籤）或 `size` 改變時外框過渡到新寬高，不固定高度；關閉即忘記尺寸，開啟不過渡。非 dialog 浮層掛 `nxFrameMotion`（通知中心）。
 - 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
 - sheet 與抽屜可滑動關閉，未達距離或速度以 `--ease-spring` 彈回，見 [手機](mobile.md#滑動關閉)。
@@ -54,16 +55,16 @@
 - 選單、下拉、日期、資訊浮層、桌面的通知中心等浮層一律掛 [`popovers.scss`](../../frontend/src/styles/popovers.scss) 的 `.popover-panel`：外框與進出場只寫在這裡，元件樣式只留 padding、尺寸等差異。
 - 進場從觸發點長出（小幅位移＋微縮，`--ease-spring`），退場沿原路 `--ease-exit`。
 - 方向與原點由定位函式（`shared/browser/popover-position.ts` 的 `setPopoverOrigin`）在量測後寫入 `data-side` 與 `transform-origin`。進場因此用 keyframes（`popover-arrive`）而不是 `@starting-style`：後者的起始值在 `showPopover()` 後第一次量測就固定，翻轉來不及生效；keyframes 裡的 `var()` 會重新解析。
-- 退場中已不是 `:popover-open`，Esc 歸屬（`DetailDrawer`）與 light dismiss 不受影響；同時 inert、不接點擊。e2e 關閉後用 `toBeHidden()` 等退場結束。
+- 退場中已不是 `:popover-open`，Esc 歸屬與 light dismiss 不受影響，且 inert；e2e 用 `toBeHidden()` 等退場結束。
 
 ## 減少動態
 
-- 兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。JS 動畫（`view-motion.ts`）看 `ThemeService.reducedMotion()`。
+- 兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 到終點、移除 transition、略過 View Transitions。JS 動畫（`view-motion.ts`）看 `ThemeService.reducedMotion()`。
 - 元件內的 loop 另以 `@media (prefers-reduced-motion)` 加 `:host-context([data-reduced-motion='true'])` 停止；顏色與文字狀態保留。
 
 ## 生成與登入
 
-- 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容顯示（`core/api/generation-status.ts`）；思考強度不是推理階段，不宣稱「正在推理」，工作結束即停止。
-- 登入：兩道訊號沿 N 的輪廓描繪、交會後填色再落到字標（`signal-mark.ts`），輪廓留下，品牌側不變空。每個分頁只播一次（`sessionStorage`），可跳過／重播；窄或矮的視窗不播。文案與表單不等動畫。`LoginSubmit` 依 idle→loading→success morph，打勾停約 0.4 秒。
-- 登入後依序：（多個身分時）身分選擇滑入 → 品牌側展開成歡迎畫面（`sign-in-welcome`），同時預先載入 `/me` 約 0.9 秒 → 工作區從標誌位置擴散，標誌與頭像飛進側欄（`sign-in`），第一頁內容依序進場（`data-entrance`）。編排用 `ViewMorph.next(kind, origin)`；減少動態時不經歡迎畫面。
-- 登出反向且較快（`sign-out`）：工作區收進頭像、側欄滑出、標誌飛回登入頁。帳號世代在離開工作區後才更新，收合時仍顯示登出的人，頁面也不會重新讀取。
+- 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容（`core/api/generation-status.ts`）；不宣稱「正在推理」，工作結束即停止。
+- 登入：兩道訊號描出 N 的輪廓後填色落到字標（`signal-mark.ts`）。每個分頁只播一次，可跳過／重播；窄或矮的視窗不播；表單不等動畫。`LoginSubmit` 依 idle→loading→success morph。
+- 登入後依序：（多個身分時）身分選擇 → 歡迎畫面（`sign-in-welcome`，同時預載 `/me`）→ 工作區從標誌擴散，標誌與頭像飛進側欄（`sign-in`），第一頁依序進場（`data-entrance`）。編排用 `ViewMorph.next(kind, origin)`；減少動態時不經歡迎畫面。
+- 登出反向且較快（`sign-out`）：工作區收進頭像、側欄滑出、標誌飛回登入頁。帳號世代離開工作區後才更新，收合中頁面不重新讀取。

@@ -1,5 +1,6 @@
 // tiles：訊息裡的附件方塊。圖片只有縮圖（檔名在報讀名稱與 title），其他檔案是「類型＋檔名＋說明」的直式小卡；
-// 下載鈕浮在右上角，指到或焦點進入時才出現（觸控一直顯示）。卡片的共用規則在 file-list.scss。
+// 下載鈕指到或焦點進入時才浮現：圖片在縮圖正中央、其他檔案在右上角（觸控一直顯示在角落）。
+// 卡片的共用規則在 file-list.scss。
 :host([data-layout='tiles']) {
   .attachment-list {
     margin: 0;
@@ -64,39 +65,62 @@
   .attachment-card small {
     margin-top: 0;
   }
+  // 下載鈕是浮在方塊上的圓鈕，不是卡片列裡的一格：不要分隔線，平時收起。
   .attachment-download {
     position: absolute;
-    top: var(--p-space-1);
-    right: var(--p-space-1);
+    inset: var(--p-space-1) var(--p-space-1) auto auto;
     min-width: var(--control-height-compact);
     min-height: var(--control-height-compact);
-    flex-basis: auto;
-    background: var(--material-thick);
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    box-shadow: var(--shadow);
+    color: var(--ink);
     opacity: 0;
-    transform: scale(0.9);
+    scale: 0.8;
     transition:
       opacity var(--motion) var(--ease),
-      transform var(--motion) var(--ease-spring);
+      scale var(--motion) var(--ease-spring),
+      background var(--motion) var(--ease),
+      color var(--motion) var(--ease);
     &::before {
       content: none;
     }
   }
   .attachment-card:is(:hover, :focus-within) .attachment-download {
     opacity: 1;
-    transform: none;
+    scale: 1;
   }
   .attachment-card:active {
     transform: scale(0.98);
   }
 }
+// 指標裝置：圖片方塊的下載鈕改到正中央，縮圖同時模糊、壓暗並略為放大（裁掉模糊後透出的邊）。
+// 模糊的是縮圖本身而不是 backdrop-filter：方塊會在訊息裡重複出現，backdrop-filter 只留給固定層
+// （docs/frontend/materials.md）。點中央是下載，其餘範圍仍是開啟預覽。
 @media (hover: hover) and (pointer: fine) {
-  :host([data-layout='tiles']) .attachment-card:hover {
-    transform: translateY(-1px);
+  :host([data-layout='tiles']) {
+    .attachment-card:hover {
+      transform: translateY(-1px);
+    }
+    .is-image img {
+      transition:
+        opacity var(--motion) var(--ease),
+        filter var(--motion) var(--ease),
+        scale var(--motion) var(--ease);
+    }
+    .is-image:is(:hover, :focus-within) img {
+      filter: blur(3px) brightness(0.82);
+      scale: 1.08;
+    }
+    .is-image .attachment-download {
+      inset: 0;
+      margin: auto;
+    }
   }
 }
+// 觸控沒有指到的狀態：下載鈕一直留在角落，不蓋住縮圖。
 @media (pointer: coarse) {
   :host([data-layout='tiles']) .attachment-download {
     opacity: 1;
-    transform: none;
+    scale: 1;
   }
 }

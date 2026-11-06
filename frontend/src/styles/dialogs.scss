@@ -385,8 +385,8 @@ form.dialog-form {
     opacity: 0;
     translate: 0 -0.5rem;
     transition:
-      opacity var(--motion-panel) var(--ease-exit),
-      translate var(--motion-panel) var(--ease-exit);
+      opacity var(--motion) var(--ease-exit),
+      translate var(--motion) var(--ease-exit);
     &::after {
       content: '';
       position: absolute;

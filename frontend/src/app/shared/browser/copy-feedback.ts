@@ -1,4 +1,5 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { TRANSIENT_HOLD_MS } from './motion-tokens';
 
 /** 元件範圍的回饋；計時器與待完成的狀態不會比視圖存活更久。 */
 @Injectable()
@@ -31,7 +32,7 @@ export class CopyFeedback {
           button.textContent = label;
           button.removeAttribute('data-copied');
         } else this.copied.set(false);
-      }, 1800);
+      }, TRANSIENT_HOLD_MS);
       this.timers.add(timer);
     } catch {
       if (!this.destroyed) this.error.set('瀏覽器未允許複製，請選取文字後複製。');
