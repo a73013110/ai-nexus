@@ -1,3 +1,5 @@
+@use 'optical';
+
 // 主欄與側欄依對話框本身的寬度切換，不看視窗：同一個視窗寬度下對話框可能放大或縮成底部面板。
 // body 不留內距（dialog-body-flush），側欄的底色與左線才能貼齊對話框邊緣、撐滿高度。
 .dialog-body {
@@ -119,13 +121,15 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+// 頭像對齊姓名那一行（與左側標籤同一條中線），單位與職稱接在姓名下方；不置中於兩行，否則頭像會比標籤低半行。
 .form-person {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--p-space-2);
 }
 .form-person .avatar {
   --sidebar-avatar-size: 1.5rem;
+  @include optical.line-icon(var(--sidebar-avatar-size));
   font-size: var(--p-font-xs);
 }
 .form-person > span:last-child {

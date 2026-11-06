@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'optical';
 @use 'scroll-pad';
 
 // Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
@@ -125,7 +126,9 @@ form.dialog-form {
   gap: 2px;
   min-width: 0;
 }
-// 單筆紀錄（表單、單據）的標題列：左側圖示方塊、較大的標題、第二行寫種類與單號；工具與關閉鈕對齊第一行。
+// 單筆紀錄（表單、單據）的標題列：左側圖示方塊、較大的標題、第二行寫種類與單號。
+// 標題那一行是按鈕高的帶（optical.band-text），靠上排的工具與關閉鈕因此對齊標題字的中線；
+// 圖示方塊陪的是標題與第二行整塊，置中於整塊，第二行換行時也跟著置中。
 .dialog-bar.is-record {
   align-items: flex-start;
   gap: var(--p-space-3);
@@ -136,6 +139,10 @@ form.dialog-form {
   .dialog-title h2 {
     font-size: var(--p-font-xl);
     line-height: 1.4;
+    @include optical.band-text;
+  }
+  > .dialog-icon {
+    align-self: center;
   }
 }
 .dialog-icon {

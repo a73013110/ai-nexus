@@ -13,7 +13,8 @@
 - 標題要以刪節號截斷時用 `optical.label-line-truncate`：修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與下伸部（g、y），它改用 `overflow: clip` 加裁切邊界。不要自己把 `text-box` 與 `overflow: hidden` 寫在一起。
 - 有說明行時，指示物只對齊**標題那一行**（grid：指示物與標題同一列、說明在下一列），說明再長也不會把方框拉到兩行中間。修剪後的標題沒有行距，標題與說明之間用 `gap`（`--p-space-1`）。
 - 多行內容的區塊（卡片標題＋說明、段落）不修剪；置中對齊的是整塊。
-- 可能換行的說明句前的圖示用 `optical.line-icon`（容器 `align-items: flex-start`）：圖示對齊第一行，不手調 `margin-top`。
+- 可能換行的說明句前的圖示用 `optical.line-icon`（容器 `align-items: flex-start`）：圖示對齊第一行，不手調 `margin-top`。頭像這類不是圖示的指示物傳入它的高度，例：標籤旁的「頭像＋姓名＋單位」，頭像對齊姓名那一行、與標籤同一條中線。
+- 單筆紀錄的對話框標題列（`nx-dialog-header` 帶 `icon`）：標題行是按鈕高的帶，關閉鈕對齊標題字；圖示方塊置中於標題＋第二行整塊。
 - 圖示＋訊息＋動作按鈕的列一列列疊在一起時（動態島），訊息用 `optical.band-text`、圖示用 `optical.band-icon`：第一行是按鈕高的帶，沒有按鈕的列也一樣高，旁邊的收合鈕才對得齊。
 
 ## 勾選與單選
