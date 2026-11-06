@@ -13,7 +13,7 @@
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens。
 - 材質、受光漸層、分層陰影與狀態光暈依 [質感](materials.md) 使用；不用多色相漸層、漸層文字、彩色發光、彩色側邊線與透視網格。低層次表面共用 `--surface-subtle`。
-- 模型活動只用一個圖形 `AiMark`，它與串流游標、生成中的外框與轉圈一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光；唯一例外是助理圓鈕，三個節點各用一個品牌色（`--ai-node-*`）。完成與成功仍用 `--signal`／`--success`。
+- 模型活動只用一個圖形 `AiMark`，它與串流游標、生成中的外框與轉圈一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光；只有助理圓鈕的三個節點各用一個品牌色（`--ai-node-*`）。完成與成功仍用 `--signal`／`--success`。
 - 建議 chip（如對話起點）：透明底、1px `--control-line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 
@@ -73,7 +73,7 @@
 
 ## 元件工作臺 /design
 
-- 系統管理選單的「介面元件」（功能 `design`，預設授予 `administrators`，與其他管理頁分開授權）；純前端頁面、沒有 API，所以只有選單授權、沒有 policy。正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
+- 系統管理選單的「介面元件」（功能 `design`，預設授予 `administrators`，與其他管理頁分開授權）；純前端頁面、沒有 API，只有選單授權。正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
 - 頁籤分類（`?group=`），側欄列出該類自行登記的 `DesignSection`；每類一檔於 `frontend/src/app/features/admin/design/sections`。
 - 新共用元件要放範例（含停用、錯誤、選填等狀態）。
 
