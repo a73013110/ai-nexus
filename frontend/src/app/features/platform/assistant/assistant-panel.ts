@@ -14,6 +14,7 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { UserSettingsService } from '@core/preferences/user-settings';
 import { Autosize } from '@shared/browser/autosize';
 import { CopyFeedback } from '@shared/browser/copy-feedback';
@@ -27,6 +28,7 @@ import { GenerationIndicator } from '@shared/ui/generation-indicator';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
+import { StatusBadge } from '@shared/ui/status-badge';
 import {
   ASSISTANT_LIMITS,
   type AssistantConversation,
@@ -54,7 +56,9 @@ const PREVIEW_MS = 2600;
     Icon,
     MarkdownView,
     Notice,
+    RouterLink,
     Select,
+    StatusBadge,
     StreamingAnswer,
   ],
   providers: [CopyFeedback],
@@ -78,6 +82,8 @@ export class AssistantPanel {
   readonly cited = signal<{ turn: number; fact: number } | null>(null);
   readonly copiedTurn = signal<number | null>(null);
   readonly copy = inject(CopyFeedback);
+  /** 依據的處理頁連結（後端給的網址含查詢字串，例：卡號對應以卡號搜尋）。 */
+  readonly router = inject(Router);
   private readonly settings = inject(UserSettingsService);
   private readonly floating = viewChild(FloatingPanel);
   /** 第一次展開才建立面板內容：島常駐，但輸入框、模型選單等等到要用才付出成本。 */

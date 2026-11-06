@@ -1,4 +1,5 @@
 using System.Text;
+using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Platform.Assistant;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 
@@ -23,6 +24,27 @@ public sealed class AssistantPromptTests
         Assert.Equal(1, instruction.Split("- 規則甲。").Length - 1);
         Assert.Contains("- 規則乙。", instruction, StringComparison.Ordinal);
         Assert.DoesNotContain("呼叫工具", AssistantPrompt.Instruction(null, [], tools: false), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RulesAndChecksAreMarkedAndChecksNameThePageThatFixesThem()
+    {
+        var result = new AssistantToolResult("範圍", [
+            new("資料", "一般的事實"),
+            AssistantFact.Rule("誰會列出", "持卡的人才列出"),
+            AssistantFact.Check("王小明", "帳號已停用仍持卡", new(FeatureCatalog.AttendanceCards, "search=A1")),
+        ]);
+
+        var block = AssistantPrompt.Facts("查詢", result, 1, 30000);
+
+        Assert.Contains("[1] 資料：一般的事實\n", block.Text, StringComparison.Ordinal);
+        Assert.Contains("[2] 〈規則〉誰會列出：持卡的人才列出\n", block.Text, StringComparison.Ordinal);
+        Assert.Contains($"[3] 〈檢查〉王小明：帳號已停用仍持卡（處理頁：{FeatureCatalog.Find(FeatureCatalog.AttendanceCards)!.Name}）\n", block.Text, StringComparison.Ordinal);
+        // 系統指令說明兩種標記與資料範圍怎麼用，所有功能共用，不必每個工具各寫一次。
+        var instruction = AssistantPrompt.Instruction(null, [], tools: true);
+        Assert.Contains("〈規則〉", instruction, StringComparison.Ordinal);
+        Assert.Contains("〈檢查〉", instruction, StringComparison.Ordinal);
+        Assert.Contains(AssistantPrompt.ScopeLabel, instruction, StringComparison.Ordinal);
     }
 
     [Fact]

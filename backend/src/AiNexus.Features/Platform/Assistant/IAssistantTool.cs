@@ -25,7 +25,10 @@ public interface IAssistantTool
     /// <summary>持有這個功能（<c>FeatureCatalog</c> 的 ID）才交給模型。</summary>
     string Feature { get; }
 
-    /// <summary>這個領域的回答規則（名詞的意思、邊界），寫進系統指令；同一模組的工具共用同一段，相同的只寫一次。</summary>
+    /// <summary>
+    /// 這個領域的回答規則（名詞的意思、該用哪個工具），寫進系統指令；同一模組的工具共用同一段，相同的只寫一次。
+    /// 判定與列出的條件不寫在這裡，寫成結果裡的〈規則〉事實（<see cref="AssistantFact.Rule"/>），模型才能引用、畫面才看得到。
+    /// </summary>
     string Guidance { get; }
 
     /// <summary>每次呼叫寫一筆的稽核動作；null 表示讀的不是需要留證的資料（例如規則說明）。</summary>
@@ -46,7 +49,33 @@ public interface IAssistantTool
 /// 一次工具呼叫。<paramref name="View"/> 是提問所在頁面目前的查詢條件（頁面送來的 JSON，只有工具屬於那一頁時才有值），
 /// 工具在參數沒填時以它為準；內容來自瀏覽器，工具要和頁面的查詢端點一樣驗證。
 /// </summary>
-public sealed record AssistantToolCall(Guid Viewer, AssistantArguments Arguments, JsonElement? View);
+public sealed record AssistantToolCall(Guid Viewer, AssistantArguments Arguments, JsonElement? View)
+{
+    /// <summary>
+    /// 參數都沒填時，把畫面條件讀成該頁查詢端點的參數型別（傳入與端點相同的 <c>JsonOptions</c>，欄位才同名同格式）。
+    /// 沒有畫面條件時 <c>Missing</c>；型別不對時 <c>Invalid</c>，與查詢端點收到錯誤參數一樣當成條件不合法，其餘交給查詢本身驗證。
+    /// </summary>
+    public (T? View, AssistantViewState State) ReadView<T>(JsonSerializerOptions options) where T : class
+    {
+        if (!Arguments.IsEmpty || View is not { } view) return (null, AssistantViewState.Missing);
+        try
+        {
+            return view.Deserialize<T>(options) is { } value ? (value, AssistantViewState.Read) : (null, AssistantViewState.Invalid);
+        }
+        catch (JsonException)
+        {
+            return (null, AssistantViewState.Invalid);
+        }
+    }
+}
+
+/// <summary><see cref="AssistantToolCall.ReadView{T}"/> 的結果。</summary>
+public enum AssistantViewState
+{
+    Missing,
+    Read,
+    Invalid,
+}
 
 /// <summary>工具的結果：<paramref name="Scope"/> 是一行範圍說明（畫面顯示），<paramref name="Facts"/> 依重要性排序，放不下時從後面捨去。</summary>
 public sealed record AssistantToolResult(string Scope, IReadOnlyList<AssistantFact> Facts);

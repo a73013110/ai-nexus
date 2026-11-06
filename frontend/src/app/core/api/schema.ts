@@ -4850,14 +4850,19 @@ export interface components {
             text: null | string;
             tool: null | string;
             scope: null | string;
-            facts: null | components["schemas"]["AssistantFact"][];
+            facts: null | components["schemas"]["AssistantFactDto"][];
             partial: null | boolean;
             truncated: null | boolean;
         };
-        AssistantFact: {
+        AssistantFactDto: {
             label: string;
             text: string;
+            kind: components["schemas"]["AssistantFactKind"];
+            page: null | string;
+            url: null | string;
         };
+        /** @enum {unknown} */
+        AssistantFactKind: "Data" | "Rule" | "Check";
         AssistantQuestion: {
             text: string;
             modelId?: null | string;
@@ -7985,7 +7990,8 @@ export type ArtifactDto = components['schemas']['ArtifactDto'];
 export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
 export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
 export type AssistantEventDto = components['schemas']['AssistantEventDto'];
-export type AssistantFact = components['schemas']['AssistantFact'];
+export type AssistantFactDto = components['schemas']['AssistantFactDto'];
+export type AssistantFactKind = components['schemas']['AssistantFactKind'];
 export type AssistantQuestion = components['schemas']['AssistantQuestion'];
 export type AssistantTurn = components['schemas']['AssistantTurn'];
 export type AttachmentDto = components['schemas']['AttachmentDto'];

@@ -1,5 +1,6 @@
 import { Component, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelsDto } from '@core/api/schema';
 import { ClientIssues } from '@core/errors/client-issues';
@@ -21,8 +22,22 @@ const reply = () =>
         {
           scope: '10/01–10/31 · 1 人',
           facts: [
-            { label: '查詢範圍', text: '10/01–10/31。' },
-            { label: '王小明', text: '未補足 1 天。' },
+            { label: '查詢範圍', text: '10/01–10/31。', kind: 'Data' },
+            { label: '王小明', text: '未補足 1 天。', kind: 'Data' },
+            {
+              label: '陳小華',
+              text: '帳號已停用，卡號 A1 的持有期間沒有結束。',
+              kind: 'Check',
+              page: '卡號對應',
+              url: '/office/attendance/cards?search=A1',
+            },
+            {
+              label: '誰會列出',
+              text: '持卡的人才列出。',
+              kind: 'Rule',
+              page: '卡號對應',
+              url: null,
+            },
           ],
           partial: false,
         },
@@ -72,6 +87,7 @@ describe('AssistantPanel', () => {
     );
     TestBed.configureTestingModule({
       providers: [
+        provideRouter([]),
         { provide: ClientIssues, useValue: {} },
         { provide: UserSettingsService, useValue: { value: signal(defaultSettings()) } },
       ],
@@ -114,6 +130,29 @@ describe('AssistantPanel', () => {
     expect(host.querySelector('.assistant-facts-toggle')?.getAttribute('aria-expanded')).toBe(
       'true',
     );
+  });
+
+  it('marks rules and checks and links a check to the page that fixes it', async () => {
+    const { fixture, host } = await open();
+    host.querySelector<HTMLButtonElement>('.assistant-suggestions button')!.click();
+    await vi.waitFor(() => expect(fixture.componentInstance.chat.busy()).toBe(false));
+    await fixture.whenStable();
+    host.querySelector<HTMLButtonElement>('.assistant-facts-toggle')!.click();
+    await fixture.whenStable();
+
+    const items = [...host.querySelectorAll<HTMLElement>('.assistant-facts li')];
+    expect(items.map((x) => x.querySelector('.assistant-fact-kind')?.textContent ?? '')).toEqual([
+      '',
+      '',
+      '檢查',
+      '規則',
+    ]);
+    // 有權限的處理頁給連結（保留查詢字串）；沒有權限時只寫該找哪一頁。
+    const link = items[2].querySelector<HTMLAnchorElement>('.assistant-fact-link')!;
+    expect(link.textContent).toContain('前往卡號對應');
+    expect(link.getAttribute('href')).toBe('/office/attendance/cards?search=A1');
+    expect(items[3].querySelector('.assistant-fact-link')).toBeNull();
+    expect(items[3].textContent).toContain('處理頁：卡號對應');
   });
 
   it('sends on Enter but leaves Shift+Enter and IME composition alone', async () => {

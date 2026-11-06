@@ -1,4 +1,3 @@
-using System.Text.Json;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Office.Attendance.Records;
 using AiNexus.Features.Platform.Assistant;
@@ -13,8 +12,10 @@ namespace AiNexus.Features.Office.Attendance.Assistant;
 /// <summary>
 /// 出勤名單（描述出勤紀錄那一頁）：參數都沒填時是畫面上的條件，與表格、匯出同一份（不分頁）；有填時依參數查，沒給區間就是本月。
 /// 資料範圍、名單與判定都走 <see cref="ListAttendanceRecords"/>，看不到的人一樣查不到。
+/// 名單上帳號已停用卻仍持卡的人另附〈檢查〉：這是在這一頁最常被問的「離職了怎麼還在」，不必等模型再查一次。
 /// </summary>
-internal sealed class AttendanceRecordsTool(ListAttendanceRecords records, IOptions<AttendanceOptions> options, IOptions<JsonOptions> json, TimeProvider clock)
+internal sealed class AttendanceRecordsTool(ListAttendanceRecords records, AttendanceSetupReader setups, IOptions<AttendanceOptions> options,
+    IOptions<JsonOptions> json, TimeProvider clock)
     : IAssistantTool
 {
     public string Name => "attendance_records";
@@ -35,8 +36,9 @@ internal sealed class AttendanceRecordsTool(ListAttendanceRecords records, IOpti
     {
         var arguments = call.Arguments;
         var person = arguments.Text("person");
-        var filter = arguments.IsEmpty && call.View is { } view ? View(view) : Filter(arguments);
-        if (filter is null) return AttendanceErrors.RecordsFilterInvalid;
+        var (view, state) = call.ReadView<AttendanceRecordsFilter>(json.Value.SerializerOptions);
+        if (state == AssistantViewState.Invalid) return AttendanceErrors.RecordsFilterInvalid;
+        var filter = view ?? Filter(arguments);
 
         var read = await records.HandleAsync(call.Viewer, filter, ListAttendanceRecords.Page.All, ct);
         if (!read.IsSuccess) return read.Error;
@@ -46,20 +48,8 @@ internal sealed class AttendanceRecordsTool(ListAttendanceRecords records, IOpti
             List<AttendancePersonDto> matched = [.. result.People.Where(x => AttendanceAssistant.Matches(x, person))];
             result = result with { People = matched, Total = matched.Count };
         }
-        return AttendanceAssistant.Records(result, options.Value.Workday);
-    }
-
-    /// <summary>畫面條件與查詢端點的參數同名、同格式；來自瀏覽器，型別不對時當成條件不合法，其餘交給查詢本身驗證。</summary>
-    private AttendanceRecordsFilter? View(JsonElement view)
-    {
-        try
-        {
-            return view.Deserialize<AttendanceRecordsFilter>(json.Value.SerializerOptions);
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        var now = clock.GetUtcNow();
+        return AttendanceAssistant.Records(result, options.Value.Workday, await setups.StillHeldAfterDisabledAsync(now, ct), now);
     }
 
     private AttendanceRecordsFilter Filter(AssistantArguments arguments)

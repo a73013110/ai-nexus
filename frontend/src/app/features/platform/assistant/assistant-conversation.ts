@@ -1,7 +1,7 @@
 import { computed, DestroyRef, inject, signal } from '@angular/core';
 import type {
   AssistantEventDto,
-  AssistantFact,
+  AssistantFactDto,
   AssistantQuestion,
   ModelsDto,
 } from '@core/api/schema';
@@ -42,7 +42,7 @@ export interface AssistantExchange {
   readonly answer: string;
   readonly scopes: readonly string[];
   readonly activity: string | null;
-  readonly facts: readonly AssistantFact[];
+  readonly facts: readonly AssistantFactDto[];
   readonly partial: boolean;
   readonly truncated: boolean;
   readonly status: AssistantStatus;

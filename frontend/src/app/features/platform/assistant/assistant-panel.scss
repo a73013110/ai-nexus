@@ -188,6 +188,19 @@
   color: var(--ink);
   font-weight: 600;
 }
+// 〈規則〉〈檢查〉的標記與處理頁連結：檢查是系統發現的設定問題，用警示色讓人在依據裡一眼找到。
+.assistant-fact-kind {
+  margin-inline-end: var(--p-space-1);
+  vertical-align: 0.0625rem;
+}
+.assistant-fact-link {
+  display: inline-flex;
+  gap: 0.125rem;
+  align-items: center;
+  margin-inline-start: var(--p-space-1);
+  font-weight: 600;
+  --icon-size: var(--icon-sm);
+}
 
 // 輸入框坐在面板底部，與對話頁同一個外框；模型選單在左下、送出在右下。
 .assistant-composer {

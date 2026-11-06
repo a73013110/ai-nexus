@@ -11336,7 +11336,7 @@
               "array"
             ],
             "items": {
-              "$ref": "#/components/schemas/AssistantFact"
+              "$ref": "#/components/schemas/AssistantFactDto"
             }
           },
           "partial": {
@@ -11353,10 +11353,13 @@
           }
         }
       },
-      "AssistantFact": {
+      "AssistantFactDto": {
         "required": [
           "label",
-          "text"
+          "text",
+          "kind",
+          "page",
+          "url"
         ],
         "type": "object",
         "properties": {
@@ -11365,8 +11368,30 @@
           },
           "text": {
             "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssistantFactKind"
+          },
+          "page": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
+      },
+      "AssistantFactKind": {
+        "enum": [
+          "Data",
+          "Rule",
+          "Check"
+        ]
       },
       "AssistantQuestion": {
         "required": [

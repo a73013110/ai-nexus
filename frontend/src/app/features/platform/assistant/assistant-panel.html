@@ -144,8 +144,22 @@
                         [id]="factId(turn, $index + 1)"
                         [class.is-cited]="cited()?.turn === turn.id && cited()?.fact === $index + 1"
                       >
+                        @if (fact.kind !== 'Data') {
+                          <nx-status-badge
+                            class="assistant-fact-kind"
+                            [tone]="fact.kind === 'Check' ? 'warning' : 'neutral'"
+                            >{{ fact.kind === 'Check' ? '檢查' : '規則' }}</nx-status-badge
+                          >
+                        }
                         <span class="assistant-fact-label">{{ fact.label }}</span
                         >{{ fact.text }}
+                        @if (fact.url) {
+                          <a class="assistant-fact-link" [routerLink]="router.parseUrl(fact.url)"
+                            >前往{{ fact.page }}<nx-icon name="chevron"
+                          /></a>
+                        } @else if (fact.page) {
+                          <span class="assistant-fact-page">（處理頁：{{ fact.page }}）</span>
+                        }
                       </li>
                     }
                   </ol>

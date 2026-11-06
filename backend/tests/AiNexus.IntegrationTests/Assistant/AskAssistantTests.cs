@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.AccessControl.Scopes;
 using AiNexus.Features.Platform.Assistant;
@@ -21,6 +22,9 @@ public sealed class AskAssistantTests
 {
     private const string Questions = "/api/v1/assistant/questions";
     private const string Page = "attendance.records";
+
+    /// <summary>與一般回應相同的序列化：列舉以名稱傳遞。</summary>
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerOptions.Web) { Converters = { new JsonStringEnumConverter() } };
 
     private static JsonElement View(string from = "2026-10-19", string to = "2026-10-21")
         => JsonSerializer.SerializeToElement(new { from, to });
@@ -53,7 +57,7 @@ public sealed class AskAssistantTests
         {
             if (line.StartsWith("event: ", StringComparison.Ordinal)) name = line[7..];
             else if (line.StartsWith("data: ", StringComparison.Ordinal))
-                events.Add((name!, JsonSerializer.Deserialize<AssistantEventDto>(line[6..], JsonSerializerOptions.Web)!));
+                events.Add((name!, JsonSerializer.Deserialize<AssistantEventDto>(line[6..], Json)!));
         }
         return events;
     }
@@ -76,7 +80,11 @@ public sealed class AskAssistantTests
 
         // 交給模型的事實與送給畫面的依據是同一份、同樣的編號；模型不支援工具時不給工具。
         var prompt = session.Factory.Provider.LastMessages[^1].Content;
-        Assert.Contains("[1] 查詢範圍：", prompt, StringComparison.Ordinal);
+        // 第一筆是提問者在這個功能的資料範圍（平台自動補上），接著才是工具的資料。
+        Assert.Equal((AssistantFactKind.Rule, AssistantPrompt.ScopeLabel), (grounding.Facts![0].Kind, grounding.Facts[0].Label));
+        Assert.Contains("全部", grounding.Facts[0].Text, StringComparison.Ordinal);
+        Assert.Contains($"[1] 〈規則〉{AssistantPrompt.ScopeLabel}：", prompt, StringComparison.Ordinal);
+        Assert.Contains("[2] 查詢範圍：", prompt, StringComparison.Ordinal);
         Assert.EndsWith("問題：誰還沒補足？", prompt, StringComparison.Ordinal);
         Assert.Contains($"[{grounding.Facts!.Count}] ", prompt, StringComparison.Ordinal);
         Assert.Contains("「出勤紀錄」", session.Factory.Provider.LastMessages[0].Content, StringComparison.Ordinal);
@@ -126,6 +134,66 @@ public sealed class AskAssistantTests
             Assert.All(audits, x => Assert.Equal(Page, x.FeatureId));
             Assert.Contains("attendance_day_explanation", audits[1].DetailsJson, StringComparison.Ordinal);
         });
+    }
+
+    [Fact]
+    public async Task ADisabledAccountStillHoldingACardIsACheckLinkedOnlyForThoseWhoMayFixIt()
+    {
+        await using var session = await ArrangeAsync();
+        await session.WithDbAsync(db => db.Users.Where(x => x.AdAccount == "bob").ExecuteUpdateAsync(x => x.SetProperty(u => u.Enabled, false)));
+        using var hr = await session.Factory.SignedInAsync("hr");
+
+        var events = await ReadEventsAsync(await hr.PostAsJsonAsync(Questions, new AssistantQuestion("bob 離職了怎麼還有紀錄？", Page: Page, View: View())));
+
+        // hr 沒有卡號對應：只看得到該找哪一頁，沒有連結。
+        var check = Assert.Single(events[0].Data.Facts!, x => x.Kind == AssistantFactKind.Check);
+        Assert.StartsWith("bob", check.Label, StringComparison.Ordinal);
+        Assert.Equal(("卡號對應", null), (check.Page, check.Url));
+        Assert.Contains("〈檢查〉bob", session.Factory.Provider.LastMessages[^1].Content, StringComparison.Ordinal);
+
+        await session.WithDbAsync(async db =>
+        {
+            db.RoleGroupFeatures.Add(new() { GroupId = "test-records-" + DataScopes.All, FeatureId = FeatureCatalog.AttendanceCards });
+            await db.SaveChangesAsync();
+        });
+        using var maintainer = await session.Factory.SignedInAsync("hr");
+        var again = await ReadEventsAsync(await maintainer.PostAsJsonAsync(Questions, new AssistantQuestion("bob 離職了怎麼還有紀錄？", Page: Page, View: View())));
+        Assert.Equal(FeatureCatalog.RouteOf(FeatureCatalog.AttendanceCards) + "?search=A1",
+            Assert.Single(again[0].Data.Facts!, x => x.Kind == AssistantFactKind.Check).Url);
+    }
+
+    [Fact]
+    public async Task ThePersonToolExplainsWhySomeoneIsMissingFromTheList()
+    {
+        await using var session = await ArrangeAsync(tools: true);
+        await session.HideAsync("A2");
+        using var hr = await session.Factory.SignedInAsync("hr");
+        session.Factory.Provider.ToolCalls.Enqueue([new("attendance_person", new JsonObject { ["person"] = "carol" })]);
+
+        var events = await ReadEventsAsync(await hr.PostAsJsonAsync(Questions, new AssistantQuestion("為什麼看不到 carol？", Page: Page, View: View())));
+
+        // 隱藏的卡讓 carol 不在整份名單上，但名單設定查得到她，連同解釋這件事的〈規則〉。
+        Assert.DoesNotContain(events[0].Data.Facts!, x => x.Label.StartsWith("carol", StringComparison.Ordinal));
+        Assert.Equal("查詢名單設定", events[1].Data.Tool);
+        var setup = events[2].Data.Facts!;
+        Assert.Contains(setup, x => x.Label == "carol（carol） 卡號 A2" && x.Text.Contains("這張卡設為在出勤紀錄隱藏", StringComparison.Ordinal));
+        Assert.Contains(setup, x => x is { Kind: AssistantFactKind.Rule, Label: "隱藏的卡" });
+        Assert.DoesNotContain(setup, x => x.Kind == AssistantFactKind.Check);
+        // 同一個功能的範圍已在畫面資料說明過，工具結果不再重複。
+        Assert.DoesNotContain(setup, x => x.Label == AssistantPrompt.ScopeLabel);
+    }
+
+    [Fact]
+    public async Task ThePersonToolStaysWithinTheViewersScope()
+    {
+        await using var session = await ArrangeAsync(tools: true);
+        using var bob = await session.Factory.SignedInAsync("bob");
+        session.Factory.Provider.ToolCalls.Enqueue([new("attendance_person", new JsonObject { ["person"] = "carol" })]);
+
+        var events = await ReadEventsAsync(await bob.PostAsJsonAsync(Questions, new AssistantQuestion("carol 為什麼不在？", Page: Page, View: View())));
+
+        Assert.Equal("「carol」· 查無此人", events[2].Data.Scope);
+        Assert.DoesNotContain(events[2].Data.Facts!, x => x.Label.StartsWith("carol", StringComparison.Ordinal));
     }
 
     [Fact]
