@@ -16,24 +16,25 @@ export function usersTour(options: {
         '每位使用者的登入方式、角色、模型政策與附件容量都在這裡設定；角色決定他能用哪些功能。',
       side: 'bottom',
     },
-    {
-      target: 'nx-users-page nx-admin-users-tab .page-toolbar nx-search-field',
-      title: '找到使用者',
-      description: '輸入姓名、登入帳號或通知信箱的任一段，列表會重新查詢。',
-      side: 'bottom',
-    },
     options.directoryImport && {
-      target: 'nx-users-page nx-admin-users-tab .page-toolbar .directory-import-button',
+      target: 'nx-users-page .directory-import-button',
       title: '從 AD 匯入',
       description:
         '新進人員還沒登入、要先指派角色時使用。\n依 OU 瀏覽公司 AD，可跨節點勾選，預覽後再確認。\n已在平台的人，會以 AD 的姓名、信箱與帳號更新。',
       side: 'bottom',
     },
     {
-      target: 'nx-users-page nx-admin-users-tab .page-toolbar .primary-button',
+      target: 'nx-users-page .user-create-button',
       title: '新增使用者',
       description:
         '只需填帳號與角色；預建的 AD 帳號在首次登入時才綁定。模型政策與容量建立後再從詳情調整。',
+      side: 'bottom',
+    },
+    {
+      target: 'nx-users-page nx-query-bar',
+      title: '找到使用者',
+      description:
+        '上方切換帳號狀態，立即套用。\n搜尋姓名、登入帳號或信箱的任一段，可再挑角色（符合任一個）。\n按「查詢」套用；有條件時不能拖曳排序。',
       side: 'bottom',
     },
     sync && {

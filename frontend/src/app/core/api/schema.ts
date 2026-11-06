@@ -8900,6 +8900,8 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
+                enabled?: boolean;
+                role?: string[];
                 offset?: number;
             };
             header?: never;

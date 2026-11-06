@@ -4,7 +4,8 @@
 -- Author:      Yikai
 -- Create date: 2026-10-20
 -- Description: 管理頁的使用者列表：未刪除的使用者每頁 100 筆、依使用者順序排列，附通知信箱、角色、近期用量、對話數與儲存空間。
---              結果集依序為：總筆數與已排序人數、本頁使用者（含在整份名單的位置）、本頁使用者的角色、本頁使用者的帳號版本。
+--              條件（搜尋、啟用狀態、角色）之間是「且」；@RoleIds 是角色 ID 的 JSON 陣列，擁有其中任一角色即符合。
+--              結果集依序為：符合條件的人數與已排序人數、本頁使用者（含在整份名單的位置）、本頁使用者的角色、本頁使用者的帳號版本。
 --              使用者順序與程式的 UserOrder 相同：有 SortOrder 的在前，同值依姓名、帳號（AD 帳號優先，否則本地帳號）的二進位比較（程式用 ordinal），最後依 Id。
 --              @Since 與 @DefaultAttachmentLimitBytes 由程式傳入（TimeProvider 與設定），不用資料庫時鐘。
 -- Modify:      2026-10-21 Yikai 改用標準檔頭，說明移入檔頭
@@ -13,12 +14,15 @@
 -- Modify:      2026-10-25 Yikai 改依使用者順序排列，多回傳 SortOrder、Position 與已排序人數
 -- Modify:      2026-10-25 Yikai 移除 Users.Account，帳號改回傳 AD 帳號（沒有時為本地帳號）
 -- Modify:      2026-11-02 Yikai 帳號版本另成最後一個結果集，還沒換版的程式仍讀得了前三個
+-- Modify:      2026-11-06 Yikai 新增啟用狀態（@Enabled）與角色（@RoleIds）條件，預設不篩，舊程式照常呼叫
 -- =============================================
 CREATE   PROCEDURE [operations].[usp_ListAdminUsers]
     @Search                      NVARCHAR (120) = NULL,
     @Offset                      INT,
     @Since                       DATETIMEOFFSET (7),
-    @DefaultAttachmentLimitBytes BIGINT
+    @DefaultAttachmentLimitBytes BIGINT,
+    @Enabled                     BIT            = NULL,
+    @RoleIds                     NVARCHAR (MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -26,7 +30,7 @@ BEGIN
     DECLARE @matches TABLE (Id UNIQUEIDENTIFIER PRIMARY KEY, Position INT NOT NULL);
     DECLARE @page TABLE (Id UNIQUEIDENTIFIER PRIMARY KEY, Position INT NOT NULL);
 
-    -- Position 是在整份名單（不受搜尋影響）的位置：搜尋時畫面上的編號仍是出勤等列表中的實際順序。
+    -- Position 是在整份名單（不受條件影響）的位置：篩選時畫面上的編號仍是出勤等列表中的實際順序。
     -- CHARINDEX 不把 % 與 _ 當萬用字元，與程式的 Contains 相同；大小寫依資料庫定序。
     WITH ordered AS (
         SELECT u.Id,
@@ -44,7 +48,14 @@ BEGIN
            OR CHARINDEX(@Search, u.DisplayName) > 0
            OR CHARINDEX(@Search, u.LocalAccount) > 0
            OR CHARINDEX(@Search, u.AdAccount) > 0
-           OR CHARINDEX(@Search, u.Email) > 0);
+           OR CHARINDEX(@Search, u.Email) > 0)
+      AND (@Enabled IS NULL OR u.Enabled = @Enabled)
+      -- OPENJSON 以 WITH 指定型別：取出的值與 RoleId 同型別、同為資料庫定序，比較不必轉換。
+      AND (@RoleIds IS NULL
+           OR EXISTS (SELECT 1
+                      FROM [accesscontrol].[UserRoles] AS ur
+                      WHERE ur.UserId = u.Id
+                        AND ur.RoleId IN (SELECT r.RoleId FROM OPENJSON(@RoleIds) WITH (RoleId NVARCHAR (64) '$') AS r)));
 
     SELECT COUNT(*) AS Total,
            (SELECT COUNT(*) FROM [identity].[Users] WHERE DeletedAt IS NULL AND SortOrder IS NOT NULL) AS Sorted

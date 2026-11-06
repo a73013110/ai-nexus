@@ -19,28 +19,30 @@ public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversation
 public sealed record AdminUserDto(Guid Id, int ProfileVersion, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null, AttachmentStorageDto? Storage = null,
     string? Email = null, string? EmailSource = null, DateTimeOffset? EmailVerifiedAt = null, int? SortOrder = null, int? Position = null);
 
-/// <summary><paramref name="Sorted"/> 是整份名單中已排序的人數（不受搜尋影響）。</summary>
+/// <summary><paramref name="Total"/> 是符合條件的人數；<paramref name="Sorted"/> 是整份名單中已排序的人數（不受條件影響）。</summary>
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset, int Sorted);
 
 /// <summary>
 /// 未刪除使用者的列表，每頁 100 筆、依使用者順序（<see cref="AiNexus.Data.App.Identity.UserOrder"/>）排列，附通知信箱、角色、用量、對話數與儲存空間；
-/// 搜尋涵蓋姓名、帳號與信箱。查詢在 <c>operations.usp_ListAdminUsers</c>。
+/// 條件見 <see cref="AdminUserFilter"/>。查詢在 <c>operations.usp_ListAdminUsers</c>。
 /// </summary>
 internal sealed class ListAdminUsers(ISqlDatabase<AppDbContext> sql, UsageReports reports, AttachmentQuota quota) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
-        .MapGet("/users", (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) =>
-            handler.HandleAsync(search, offset ?? 0, ct))
+        .MapGet("/users", ([AsParameters] AdminUserFilter filter, int? offset, ListAdminUsers handler, CancellationToken ct) =>
+            handler.HandleAsync(filter, offset ?? 0, ct))
         .Audited(IdentityAudit.UserRead)
         .WithName("ListAdminUsers");
 
-    public async Task<Result<AdminUsersDto>> HandleAsync(string? search, int offset, CancellationToken ct)
+    public async Task<Result<AdminUsersDto>> HandleAsync(AdminUserFilter filter, int offset, CancellationToken ct)
     {
-        if (search?.Length > 120 || offset < 0) return OperationsErrors.InvalidSearch;
+        if (!filter.IsValid() || offset < 0) return OperationsErrors.InvalidSearch;
         // 用量期間與預設儲存上限由程式決定（TimeProvider、設定），procedure 只負責查詢。
         var arguments = new
         {
-            Search = string.IsNullOrWhiteSpace(search) ? null : search,
+            Search = string.IsNullOrWhiteSpace(filter.Search) ? null : filter.Search,
+            filter.Enabled,
+            RoleIds = filter.RoleIdsJson(),
             Offset = offset,
             reports.Since,
             DefaultAttachmentLimitBytes = quota.DefaultLimitBytes,

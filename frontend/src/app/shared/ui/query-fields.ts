@@ -99,6 +99,38 @@ export const queryField = {
     };
   },
 
+  /**
+   * 多個不固定的值（`?role=a&role=b`，例：後端讀來的角色）：讀網址時選項可能還沒載入，所以只以 `pattern` 檢查格式，
+   * 去掉重複、最多取 `max` 個。chip 寫 `chip：名稱、名稱`，名稱由 `label` 對應，對不到時（還沒載入、已刪除）顯示值本身。
+   */
+  list(
+    param: string,
+    options: {
+      chip: string;
+      label?: (value: string) => string | undefined;
+      pattern?: RegExp;
+      max?: number;
+    },
+  ): QueryFieldSpec<string[]> {
+    return {
+      initial: () => [],
+      read: (params) => {
+        const values = [
+          ...new Set(
+            params
+              .getAll(param)
+              .map((value) => value.trim())
+              .filter((value) => value && (!options.pattern || options.pattern.test(value))),
+          ),
+        ].slice(0, options.max);
+        return values.length ? values : undefined;
+      },
+      write: (value) => ({ [param]: value }),
+      chip: (value) =>
+        `${options.chip}：${value.map((item) => options.label?.(item) ?? item).join('、')}`,
+    };
+  },
+
   /** 勾選：勾了才寫 `param=true`；`chip` 是勾選時的 chip 文字。 */
   flag(param: string, chip = ''): QueryFieldSpec<boolean> {
     return {

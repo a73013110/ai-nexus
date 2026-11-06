@@ -1,20 +1,41 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import type { AdminUserDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { ViewScope } from '@shared/browser/view-scope';
+import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AdminUsersStore } from './admin-users-store';
 import { usersTour } from './identity-tour';
+import { AccountReviews } from './users/account-reviews';
+import { AdminUserCreateDialog } from './users/admin-user-create-dialog';
 import { AdminUserInspector } from './users/admin-user-inspector';
 import { AdminUsersTab } from './users/admin-users-tab';
+import { DirectoryImportDialog } from './users/directory-import-dialog';
 
 /** 使用者管理：公司身分、角色指派、個人政策與稽核式檢視；角色名稱與功能預覽取自存取目錄。 */
 @Component({
   selector: 'nx-users-page',
-  imports: [Notice, PendingButton, FeaturePage, AdminUserInspector, AdminUsersTab],
+  imports: [
+    Icon,
+    Notice,
+    PendingButton,
+    FeaturePage,
+    AccountReviews,
+    AdminUserCreateDialog,
+    AdminUserInspector,
+    AdminUsersTab,
+    DirectoryImportDialog,
+  ],
   providers: [AccessControlStore, AdminUsersStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -23,6 +44,26 @@ import { AdminUsersTab } from './users/admin-users-tab';
       layoutMode="data"
       [tour]="tour()"
     >
+      <div page-actions class="page-actions">
+        <nx-account-reviews />
+        @if (session.has('identity.users.import')) {
+          <button
+            type="button"
+            class="secondary-button directory-import-button"
+            (click)="importDialog()?.open()"
+          >
+            <nx-icon name="import" />從 AD 匯入
+          </button>
+        }
+        <button
+          type="button"
+          class="primary-button user-create-button"
+          [disabled]="!store.access.catalog()"
+          (click)="createDialog().open()"
+        >
+          <nx-icon name="plus" />新增使用者
+        </button>
+      </div>
       <!-- 目錄與列表的首次載入都由表格的骨架表示；目錄讀取失敗時只留提示與重試。 -->
       @if (store.error()) {
         <nx-notice [message]="store.error()"
@@ -51,12 +92,19 @@ import { AdminUsersTab } from './users/admin-users-tab';
       [count]="pageUsers().length"
       (move)="inspectAdjacent($event)"
       (closed)="inspected.set(null)"
-    />`,
+    />
+    <nx-admin-user-create-dialog />
+    @if (session.has('identity.users.import')) {
+      <nx-directory-import-dialog />
+    }`,
 })
 export class UsersPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AdminUsersStore);
   readonly inspected = signal<AdminUserDto | null>(null);
+  readonly createDialog = viewChild.required(AdminUserCreateDialog);
+  /** 只有具備匯入授權時才建立，所以是選用的。 */
+  readonly importDialog = viewChild(DirectoryImportDialog);
   readonly tour = computed(() =>
     usersTour({
       directoryImport: this.session.has('identity.users.import'),

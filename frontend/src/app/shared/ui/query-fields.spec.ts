@@ -8,6 +8,7 @@ interface Sample {
   status: '' | 'Open' | 'Closed';
   file: string;
   results: string[];
+  roles: string[];
   archived: boolean;
   range: TimeRange;
 }
@@ -33,6 +34,12 @@ const options: QueryStateOptions<Sample> = {
       ],
       { chip: '結果' },
     ),
+    roles: queryField.list('role', {
+      chip: '角色',
+      label: (id) => ({ hr: '人事' })[id],
+      pattern: /^[a-z-]+$/,
+      max: 2,
+    }),
     archived: queryField.flag('archived', '含封存'),
     range: queryField.range(
       [
@@ -56,6 +63,7 @@ describe('queryField', () => {
       status: 'Closed',
       file: ' 20261001 ',
       results: ['failed', 'ok'],
+      roles: ['hr', 'gone'],
       archived: true,
       range: { preset: CUSTOM_RANGE, from: '2026-10-01', to: '2026-10-02' },
     };
@@ -64,6 +72,7 @@ describe('queryField', () => {
       status: 'closed',
       file: '20261001.txt',
       result: ['ok', 'failed'],
+      role: ['hr', 'gone'],
       archived: 'true',
       from: '2026-10-01',
       until: '2026-10-02',
@@ -72,6 +81,7 @@ describe('queryField', () => {
     expect(queryChips(options, query).map((chip) => chip.label)).toEqual([
       '檔案：20261001.txt',
       '結果：完成、失敗',
+      '角色：人事、gone',
       '含封存',
       '時間：2026/10/01 — 10/02',
     ]);
@@ -84,9 +94,11 @@ describe('queryField', () => {
       status: '',
       file: '',
       results: [],
+      roles: [],
       archived: false,
       range: { preset: 'all', from: '', to: '' },
     });
+    expect(read({ role: ['hr', 'Bad!', 'hr', ' it ', 'qa'] }).roles).toEqual(['hr', 'it']);
     expect(read({ range: '7d' }).range).toEqual({ preset: '7d', from: '', to: '' });
   });
 

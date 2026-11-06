@@ -103,6 +103,8 @@ export class QueryState<T extends object> {
   readonly applied: Signal<T>;
   readonly error = signal('');
   readonly dirty: Signal<boolean>;
+  /** 已套用的條件不是預設值，也就是結果被條件縮小了（例：使用者頁只在沒有條件時能拖曳排序）。 */
+  readonly filtered: Signal<boolean>;
   readonly chips: Signal<QueryChip<T>[]>;
   /**
    * 最近寫入或讀到的 URL 參數。自己寫 URL 也會觸發 queryParamMap，
@@ -121,6 +123,7 @@ export class QueryState<T extends object> {
     this.error.set(initial.error);
     this.applied = this.current.asReadonly();
     this.dirty = computed(() => !same(this.draft(), this.current()));
+    this.filtered = computed(() => !same(this.current(), this.defaults()));
     this.chips = computed(() => queryChips(this.options, this.current()));
     if (route) this.seen = paramsKey(route.snapshot.queryParamMap);
   }

@@ -1,27 +1,36 @@
-<div class="page-toolbar">
-  <nx-search-field
-    label="搜尋使用者"
-    placeholder="搜尋姓名、登入帳號或信箱"
-    [value]="store.search()"
-    [busy]="store.loadingUsers()"
-    (valueChange)="store.find($event)"
+<nx-query-bar label="使用者查詢條件" [state]="query" [busy]="store.loadingUsers()">
+  <nx-view-switch
+    query-lead
+    label="帳號狀態"
+    [options]="statuses"
+    [value]="query.applied().status"
+    (valueChange)="commitStatus($event)"
   />
-  <div class="page-actions">
-    <nx-account-reviews />
-    @if (session.has('identity.users.import')) {
-      <button class="secondary-button directory-import-button" (click)="importDialog()?.open()">
-        <nx-icon name="import" />從 AD 匯入
-      </button>
-    }
-    <button
-      class="primary-button"
-      [disabled]="!store.access.catalog()"
-      (click)="createDialog().open()"
-    >
-      <nx-icon name="plus" />新增使用者
-    </button>
+  <label class="ui-field ui-query-wide" nxQueryField="search"
+    >搜尋<input
+      nxField
+      type="search"
+      maxlength="120"
+      autocomplete="off"
+      placeholder="姓名、登入帳號或信箱"
+      [value]="draft().search"
+      (input)="query.set('search', $any($event.target).value)"
+  /></label>
+  <div class="ui-field" nxQueryField="roles">
+    <span aria-hidden="true">角色</span>
+    <nx-select
+      label="角色"
+      placeholder="所有角色"
+      [multiple]="true"
+      [searchable]="true"
+      [searchFrom]="10"
+      [options]="store.roleOptions()"
+      [loading]="store.access.loading()"
+      [values]="draft().roles"
+      (valuesChange)="query.set('roles', $event)"
+    />
   </div>
-</div>
+</nx-query-bar>
 <nx-data-table
   class="admin-access-table admin-users-table"
   label="使用者列表"
@@ -195,10 +204,6 @@
 </nx-data-table>
 <nx-confirm-dialog />
 <nx-test-identity-dialog />
-<nx-admin-user-create-dialog />
-@if (session.has('identity.users.import')) {
-  <nx-directory-import-dialog />
-}
 @if (session.has('identity.users.sync')) {
   <nx-directory-sync-dialog />
 }

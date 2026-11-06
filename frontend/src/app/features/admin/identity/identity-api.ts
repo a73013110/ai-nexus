@@ -1,10 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient } from '@core/api/api-client';
+import { ApiClient, type ApiQuery } from '@core/api/api-client';
 import type {
   DirectoryImportRequest,
   ModelPolicyRequest,
   UserAccountRequest,
 } from '@core/api/schema';
+
+/** 使用者列表的條件（不含分頁）；畫面上的查詢條件在 `users/users-query.ts` 換算成這個。 */
+export type UserFilters = Omit<ApiQuery<'/api/v1/admin/users', 'get'>, 'offset'>;
 
 /**
  * 使用者頁（`identity.users`）的端點：帳號、通知信箱、角色指派、附件容量、個人模型政策、帳號待辦、洞察與稽核式讀取對話。
@@ -13,8 +16,8 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class IdentityApi {
   private readonly api = inject(ApiClient);
-  users = (search: string, offset = 0) =>
-    this.api.get('/api/v1/admin/users', { query: { search, offset } });
+  users = (filters: UserFilters, offset = 0, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/users', { query: { ...filters, offset }, signal });
   insights = (id: string) => this.api.get('/api/v1/admin/users/{id}/insights', { path: { id } });
   conversations = (id: string, search: string, includeDeleted: boolean, offset = 0) =>
     this.api.get('/api/v1/admin/users/{id}/conversations', {

@@ -51,7 +51,7 @@ function setup(value: AccountReviewsDto | null = reviews) {
   const store = {
     reviews: signal(value),
     reviewsRead: { refreshing: signal(false), error: signal(''), reload: vi.fn() },
-    find: vi.fn(),
+    findAccount: vi.fn(),
   };
   TestBed.configureTestingModule({
     providers: [provideRouter([]), { provide: AdminUsersStore, useValue: store }],
@@ -87,7 +87,7 @@ describe('account reviews', () => {
   it('searches the list for a user by account', () => {
     const { host, store } = setup();
     host.querySelector<HTMLButtonElement>('section button')!.click();
-    expect(store.find).toHaveBeenCalledWith('wang');
+    expect(store.findAccount).toHaveBeenCalledWith('wang');
   });
 
   it('says there is nothing to review only after reading', () => {

@@ -647,16 +647,10 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
   expect(menu.height).toBeGreaterThanOrEqual(44);
   expect(box.x + box.width - (menu.x + menu.width)).toBeLessThan(20);
   expect(menu.y - box.y).toBeLessThan(20);
-  // Search and the add button share one row; the button keeps its text as its name.
-  const search = (await page
-    .getByRole("searchbox", { name: "搜尋使用者" })
-    .boundingBox())!;
+  // 頁首動作在手機上只留圖示，按鈕仍以文字為名稱。
   const add = (await page
     .getByRole("button", { name: "新增使用者", exact: true })
     .boundingBox())!;
-  expect(
-    Math.abs(search.y + search.height / 2 - (add.y + add.height / 2)),
-  ).toBeLessThan(2);
   expect(add.width).toBeLessThanOrEqual(46);
   await card.locator("td").nth(2).click();
   const inspector = page.getByRole("dialog", { name: "王小明", exact: true });
@@ -990,14 +984,17 @@ test("使用者表上直接以方向鍵、輸入位置或拖曳調整順序，�
   expect(moves()).toHaveLength(writes);
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  // 搜尋時編號仍是整份名單的位置；拖曳把手停用，只能輸入編號。
-  await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("王");
+  // 有查詢條件時編號仍是整份名單的位置；拖曳把手停用，只能輸入編號。
+  const search = page.getByRole("searchbox", { name: "搜尋", exact: true });
+  await search.fill("王");
+  await search.press("Enter");
   await expect.poll(names).toEqual(["王小明"]);
   await expect(
     table.getByRole("button", { name: "第 3 位，輸入新位置：王小明" }),
   ).toBeVisible();
   await expect(handle("王小明")).toHaveAttribute("aria-disabled", "true");
-  await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("");
+  await search.fill("");
+  await search.press("Enter");
   await expect.poll(names).toHaveLength(5);
 
   // 伺服器拒絕：換回原本的列並提示。
@@ -2378,7 +2375,9 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     .click();
   await expect(self).not.toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.getByRole("searchbox", { name: "搜尋使用者" }).fill("王小明");
+  const search = page.getByRole("searchbox", { name: "搜尋", exact: true });
+  await search.fill("王小明");
+  await search.press("Enter");
   await expect(
     page.getByRole("button", { name: "管理使用者：王小明", exact: true }),
   ).toBeVisible();

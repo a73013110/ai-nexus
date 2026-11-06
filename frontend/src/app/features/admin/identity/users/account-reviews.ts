@@ -81,7 +81,7 @@ import { AccountReviewItems } from './account-review-items';
                   type="button"
                   class="quiet-button"
                   title="在列表中搜尋這位使用者"
-                  (click)="store.find(user.account)"
+                  (click)="store.findAccount(user.account)"
                 >
                   <nx-icon name="search" />{{ user.displayName }}
                 </button>

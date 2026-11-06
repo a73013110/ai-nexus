@@ -19,8 +19,8 @@ describe('usersTour', () => {
   it('covers creating and row actions for administrators', () => {
     expect(titles(usersTour({}))).toEqual([
       '管理身分與 AI 政策',
-      '找到使用者',
       '新增使用者',
+      '找到使用者',
       '最近 30 天用量',
       '開啟使用者詳情',
       '測試身分與刪除',
@@ -36,9 +36,9 @@ describe('usersTour', () => {
     const tour = usersTour({ directoryImport: true, directorySync: true });
     expect(titles(tour)).toEqual([
       '管理身分與 AI 政策',
-      '找到使用者',
       '從 AD 匯入',
       '新增使用者',
+      '找到使用者',
       '從 AD 更新',
       '最近 30 天用量',
       '開啟使用者詳情',

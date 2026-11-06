@@ -34,11 +34,13 @@ describe('QueryState', () => {
     const state = new QueryState(options);
     state.set('text', 'timeout');
     expect(state.dirty()).toBe(true);
+    expect(state.filtered()).toBe(false);
     expect(state.applied().text).toBe('');
     expect(state.chips()).toEqual([]);
     const before = state.applied();
     expect(state.apply()).toBe(true);
     expect(state.dirty()).toBe(false);
+    expect(state.filtered()).toBe(true);
     expect(state.applied().text).toBe('timeout');
     expect(state.chips().map((chip) => chip.label)).toEqual(['文字：timeout']);
     // 套用相同的條件會重新讀取。

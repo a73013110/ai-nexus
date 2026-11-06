@@ -1,34 +1,46 @@
-import { Injectable, computed, inject, linkedSignal, signal } from '@angular/core';
+import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { apiResource } from '@core/api/api-resource';
 import type { AdminUserDto } from '@core/api/schema';
 import { STALE_WRITE_MESSAGE } from '@core/errors/safe-errors';
-import { ViewScope } from '@shared/browser/view-scope';
+import { optionTags } from '@shared/ui/option-tags';
+import { queryState } from '@shared/ui/query-state';
+import type { SelectOption } from '@shared/ui/select';
 import { endpointTable } from '@shared/ui/table-model';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { IdentityApi } from './identity-api';
+import { userFilters, usersQueryOptions } from './users/users-query';
 
 /**
- * 使用者頁提供的使用者列表（搜尋與分頁）。角色與群組名稱來自同頁提供的 `AccessControlStore`，
+ * 使用者頁的使用者列表（查詢條件與分頁）。角色與群組名稱來自同頁提供的 `AccessControlStore`，
  * 所以列表在目錄讀到後才讀，名稱不會先顯示成 ID。
  */
 @Injectable()
 export class AdminUsersStore {
   private readonly api = inject(IdentityApi);
-  private readonly scope = inject(ViewScope);
   readonly access = inject(AccessControlStore);
   private readonly ready = computed(() => !!this.access.catalog());
-  readonly search = signal('');
-  private readonly query = signal('');
-  private readonly typing = signal(false);
+  /** 查詢條件（狀態、搜尋、角色）；已套用的寫進網址，角色 chip 的名稱取自存取目錄。 */
+  readonly query = queryState(
+    usersQueryOptions((id) => this.access.catalog()?.roles.find((role) => role.id === id)?.name),
+  );
+  /** 角色條件的選項：停用的角色也能篩（看還掛著它的人），以標籤標示。 */
+  readonly roleOptions = computed<SelectOption[]>(() =>
+    (this.access.catalog()?.roles ?? []).map((role) => ({
+      value: role.id,
+      label: role.name,
+      description: role.id,
+      tags: optionTags(!role.enabled && '停用'),
+    })),
+  );
   /**
    * 使用者列表：伺服器固定每頁 100 筆（`ListAdminUsers`），順序是手動排序（沒有欄位排序與篩選）。
-   * 目錄讀到前不讀；換搜尋字時模型回到第一頁，同一頁重讀（排序寫入後、帳號異動後）不改 revision，表格保留捲動位置。
+   * 目錄讀到前不讀；每次套用條件都是新參考，模型回到第一頁，同一頁重讀（排序寫入後、帳號異動後）不改 revision，表格保留捲動位置。
    */
   readonly table = endpointTable({
     feature: 'identity.users',
-    params: computed(() => (this.ready() ? { search: this.query() } : undefined)),
-    load: async ({ search }, page) => {
-      const data = await this.api.users(search, page.offset);
+    params: computed(() => (this.ready() ? userFilters(this.query.applied()) : undefined)),
+    load: async (filters, page, signal) => {
+      const data = await this.api.users(filters, page.offset, signal);
       return { ...data, items: data.users, complete: false };
     },
     columns: [],
@@ -49,12 +61,10 @@ export class AdminUsersStore {
   );
   readonly loading = this.access.loading;
   /**
-   * 表格的讀取狀態：搜尋的防抖等待、重讀，以及列表還在等目錄（目錄讀到前列表不會開始讀）。
+   * 表格的讀取狀態：重讀，以及列表還在等目錄（目錄讀到前列表不會開始讀）。
    * 沒有列時表格畫骨架，有列時淡化。
    */
-  readonly loadingUsers = computed(
-    () => this.typing() || this.table.refreshing() || this.access.loading(),
-  );
+  readonly loadingUsers = computed(() => this.table.refreshing() || this.access.loading());
   /** 頁面上的寫入（排序、列上的刪除與從 AD 更新）與存取目錄共用，失敗都顯示在頁首的 Notice。 */
   readonly writing = this.access.writing;
   readonly toast = this.access.toast;
@@ -72,17 +82,9 @@ export class AdminUsersStore {
   reviewsOf(id: string) {
     return this.reviewsById().get(id) ?? [];
   }
-  find(value: string) {
-    this.search.set(value);
-    this.typing.set(true);
-    this.scope.later(
-      () => {
-        this.typing.set(false);
-        this.query.set(value);
-      },
-      250,
-      'admin-users-search',
-    );
+  /** 列表只找這個帳號（帳號待辦的捷徑）：其他條件回到預設，人才不會被狀態或角色濾掉。 */
+  findAccount(account: string) {
+    this.query.commit({ ...this.query.defaults(), search: account });
   }
   /** 重新讀取顯示中的使用者頁面。 */
   readUsers() {
@@ -106,8 +108,8 @@ export class AdminUsersStore {
   }
   /** 正在寫入順序；期間不能再拖，避免第二次移動以舊的位置計算。 */
   readonly ordering = computed(() => this.writing.pendingFor('order'));
-  /** 未搜尋時本頁是整份名單連續的一段，可以先在本頁換序；搜尋時只能等重讀。 */
-  readonly reorderable = computed(() => !this.query() && !this.typing());
+  /** 沒有條件時本頁是整份名單連續的一段，可以先在本頁換序；有條件時只能等重讀。 */
+  readonly reorderable = computed(() => !this.query.filtered());
   /**
    * 把使用者移到整份名單第 `position` 位：先在本頁換序（畫面立即反應，`SortableRows` 接著播放落定動畫），
    * 寫入後重讀本頁取得伺服器算出的排序值與編號；失敗時換回原本的列並提示。

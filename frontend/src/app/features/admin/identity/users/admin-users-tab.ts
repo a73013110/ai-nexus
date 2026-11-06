@@ -19,19 +19,20 @@ import {
   TableState,
   type TableColumn,
 } from '@shared/ui/data-table';
+import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
-import { SearchField } from '@shared/ui/search-field';
+import { QueryBar, QueryField } from '@shared/ui/query-bar';
+import { Select } from '@shared/ui/select';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { SortableRows, SortHandle, SortRank, type RowMove } from '@shared/ui/sortable-rows';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
-import { AccountReviews } from './account-reviews';
-import { AdminUserCreateDialog } from './admin-user-create-dialog';
 import { emailState, signInMethods } from './user-account-fields';
 import { AccessStatus } from '@features/admin/access-control/roles/access-status';
 import { TestIdentityDialog } from './test-identity-dialog';
-import { DirectoryImportDialog } from './directory-import-dialog';
 import { DirectorySyncDialog } from './directory-sync-dialog';
 import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directory-outcomes';
+import { USER_STATUSES } from './users-query';
 
 @Component({
   selector: 'nx-admin-users-tab',
@@ -40,15 +41,16 @@ import { describeChange, outcomeLabel, outcomeNote, writesUser } from './directo
     DataTableColumn,
     DataTableRow,
     TableState,
+    Field,
     Icon,
-    SearchField,
+    QueryBar,
+    QueryField,
+    Select,
+    ViewSwitch,
     AccessStatus,
-    AccountReviews,
     ActionMenu,
     ConfirmDialog,
     TestIdentityDialog,
-    AdminUserCreateDialog,
-    DirectoryImportDialog,
     DirectorySyncDialog,
     SortableRows,
     SortHandle,
@@ -67,10 +69,11 @@ export class AdminUsersTab {
   readonly inspect = output<AdminUserDto>();
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly testDialog = viewChild.required(TestIdentityDialog);
-  readonly createDialog = viewChild.required(AdminUserCreateDialog);
   /** 只有具備對應動作授權時才建立，所以是選用的。 */
-  readonly importDialog = viewChild(DirectoryImportDialog);
   readonly syncDialog = viewChild(DirectorySyncDialog);
+  readonly query = this.store.query;
+  readonly draft = this.query.draft;
+  readonly statuses = USER_STATUSES;
   readonly userColumns: TableColumn[] = [
     { id: 'name', label: '使用者', hideable: false },
     { id: 'email', label: '通知信箱' },
@@ -84,17 +87,22 @@ export class AdminUsersTab {
   readonly methods = signInMethods;
   readonly emailState = emailState;
   readonly ids = computed(() => (this.store.users()?.users ?? []).map((user) => user.id));
-  /** 拖曳與方向鍵只在看得到鄰居時（未搜尋）可用；寫入中不能再移動。位置編號在搜尋時也能用。 */
+  /** 拖曳與方向鍵只在看得到鄰居時（沒有查詢條件）可用；寫入中不能再移動。位置編號有條件時也能用。 */
   readonly sortable = computed(() => this.store.reorderable() && !this.store.ordering());
   readonly lockedHint = computed(() =>
-    this.store.ordering() ? '正在儲存順序…' : '清除搜尋後可拖曳；或按編號輸入位置',
+    this.store.ordering() ? '正在儲存順序…' : '清除查詢條件後可拖曳；或按編號輸入位置',
   );
   readonly nameOf = (id: string) =>
     this.store.users()?.users.find((user) => user.id === id)?.displayName ?? '';
-  /** 已排序與未排序的分界畫在第一個未排序的人上方；全部未排序或搜尋中不畫。 */
+  /** 已排序與未排序的分界畫在第一個未排序的人上方；全部未排序或有查詢條件時不畫。 */
   firstUnsorted(user: AdminUserDto) {
     const sorted = this.store.users()?.sorted ?? 0;
     return this.store.reorderable() && sorted > 0 && user.position === sorted + 1;
+  }
+  /** 狀態切換即套用；草稿裡其他尚未查詢的條件留在草稿。 */
+  commitStatus(value: string) {
+    const status = this.statuses.find((item) => item.value === value)?.value;
+    if (status !== undefined) this.query.commit({ status });
   }
   moved(move: RowMove) {
     this.store.move(move.id, (this.store.users()?.offset ?? 0) + move.index + 1);

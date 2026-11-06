@@ -78,4 +78,39 @@ public sealed class ListAdminUsersTests
         Assert.Equal((3, 100), (beyond.Total, beyond.Offset)); Assert.Empty(beyond.Users);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/users?offset=-1")).StatusCode);
     }
+
+    [Fact]
+    public async Task FiltersCombineStatusAnyRoleAndSearchWhilePositionsStayInTheWholeList()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]);
+        using var admin = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob"); using var carol = await factory.SignedInAsync("carol"); using var dave = await factory.SignedInAsync("dave");
+        var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var carolId = (await carol.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var daveId = (await dave.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Roles.AddRange(new Role { Id = "filter-a", Name = "篩選 A" }, new Role { Id = "filter-b", Name = "篩選 B" });
+            db.UserRoles.AddRange(new UserRole { UserId = bobId, RoleId = "filter-a" }, new UserRole { UserId = carolId, RoleId = "filter-b" },
+                new UserRole { UserId = daveId, RoleId = "filter-b" });
+            (await db.Users.SingleAsync(x => x.Id == carolId)).Enabled = false;
+            await db.SaveChangesAsync();
+        }
+        async Task<AdminUsersDto> List(string query) => (await admin.GetFromJsonAsync<AdminUsersDto>("/api/v1/admin/users?" + query))!;
+        // 結果依整份名單的順序（姓名），編號是整份名單中的位置。
+        var positions = (await List("")).Users.ToDictionary(x => x.Id, x => x.Position);
+
+        var disabled = await List("enabled=false");
+        Assert.Equal((1, carolId), (disabled.Total, Assert.Single(disabled.Users).Id));
+        Assert.Equal(positions[carolId], disabled.Users[0].Position);
+        Assert.Equal([bobId, carolId, daveId], (await List("role=filter-a&role=filter-b&role=filter-a")).Users.Select(x => x.Id));
+        Assert.Equal([bobId, daveId], (await List("role=filter-a&role=filter-b&enabled=true")).Users.Select(x => x.Id));
+        Assert.Equal(daveId, Assert.Single((await List("role=filter-b&enabled=true&search=dav")).Users).Id);
+        Assert.Equal(0, (await List("role=missing")).Total);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/users?role=" + new string('r', Role.IdMaxLength + 1))).StatusCode);
+        var tooMany = string.Join('&', Enumerable.Range(0, AdminUserFilter.MaxRoles + 1).Select(i => $"role=r{i}"));
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/users?" + tooMany)).StatusCode);
+    }
 }
