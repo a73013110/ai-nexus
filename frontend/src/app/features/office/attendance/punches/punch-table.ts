@@ -61,10 +61,10 @@ export function punchTable<P>(options: {
       min-width: 28rem;
     }
     .punch-table-time-column {
-      width: 10.5rem;
+      --column-width: 10.5rem;
     }
     .punch-table-codes-column {
-      width: 5rem;
+      --column-width: 5rem;
     }
     .punch-table-card {
       font-family: var(--font-code);

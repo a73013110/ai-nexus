@@ -80,7 +80,7 @@ small {
 }
 .flow-meta {
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: var(--p-font-2xs);
 }
 // The connector sits in the gap before each stage, at the icon's height: a plain hairline.
 .flow-link {

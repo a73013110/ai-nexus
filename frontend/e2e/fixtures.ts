@@ -315,8 +315,12 @@ export async function expectCompactWorkspace(page: Page) {
   );
 }
 
-export async function expectCompactSurfaces(workspace: Locator) {
-  await expect(workspace).toHaveCSS("font-size", "13px");
+// 文字大小只放大字級：卡片內距在任何倍率都是 12px，只有字級跟著倍率變。
+export async function expectCompactSurfaces(
+  workspace: Locator,
+  fontSize = "13px",
+) {
+  await expect(workspace).toHaveCSS("font-size", fontSize);
   await expect(workspace.locator("[nxCard]:not(.ui-card)")).toHaveCount(0);
   const surfaces = await workspace.locator(".ui-card").evaluateAll((cards) =>
     cards

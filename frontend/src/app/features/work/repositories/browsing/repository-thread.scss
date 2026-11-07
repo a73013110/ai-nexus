@@ -41,9 +41,9 @@
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--label, var(--muted)) 14%, transparent);
   color: color-mix(in srgb, var(--label, var(--muted)) 55%, var(--ink));
-  font-size: 0.6875rem;
+  font-size: var(--p-font-2xs);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: 1.8;
 }
 .meta {
   margin: 0;

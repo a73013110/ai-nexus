@@ -20,7 +20,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-appearance-tab .appearance-workspace`,
           title: '主題、文字大小與動態效果',
           description:
-            '主題可跟隨作業系統。\n文字大小會連同間距放大整個介面。\n減少動態效果會保留狀態提示，只省掉進場與持續動畫。',
+            '主題可跟隨作業系統。\n文字大小只放大字，版面維持原樣。\n減少動態效果會保留狀態提示，只省掉進場與持續動畫。',
           side: 'bottom',
         },
         {

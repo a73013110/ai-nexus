@@ -1,3 +1,4 @@
+@use 'optical';
 :host {
   display: grid;
   gap: var(--p-space-3);
@@ -48,7 +49,7 @@
   column-gap: var(--p-space-3);
   padding-bottom: var(--p-space-3);
   font-size: var(--p-font-data);
-  line-height: 1.25rem;
+  line-height: 1.5;
 }
 .ui-approval-step:last-child {
   padding-bottom: 0;
@@ -57,7 +58,7 @@
 .ui-approval-step:not(:last-child)::before {
   content: '';
   position: absolute;
-  top: calc(var(--approval-mark) + var(--p-space-1));
+  top: calc((1lh + var(--approval-mark)) / 2 + var(--p-space-1));
   bottom: var(--p-space-1);
   left: calc(0.75rem - 1px);
   width: 2px;
@@ -75,6 +76,8 @@
   height: var(--approval-mark);
   border-radius: 50%;
   --icon-size: 0.75rem;
+  // 圓點對齊第一行字的中線；文字放大、行變高時仍落在同一行。
+  @include optical.line-icon(var(--approval-mark));
 }
 [data-state='done'] > .ui-approval-mark {
   background: var(--signal);

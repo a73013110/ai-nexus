@@ -123,13 +123,13 @@
   min-width: 40rem;
 }
 .calendar-date-column {
-  width: 9rem;
+  --column-width: 9rem;
 }
 .calendar-type-column {
-  width: 9rem;
+  --column-width: 9rem;
 }
 .calendar-half-column {
-  width: 5rem;
+  --column-width: 5rem;
 }
 .calendar-type {
   display: inline-flex;

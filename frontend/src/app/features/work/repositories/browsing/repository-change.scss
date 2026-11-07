@@ -44,7 +44,7 @@
   border-radius: 50%;
   background: var(--tile-inset);
   color: var(--secondary);
-  font-size: 0.6875rem;
+  font-size: var(--p-font-2xs);
   font-weight: 700;
 }
 .sha {

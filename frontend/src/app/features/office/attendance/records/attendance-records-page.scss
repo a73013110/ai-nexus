@@ -13,25 +13,25 @@ nx-attendance-records-page {
   table-layout: fixed;
 }
 .records-person-column {
-  width: 8.5rem;
+  --column-width: 8.5rem;
 }
 .records-date-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .records-day-type-column {
-  width: 4.5rem;
+  --column-width: 4.5rem;
 }
 .records-status-column {
-  width: 7rem;
+  --column-width: 7rem;
 }
 .records-coverage-column {
-  width: 13rem;
+  --column-width: 13rem;
 }
 .records-time-column {
-  width: 5.5rem;
+  --column-width: 5.5rem;
 }
 .records-duration-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .records-table th.records-person-head {
   left: 0;

@@ -6,10 +6,10 @@
   width: 2.75rem;
 }
 .navigation-name-column {
-  width: 20rem;
+  --column-width: 20rem;
 }
 .navigation-kind-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 // 圖示在左，名稱疊在祖先路徑上方；子節點依深度內縮，樹狀關係不必靠路徑也看得出來。
 .navigation-name {

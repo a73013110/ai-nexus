@@ -58,7 +58,9 @@
 }
 .workspace-icons {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  // 最多三欄；一格至少放得下四個字的名稱，文字大小調大時自動降成兩欄，不把名稱截成兩個字。
+  --workspace-tile-min: calc(4 * var(--text-caption) + 2 * var(--p-space-1));
+  grid-template-columns: repeat(auto-fill, minmax(max(100% / 3, var(--workspace-tile-min)), 1fr));
   gap: 2px 0;
   // 第一列上方緊貼黏頂的分群標題（不透明底）與收合裁切，徽章探出格頂的部分要留在這段內距裡；
   // 下面幾列的徽章落在上一列格子的下內距，不必再留。

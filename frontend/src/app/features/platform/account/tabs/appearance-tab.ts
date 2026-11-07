@@ -21,7 +21,7 @@ const pixels = (values: number[]) =>
       />
       <nx-setting-row
         label="文字大小"
-        description="整個介面的文字與間距一起放大。"
+        description="只放大文字，間距與版面不變。"
         [options]="textScales"
         [value]="'' + store.draft().appearance.textScale"
         (valueChange)="store.appearance('textScale', +$event)"

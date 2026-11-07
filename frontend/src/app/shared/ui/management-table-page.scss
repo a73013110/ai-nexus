@@ -14,16 +14,16 @@
 }
 .admin-status-column,
 .admin-count-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .admin-name-column {
-  width: 15rem;
+  --column-width: 15rem;
 }
 .admin-model-column {
-  width: 10rem;
+  --column-width: 10rem;
 }
 .admin-storage-column {
-  width: 7rem;
+  --column-width: 7rem;
 }
 @include bp.below(narrow) {
   nx-access-status + small {

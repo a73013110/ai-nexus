@@ -11,22 +11,22 @@
   min-width: 60rem;
 }
 .log-col-time {
-  width: 11.75rem;
+  --column-width: 11.75rem;
 }
 .log-col-level {
-  width: 6.25rem;
+  --column-width: 6.25rem;
 }
 .log-col-event {
-  width: 13rem;
+  --column-width: 13rem;
 }
 .log-col-correlation {
-  width: 14rem;
+  --column-width: 14rem;
 }
 .log-col-status {
-  width: 4.5rem;
+  --column-width: 4.5rem;
 }
 .log-col-duration {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .log-correlation {
   display: flex;

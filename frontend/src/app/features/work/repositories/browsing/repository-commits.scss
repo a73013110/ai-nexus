@@ -131,7 +131,7 @@
   border-radius: 50%;
   background: var(--tile-inset);
   color: var(--secondary);
-  font-size: 0.625rem;
+  font-size: var(--p-font-3xs);
   font-weight: 700;
 }
 .merge {

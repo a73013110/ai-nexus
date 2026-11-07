@@ -79,16 +79,16 @@ import { ReimportDialog, reimportOutcome } from './reimport-dialog';
       min-width: 48rem;
     }
     .imports-time-column {
-      width: 11rem;
+      --column-width: 11rem;
     }
     .imports-file-column {
-      width: 9rem;
+      --column-width: 9rem;
     }
     .imports-status-column {
-      width: 14rem;
+      --column-width: 14rem;
     }
     .imports-count-column {
-      width: 6rem;
+      --column-width: 6rem;
     }
     .imports-file {
       font-family: var(--font-code);

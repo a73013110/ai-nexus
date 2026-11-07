@@ -45,6 +45,27 @@ Describe 'Frontend radii' {
     }
 }
 
+Describe 'Frontend type' {
+    # 個人設定的文字大小只乘在 tokens.scss 的字級階梯上（docs/frontend/design-system.md）；
+    # 寫死 rem／px 的字級不會跟著放大。隨容器或視窗伸縮的展示字級（clamp 帶 vw、cqi）由空間決定，照常允許。
+    It 'size text with a type token instead of a literal length' {
+        $literals = foreach ($name in $styles) {
+            $number = 0
+            foreach ($line in [IO.File]::ReadAllLines((Join-Path $root $name))) {
+                $number++
+                foreach ($match in [regex]::Matches($line, '(?:^|[\s{;])(font-size|font|--[a-z-]*font-size)\s*:\s*([^;]+);')) {
+                    $value = $match.Groups[2].Value.Trim()
+                    $fluid = $value -match '\d(?:vw|vh|vmin|vmax|cqi|cqw)\b'
+                    if (-not $fluid -and $value -match '(?<![\w.-])\d*\.?\d+(?:rem|px)\b') {
+                        "${name}:$number $($match.Groups[1].Value): $value"
+                    }
+                }
+            }
+        }
+        $literals | Should -BeNullOrEmpty
+    }
+}
+
 Describe 'Frontend lines' {
     BeforeAll {
         # 每個外框宣告（border*、outline、outline-color）與線條自訂屬性（--line、--*-line）的位置與值。

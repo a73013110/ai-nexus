@@ -112,7 +112,7 @@ h2 {
   overflow: auto;
   border-radius: var(--radius-block);
   background: var(--code);
-  font: 0.75rem / 1.55 var(--font-code);
+  font: var(--p-font-xs) / 1.55 var(--font-code);
 }
 .loading {
   display: grid;

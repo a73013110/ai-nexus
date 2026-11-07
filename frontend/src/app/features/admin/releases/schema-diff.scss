@@ -21,7 +21,7 @@
   display: grid;
   // 兩邊各一欄行號、一欄本文；長行折行而不是橫向捲動，兩邊的同一列才會對齊。
   grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
-  font: 0.8125rem / 1.6 var(--font-code);
+  font: var(--p-font-data) / 1.6 var(--font-code);
 }
 .diff-row,
 .diff-skip {

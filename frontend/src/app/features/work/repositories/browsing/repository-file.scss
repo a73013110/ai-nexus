@@ -60,7 +60,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   max-height: min(72vh, 60rem);
   overflow: auto;
-  font: 0.8125rem / 1.65 var(--font-code);
+  font: var(--p-font-data) / 1.65 var(--font-code);
   tab-size: 4;
   &:focus-visible {
     outline: 2px solid var(--focus);

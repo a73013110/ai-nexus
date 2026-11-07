@@ -19,22 +19,22 @@
   --table-min-width: 46rem;
 }
 .usage-count-column {
-  width: 6rem;
+  --column-width: 6rem;
 }
 .usage-token-column {
-  width: 8.5rem;
+  --column-width: 8.5rem;
 }
 .usage-time-column {
-  width: 8rem;
+  --column-width: 8rem;
 }
 .usage-share-column {
-  width: 11rem;
+  --column-width: 11rem;
 }
 .usage-service-column {
-  width: 8rem;
+  --column-width: 8rem;
 }
 .usage-status-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .usage-rate {
   margin-inline-start: var(--p-space-2);

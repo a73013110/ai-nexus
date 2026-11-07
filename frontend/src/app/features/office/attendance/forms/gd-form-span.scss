@@ -23,7 +23,7 @@
   letter-spacing: 0.02em;
 }
 .span-point :is(time, strong) {
-  font-size: 1.125rem;
+  font-size: var(--p-font-lg);
   font-weight: 600;
   line-height: 1.4;
   font-variant-numeric: tabular-nums;

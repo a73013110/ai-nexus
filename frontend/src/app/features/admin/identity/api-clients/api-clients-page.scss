@@ -4,19 +4,19 @@
 }
 // 系統名稱很少超過十個字：名稱欄不吃掉剩下的寬度，其餘欄位依內容給固定寬。
 .api-clients-name-column {
-  width: 14rem;
+  --column-width: 14rem;
 }
 .api-clients-status-column {
-  width: 5.5rem;
+  --column-width: 5.5rem;
 }
 .api-clients-key-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .api-clients-date-column {
-  width: 7.5rem;
+  --column-width: 7.5rem;
 }
 .api-clients-calls-column {
-  width: 6rem;
+  --column-width: 6rem;
 }
 .api-clients-action-column {
   width: 3.25rem;

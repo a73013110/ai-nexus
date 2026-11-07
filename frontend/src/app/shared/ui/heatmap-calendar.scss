@@ -19,7 +19,7 @@
   display: grid;
   align-items: center;
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: var(--p-font-3xs);
   line-height: 1;
 }
 .heatmap-grid {

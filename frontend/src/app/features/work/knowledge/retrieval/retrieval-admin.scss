@@ -7,16 +7,16 @@
   --table-min-width: 36rem;
 }
 .retrieval-name-column {
-  width: 14rem;
+  --column-width: 14rem;
 }
 .retrieval-status-column {
-  width: 8rem;
+  --column-width: 8rem;
 }
 .retrieval-time-column {
-  width: 9rem;
+  --column-width: 9rem;
 }
 .retrieval-action-column {
-  width: 13rem;
+  --column-width: 13rem;
 }
 .retrieval-profiles :is(td, th) {
   vertical-align: top;

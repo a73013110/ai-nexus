@@ -1,6 +1,6 @@
 # 設計系統
 
-結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值與元件清單以程式碼和 `/admin/design` 頁為準。
+結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值以程式碼和 `/admin/design` 為準。
 
 ## 三層 token
 
@@ -11,7 +11,7 @@
 | Component | `--reading-width`、`--dialog-width`、`--button-target` | 單一元件或版面的尺寸與密度 |
 
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
-- 全站字級調 font primitives；單一區域密度調 component tokens。
+- 全站字級調 font primitives，區域密度調 component tokens。
 - 材質、受光漸層、分層陰影與狀態光暈依 [質感](materials.md) 使用；不用多色相漸層、漸層文字、彩色發光、彩色側邊線與透視網格。低層次表面共用 `--surface-subtle`。
 - 模型活動只用一個圖形 `AiMark`，它與串流游標、生成中的外框與轉圈一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光；只有助理圓鈕的三個節點各用一個品牌色（`--ai-node-*`）。完成與成功仍用 `--signal`／`--success`。
 - 建議 chip（如對話起點）：透明底、1px `--control-line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
@@ -30,14 +30,14 @@
 
 - `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/admin/design` 的局部預覽靠它。
 - 危險按鈕用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開。
-- 個人設定只改 semantic／component tokens，不能縮小最小字級與觸控目標。
+- 個人設定只改 tokens，不能縮小最小字級與觸控目標。
 - 一般文字對比 WCAG AA 4.5:1，focus 有 2px 可見輪廓；新的文字／背景組合要實測。
 
 ## 字級與密度
 
-- 根字級＝瀏覽器預設 × `--text-scale`；尺寸與間距寫 rem／`--p-space-*` 才會跟著縮放，px 只給線條、陰影、圓角與 1–3px 對位。
+- 文字大小（`--text-scale`）只乘在 `--p-font-*`，字級不寫死 rem／px。裝字的元件用 `min-height`、單位行高或 em；表格文字欄寬用 `--column-width`。px 只給線條、陰影、圓角與 1–3px 對位。
 - UI 與程式碼用系統字型，不載外部字型。
-- 閱讀偏好只調 `--line-reading`／`--reading-width`，不影響操作尺度。
+- 閱讀偏好只調 `--line-reading`／`--reading-width`。
 - 閱讀預設值同時在前端 tokens、[`UserPreferences`](../../backend/src/AiNexus.Data/App/Identity/UserPreferences.cs) 常數與資料庫 default constraint，要一起改；已保存的偏好不受影響。
 - 緊湊 scope（`.ui-density-compact`、`FeaturePage` 預設）要同時設定 tokens 與實際字級／行高；共用控制項用 `--density-text-size`／`--density-caption-size`。
 - 操作面積：桌面 34px，觸控與窄螢幕 44px，見 [共用介面模式](ui-patterns.md#手機)。
@@ -80,4 +80,4 @@
 ## 改 token 或元件後的檢查
 
 - 跑 `scripts/Verify.ps1 -Browser`，再人工檢查：light／dark 對比、375px 與 1280×768、長回答／長草稿、浮層與捲動、Tab／方向鍵／Esc、焦點返回、停用狀態、減少動態。
-- 自動測試只涵蓋選定的對比組合、控制面積與橫向溢出，不等於視覺驗收。
+- 自動測試只涵蓋選定的對比、控制面積與橫向溢出，不等於視覺驗收。

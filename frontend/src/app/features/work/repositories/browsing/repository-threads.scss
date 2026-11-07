@@ -81,9 +81,9 @@
 .draft {
   padding: 0 0.5rem;
   border-radius: var(--radius-full);
-  font-size: 0.6875rem;
+  font-size: var(--p-font-2xs);
   font-weight: 600;
-  line-height: 1.25rem;
+  line-height: 1.8;
 }
 .label {
   border: 1px solid color-mix(in srgb, var(--label, var(--muted)) 45%, transparent);

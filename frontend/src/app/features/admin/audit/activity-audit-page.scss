@@ -9,10 +9,10 @@ code {
   font-size: var(--p-font-xs);
 }
 .audit-result-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .audit-time-column {
-  width: 11rem;
+  --column-width: 11rem;
 }
 .audit-changes {
   display: grid;

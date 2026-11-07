@@ -77,7 +77,7 @@
 }
 .period-weekday {
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: var(--p-font-3xs);
   text-align: center;
 }
 .period-cell {
@@ -86,7 +86,7 @@
   aspect-ratio: 1;
   border-radius: var(--radius-data);
   color: var(--secondary);
-  font-size: 0.625rem;
+  font-size: var(--p-font-3xs);
   font-variant-numeric: tabular-nums;
 }
 .period-cell.is-weekend {

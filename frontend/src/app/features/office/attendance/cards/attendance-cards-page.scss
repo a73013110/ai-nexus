@@ -3,13 +3,13 @@
   min-width: 52rem;
 }
 .cards-number-column {
-  width: 11rem;
+  --column-width: 11rem;
 }
 .cards-time-column {
-  width: 10rem;
+  --column-width: 10rem;
 }
 .cards-status-column {
-  width: 9.5rem;
+  --column-width: 9.5rem;
 }
 .cards-badges {
   display: inline-flex;

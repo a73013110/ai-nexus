@@ -25,22 +25,22 @@
   width: 3.25rem;
 }
 .price-name-column {
-  width: 12rem;
+  --column-width: 12rem;
 }
 .price-state-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .price-kind-column {
-  width: 8rem;
+  --column-width: 8rem;
 }
 .price-currency-column {
-  width: 4.5rem;
+  --column-width: 4.5rem;
 }
 .price-rate-column {
-  width: 6.5rem;
+  --column-width: 6.5rem;
 }
 .price-time-column {
-  width: 10.5rem;
+  --column-width: 10.5rem;
 }
 .price-time {
   font-variant-numeric: tabular-nums;

@@ -6,7 +6,7 @@
   align-items: center;
   min-width: 0;
   --count-badge-size: 1rem;
-  --count-badge-font-size: 0.6875rem;
+  --count-badge-font-size: var(--p-font-2xs);
   --count-badge-padding: 0.25rem;
   --count-badge-ring: var(--sidebar);
 }

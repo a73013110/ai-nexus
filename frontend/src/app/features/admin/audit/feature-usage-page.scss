@@ -5,13 +5,13 @@
   --table-min-width: 40rem;
 }
 .usage-count-column {
-  width: 7rem;
+  --column-width: 7rem;
 }
 .usage-time-column {
-  width: 10rem;
+  --column-width: 10rem;
 }
 .usage-share-column {
-  width: 12rem;
+  --column-width: 12rem;
 }
 .usage-feature {
   display: flex;

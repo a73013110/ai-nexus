@@ -36,7 +36,7 @@ dt {
   border-radius: var(--radius-full);
   background: var(--hover);
   color: var(--muted);
-  font-size: 0.625rem;
+  font-size: var(--p-font-3xs);
 }
 dd {
   display: flex;
@@ -66,7 +66,7 @@ dd {
 small {
   overflow: hidden;
   color: var(--muted);
-  font-size: 0.6875rem;
+  font-size: var(--p-font-2xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

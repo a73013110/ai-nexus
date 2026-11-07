@@ -145,8 +145,9 @@
 .markdown .markdown-cite {
   display: inline-grid;
   place-items: center;
-  min-width: 1.15rem;
-  height: 1.15rem;
+  // 以 em 跟著引用編號的字級，文字放大時框一起長。
+  min-width: 1.65em;
+  height: 1.65em;
   margin-inline: 0.1em;
   padding: 0 0.25rem;
   border: 1px solid var(--line);
@@ -154,7 +155,7 @@
   background: var(--surface-subtle);
   color: var(--secondary);
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--p-font-2xs);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   vertical-align: 0.15em;

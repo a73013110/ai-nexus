@@ -173,7 +173,7 @@ h1 em {
   }
   :host([data-stage='welcome']) .login-brand {
     top: 50%;
-    font-size: 2.5rem;
+    font-size: var(--login-brand-size);
   }
   .login-brand {
     top: var(--p-space-5);
@@ -213,7 +213,7 @@ h1 em {
       display: none;
     }
     h1 {
-      font-size: 2rem;
+      font-size: var(--p-font-3xl);
       margin-bottom: var(--p-space-3);
     }
   }

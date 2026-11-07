@@ -145,7 +145,7 @@ test("每個設定分類共用緊湊卡片，最大文字仍不超出畫面", as
     "使用狀況",
     "鍵盤快捷鍵",
   ];
-  // 標準字級檢查緊湊尺度；130% 時整個介面等比例放大，只要求不超出畫面。
+  // 130% 只放大字級：卡片內距維持緊湊尺度，版面也不超出畫面。
   for (const scale of [100, 130]) {
     fixture.preferences.textScale = scale;
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -159,8 +159,10 @@ test("每個設定分類共用緊湊卡片，最大文字仍不超出畫面", as
         await expect(
           dialog.getByRole("heading", { name: section, exact: true }),
         ).toBeVisible();
-        if (scale === 100)
-          await expectCompactSurfaces(dialog.locator(".settings-layout"));
+        await expectCompactSurfaces(
+          dialog.locator(".settings-layout"),
+          scale === 100 ? "13px" : "16.9px",
+        );
         await expect(dialog.locator(".settings-page-header h1")).toHaveCSS(
           "font-size",
           scale === 100 ? "24px" : "31.2px",
