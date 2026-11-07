@@ -38,7 +38,7 @@ public static class IdentityAudit
 
     public static readonly AuditAction ApiClientRead = AuditAction.Access("identity.api_client.read", "查詢外部系統");
     public static readonly AuditAction ApiClientCreated = AuditAction.Administration("identity.api_client.created", "新增外部系統");
-    public static readonly AuditAction ApiClientRenamed = AuditAction.Administration("identity.api_client.renamed", "修改外部系統名稱");
+    public static readonly AuditAction ApiClientUpdated = AuditAction.Administration("identity.api_client.updated", "修改外部系統");
     public static readonly AuditAction ApiClientKeyReissued = AuditAction.Administration("identity.api_client_key.created", "重新產生外部系統金鑰");
     public static readonly AuditAction ApiClientDeleted = AuditAction.Administration("identity.api_client.deleted", "刪除外部系統");
 }

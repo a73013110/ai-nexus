@@ -13,6 +13,30 @@
   >
     <nx-icon name="plus" />新增外部系統
   </button>
+  <nx-query-bar
+    label="外部系統查詢條件"
+    [state]="query"
+    [table]="table"
+    [busy]="store.refreshing()"
+  >
+    <nx-view-switch
+      query-lead
+      label="狀態"
+      [options]="statuses"
+      [value]="query.applied().status"
+      (valueChange)="query.commit({ status: $any($event) })"
+    />
+    <label class="ui-field ui-query-wide" nxQueryField="search"
+      >搜尋<input
+        nxField
+        type="search"
+        autocomplete="off"
+        placeholder="名稱、聯絡人或金鑰末四碼"
+        [attr.maxlength]="searchMax"
+        [value]="draft().search"
+        (input)="query.set('search', $any($event.target).value)"
+    /></label>
+  </nx-query-bar>
   @if (store.notice()) {
     <nx-notice
       tone="danger"
@@ -50,37 +74,68 @@
         可呼叫帳密驗證的外部系統，預設依名稱排序；欄位標題可排序與篩選。
       </caption>
       <colgroup>
-        <col nxTableColumn="name" />
+        <col nxTableColumn="name" class="api-clients-name-column" />
+        <col nxTableColumn="status" class="api-clients-status-column" />
         <col nxTableColumn="key" class="api-clients-key-column" />
-        <col nxTableColumn="issued" class="api-clients-time-column" />
-        <col nxTableColumn="used" class="api-clients-time-column" />
+        <col nxTableColumn="issued" class="api-clients-date-column" />
+        <col nxTableColumn="used" class="api-clients-date-column" />
+        <col nxTableColumn="calls" class="api-clients-calls-column" />
         <col class="api-clients-action-column" />
       </colgroup>
       <thead>
         <tr>
           <th nxHeader="name"></th>
+          <th nxHeader="status"></th>
           <th nxHeader="key"></th>
           <th nxHeader="issued"></th>
           <th nxHeader="used"></th>
+          <th nxHeader="calls"></th>
           <th scope="col"><span class="sr-only">操作</span></th>
         </tr>
       </thead>
       <tbody>
         @for (row of rows(); track row.client.id) {
-          <tr>
+          <tr [class.is-disabled]="!row.client.enabled">
             <td nxTableColumn="name">
               <strong class="ui-truncate" [title]="row.client.name">{{ row.client.name }}</strong>
+              @if (row.client.contact) {
+                <span class="api-clients-contact ui-truncate" [title]="row.client.contact"
+                  >聯絡人 {{ row.client.contact }}</span
+                >
+              }
+            </td>
+            <td nxTableColumn="status" data-label="狀態">
+              <nx-status-badge
+                [tone]="row.client.enabled ? 'success' : 'neutral'"
+                [state]="row.client.enabled ? 'enabled' : 'disabled'"
+                >{{ row.client.enabled ? '啟用' : '停用' }}</nx-status-badge
+              >
             </td>
             <td nxTableColumn="key" data-label="金鑰">
-              <code class="api-clients-hint">ainexus_…{{ row.client.keyHint }}</code>
+              <code class="api-clients-hint" [title]="'金鑰末四碼 ' + row.client.keyHint"
+                ><nx-icon name="lock" />{{ row.client.keyHint }}</code
+              >
             </td>
-            <td nxTableColumn="issued" data-label="金鑰產生於">{{ row.issued }}</td>
+            <td nxTableColumn="issued" data-label="金鑰產生於">
+              @if (row.keyStale) {
+                <span
+                  class="api-clients-stale"
+                  title="金鑰已使用超過一年，建議與對方約好時間重新產生"
+                  >{{ row.issued }}</span
+                >
+              } @else {
+                {{ row.issued }}
+              }
+            </td>
             <td nxTableColumn="used" data-label="最近使用">
               @if (row.used) {
                 <span [title]="row.usedTitle">{{ row.used }}</span>
               } @else {
                 <span class="form-note">尚未使用</span>
               }
+            </td>
+            <td nxTableColumn="calls" class="ui-table-numeric" data-label="近 30 天">
+              {{ row.calls }}
             </td>
             <td data-stack="end">
               <nx-action-menu
@@ -97,11 +152,11 @@
     <nx-table-state
       loadingText="正在載入外部系統…"
       errorTitle="無法取得外部系統"
-      emptyTitle="還沒有外部系統"
-      emptyText="新增後把金鑰交給對方，對方就能以 AD 驗證使用者的帳密。"
+      [emptyTitle]="empty().title"
+      [emptyText]="empty().text"
     />
   </nx-data-table>
 </nx-feature-page>
-<nx-name-dialog />
+<nx-api-client-dialog (created)="showKey($event)" (stale)="store.stale()" />
 <nx-api-client-key-dialog />
 <nx-confirm-dialog />

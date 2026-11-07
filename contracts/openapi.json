@@ -1881,7 +1881,7 @@
         "tags": [
           "Identity"
         ],
-        "operationId": "RenameApiClient",
+        "operationId": "UpdateApiClient",
         "parameters": [
           {
             "name": "id",
@@ -1897,7 +1897,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ApiClientRenameRequest"
+                "$ref": "#/components/schemas/ApiClientUpdateRequest"
               }
             }
           },
@@ -11424,6 +11424,12 @@
         "properties": {
           "name": {
             "type": "string"
+          },
+          "contact": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -11432,10 +11438,13 @@
           "id",
           "rowVersion",
           "name",
+          "contact",
+          "enabled",
           "keyHint",
           "keyIssuedAt",
           "createdAt",
-          "lastUsedAt"
+          "lastUsedAt",
+          "recentCalls"
         ],
         "type": "object",
         "properties": {
@@ -11449,6 +11458,15 @@
           },
           "name": {
             "type": "string"
+          },
+          "contact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
           },
           "keyHint": {
             "type": "string"
@@ -11467,6 +11485,10 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "recentCalls": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -11482,15 +11504,26 @@
           }
         }
       },
-      "ApiClientRenameRequest": {
+      "ApiClientUpdateRequest": {
         "required": [
           "name",
+          "contact",
+          "enabled",
           "rowVersion"
         ],
         "type": "object",
         "properties": {
           "name": {
             "type": "string"
+          },
+          "contact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
           },
           "rowVersion": {
             "type": "integer",

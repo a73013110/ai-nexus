@@ -90,7 +90,7 @@ public sealed class IdentityModule : IFeatureModule
         api.MapGroup("/admin/api-clients").RequireFeature(FeatureCatalog.IdentityApiClients)
             .MapSlice<ListApiClients>()
             .MapSlice<CreateApiClient>()
-            .MapSlice<RenameApiClient>()
+            .MapSlice<UpdateApiClient>()
             .MapSlice<ReissueApiClientKey>()
             .MapSlice<DeleteApiClient>();
         api.MapSlice<VerifyCredentials>();

@@ -622,7 +622,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["RenameApiClient"];
+        put: operations["UpdateApiClient"];
         post?: never;
         delete: operations["DeleteApiClient"];
         options?: never;
@@ -4885,6 +4885,7 @@ export interface components {
         };
         ApiClientCreateRequest: {
             name: string;
+            contact?: null | string;
         };
         ApiClientDto: {
             /** Format: uuid */
@@ -4892,6 +4893,8 @@ export interface components {
             /** Format: int64 */
             rowVersion: number;
             name: string;
+            contact: null | string;
+            enabled: boolean;
             keyHint: string;
             /** Format: date-time */
             keyIssuedAt: string;
@@ -4899,13 +4902,17 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             lastUsedAt: null | string;
+            /** Format: int32 */
+            recentCalls: number;
         };
         ApiClientKeyRequest: {
             /** Format: int64 */
             rowVersion: number;
         };
-        ApiClientRenameRequest: {
+        ApiClientUpdateRequest: {
             name: string;
+            contact: null | string;
+            enabled: boolean;
             /** Format: int64 */
             rowVersion: number;
         };
@@ -8093,7 +8100,7 @@ export type AdminUsersDto = components['schemas']['AdminUsersDto'];
 export type ApiClientCreateRequest = components['schemas']['ApiClientCreateRequest'];
 export type ApiClientDto = components['schemas']['ApiClientDto'];
 export type ApiClientKeyRequest = components['schemas']['ApiClientKeyRequest'];
-export type ApiClientRenameRequest = components['schemas']['ApiClientRenameRequest'];
+export type ApiClientUpdateRequest = components['schemas']['ApiClientUpdateRequest'];
 export type ArtifactDto = components['schemas']['ArtifactDto'];
 export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
 export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
@@ -9490,7 +9497,7 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    RenameApiClient: {
+    UpdateApiClient: {
         parameters: {
             query?: never;
             header?: never;
@@ -9501,7 +9508,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ApiClientRenameRequest"];
+                "application/json": components["schemas"]["ApiClientUpdateRequest"];
             };
         };
         responses: {

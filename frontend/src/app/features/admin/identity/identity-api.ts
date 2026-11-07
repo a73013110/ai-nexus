@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient, type ApiQuery } from '@core/api/api-client';
 import type {
+  ApiClientCreateRequest,
+  ApiClientUpdateRequest,
   DirectoryImportRequest,
   ModelPolicyRequest,
   UserAccountRequest,
@@ -84,10 +86,10 @@ export class IdentityApi {
     this.api.post('/api/v1/admin/directory-syncs', { body: { userIds } });
   /** 外部系統（`identity.api-clients`）：新增與重新產生回傳的金鑰只有這一次，伺服器只存雜湊。 */
   apiClients = (signal?: AbortSignal) => this.api.get('/api/v1/admin/api-clients', { signal });
-  createApiClient = (name: string) =>
-    this.api.post('/api/v1/admin/api-clients', { body: { name } });
-  renameApiClient = (id: string, name: string, rowVersion: number) =>
-    this.api.put('/api/v1/admin/api-clients/{id}', { path: { id }, body: { name, rowVersion } });
+  createApiClient = (body: ApiClientCreateRequest) =>
+    this.api.post('/api/v1/admin/api-clients', { body });
+  updateApiClient = (id: string, body: ApiClientUpdateRequest) =>
+    this.api.put('/api/v1/admin/api-clients/{id}', { path: { id }, body });
   reissueApiClientKey = (id: string, rowVersion: number) =>
     this.api.post('/api/v1/admin/api-clients/{id}/keys', { path: { id }, body: { rowVersion } });
   deleteApiClient = (id: string, rowVersion: number) =>

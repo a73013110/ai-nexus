@@ -11,6 +11,7 @@ public sealed class ApiClient : IRowVersioned
 {
     public const int NameMaxLength = 100;
     public const int KeyHintLength = 4;
+    public const int ContactMaxLength = 100;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public long RowVersion { get; set; }
@@ -21,6 +22,10 @@ public sealed class ApiClient : IRowVersioned
     /// <summary>目前這把金鑰的產生時間；重新產生時更新，舊金鑰同時失效。</summary>
     public DateTimeOffset KeyIssuedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>對方系統的聯絡人（姓名、分機等），重新產生金鑰或停用前要通知的人。</summary>
+    public string? Contact { get; set; }
+    /// <summary>停用時金鑰不被接受，但金鑰本身不變：重新啟用後對方不必改設定。</summary>
+    public bool Enabled { get; set; } = true;
 }
 
 internal sealed class ApiClientConfiguration : IEntityTypeConfiguration<ApiClient>
@@ -34,5 +39,6 @@ internal sealed class ApiClientConfiguration : IEntityTypeConfiguration<ApiClien
         client.Property(x => x.Name).HasMaxLength(ApiClient.NameMaxLength);
         client.Property(x => x.KeyHash).HasMaxLength(32).IsFixedLength();
         client.Property(x => x.KeyHint).HasMaxLength(ApiClient.KeyHintLength);
+        client.Property(x => x.Contact).HasMaxLength(ApiClient.ContactMaxLength);
     }
 }

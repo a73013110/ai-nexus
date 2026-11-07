@@ -6,6 +6,8 @@ CREATE TABLE [identity].[ApiClients] (
     [KeyHint]     NVARCHAR (4)       NOT NULL,
     [KeyIssuedAt] DATETIMEOFFSET (7) NOT NULL,
     [CreatedAt]   DATETIMEOFFSET (7) NOT NULL,
+    [Contact]     NVARCHAR (100)     NULL,
+    [Enabled]     BIT                CONSTRAINT [df_ApiClients_Enabled] DEFAULT ((1)) NOT NULL,
     CONSTRAINT [pk_ApiClients] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -29,7 +31,17 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'可呼叫 A
 
 GO
 
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'對方系統的聯絡人（姓名、分機等），重新產生金鑰或停用前要通知的人；選填。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'ApiClients', @level2type = N'COLUMN', @level2name = N'Contact';
+
+
+GO
+
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'建立時間（UTC）。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'ApiClients', @level2type = N'COLUMN', @level2name = N'CreatedAt';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'是否接受這把金鑰；停用時呼叫一律回 401，金鑰不變，重新啟用後對方不必改設定。', @level0type = N'SCHEMA', @level0name = N'identity', @level1type = N'TABLE', @level1name = N'ApiClients', @level2type = N'COLUMN', @level2name = N'Enabled';
 
 
 GO

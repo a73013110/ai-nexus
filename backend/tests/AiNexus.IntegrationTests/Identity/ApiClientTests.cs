@@ -38,7 +38,9 @@ public sealed class ApiClientTests
         var audit = await db.AuditEvents.SingleAsync(x => x.Action == IdentityAudit.CredentialsVerified.Name);
         Assert.Equal(issued.Client.Id, audit.ResourceId);
         Assert.Equal("completed", audit.Result);
-        Assert.NotNull((await ListAsync(admin)).Single().LastUsedAt);
+        var listed = (await ListAsync(admin)).Single();
+        Assert.NotNull(listed.LastUsedAt);
+        Assert.Equal(1, listed.RecentCalls);
     }
 
     [Fact]
@@ -100,20 +102,51 @@ public sealed class ApiClientTests
     }
 
     [Fact]
-    public async Task NamesAreUniqueAndRenamingKeepsTheKey()
+    public async Task NamesAreUniqueAndEditingKeepsTheKey()
     {
         await using var f = new AppFactory(administrators: ["alice"]);
         using var admin = await f.SignedInAsync();
-        var gd = await CreateAsync(admin, "公文系統");
+        var gd = await CreateAsync(admin, "公文系統", "王小明 #1234");
         var pm = await CreateAsync(admin, "專案管理");
+        Assert.Equal("王小明 #1234", gd.Client.Contact);
+        Assert.True(gd.Client.Enabled);
         await AssertCodeAsync(await admin.PostAsJsonAsync("/api/v1/admin/api-clients", new ApiClientCreateRequest(" 公文系統 ")), HttpStatusCode.Conflict, "api_client_name_taken");
-        await AssertCodeAsync(await admin.PutAsJsonAsync($"/api/v1/admin/api-clients/{pm.Client.Id}", new ApiClientRenameRequest("公文系統", pm.Client.RowVersion)),
-            HttpStatusCode.Conflict, "api_client_name_taken");
+        await AssertCodeAsync(await UpdateAsync(admin, pm.Client, "公文系統", null, true), HttpStatusCode.Conflict, "api_client_name_taken");
 
-        (await admin.PutAsJsonAsync($"/api/v1/admin/api-clients/{gd.Client.Id}", new ApiClientRenameRequest("公文系統（GD）", gd.Client.RowVersion))).EnsureSuccessStatusCode();
-        Assert.Contains("公文系統（GD）", (await ListAsync(admin)).Select(x => x.Name));
+        (await UpdateAsync(admin, gd.Client, "公文系統（GD）", "  ", true)).EnsureSuccessStatusCode();
+        var edited = (await ListAsync(admin)).Single(x => x.Id == gd.Client.Id);
+        Assert.Equal("公文系統（GD）", edited.Name);
+        Assert.Null(edited.Contact);
         using var system = KeyClient(f, gd.Key);
         Assert.Equal(HttpStatusCode.OK, (await system.PostAsJsonAsync(Verify, new CredentialVerificationRequest("alice", "fixture-password"))).StatusCode);
+    }
+
+    [Fact]
+    public async Task DisablingRejectsTheKeyUntilEnabledAgain()
+    {
+        await using var f = new AppFactory(administrators: ["alice"]);
+        using var admin = await f.SignedInAsync();
+        var issued = await CreateAsync(admin, "公文系統");
+        using var system = KeyClient(f, issued.Key);
+        var request = new CredentialVerificationRequest("alice", "fixture-password");
+        Assert.Equal(HttpStatusCode.OK, (await system.PostAsJsonAsync(Verify, request)).StatusCode);
+        await AssertCodeAsync(await system.PostAsJsonAsync(Verify, new CredentialVerificationRequest("alice", "wrong")), HttpStatusCode.UnprocessableEntity, "credentials_rejected");
+
+        (await UpdateAsync(admin, issued.Client, "公文系統", null, false)).EnsureSuccessStatusCode();
+        var disabled = (await ListAsync(admin)).Single();
+        Assert.False(disabled.Enabled);
+        // 不論驗證結果都算一次呼叫。
+        Assert.Equal(2, disabled.RecentCalls);
+        // 停用與不存在的金鑰回應相同。
+        using var rejected = await system.PostAsJsonAsync(Verify, request);
+        await AssertCodeAsync(rejected, HttpStatusCode.Unauthorized, "authentication_required");
+
+        (await UpdateAsync(admin, disabled, "公文系統", null, true)).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, (await system.PostAsJsonAsync(Verify, request)).StatusCode);
+
+        using var scope = f.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(2, await db.AuditEvents.CountAsync(x => x.Action == IdentityAudit.ApiClientUpdated.Name && x.ResourceId == issued.Client.Id));
     }
 
     [Fact]
@@ -150,12 +183,15 @@ public sealed class ApiClientTests
         return client;
     }
 
-    private static async Task<IssuedApiClientKeyDto> CreateAsync(HttpClient admin, string name)
+    private static async Task<IssuedApiClientKeyDto> CreateAsync(HttpClient admin, string name, string? contact = null)
     {
-        using var response = await admin.PostAsJsonAsync("/api/v1/admin/api-clients", new ApiClientCreateRequest(name));
+        using var response = await admin.PostAsJsonAsync("/api/v1/admin/api-clients", new ApiClientCreateRequest(name, contact));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<IssuedApiClientKeyDto>())!;
     }
+
+    private static Task<HttpResponseMessage> UpdateAsync(HttpClient admin, ApiClientDto client, string name, string? contact, bool enabled)
+        => admin.PutAsJsonAsync($"/api/v1/admin/api-clients/{client.Id}", new ApiClientUpdateRequest(name, contact, enabled, client.RowVersion));
 
     private static async Task<ApiClientDto[]> ListAsync(HttpClient admin) => (await admin.GetFromJsonAsync<ApiClientDto[]>("/api/v1/admin/api-clients"))!;
 }

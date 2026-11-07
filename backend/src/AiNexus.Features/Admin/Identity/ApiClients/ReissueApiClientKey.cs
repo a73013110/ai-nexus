@@ -44,6 +44,6 @@ internal sealed class ReissueApiClientKey(AppDbContext db, AdministrativeWrite w
 
         var committed = await transaction.CommitAsync(ct);
         if (!committed.IsSuccess) return committed.Error;
-        return new IssuedApiClientKeyDto(await ApiClientDto.Project(db, db.ApiClients.AsNoTracking().Where(x => x.Id == id)).SingleAsync(ct), key.Key);
+        return new IssuedApiClientKeyDto(await ApiClientDto.Project(db, db.ApiClients.AsNoTracking().Where(x => x.Id == id), clock.GetUtcNow()).SingleAsync(ct), key.Key);
     }
 }

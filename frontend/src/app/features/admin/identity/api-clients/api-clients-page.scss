@@ -1,17 +1,47 @@
 .api-clients-table table {
   table-layout: fixed;
-  min-width: 40rem;
+  min-width: 48rem;
+}
+// 系統名稱很少超過十個字：名稱欄不吃掉剩下的寬度，其餘欄位依內容給固定寬。
+.api-clients-name-column {
+  width: 14rem;
+}
+.api-clients-status-column {
+  width: 5.5rem;
 }
 .api-clients-key-column {
-  width: 10rem;
+  width: 6.5rem;
 }
-.api-clients-time-column {
-  width: 10rem;
+.api-clients-date-column {
+  width: 7.5rem;
+}
+.api-clients-calls-column {
+  width: 6rem;
 }
 .api-clients-action-column {
   width: 3.25rem;
 }
+.api-clients-contact {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
 .api-clients-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
   font-family: var(--font-code);
   font-size: var(--p-font-xs);
+  color: var(--muted);
+  nx-icon {
+    --icon-size: var(--icon-xs);
+  }
+}
+.api-clients-stale {
+  color: var(--warning);
+}
+// 停用的系統仍列出（可重新啟用），文字退一階；狀態欄的徽章保留原色才看得出差別。
+tr.is-disabled td:not([data-stack]) strong {
+  color: var(--muted);
+  font-weight: inherit;
 }

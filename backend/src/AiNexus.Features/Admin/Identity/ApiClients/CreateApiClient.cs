@@ -9,12 +9,16 @@ using FluentValidation;
 
 namespace AiNexus.Features.Admin.Identity.ApiClients;
 
-/// <summary>新增外部系統；名稱是給管理員辨認的系統名稱，例如「公文系統」。</summary>
-public sealed record ApiClientCreateRequest(string Name);
+/// <summary>新增外部系統；名稱是給管理員辨認的系統名稱，例如「公文系統」，聯絡人選填。新增的系統一律啟用。</summary>
+public sealed record ApiClientCreateRequest(string Name, string? Contact = null);
 
 internal sealed class ApiClientCreateRequestValidator : RequestValidator<ApiClientCreateRequest>
 {
-    public ApiClientCreateRequestValidator() => RuleFor(x => x.Name).RequiredText(ApiClient.NameMaxLength);
+    public ApiClientCreateRequestValidator()
+    {
+        RuleFor(x => x.Name).RequiredText(ApiClient.NameMaxLength);
+        RuleFor(x => x.Contact).OptionalText(ApiClient.ContactMaxLength);
+    }
 }
 
 /// <summary>新增外部系統並產生它的金鑰；金鑰只在這次回應出現。會稽核（<c>identity.api_client.created</c>）。</summary>
@@ -28,7 +32,7 @@ internal sealed class CreateApiClient(AppDbContext db, AdministrativeWrite write
     public async Task<Result<IssuedApiClientKeyDto>> HandleAsync(ApiClientCreateRequest request, CancellationToken ct)
     {
         var key = ApiClientKeys.Issue();
-        var client = new ApiClient { Name = request.Name.Trim(), KeyHash = key.Hash, KeyHint = key.Hint, KeyIssuedAt = clock.GetUtcNow() };
+        var client = new ApiClient { Name = request.Name.Trim(), Contact = ApiClientRules.Contact(request.Contact), KeyHash = key.Hash, KeyHint = key.Hint, KeyIssuedAt = clock.GetUtcNow() };
         var begun = await write.BeginAsync(ApiClientRules.Target(db, client.Id), ct);
         if (!begun.IsSuccess) return begun.Error;
         await using var transaction = begun.Value;
@@ -37,6 +41,6 @@ internal sealed class CreateApiClient(AppDbContext db, AdministrativeWrite write
         db.Add(client);
 
         return await transaction.CommitAsync(() => new IssuedApiClientKeyDto(
-            new(client.Id, client.RowVersion, client.Name, client.KeyHint, client.KeyIssuedAt, client.CreatedAt, null), key.Key), ct);
+            new(client.Id, client.RowVersion, client.Name, client.Contact, client.Enabled, client.KeyHint, client.KeyIssuedAt, client.CreatedAt, null, 0), key.Key), ct);
     }
 }

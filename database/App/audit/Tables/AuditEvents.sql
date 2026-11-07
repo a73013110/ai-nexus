@@ -64,6 +64,12 @@ CREATE NONCLUSTERED INDEX [ix_AuditEvents_OwnerId_Id]
 
 GO
 
+CREATE NONCLUSTERED INDEX [ix_AuditEvents_ResourceId_At]
+    ON [audit].[AuditEvents]([ResourceId] ASC, [At] ASC) WHERE ([Action]=N'identity.credentials.verified');
+
+
+GO
+
 CREATE NONCLUSTERED INDEX [ix_AuditEvents_SubjectUserId_Id]
     ON [audit].[AuditEvents]([SubjectUserId] ASC, [Id] ASC) WHERE ([SubjectUserId] IS NOT NULL);
 
