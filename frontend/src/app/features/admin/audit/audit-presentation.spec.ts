@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   auditChanges,
+  auditCaller,
   auditContext,
   auditDetails,
   auditOutcome,
@@ -97,6 +98,16 @@ describe('audit presentation', () => {
       { label: '登入方式', value: 'AD 驗證' },
     ]);
     expect(auditContext('{')).toEqual([]);
+    expect(
+      auditContext('{"account":"user01","authentication":"ad","client":"公文系統"}'),
+    ).toContainEqual({ label: '外部系統', value: '公文系統' });
+  });
+  it('names the calling system only for external credential checks', () => {
+    expect(auditCaller('{"account":"user01","authentication":"ad","client":"公文系統"}')).toBe(
+      '公文系統',
+    );
+    expect(auditCaller('{"account":"user01","authentication":"ad"}')).toBe('');
+    expect(auditCaller('{')).toBe('');
   });
   it('compares nested policy changes and preserves the removal of an explicit limit', () => {
     const modelId = 'ollama/qwen3.8:27b';

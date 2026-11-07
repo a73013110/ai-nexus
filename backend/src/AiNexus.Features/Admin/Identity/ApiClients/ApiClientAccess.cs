@@ -34,6 +34,10 @@ public static class ApiClientAccess
     public static Guid ApiClientId(this ClaimsPrincipal user)
         => Guid.Parse(user.FindFirstValue(ClientIdClaim) ?? throw new InvalidOperationException("The endpoint does not require an API client."), CultureInfo.InvariantCulture);
 
+    /// <summary>呼叫的外部系統在驗證當下的名稱，供稽核記下是哪個系統。</summary>
+    public static string ApiClientName(this ClaimsPrincipal user)
+        => user.FindFirstValue(ClientNameClaim) ?? throw new InvalidOperationException("The endpoint does not require an API client.");
+
     internal static void Add(IServiceCollection services, AuthenticationBuilder authentication)
     {
         authentication.AddScheme<AuthenticationSchemeOptions, ApiClientAuthenticationHandler>(Scheme, null);

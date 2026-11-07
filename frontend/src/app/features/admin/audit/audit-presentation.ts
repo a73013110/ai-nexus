@@ -25,19 +25,32 @@ const authenticationMethods: Record<string, string> = {
   test: '測試身分',
   unknown: '未識別',
 };
-/** 詳情裡值得單獨列出的欄位：登入嘗試的帳號與方式。 */
+/** 詳情裡值得單獨列出的欄位：登入嘗試的帳號與方式，外部系統驗證帳密時另有呼叫的系統。 */
 export function auditContext(json: string | null | undefined) {
   try {
     const details = JSON.parse(json || '{}');
     return [
       { label: '嘗試／登入帳號', value: details.account },
       { label: '登入方式', value: authenticationMethods[details.authentication] },
+      { label: '外部系統', value: details.client },
     ].filter(
       (field): field is { label: string; value: string } =>
         typeof field.value === 'string' && !!field.value,
     );
   } catch {
     return [];
+  }
+}
+/**
+ * 外部系統驗證帳密（`identity.credentials.verified`）時呼叫的系統名稱，是呼叫當下的名稱；其他紀錄為空字串。
+ * 這類紀錄沒有登入的使用者，操作者欄改顯示這個名稱，不顯示 system。
+ */
+export function auditCaller(json: string | null | undefined): string {
+  try {
+    const client = JSON.parse(json || '{}').client;
+    return typeof client === 'string' ? client : '';
+  } catch {
+    return '';
   }
 }
 export interface AuditChange {

@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using AiNexus.Data.App;
+using AiNexus.Features.Admin.Audit;
 using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.ApiClients;
 using AiNexus.Features.Admin.Identity.Authentication;
@@ -41,6 +43,13 @@ public sealed class ApiClientTests
         var listed = (await ListAsync(admin)).Single();
         Assert.NotNull(listed.LastUsedAt);
         Assert.Equal(1, listed.RecentCalls);
+
+        // 外部系統頁「查看呼叫紀錄」帶的條件：稽核看得到呼叫的系統名稱，遮罩後仍保留。
+        var calls = (await admin.GetFromJsonAsync<AuditDto[]>(
+            $"/api/v1/admin/audit?action={IdentityAudit.CredentialsVerified.Name}&search={issued.Client.Id}"))!;
+        using var details = JsonDocument.Parse(Assert.Single(calls).DetailsJson!);
+        Assert.Equal("公文系統", details.RootElement.GetProperty("client").GetString());
+        Assert.Equal("bob", details.RootElement.GetProperty("account").GetString());
     }
 
     [Fact]
@@ -52,6 +61,20 @@ public sealed class ApiClientTests
         using var system = KeyClient(f, issued.Key);
         await AssertCodeAsync(await system.PostAsJsonAsync(Verify, new CredentialVerificationRequest("alice", "wrong")), HttpStatusCode.UnprocessableEntity, "credentials_rejected");
         await AssertCodeAsync(await system.PostAsJsonAsync(Verify, new CredentialVerificationRequest("alice", "")), HttpStatusCode.UnprocessableEntity, "credentials_rejected");
+        using (var scope = f.Services.CreateScope())
+        {
+            // 失敗的呼叫也記下是哪個系統；網站登入的稽核不帶這個欄位。
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var failures = await db.AuditEvents.Where(x => x.Action == IdentityAudit.CredentialsVerified.Name).Select(x => x.DetailsJson!).ToListAsync();
+            Assert.Equal(2, failures.Count);
+            Assert.All(failures, json =>
+            {
+                using var failure = JsonDocument.Parse(json);
+                Assert.Equal("公文系統", failure.RootElement.GetProperty("client").GetString());
+            });
+            Assert.All(await db.AuditEvents.Where(x => x.Action == IdentityAudit.SignedIn.Name).Select(x => x.DetailsJson!).ToListAsync(),
+                json => Assert.DoesNotContain("client", json, StringComparison.Ordinal));
+        }
 
         // 格式正確但不存在的金鑰，與格式錯誤的值回同一個代碼。
         using var unknown = KeyClient(f, "ainexus_" + new string('A', 43));

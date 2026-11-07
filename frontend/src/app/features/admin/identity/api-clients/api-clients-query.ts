@@ -17,6 +17,15 @@ export const API_CLIENT_STATUSES: readonly { value: ApiClientStatus; label: stri
 
 export const API_CLIENT_SEARCH_MAX = 100;
 
+/** 後端 `IdentityAudit.CredentialsVerified`：每次帳密驗證寫一筆，稽核對象（ResourceId）是呼叫的系統。 */
+const CREDENTIALS_VERIFIED = 'identity.credentials.verified';
+
+/** 活動稽核頁的條件：這個系統的帳密驗證紀錄。搜尋系統 ID 會比對稽核對象，系統改名後也查得到舊紀錄。 */
+export const apiClientCallsQuery = (client: ApiClientDto) => ({
+  action: CREDENTIALS_VERIFIED,
+  search: client.id,
+});
+
 export const apiClientsQueryOptions: QueryStateOptions<ApiClientsQuery> = {
   fields: {
     // 狀態切換本身就看得到目前的值，不另做條件標籤。

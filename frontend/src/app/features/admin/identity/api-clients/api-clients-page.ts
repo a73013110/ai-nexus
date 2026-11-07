@@ -1,4 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
+import { Router } from '@angular/router';
+import { routeOf } from '@core/api/catalog';
 import type { ApiClientDto, IssuedApiClientKeyDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -23,6 +25,7 @@ import { ApiClientKeyDialog } from './api-client-key-dialog';
 import {
   API_CLIENT_SEARCH_MAX,
   API_CLIENT_STATUSES,
+  apiClientCallsQuery,
   apiClientsQueryOptions,
   matchesApiClient,
 } from './api-clients-query';
@@ -35,7 +38,7 @@ const count = new Intl.NumberFormat('zh-TW');
 
 /**
  * 外部系統（`identity.api-clients`）：發給其他系統呼叫 AD 帳密驗證的金鑰，一個系統一把。
- * 金鑰只在新增與重新產生後顯示一次；最近使用與近 30 天次數取自帳密驗證的稽核。
+ * 金鑰只在新增與重新產生後顯示一次；最近使用與近 30 天次數取自帳密驗證的稽核，有活動稽核權限時列選單可直接查看。
  * 清單只有個位數、一次讀完：狀態與搜尋在查詢列（寫進網址），排序與欄位篩選在表格，都在本機處理。
  */
 @Component({
@@ -68,6 +71,7 @@ const count = new Intl.NumberFormat('zh-TW');
 export class ApiClientsPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(ApiClientsStore);
+  private readonly router = inject(Router);
   private readonly editor = viewChild.required(ApiClientDialog);
   private readonly keys = viewChild.required(ApiClientKeyDialog);
   private readonly confirmation = viewChild.required(ConfirmDialog);
@@ -124,6 +128,7 @@ export class ApiClientsPage {
   });
   readonly rows = computed(() => {
     const busy = this.store.busy();
+    const audit = this.session.has('audit');
     const now = Date.now();
     return this.table.rows().map((client) => ({
       client,
@@ -134,6 +139,7 @@ export class ApiClientsPage {
       calls: count.format(client.recentCalls),
       actions: [
         { id: 'edit', label: '編輯', icon: 'edit', disabled: busy },
+        ...(audit ? [{ id: 'calls', label: '查看呼叫紀錄', icon: 'audit' }] : []),
         { id: 'reissue', label: '重新產生金鑰', icon: 'repeat', disabled: busy },
         client.enabled
           ? { id: 'disable', label: '停用', icon: 'stop', disabled: busy }
@@ -157,6 +163,8 @@ export class ApiClientsPage {
   }
   action(client: ApiClientDto, id: string) {
     if (id === 'edit') this.editor().edit(client);
+    else if (id === 'calls')
+      void this.router.navigate([routeOf('audit')], { queryParams: apiClientCallsQuery(client) });
     else if (id === 'reissue') void this.reissue(client);
     else if (id === 'disable') void this.disable(client);
     else if (id === 'enable') void this.enable(client);

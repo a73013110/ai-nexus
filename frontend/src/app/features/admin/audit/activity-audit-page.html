@@ -135,8 +135,8 @@
                 <time [attr.datetime]="row.entry.at">{{ row.date }}</time>
               </td>
               <td nxTableColumn="actor">
-                <span class="ui-truncate" [title]="row.entry.actor">{{ row.entry.actor }}</span>
-                @if (row.entry.actor === '未驗證' && row.context.length) {
+                <span class="ui-truncate" [title]="row.actor">{{ row.actor }}</span>
+                @if ((row.entry.actor === '未驗證' || row.caller) && row.context.length) {
                   <small class="ui-truncate">{{ row.context[0].value }}</small>
                 }
                 @if (row.entry.actingAs) {
@@ -209,7 +209,7 @@
           </div>
           <h3>{{ row.action }}</h3>
           <span class="ui-drawer-subtitle"
-            >{{ row.entry.actor }}
+            >{{ row.actor }}
             @if (row.entry.actingAs) {
               · 測試身分 {{ row.entry.actingAs }}
             }
@@ -253,7 +253,7 @@
           <dl class="ui-description-list audit-basics">
             <div>
               <dt>操作者</dt>
-              <dd>{{ row.entry.actor }}</dd>
+              <dd>{{ row.actor }}</dd>
             </div>
             <div>
               <dt>分類</dt>

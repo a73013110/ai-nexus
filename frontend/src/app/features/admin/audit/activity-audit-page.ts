@@ -38,6 +38,7 @@ import { auditLogQuery } from './audit-navigation';
 import { activityAuditTour, auditDetailTour } from './audit-tour';
 import {
   auditChanges,
+  auditCaller,
   auditContext,
   auditDetails,
   auditOutcome,
@@ -168,6 +169,8 @@ export class ActivityAuditPage {
   readonly presentedRows = computed(() =>
     this.rows().map((entry) => ({
       entry,
+      actor: auditCaller(entry.detailsJson) || entry.actor,
+      caller: !!auditCaller(entry.detailsJson),
       ...auditOutcome(entry.result),
       date: formatDate(entry.at),
       action: actionLabel(entry.action, this.actions(), this.modules()),

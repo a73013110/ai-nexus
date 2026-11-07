@@ -36,6 +36,7 @@ internal sealed class VerifyCredentials(DirectoryCredentials directory, Authenti
     public async Task<Results<Ok<VerifiedCredentialDto>, ProblemHttpResult>> HandleAsync(HttpContext http, CredentialVerificationRequest body, CancellationToken ct)
     {
         var client = http.User.ApiClientId();
+        var name = http.User.ApiClientName();
         Result<AdIdentity> identity;
         try
         {
@@ -47,7 +48,7 @@ internal sealed class VerifyCredentials(DirectoryCredentials directory, Authenti
         {
             // AD 連不上、服務帳號未設定：回 503 與查證代碼，稽核記同一個代碼，呼叫端不可把它當成密碼錯誤。
             var problem = issues.Problem(error);
-            await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, body.Account, "ad", ct, problem.Code, problem.IssueCode, client);
+            await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, body.Account, "ad", ct, problem.Code, problem.IssueCode, client, name);
             throw;
         }
         if (!identity.IsSuccess)
@@ -55,12 +56,12 @@ internal sealed class VerifyCredentials(DirectoryCredentials directory, Authenti
             // 帳密錯誤、帳號停用、目錄缺 SID 一律同一個代碼，不透露是哪一種；被限流則照實回 429 與 Retry-After。
             var error = identity.Error.Kind == ErrorKind.RateLimited ? identity.Error : IdentityErrors.CredentialsRejected;
             var issue = issues.Report(error);
-            await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, body.Account, "ad", ct, error.Code, issue, client);
+            await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, body.Account, "ad", ct, error.Code, issue, client, name);
             return error.ToProblem(issue);
         }
         var verified = identity.Value;
         var account = UserAccounts.AccountName(verified.Account);
-        await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, account, "ad", ct, resource: client);
+        await audit.WriteAsync(IdentityAudit.CredentialsVerified, null, account, "ad", ct, resource: client, client: name);
         return TypedResults.Ok(new VerifiedCredentialDto(verified.Sid, account, verified.DisplayName, verified.Email));
     }
 }
