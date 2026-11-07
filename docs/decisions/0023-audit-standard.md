@@ -40,7 +40,7 @@
 | `SubjectUserId` | 資料主體，也就是被查閱或被修改的使用者 |
 | `ResourceId` | 被操作的資料列 |
 | `Result` | `completed` 或錯誤代碼：problem 的 code、`validation_failed`、`feature_forbidden`、`unexpected_error` 等 |
-| `DetailsJson` | 查詢條件與前後快照，鍵名必須在 `AuditRedactor` 白名單內 |
+| `DetailsJson` | 查詢條件與前後快照，鍵名必須在 `AuditRedactor` 白名單內，否則寫入時被丟掉（`AuditDetailTests` 檢查）。request body 不會自動記，handler 要用 `Describe` 補上 |
 | `ClientAddress`、`TraceId`、`OperationId`、`IssueCode`、`At` | 來源與查證關聯 |
 
 - 預設值：
@@ -59,7 +59,7 @@
   - handler 已經提交、之後才失敗時（例如跨資料庫的提交失敗），會把同一筆紀錄改記成錯誤代碼。
 - **例外**：記 `unexpected_error`，或外部服務自己的代碼。如果這筆也寫不進去，就記日誌 1003 `audit.failure_unrecorded`，原本的例外照常拋出。
 - **授權拒絕**：`AuditingAuthorizationResultHandler` 在寫出 403 前，用端點宣告的動作寫一筆，結果與回應的錯誤代碼相同（`feature_forbidden`），`FeatureId` 是被要求的功能。放在授權結果處理而非 requirement handler，每個請求只記一筆，評估授權也不帶寫入。這筆寫不進去時記日誌 1003，仍回 403：拒絕沒有送出資料。
-- **請求以外**：背景工作，或一個請求影響多筆資料時，用 `AuditTrail.Record`，由呼叫端在自己的交易裡提交。
+- **請求以外**：背景工作，或一個請求影響多筆資料時，用 `AuditTrail.Record`，由呼叫端在自己的交易裡提交。系統動作的擁有者是 `Guid.Empty`，明細帶 `automatic`；改了業務資料或依保存期銷毀資料就要記（排程匯入、保存期清理），沒有異動的那一輪不記。
 - `AuditEventInterceptor` 會拒絕沒有分類的紀錄。
 
 ## 重複查詢

@@ -22,6 +22,8 @@ public static class AttendanceAudit
 
     public static readonly AuditAction ImportRead = AuditAction.Access("attendance.punch_import.read", "查詢打卡匯入紀錄");
     public static readonly AuditAction PunchFileImported = AuditAction.Administration("attendance.punch_file.imported", "手動重匯打卡檔");
+    /// <summary>排程匯入寫入了新刷卡（系統動作，擁有者為空）；沒有新刷卡的掃描不記。</summary>
+    public static readonly AuditAction PunchFileSynced = AuditAction.Administration("attendance.punch_file.synced", "排程匯入打卡檔");
     public static readonly AuditAction CalendarDayRead = AuditAction.Access("attendance.calendar_day.read", "查詢假日設定");
     public static readonly AuditAction CalendarDayUpdated = AuditAction.Administration("attendance.calendar_day.updated", "修改假日設定");
 }

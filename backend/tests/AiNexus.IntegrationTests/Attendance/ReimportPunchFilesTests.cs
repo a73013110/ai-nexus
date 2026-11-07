@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Office.Attendance.Imports;
 using static AiNexus.IntegrationTests.Support.AttendanceApi;
 using static AiNexus.IntegrationTests.Support.OrganizationApi;
@@ -60,6 +61,12 @@ public sealed class ReimportPunchFilesTests
         Assert.Equal([null, session.HrId], imports.Select(x => x.RequestedById));
         Assert.Equal(dto.Id, (await session.FileAsync(Oct1)).LastImportId);
         Assert.Equal(2, (await session.PunchesAsync()).Count);
+        // 稽核記下重匯的區間與檔數（body 不會自動記）；排程匯入的那筆是另一個動作。
+        var audit = Assert.Single(await AuditAsync(session.Factory, AttendanceAudit.PunchFileImported.Name)).Details;
+        Assert.Contains("\"from\":\"2026-10-01\"", audit);
+        Assert.Contains("\"to\":\"2026-10-01\"", audit);
+        Assert.Contains("\"count\":1", audit);
+        Assert.Contains("\"missing\":0", audit);
     }
 
     [Fact]

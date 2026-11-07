@@ -1,5 +1,9 @@
+using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
+using AiNexus.Data.App.Audit;
+using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Office.Attendance.Imports;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static AiNexus.IntegrationTests.Support.PunchSource;
@@ -25,6 +29,27 @@ public sealed class PunchImportScanTests
         Assert.Equal((1, 0, 0), (second.Found, second.Imported, second.Failed));
         Assert.Equal(0, third.Imported);
         Assert.Single(await session.ImportsAsync());
+    }
+
+    [Fact]
+    public async Task AScheduledImportThatAddsPunchesIsAuditedAsASystemAction()
+    {
+        await using var session = await PunchImportSession.CreateAsync();
+        session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0), Line("A001", 10, 1, 18, 0)]);
+        await session.ScanAsync();
+        // 只改修改時間、沒有新刷卡：匯入紀錄多一筆，但資料沒變，不另記稽核。
+        session.Clock.Advance(TimeSpan.FromHours(1));
+        session.Source.SetModified(Oct1, (await session.FileAsync(Oct1)).ImportedModifiedAt!.Value.AddMinutes(10));
+        Assert.Equal(1, (await session.ScanAsync()).Imported);
+
+        var audit = Assert.Single(await AttendanceApi.AuditAsync(session.Factory, AttendanceAudit.PunchFileSynced.Name));
+        Assert.Equal(AuditEvent.Completed, audit.Result);
+        Assert.Contains("\"automatic\":true", audit.Details);
+        Assert.Contains("\"count\":2", audit.Details);
+        Assert.Contains("\"cards\":1", audit.Details);
+        using var scope = session.Factory.Services.CreateScope();
+        var row = await scope.ServiceProvider.GetRequiredService<AppDbContext>().AuditEvents.AsNoTracking().SingleAsync(x => x.Action == AttendanceAudit.PunchFileSynced.Name);
+        Assert.Equal((Guid.Empty, (await session.FileAsync(Oct1)).Id, "administration"), (row.OwnerId, row.ResourceId!.Value, row.Category));
     }
 
     [Fact]

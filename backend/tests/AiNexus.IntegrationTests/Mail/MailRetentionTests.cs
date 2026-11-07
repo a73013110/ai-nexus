@@ -1,5 +1,7 @@
 using AiNexus.Data.App;
+using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Mail;
+using AiNexus.Features.Admin.Mail;
 using AiNexus.Features.Admin.Mail.Delivery;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +43,13 @@ public sealed class MailRetentionTests
         var db = check.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal([pending], await db.OutboundMessages.Select(x => x.Id).ToListAsync());
         Assert.False(await db.DeliveryAttempts.AnyAsync(x => x.MessageId == old));
+        // 每一輪清到資料就記一筆系統稽核，只有筆數；沒清到的一輪不記。
+        Assert.Equal(MailPurge.None, await worker.PurgeAsync(CancellationToken.None));
+        var cleared = await db.AuditEvents.AsNoTracking().Where(x => x.Action == MailAudit.MessageCleared.Name).OrderBy(x => x.Id).ToListAsync();
+        Assert.Equal(3, cleared.Count);
+        Assert.All(cleared, x => Assert.Equal((Guid.Empty, AuditEvent.Completed), (x.OwnerId, x.Result)));
+        Assert.Equal(["contents", "recipients", "records"], cleared.Select(x => x.DetailsJson!).Select(json => json.Contains("\"contents\":1") ? "contents" : json.Contains("\"recipients\":1") ? "recipients" : json.Contains("\"records\":1") ? "records" : json));
+        Assert.DoesNotContain(cleared, x => x.DetailsJson!.Contains("@company.com"));
     }
 
     [Fact]

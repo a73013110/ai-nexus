@@ -6,7 +6,10 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Admin.Mail.Delivery;
 
 /// <summary>清理的筆數，測試與日後的監控用。</summary>
-public sealed record MailPurge(int Expired, int Contents, int Recipients, int Records);
+public sealed record MailPurge(int Expired, int Contents, int Recipients, int Records)
+{
+    public static readonly MailPurge None = new(0, 0, 0, 0);
+}
 
 /// <summary>
 /// 每小時依 <c>Mail:Retention</c> 刪內文、清收件原址、刪舊紀錄；只處理已結束（sent、failed、cancelled）的信。
@@ -67,7 +70,15 @@ public sealed partial class MailRetentionWorker(
         // 內文與嘗試由資料庫的 ON DELETE CASCADE 一併刪除。
         var recordBefore = now.AddDays(-retention.RecordDays);
         var records = await BatchesAsync(() => finished.Where(x => x.CreatedAt < recordBefore).Take(BatchSize).ExecuteDeleteAsync(ct));
-        return new(expired, contents, recipients, records);
+        // 刪內文、清收件人、刪紀錄都是依政策銷毀資料，要留證；批次各自提交，所以在全部完成後另記一筆，中途失敗的部分下一輪清完時一起記。
+        var purge = new MailPurge(expired, contents, recipients, records);
+        if (purge != MailPurge.None)
+        {
+            scope.ServiceProvider.GetRequiredService<AuditTrail>().Record(MailAudit.MessageCleared, Guid.Empty,
+                details: new { automatic = true, expired, contents, recipients, records });
+            await db.SaveChangesAsync(ct);
+        }
+        return purge;
     }
 
     private static async Task<int> BatchesAsync(Func<Task<int>> batch)

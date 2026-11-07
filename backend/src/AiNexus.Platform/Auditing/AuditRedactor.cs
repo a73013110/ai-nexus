@@ -31,9 +31,18 @@ public static class AuditRedactor
         // 外部系統（identity.api_client*）：名稱用既有的 name；金鑰只記末四碼與產生時間，雜湊與明碼都不收。
         // client 是帳密驗證（identity.credentials.verified）時呼叫的系統名稱，由管理者命名、不是個人資料。
         "keyHint", "keyIssuedAt", "client",
+        // 系統動作（背景工作）的標記與向量索引設定；管理者開啟他人對話附件時的檔案 ID；分享對象的群組數。
+        "automatic", "profileId", "fileId", "groups",
+        // 排程匯入的新刷卡數用 count、自動建立的卡片數 cards；手動重匯找不到的檔數 missing。
+        "cards", "missing",
+        // 郵件保存期清理（mail.message.cleared）：逾期未寄、刪內文、刪紀錄的筆數；清掉收件人的筆數用既有的 recipients。
+        "expired", "contents", "records",
         // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。
         "route", "query"
     };
+
+    /// <summary>明細鍵是否在白名單內；不在的鍵寫入時會被丟掉，<c>AuditDetailTests</c> 用它檢查宣告的明細。</summary>
+    public static bool Allows(string key) => Fields.Contains(key);
 
     /// <summary>
     /// 清理稽核 JSON：只保留核准的白名單欄位，並限制巢狀深度與大小。

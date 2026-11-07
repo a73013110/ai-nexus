@@ -10,9 +10,10 @@
 - **排程只新增**：HAMS 的檔只附加（見 [打卡機主機排程](../operations/attendance-hams.md)），每次重讀整檔、只寫資料庫還沒有的刷卡；檔案少了行或被清空也不刪。同一張卡一天可以有好幾行，判定只取最早與最晚。
 - **去重**：（卡號、時間、機器代號）不分檔案，已在資料庫的刷卡歸先寫入的檔；只載入新內容涵蓋的出勤日比對。`PunchCount` 是該檔實際擁有的筆數。
 - **手動重匯整檔取代**：該檔先前寫入、新內容已沒有的刷卡一併刪除（只動有差異的列），HR 修正檔案後重匯即可，不必寫 SQL。被刪的刷卡可能也在別的檔（例如在 HAMS 畫面手動轉出過）：同一交易把檔名日期不早於它出勤日、已匯入的檔標記為要重匯（清空 `ImportedModifiedAt`、`ImportedSize`），下一次掃描以只新增補回。
+- **排程的稽核**：寫入了新刷卡的排程匯入，在同一交易另記系統稽核 `attendance.punch_file.synced`（擁有者為空，明細是新刷卡數與自動建立的卡片數）；沒有新刷卡的掃描不記。
 - **失敗**：交易整個回復，`Punches` 與檔案的已匯入版本維持上次成功；`PunchImports` 的 failed 紀錄在回復之後另一個交易寫入，並更新 `LastImportId`。連失敗紀錄都寫不進去（資料庫不可用）時沒有紀錄，下一輪再試。
 - **並行**：讀檔與解析不持鎖，寫入前取匯入鎖（`AttendanceLocks.PunchImport`），本機與 IIS 同時跑也一次只寫入一個檔；排程等到鎖後會再判斷一次，已匯入的版本就跳過。手動重匯的檔之間排程可插入。`Punches` 的唯一索引是最後防線。
-- **手動重匯**：`POST /api/v1/attendance-imports`，body `{ "from": "2026-10-01", "to": "2026-10-22" }`：檔名日期、含頭尾（起訖相同即單一檔），不晚於台灣今天、最多 31 天。請求內同步、由舊到新逐檔重匯，不論有沒有變都整檔取代，記為 `manual` 並帶操作者。回 200：各檔的匯入紀錄（含 failed）與找不到的檔名。整段都沒有檔 `attendance_import_file_not_found`（404）、資料夾讀不到 `attendance_import_source_unavailable`（503），不留紀錄（已完成的檔保留）。不另寫稽核。
+- **手動重匯**：`POST /api/v1/attendance-imports`，body `{ "from": "2026-10-01", "to": "2026-10-22" }`：檔名日期、含頭尾（起訖相同即單一檔），不晚於台灣今天、最多 31 天。請求內同步、由舊到新逐檔重匯，不論有沒有變都整檔取代，記為 `manual` 並帶操作者，稽核 `attendance.punch_file.imported` 記下區間、重匯與找不到的檔數。回 200：各檔的匯入紀錄（含 failed）與找不到的檔名。整段都沒有檔 `attendance_import_file_not_found`（404）、資料夾讀不到 `attendance_import_source_unavailable`（503），不留匯入紀錄（已完成的檔保留）。
 - **查詢**：`GET /api/v1/attendance-imports`，新到舊，排序、欄位篩選與分頁走共用表格查詢（[ADR 0026](../decisions/0026-shared-table-queries.md)）；可依檔案（`fileId`、`fileName`）、狀態與開始時間期間篩選，帶出檔名與操作者姓名。
 - **匯入明細**：點一筆開詳情。`GET /api/v1/attendance-imports/{id}/punches` 列出這次寫入的刷卡（卡號、時間、持有人、代號），與 `PunchCount` 一致，不含歸給別的檔的重複刷卡。刷卡依檔案保存、不依匯入保存，所以只有該檔最近一次成功的匯入（`isCurrent`）列得出來；失敗或已被之後的匯入取代的回 `attendance_import_not_current`（409），畫面改列結果與來源資訊。持有人是讀取當下的歸戶結果。
 - **監控**：子系統 `attendance-import`，判定見 [監控子系統](../architecture/monitoring-sources.md)。沒有新刷卡時 HAMS 不寫檔，所以過期看「上次成功之後有沒有整天過去的工作日」（GD 行事曆，讀不到時以週一到週五計），週末與連假不會誤報。日誌事件 3400–3406；資料夾讀不到與恢復只在轉換時各記一次。

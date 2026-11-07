@@ -85,7 +85,7 @@ internal sealed class OpenAdminConversationFile(AppDbContext db, AccessService a
             ? await db.Attachments.AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct)
             : null;
         if (file is null) return ConversationsErrors.AdminResourceNotFound;
-        audit.Describe(subject: owner.Value, details: new { file = fileId });
+        audit.Describe(subject: owner.Value, details: new { fileId });
         return file;
     }
 }

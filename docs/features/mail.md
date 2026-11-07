@@ -75,4 +75,4 @@
 
 - 列表只顯示遮罩收件者，另存小寫地址的 SHA-256 供搜尋（查詢鍵，不是匿名化）。
 - 驗證碼等敏感信：內文以 Data Protection 加密，寄出或結束後刪除，不能檢視或重寄。日誌不記收件者、主旨與內文。
-- `Retention`：內文 `ContentDays`（30）、收件原址 `RecipientDays`（90）、紀錄 `RecordDays`（365）；每小時清理已結束的信。
+- `Retention`：內文 `ContentDays`（30）、收件原址 `RecipientDays`（90）、紀錄 `RecordDays`（365）；每小時清理已結束的信。清到資料的那一輪記一筆系統稽核 `mail.message.cleared`，只有各類筆數。

@@ -39,7 +39,7 @@ internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReim
 }
 
 /// <summary>
-/// HR 手動重匯一段日期的每日檔：不論檔案有沒有變動，都把各檔的刷卡換成檔案內容（新內容沒有的刷卡一併刪除，見 <see cref="PunchImporter"/>），匯入紀錄記為 <c>manual</c> 並帶操作者。操作本身就是匯入紀錄，不另寫稽核。
+/// HR 手動重匯一段日期的每日檔：不論檔案有沒有變動，都把各檔的刷卡換成檔案內容（新內容沒有的刷卡一併刪除，見 <see cref="PunchImporter"/>），匯入紀錄記為 <c>manual</c> 並帶操作者。請求稽核另記區間與檔數：body 不會自動記進稽核，少了它只看得出有人重匯、看不出重匯了哪幾天。
 /// <para>
 /// 依檔名日期由舊到新逐檔交給 <see cref="PunchImporter"/>，與排程掃描同一個順序，所以幾個檔重複的刷卡一樣歸檔名日期較早的檔。
 /// 每個檔各自取得寫入鎖、各自一個交易：排程可以插在兩個檔之間，不會被整段重匯擋住；中途失敗或請求中斷時，已完成的檔照常保留。
@@ -52,7 +52,7 @@ internal sealed class PunchReimportRequestValidator : RequestValidator<PunchReim
 /// 單一檔案的重匯因此與以前一樣。來源資料夾讀不到（<c>attendance_import_source_unavailable</c>）就停止，之後的檔都不會成功。
 /// 檔案存在但匯入失敗（例如格式錯誤）不是請求失敗：結果裡是狀態為 <c>failed</c> 的紀錄，Punches 維持上次成功的內容。
 /// </summary>
-internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer) : IEndpointSlice
+internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer, AuditTrail audit) : IEndpointSlice
 {
     /// <summary>一次最多幾天（幾個檔）：一個月，與出勤紀錄查詢一致，也限制同步請求的等待時間。</summary>
     public const int MaxDays = 31;
@@ -66,6 +66,7 @@ internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer
 
     public async Task<Result<PunchReimportResult>> HandleAsync(Guid actor, PunchReimportRequest request, CancellationToken ct)
     {
+        audit.Describe(details: new { from = request.From, to = request.To });
         var imported = new List<Guid>();
         var missing = new List<string>();
         for (var date = request.From; date <= request.To; date = date.AddDays(1))
@@ -74,10 +75,14 @@ internal sealed class ReimportPunchFiles(AppDbContext db, PunchImporter importer
             var result = await importer.ReimportAsync(fileName, actor, ct);
             if (result.IsSuccess) imported.Add(result.Value.Id);
             else if (result.Error == AttendanceErrors.ImportFileNotFound) missing.Add(fileName);
-            else return result.Error;
+            else { Count(); return result.Error; }
         }
+        Count();
         if (imported.Count == 0) return AttendanceErrors.ImportFileNotFound;
         var imports = await db.PunchImports.AsNoTracking().Where(x => imported.Contains(x.Id)).ToDtos(db).ToListAsync(ct);
         return new PunchReimportResult([.. imports.OrderBy(x => x.FileName, StringComparer.Ordinal)], missing);
+
+        // 中途失敗時已完成的檔照常保留，所以失敗的稽核也記下已重匯與找不到的檔數。
+        void Count() => audit.Describe(details: new { count = imported.Count, missing = missing.Count });
     }
 }

@@ -36,6 +36,7 @@ namespace AiNexus.Features.Office.Attendance.Imports;
 public sealed partial class PunchImporter(
     AppDbContext db,
     AdministrativeWriteLock writes,
+    AuditTrail audit,
     IOptions<AttendanceOptions> options,
     ILogger<PunchImporter> logger,
     TimeProvider clock)
@@ -180,8 +181,11 @@ public sealed partial class PunchImporter(
             EventCode = x.EventCode,
         }).ToList();
         db.AddRange(added);
-        await RegisterCardsAsync(added, ct);
+        var cards = await RegisterCardsAsync(added, ct);
         var requeued = await RequeueNeighboursAsync(file, dropped, ct);
+        // 手動重匯由請求稽核記錄；排程匯入沒有請求，寫入了新刷卡（與自動建立的卡）就另記一筆系統動作，與異動同一個交易。
+        if (attempt.Trigger == PunchImportTriggers.Scheduled && added.Count > 0)
+            audit.Record(AttendanceAudit.PunchFileSynced, Guid.Empty, resource: file.Id, details: new { automatic = true, count = added.Count, cards });
 
         var import = await RecordAsync(file, attempt, kept + added.Count, null, ct);
         await transaction.CommitAsync(ct);
@@ -192,13 +196,16 @@ public sealed partial class PunchImporter(
     /// 新刷卡的卡號沒有卡片時建立（不隱藏），卡號對應頁因此是一張完整的表：已指派與待指派的卡都在裡面。
     /// 與刷卡同一個交易，匯入失敗就一起回復。
     /// </summary>
-    private async Task RegisterCardsAsync(List<Punch> added, CancellationToken ct)
+    /// <returns>新建立的卡片數。</returns>
+    private async Task<int> RegisterCardsAsync(List<Punch> added, CancellationToken ct)
     {
         // 卡號比對與資料庫定序一致（不分大小寫）。
         var numbers = added.Select(x => x.CardNumber).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        if (numbers.Count == 0) return;
+        if (numbers.Count == 0) return 0;
         var known = await db.Cards.Where(x => numbers.Contains(x.CardNumber)).Select(x => x.CardNumber).ToListAsync(ct);
-        db.AddRange(numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }));
+        var cards = numbers.Except(known, StringComparer.OrdinalIgnoreCase).Select(number => new Card { CardNumber = number }).ToList();
+        db.AddRange(cards);
+        return cards.Count;
     }
 
     /// <summary>
