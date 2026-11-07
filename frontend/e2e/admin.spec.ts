@@ -426,11 +426,15 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(users).toContainText("101–106 / 106");
   await users.getByRole("button", { name: "上一頁", exact: true }).click();
   await expect(users.locator("tbody tr")).toHaveCount(100);
-  // 每一頁都是側欄的一格，頁內不再放切換同模組其他頁的連結列。
-  await expect(page.locator("nx-feature-page .ui-view-switch")).toHaveCount(0);
+  // 每一頁都是側欄的一格，頁內不再放切換同模組其他頁的連結列；查詢列裡的狀態切換是篩選，不算。
+  await expect(
+    page.locator("nx-feature-page .ui-view-switch:not(nx-query-bar *)"),
+  ).toHaveCount(0);
   // 介面元件是系統管理選單裡獨立的功能，存取管理頁首不再放工具選單。
   await expect(
-    page.locator(".feature-header .page-actions button:visible"),
+    page
+      .locator(".feature-header .page-actions")
+      .getByRole("button", { name: "存取管理工具", exact: true }),
   ).toHaveCount(0);
   await page.goto(routeOf("access-control.features"));
   const features = page.locator(".admin-features-table");

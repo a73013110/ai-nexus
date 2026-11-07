@@ -3,7 +3,9 @@
 // `.embed`＋`.embed-bar`（名稱在 `.embed-label`、操作在 `.embed-actions`），外觀與互動就一致。
 .embed {
   position: relative;
+  // 父層不拉伸子項（flex-start、inline 容器）時寬度會跟著內容走；不換行的原始碼要在區塊內捲動，不撐開版面。
   min-width: 0;
+  max-width: 100%;
   margin-block: var(--p-space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-block);

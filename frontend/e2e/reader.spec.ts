@@ -77,7 +77,8 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
     .evaluate((element) => element.scrollTop);
   const id = fixture.core.attachments[0].id;
   await expect(preview).toHaveAttribute("href", /returnTo=%2Fwork%2Fchat%2F/);
-  await preview.click();
+  // 圖片方塊正中央是下載鈕，點角落才是開啟預覽。
+  await preview.click({ position: { x: 12, y: 12 } });
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.getByRole("heading", { name: fileName })).toBeVisible();
   await expect(dialog.locator(".reader-original img")).toBeVisible();
@@ -157,7 +158,7 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
     )
     .toBeLessThan(4);
   await expect(preview).toBeFocused();
-  await preview.click();
+  await preview.click({ position: { x: 12, y: 12 } });
   await expect(dialog.locator(".reader-original img")).toBeVisible();
   await dialog.getByRole("button", { name: "關閉檔案預覽" }).click();
   await expect(input).toHaveValue("關閉預覽後繼續的問題");
