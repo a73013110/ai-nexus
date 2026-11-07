@@ -31,17 +31,10 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSettings<InferenceOptions, InferenceOptionsValidator>(InferenceOptions.Section)
             .Configure(x => x.RouteProviders());
 
-        services.AddHttpClient("Ollama", (sp, client) =>
-        {
-            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<InferenceOptions>>().Value.Providers.Ollama.Endpoint);
-            client.Timeout = Timeout.InfiniteTimeSpan;
-        });
-
-        services.AddHttpClient("GoogleAI", client =>
-        {
-            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/");
-            client.Timeout = Timeout.InfiniteTimeSpan;
-        });
+        services.AddControlledHttpClient("Ollama").ConfigureHttpClient((sp, client) =>
+            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<InferenceOptions>>().Value.Providers.Ollama.Endpoint));
+        services.AddControlledHttpClient("GoogleAI").ConfigureHttpClient(client =>
+            client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/"));
 
         services.AddKeyedService<IInferenceProvider>("google", ServiceLifetime.Singleton, sp =>
             new GoogleAiProvider(sp.GetRequiredService<IHttpClientFactory>().CreateClient("GoogleAI"), sp.GetRequiredService<IOptions<InferenceOptions>>()));

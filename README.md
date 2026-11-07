@@ -67,6 +67,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 外部系統驗證 | 其他系統以金鑰呼叫 AD 帳密驗證；金鑰只顯示一次、重新產生即輪替、最近使用 | [外部系統](docs/features/api-clients.md) |
 | 組織 | 部門樹、人員所屬與主管（可從公文系統匯入）；資料範圍的依據，不授予功能 | [組織](docs/features/organization.md) |
 | 出勤打卡 | 卡號持有期間、接手、待指派卡號、在出勤紀錄隱藏、刷卡匯入、假日設定、出勤紀錄、舊資料轉移 | [出勤打卡](docs/features/attendance.md) |
+| Google 日曆同步 | 假單與出差單同步到 Google 共用日曆、退避重試、安全閥、狀態與執行紀錄 | [日曆同步](docs/features/calendar-sync.md) |
 | 平台營運 | 全平台用量、知識檢索索引、模型與工具價格；與存取管理分開授權 | [平台營運](docs/features/operations.md)、[費用](docs/features/billing.md) |
 | 活動稽核 | 每個請求的登入、查閱、異動與拒絕紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
 | 功能使用量 | 依稽核統計各功能的使用人數、次數與失敗 | [功能使用量](docs/features/feature-usage.md) |

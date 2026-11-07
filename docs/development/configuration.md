@@ -35,6 +35,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
 | `Gd` | [`GdOptions`](../../backend/src/AiNexus.Features/Platform/Gd/GdOptions.cs) | — |
+| `Google`、`CalendarSync` | 見[日曆同步](../features/calendar-sync.md) | 服務帳戶金鑰檔 |
 | `RemoteFiles` | [`RemoteFilesOptions`](../../backend/src/AiNexus.Features/Platform/RemoteFiles/RemoteFilesOptions.cs) | — |
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Export.Pdf` | [`PdfOptions`](../../backend/src/AiNexus.Platform/Export/PdfOptions.cs) | — |
@@ -65,7 +66,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 - **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不列入模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不同台時，`Inference.Providers.Ollama.Endpoint` 要改成 GPU 主機位址（localhost 指 IIS 主機）。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
-- **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（none 只用全文檢索，SQL Server 需安裝全文元件）。
+- **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（只用全文檢索）。
 - **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](../research/vector-architecture.md)。
-- **附件路徑**：`Files.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Files__StoragePath` 覆寫。
-- **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.AllowInsecureLocalhost` 只由 `-Http` 開啟，Production 一律忽略。Google API 與 Brave 只連官方 HTTPS endpoint。
+- **附件路徑**：`Files.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。
+- **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.AllowInsecureLocalhost` 只由 `-Http` 開啟，Production 忽略。

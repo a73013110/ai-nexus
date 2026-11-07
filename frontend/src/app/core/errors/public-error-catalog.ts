@@ -139,6 +139,9 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   attendance_records_filter_invalid: '查詢條件不正確，請重新選擇人員或重新整理頁面。',
   attendance_records_range_invalid: '查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。',
   attendance_user_not_found: '找不到這位使用者，帳號可能已刪除。',
+  calendar_sync_calendar_not_configured:
+    '還沒設定要同步的 Google 日曆 ID，請先在設定加上 CalendarSync:CalendarId。',
+  calendar_sync_disabled: '這個站台沒有啟用 Google 日曆同步，無法手動同步。',
   invalid_file_name: '檔案名稱不正確或過長。',
   file_size_limit: '檔案過大。',
   file_size_mismatch: '上傳檔案內容不完整，請重新上傳。',

@@ -3,6 +3,7 @@ using AiNexus.Data.App.Artifacts;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Data.App.Audit;
 using AiNexus.Data.App.Billing;
+using AiNexus.Data.App.CalendarSync;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Files;
@@ -63,6 +64,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
 
     public DbSet<ModelCharge> ModelCharges => Set<ModelCharge>();
     public DbSet<ModelPrice> ModelPrices => Set<ModelPrice>();
+
+    public DbSet<CalendarEvent> CalendarEvents => Set<CalendarEvent>();
+    public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
 
     public DbSet<ResourceGroup> ResourceGroups => Set<ResourceGroup>();
     public DbSet<ResourceMember> ResourceMembers => Set<ResourceMember>();

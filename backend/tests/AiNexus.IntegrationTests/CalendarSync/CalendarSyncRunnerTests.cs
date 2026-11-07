@@ -1,0 +1,354 @@
+using System.Net;
+using System.Net.Http.Json;
+using AiNexus.Data.App;
+using AiNexus.Data.App.CalendarSync;
+using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Features.Office.CalendarSync;
+using AiNexus.Features.Office.CalendarSync.Management;
+using AiNexus.Features.Office.CalendarSync.Sync;
+using AiNexus.Features.Platform.Gd;
+using AiNexus.Features.Platform.Google;
+using AiNexus.Features.Platform.Google.Calendar;
+using AiNexus.Platform.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace AiNexus.IntegrationTests.CalendarSync;
+
+/// <summary>同步一輪的完整流程：假 GD → 規劃 → 資料庫 → 假 Google 日曆（記憶體）；端點經 host 呼叫。</summary>
+public sealed class CalendarSyncRunnerTests
+{
+    private const string CalendarId = "team@example.test";
+    private static readonly DateTime Day = DateTime.Today.AddDays(3);
+
+    private sealed class Scenario(AppFactory factory, FakeGd gd, MemoryCalendar google)
+    {
+        public AppFactory Factory { get; } = factory;
+        public FakeGd Gd { get; } = gd;
+        public MemoryCalendar Google { get; } = google;
+
+        public async Task<CalendarSyncOutcome> RunAsync(bool manual = false, bool confirmRemovals = false)
+        {
+            using var scope = Factory.Services.CreateScope();
+            var request = manual || confirmRemovals ? new CalendarSyncRequest(Guid.Empty, confirmRemovals) : null;
+            return await scope.ServiceProvider.GetRequiredService<CalendarSyncRunner>().RunAsync(request, TestContext.Current.CancellationToken);
+        }
+
+        public async Task<List<CalendarEvent>> RowsAsync()
+        {
+            using var scope = Factory.Services.CreateScope();
+            return await scope.ServiceProvider.GetRequiredService<AppDbContext>().CalendarEvents.AsNoTracking().OrderBy(x => x.DesNo).ToListAsync();
+        }
+    }
+
+    private static async Task RunAsync(Func<Scenario, Task> test, bool enabled = false)
+    {
+        using var gd = FakeGd.Create();
+        gd.AddUser("G001", "alice", name: "王大明");
+        gd.AddUser("G002", "bob", name: "林小芳");
+        var google = new MemoryCalendar();
+        // 啟用時啟動檢查會讀服務帳戶金鑰；給一把臨時的（日曆呼叫由記憶體日曆接手，不會用到它）。
+        var key = Path.Combine(Path.GetTempPath(), $"ainexus-google-{Guid.NewGuid():N}.json");
+        using (var rsa = System.Security.Cryptography.RSA.Create(2048))
+            await File.WriteAllTextAsync(key, System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
+            {
+                ["type"] = "service_account",
+                ["client_email"] = "sync@example-project.iam.gserviceaccount.test",
+                ["private_key"] = rsa.ExportPkcs8PrivateKeyPem(),
+            }), TestContext.Current.CancellationToken);
+        try
+        {
+            await RunWithAsync(gd, google, key, enabled, test);
+        }
+        finally
+        {
+            File.Delete(key);
+        }
+    }
+
+    private static async Task RunWithAsync(FakeGd gd, MemoryCalendar google, string key, bool enabled, Func<Scenario, Task> test)
+    {
+        await using var factory = new AppFactory(services: services =>
+        {
+            services.PostConfigure<GoogleOptions>(options => options.ServiceAccountKeyFile = key);
+            services.PostConfigure<DatabasesOptions>(options => options[GdDatabase.Name] = gd.Databases[GdDatabase.Name]);
+            services.PostConfigure<CalendarSyncOptions>(options =>
+            {
+                options.CalendarId = CalendarId;
+                options.Enabled = enabled;
+                options.RemovalHoldMinimum = 3;
+            });
+            services.RemoveAll<IGoogleCalendar>();
+            services.AddSingleton<IGoogleCalendar>(google);
+        });
+        await test(new Scenario(factory, gd, google));
+    }
+
+    [Fact]
+    public async Task GdFormsBecomeEventsAndFollowLaterChanges()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Send");
+            s.Gd.Update("Form_Leave", "L-1", "AgentUserId = @agent", new { agent = "G002" });
+            s.Gd.AddTravel("T-1", "G002", Day.AddHours(9), Day.AddHours(17), "拜訪客戶", "Decide");
+            // 退回結案不是核准，不同步。
+            s.Gd.AddLeave("L-2", "G001", "A", Day.AddHours(8.5), Day.AddHours(12), "Finish");
+
+            var first = await s.RunAsync();
+
+            Assert.Equal((2, 0, 0), (first.Created, first.Updated, first.Deleted));
+            Assert.Equal(["【出差】林小芳", "【請假】王大明"], s.Google.Events.Values.Select(x => x.Summary).Order());
+            var leave = s.Google.Events.Values.Single(x => x.Summary == "【請假】王大明");
+            Assert.Equal("代理人：林小芳\n狀態：簽核中\n文號：L-1", leave.Description);
+            Assert.All(await s.RowsAsync(), x => Assert.Equal(CalendarEventStates.Synced, x.State));
+
+            // 沒有變化的一輪不推送。
+            Assert.Equal((0, 0, 0), (await s.RunAsync() is var idle ? (idle.Created, idle.Updated, idle.Deleted) : default));
+
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Decide'");
+            s.Gd.Update("Form_Travel", "T-1", "FlowOver = 'Cancel'");
+            var second = await s.RunAsync();
+
+            Assert.Equal((0, 1, 1), (second.Created, second.Updated, second.Deleted));
+            Assert.Contains("狀態：已核准", Assert.Single(s.Google.Events.Values).Description);
+            var rows = await s.RowsAsync();
+            Assert.Equal(CalendarEventStates.Removed, rows.Single(x => x.DesNo == "T-1").State);
+            Assert.NotNull(rows.Single(x => x.DesNo == "T-1").RemovedAt);
+
+            // 撤回的單又送出：救回同一列、重建同一個事件 ID。
+            s.Gd.Update("Form_Travel", "T-1", "FlowOver = 'Send'");
+            var third = await s.RunAsync();
+            Assert.Equal(1, third.Created + third.Updated);
+            Assert.Equal(2, s.Google.Events.Count);
+            Assert.Equal(2, (await s.RowsAsync()).Count);
+        });
+    }
+
+    [Fact]
+    public async Task EachSegmentOfAMultiPeriodLeaveIsItsOwnEvent()
+    {
+        await RunAsync(async s =>
+        {
+            // GD 的實際樣子：主表是整段期間、DayOfWeek 存星期代碼；各段在 Form_Leave_Group，DayOfWeek 存中文星期。
+            s.Gd.AddLeave("L-1", "G001", "A", Day, Day.AddDays(14), "Decide", dayOfWeek: "3");
+            s.Gd.AddLeaveGroup("L-1", Day.AddHours(17), Day.AddHours(17.5), "星期三");
+            s.Gd.AddLeaveGroup("L-1", Day.AddDays(7).AddHours(17), Day.AddDays(7).AddHours(17.5), "星期三");
+
+            Assert.Equal(2, (await s.RunAsync()).Created);
+
+            // 鍵與舊系統 EDocSyncToGoogleCalendar.DayOfWeek 相同（例：20250402星期三），轉入的舊列才接得上。
+            var rows = (await s.RowsAsync()).OrderBy(x => x.SegmentKey, StringComparer.Ordinal).ToList();
+            Assert.Equal([Day.ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture) + "星期三",
+                Day.AddDays(7).ToString("yyyyMMdd", System.Globalization.CultureInfo.InvariantCulture) + "星期三"], rows.Select(x => x.SegmentKey));
+            Assert.All(rows, x => Assert.Equal(TimeSpan.FromMinutes(30), x.EndsAt - x.StartsAt));
+            Assert.Equal(2, s.Google.Events.Count);
+        });
+    }
+
+    [Fact]
+    public async Task UnavailableGdRemovesNothing()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+
+            s.Gd.Databases[GdDatabase.Name].Name = "AiNexus_Test_Missing_" + Guid.NewGuid().ToString("N");
+            var outcome = await s.RunAsync();
+
+            Assert.Equal((SyncRunStatuses.Failed, CalendarSyncFailures.GdUnavailable), (outcome.Status, outcome.ErrorCode));
+            Assert.Single(s.Google.Events);
+            Assert.Equal(CalendarEventStates.Synced, Assert.Single(await s.RowsAsync()).State);
+        });
+    }
+
+    [Fact]
+    public async Task AnEventDeletedInGoogleIsRecreatedOnTheNextChange()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Send");
+            await s.RunAsync();
+            s.Google.Events.Clear();
+
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Decide'");
+            var outcome = await s.RunAsync();
+
+            Assert.Equal(1, outcome.Created);
+            Assert.Equal(CalendarEvent.NewGoogleEventId(Assert.Single(await s.RowsAsync()).Id), Assert.Single(s.Google.Events.Keys));
+        });
+    }
+
+    [Fact]
+    public async Task MassRemovalsWaitForConfirmation()
+    {
+        await RunAsync(async s =>
+        {
+            foreach (var n in Enumerable.Range(1, 4)) s.Gd.AddLeave($"L-{n}", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+            foreach (var n in Enumerable.Range(1, 4)) s.Gd.Update("Form_Leave", $"L-{n}", "FlowOver = 'Cancel'");
+
+            var held = await s.RunAsync();
+            Assert.Equal((SyncRunStatuses.Held, 4), (held.Status, held.Held));
+            Assert.Equal(4, s.Google.Events.Count);
+
+            var confirmed = await s.RunAsync(confirmRemovals: true);
+            Assert.Equal(4, confirmed.Deleted);
+            Assert.Empty(s.Google.Events);
+            Assert.All(await s.RowsAsync(), x => Assert.Equal(CalendarEventStates.Removed, x.State));
+        });
+    }
+
+    [Fact]
+    public async Task ServiceFailuresStopTheRunAndLeaveRowsForTheNextOne()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Gd.AddLeave("L-2", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Google.Failure = GoogleStatus.Forbidden;
+
+            var failed = await s.RunAsync();
+            Assert.Equal((SyncRunStatuses.Failed, CalendarSyncFailures.GoogleForbidden), (failed.Status, failed.ErrorCode));
+            Assert.All(await s.RowsAsync(), x => Assert.Equal((CalendarEventStates.Pending, 0), (x.State, x.Attempts)));
+
+            s.Google.Failure = null;
+            var recovered = await s.RunAsync();
+            Assert.Equal(2, recovered.Created);
+            Assert.Equal(SyncRunStatuses.Succeeded, recovered.Status);
+        });
+    }
+
+    [Fact]
+    public async Task OneRejectedEventIsRetriedLaterWithoutStoppingOthers()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Gd.AddLeave("L-2", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Google.RejectDescriptionContaining = "L-2";
+
+            var outcome = await s.RunAsync();
+
+            Assert.Equal((SyncRunStatuses.Partial, 1, 1), (outcome.Status, outcome.Created, outcome.Failed));
+            var rejected = (await s.RowsAsync()).Single(x => x.DesNo == "L-2");
+            Assert.Equal((CalendarEventStates.Failed, 1, CalendarSyncFailures.GoogleRejected), (rejected.State, rejected.Attempts, rejected.LastErrorCode));
+            Assert.NotNull(rejected.NextAttemptAt);
+
+            // 排程輪等退避時間；手動同步立刻重試。
+            s.Google.RejectDescriptionContaining = null;
+            Assert.Equal(0, (await s.RunAsync()).Created);
+            Assert.Equal(1, (await s.RunAsync(manual: true)).Created);
+        });
+    }
+
+    [Fact]
+    public async Task PagesAndActionsRequireTheirFeatures()
+    {
+        await RunAsync(async s =>
+        {
+            var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+            await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync);
+            var carol = await s.Factory.SignedInAsync("carol");
+            var viewer = await s.Factory.SignedInAsync("bob");
+
+            Assert.Equal(HttpStatusCode.Forbidden, (await carol.GetAsync("/api/v1/calendar-sync/status")).StatusCode);
+            var status = await viewer.GetFromJsonAsync<CalendarSyncStatusDto>("/api/v1/calendar-sync/status");
+            Assert.Equal((false, CalendarId), (status!.Enabled, status.CalendarId));
+            Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/events")).StatusCode);
+            Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/runs")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/v1/calendar-sync/runs", new { confirmRemovals = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/v1/calendar-sync/connection-test", null)).StatusCode);
+        });
+    }
+
+    [Fact]
+    public async Task ManagersCanTestTheConnectionButNotSyncADisabledSite()
+    {
+        await RunAsync(async s =>
+        {
+            var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+            await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync, FeatureCatalog.CalendarSyncManage);
+            var manager = await s.Factory.SignedInAsync("bob");
+
+            var test = await (await manager.PostAsync("/api/v1/calendar-sync/connection-test", null)).Content.ReadFromJsonAsync<CalendarSyncConnectionDto>();
+            Assert.Equal((true, "團隊行事曆"), (test!.Succeeded, test.CalendarSummary));
+
+            await ProblemAssertions.AssertCodeAsync(await manager.PostAsJsonAsync("/api/v1/calendar-sync/runs", new { confirmRemovals = false }),
+                HttpStatusCode.Conflict, "calendar_sync_disabled");
+            Assert.Single(await AttendanceApi.AuditAsync(s.Factory, CalendarSyncAudit.ConnectionTested.Name));
+        });
+    }
+
+    [Fact]
+    public async Task AManualRequestIsAcceptedWhenEnabled()
+    {
+        await RunAsync(async s =>
+        {
+            var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+            await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync, FeatureCatalog.CalendarSyncManage);
+            var manager = await s.Factory.SignedInAsync("bob");
+
+            var response = await manager.PostAsJsonAsync("/api/v1/calendar-sync/runs", new { confirmRemovals = true });
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            var audit = Assert.Single(await AttendanceApi.AuditAsync(s.Factory, CalendarSyncAudit.RunRequested.Name));
+            Assert.Contains("\"confirmRemovals\":true", audit.Details);
+        }, enabled: true);
+    }
+
+    /// <summary>記憶體中的 Google 日曆，行為與 API 相同的部分：ID 重複 409、找不到 404。推送平行執行，所以加鎖。</summary>
+    internal sealed class MemoryCalendar : IGoogleCalendar
+    {
+        private readonly Lock gate = new();
+        public Dictionary<string, GoogleCalendarEvent> Events { get; } = [];
+        public GoogleStatus? Failure { get; set; }
+        public string? RejectDescriptionContaining { get; set; }
+
+        public Task<GoogleResponse<GoogleCalendarInfo>> GetCalendarAsync(string calendarId, CancellationToken ct)
+            => Task.FromResult(GoogleResponse<GoogleCalendarInfo>.Ok(new() { Summary = "團隊行事曆", TimeZone = "Asia/Taipei" }));
+
+        public Task<GoogleResponse<GoogleCalendarEvent>> InsertEventAsync(string calendarId, GoogleCalendarEvent value, CancellationToken ct)
+        {
+            lock (gate)
+            {
+                if (Rejected(value) is { } failure) return Task.FromResult(new GoogleResponse<GoogleCalendarEvent>(failure));
+                if (Events.ContainsKey(value.Id!)) return Task.FromResult(new GoogleResponse<GoogleCalendarEvent>(GoogleStatus.Conflict));
+                return Task.FromResult(GoogleResponse<GoogleCalendarEvent>.Ok(Events[value.Id!] = value with { HtmlLink = "https://calendar.example.test/" + value.Id }));
+            }
+        }
+
+        public Task<GoogleResponse<GoogleCalendarEvent>> UpdateEventAsync(string calendarId, string eventId, GoogleCalendarEvent value, CancellationToken ct)
+        {
+            lock (gate)
+            {
+                if (Rejected(value) is { } failure) return Task.FromResult(new GoogleResponse<GoogleCalendarEvent>(failure));
+                if (!Events.ContainsKey(eventId)) return Task.FromResult(new GoogleResponse<GoogleCalendarEvent>(GoogleStatus.NotFound));
+                return Task.FromResult(GoogleResponse<GoogleCalendarEvent>.Ok(Events[eventId] = value with { Id = eventId, HtmlLink = "https://calendar.example.test/" + eventId }));
+            }
+        }
+
+        public Task<GoogleResponse<bool>> DeleteEventAsync(string calendarId, string eventId, CancellationToken ct)
+        {
+            lock (gate)
+            {
+                if (Failure is { } failure) return Task.FromResult(new GoogleResponse<bool>(failure));
+                return Task.FromResult(Events.Remove(eventId) ? GoogleResponse<bool>.Ok(true) : new GoogleResponse<bool>(GoogleStatus.NotFound));
+            }
+        }
+
+        public Task<GoogleResponse<IReadOnlyList<GoogleCalendarEvent>>> FindEventsAsync(string calendarId, string property, string value, CancellationToken ct)
+        {
+            lock (gate)
+            {
+                IReadOnlyList<GoogleCalendarEvent> found = [.. Events.Values.Where(x => x.ExtendedProperties?.Private?.GetValueOrDefault(property) == value)];
+                return Task.FromResult(GoogleResponse<IReadOnlyList<GoogleCalendarEvent>>.Ok(found));
+            }
+        }
+
+        private GoogleStatus? Rejected(GoogleCalendarEvent value)
+            => Failure ?? (RejectDescriptionContaining is { } text && value.Description?.Contains(text, StringComparison.Ordinal) == true ? GoogleStatus.Invalid : null);
+    }
+}

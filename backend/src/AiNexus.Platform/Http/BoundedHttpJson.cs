@@ -13,6 +13,13 @@ public static class BoundedHttpJson
     /// 若 Content-Length 標頭或實際傳輸位元組數超過上限，立即拋出 <see cref="ExternalServiceException"/>。
     /// </summary>
     public static async Task<JsonDocument> ReadAsync(HttpResponseMessage response, int maxBytes, CancellationToken ct)
+        => JsonDocument.Parse(await ReadBytesAsync(response, maxBytes, ct), new JsonDocumentOptions { MaxDepth = 32 });
+
+    /// <summary>
+    /// 在位元組上限內讀完回應內容，交給呼叫端自己解析（例：source-generated 的 <c>JsonTypeInfo</c>）。
+    /// 超過上限（標頭宣告或實際傳輸）時拋出 <see cref="ExternalServiceException"/>。
+    /// </summary>
+    public static async Task<byte[]> ReadBytesAsync(HttpResponseMessage response, int maxBytes, CancellationToken ct)
     {
         if (response.Content.Headers.ContentLength > maxBytes) throw TooLarge();
 
@@ -29,7 +36,7 @@ public static class BoundedHttpJson
             buffer.Write(bytes, 0, count);
         }
 
-        return JsonDocument.Parse(buffer.ToArray(), new JsonDocumentOptions { MaxDepth = 32 });
+        return buffer.ToArray();
     }
 
     private static ExternalServiceException TooLarge() => new(RemoteResponseTooLarge, "外部服務回應超過上限。");

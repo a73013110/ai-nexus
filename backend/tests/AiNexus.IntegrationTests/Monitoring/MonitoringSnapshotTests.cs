@@ -50,7 +50,7 @@ public sealed class MonitoringSnapshotTests
         }
         var first = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
         Assert.Equal(2, first.Version);
-        Assert.Equal(["generation", "model-providers", "jobs", "mail", "attendance-import", "gd", "log-pipeline", "knowledge-index", "usage-today", "storage", "web-search", "database-schema"], first.Subsystems.Select(x => x.Id));
+        Assert.Equal(["generation", "model-providers", "jobs", "mail", "attendance-import", "calendar-sync", "gd", "log-pipeline", "knowledge-index", "usage-today", "storage", "web-search", "database-schema"], first.Subsystems.Select(x => x.Id));
         // 還沒讀到任何子系統時不能斷言可以停站。
         Assert.Equal(StopReadiness.Unknown, first.Stop.Status);
         // 讀取在背景執行；頁面會在下一次快照時取得結果。

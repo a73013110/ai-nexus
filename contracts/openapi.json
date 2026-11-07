@@ -4954,6 +4954,192 @@
         }
       }
     },
+    "/api/v1/calendar-sync/status": {
+      "get": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "GetCalendarSyncStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSyncStatusDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/calendar-sync/events": {
+      "get": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "ListCalendarSyncEvents",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfCalendarSyncEventDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/calendar-sync/runs": {
+      "get": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "ListCalendarSyncRuns",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfCalendarSyncRunDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "StartCalendarSyncRun",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarSyncRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/calendar-sync/connection-test": {
+      "post": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "TestCalendarSyncConnection",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSyncConnectionDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -12789,6 +12975,381 @@
           }
         }
       },
+      "CalendarSyncCheck": {
+        "required": [
+          "at",
+          "status",
+          "errorCode",
+          "heldCount"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "heldCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "CalendarSyncConnectionDto": {
+        "required": [
+          "succeeded",
+          "errorCode",
+          "message",
+          "serviceAccount",
+          "calendarSummary",
+          "calendarTimeZone",
+          "elapsedMs"
+        ],
+        "type": "object",
+        "properties": {
+          "succeeded": {
+            "type": "boolean"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "serviceAccount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calendarSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calendarTimeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "elapsedMs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CalendarSyncEventDto": {
+        "required": [
+          "id",
+          "desNo",
+          "kind",
+          "applicantName",
+          "agentName",
+          "flowStatus",
+          "startsAt",
+          "endsAt",
+          "state",
+          "removed",
+          "attempts",
+          "nextAttemptAt",
+          "lastAttemptAt",
+          "lastErrorCode",
+          "lastError",
+          "syncedAt",
+          "htmlLink",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "desNo": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "applicantName": {
+            "type": "string"
+          },
+          "agentName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "flowStatus": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nextAttemptAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastAttemptAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastErrorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "htmlLink": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CalendarSyncRunDto": {
+        "required": [
+          "id",
+          "triggerKind",
+          "requestedById",
+          "requestedByName",
+          "startedAt",
+          "finishedAt",
+          "status",
+          "sourceCount",
+          "createdCount",
+          "updatedCount",
+          "deletedCount",
+          "failedCount",
+          "heldCount",
+          "errorCode",
+          "errorMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "triggerKind": {
+            "type": "string"
+          },
+          "requestedById": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "requestedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "sourceCount": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "createdCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updatedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deletedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "heldCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CalendarSyncRunRequest": {
+        "required": [
+          "confirmRemovals"
+        ],
+        "type": "object",
+        "properties": {
+          "confirmRemovals": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CalendarSyncStatusDto": {
+        "required": [
+          "enabled",
+          "calendarId",
+          "intervalSeconds",
+          "lookbackDays",
+          "serviceAccountConfigured",
+          "serviceAccount",
+          "running",
+          "lastCheck",
+          "lastRun",
+          "pending",
+          "failed",
+          "synced",
+          "removed"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "calendarId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lookbackDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "serviceAccountConfigured": {
+            "type": "boolean"
+          },
+          "serviceAccount": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "running": {
+            "type": "boolean"
+          },
+          "lastCheck": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarSyncCheck"
+              }
+            ]
+          },
+          "lastRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarSyncRunDto"
+              }
+            ]
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "synced": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "removed": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "CardAssignmentCreateRequest": {
         "required": [
           "cardId",
@@ -15660,6 +16221,8 @@
           "attendance.imports.reimport",
           "attendance.calendar",
           "attendance.calendar.maintain",
+          "calendar-sync",
+          "calendar-sync.manage",
           "identity.users",
           "identity.users.import",
           "identity.users.sync",
@@ -22016,6 +22579,62 @@
           }
         }
       },
+      "TablePageOfCalendarSyncEventDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarSyncEventDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TablePageOfCalendarSyncRunDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarSyncRunDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
       "TablePageOfPunchDto": {
         "required": [
           "items",
@@ -23517,6 +24136,9 @@
       "name": "Attendance"
     },
     {
+      "name": "CalendarSync"
+    },
+    {
       "name": "Account"
     },
     {
@@ -23636,6 +24258,11 @@
         "id": "attendance",
         "area": "office",
         "name": "出勤"
+      },
+      {
+        "id": "calendar-sync",
+        "area": "office",
+        "name": "日曆同步"
       },
       {
         "id": "identity",
@@ -23903,6 +24530,26 @@
         "module": "attendance",
         "name": "修改假日與彈性放假",
         "icon": "edit",
+        "route": null,
+        "scopes": [ ],
+        "managerScopes": [ ]
+      },
+      {
+        "id": "calendar-sync",
+        "kind": "page",
+        "module": "calendar-sync",
+        "name": "Google 日曆同步",
+        "icon": "calendar",
+        "route": "/office/calendar-sync",
+        "scopes": [ ],
+        "managerScopes": [ ]
+      },
+      {
+        "id": "calendar-sync.manage",
+        "kind": "action",
+        "module": "calendar-sync",
+        "name": "立即同步與測試連線",
+        "icon": "refresh",
         "route": null,
         "scopes": [ ],
         "managerScopes": [ ]

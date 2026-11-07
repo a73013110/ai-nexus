@@ -67,6 +67,8 @@ public static class FeatureCatalog
     public const string AttendanceImportsReimport = "attendance.imports.reimport";
     public const string AttendanceCalendar = "attendance.calendar";
     public const string AttendanceCalendarMaintain = "attendance.calendar.maintain";
+    public const string CalendarSync = "calendar-sync";
+    public const string CalendarSyncManage = "calendar-sync.manage";
     public const string IdentityUsers = "identity.users";
     public const string IdentityUsersImport = "identity.users.import";
     public const string IdentityUsersSync = "identity.users.sync";
@@ -109,6 +111,7 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition JobsModule = new(Jobs, Work, "背景任務");
     private static readonly ModuleDefinition RepositoriesModule = new(Repositories, Work, "程式庫");
     private static readonly ModuleDefinition AttendanceModule = new("attendance", Office, "出勤");
+    private static readonly ModuleDefinition CalendarSyncModule = new(CalendarSync, Office, "日曆同步");
     private static readonly ModuleDefinition IdentityModule = new("identity", Admin, "身分");
     private static readonly ModuleDefinition AccessControlModule = new("access-control", Admin, "存取控制");
     private static readonly ModuleDefinition OrganizationModule = new(Organization, Admin, "組織");
@@ -125,7 +128,7 @@ public static class FeatureCatalog
     public static IReadOnlyList<ModuleDefinition> Modules { get; } =
     [
         DashboardModule, ChatModule, ProjectsModule, FilesModule, KnowledgeModule, ArtifactsModule, SharingModule, JobsModule, RepositoriesModule, AttendanceModule,
-        IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, MonitoringModule, AuditModule, DiagnosticsModule,
+        CalendarSyncModule, IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, MonitoringModule, AuditModule, DiagnosticsModule,
         MailModule, ReleasesModule, QualityModule, DesignModule,
     ];
 
@@ -153,6 +156,8 @@ public static class FeatureCatalog
         new(AttendanceImportsReimport, FeatureKind.Action, AttendanceModule, "手動重匯打卡檔", "repeat"),
         new(AttendanceCalendar, FeatureKind.Page, AttendanceModule, "假日設定", "calendar"),
         new(AttendanceCalendarMaintain, FeatureKind.Action, AttendanceModule, "修改假日與彈性放假", "edit"),
+        new(CalendarSync, FeatureKind.Page, CalendarSyncModule, "Google 日曆同步", "calendar"),
+        new(CalendarSyncManage, FeatureKind.Action, CalendarSyncModule, "立即同步與測試連線", "refresh"),
         new(IdentityUsers, FeatureKind.Page, IdentityModule, "使用者", "user"),
         // 匯入會建立帳號（取得 member 的工作區），更新只套用目錄資料；分開授予，讓協助維護資料的人不必能開帳號。
         new(IdentityUsersImport, FeatureKind.Action, IdentityModule, "從 AD 匯入使用者", "import"),

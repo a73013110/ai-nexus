@@ -11,5 +11,10 @@ export const officeRoutes: Routes = [
       (module) => module.attendanceRoutes,
     ),
   ),
+  moduleRoute('calendar-sync', () =>
+    import('@features/office/calendar-sync/calendar-sync.routes').then(
+      (module) => module.calendarSyncRoutes,
+    ),
+  ),
   unavailableRoute,
 ];

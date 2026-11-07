@@ -40,6 +40,9 @@
 | 3411 | `database.external_query_rejected` | 同上 |
 | 3500 / 3501 / 3502 | `releases.schema_changes_read` / `releases.schema_changes_found` / `releases.schema_check_failed` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatch.cs` |
 | 3600 | `notifications.expiry_failed` | `Notifications/NotificationExpiryWorker.cs` |
+| 3700 | `google.token_rejected` | `Platform/Google/GoogleAccessTokens.cs` |
+| 3701 / 3702 / 3703 / 3704 | `calendar_sync.synced` / `calendar_sync.run_failed` / `calendar_sync.restored` / `calendar_sync.removals_held` | `CalendarSync/Sync/CalendarSyncRunner.cs` |
+| 3705 / 3706 | `calendar_sync.run_aborted` / `calendar_sync.retention_failed` | `CalendarSync/Sync/CalendarSyncWorker.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |

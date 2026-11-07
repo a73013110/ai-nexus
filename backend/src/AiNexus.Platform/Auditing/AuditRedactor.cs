@@ -37,6 +37,8 @@ public static class AuditRedactor
         "cards", "missing",
         // 郵件保存期清理（mail.message.cleared）：逾期未寄、刪內文、刪紀錄的筆數；清掉收件人的筆數用既有的 recipients。
         "expired", "contents", "records",
+        // 日曆同步（calendar_sync.*）：一輪的建立、更新數用既有的 created、updated，刪除與失敗數 deleted、failed；手動同步是否確認被安全閥擋下的移除。
+        "deleted", "failed", "confirmRemovals",
         // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。
         "route", "query"
     };

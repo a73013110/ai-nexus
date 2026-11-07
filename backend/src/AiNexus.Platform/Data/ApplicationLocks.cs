@@ -35,4 +35,54 @@ public static class ApplicationLocks
         // 0 是立刻取得、1 是等候後取得；負值是逾時、取消或死結犧牲者，都沒有拿到鎖。
         return (int)outcome.Value >= 0;
     }
+
+    /// <summary>
+    /// 以一條專用連線取得 <paramref name="resource"/> 的互斥鎖（擁有者是連線而不是交易），不等候：別的程序已持有時回 null。
+    /// 給「同一時間只能有一個執行者、但一次要做好幾分鐘」的背景工作：開發機與正式站共用資料庫時不會一起跑，又不必為此開一個長交易。
+    /// 處置回傳的物件就釋放鎖並關閉連線；程序中斷時連線斷開，SQL Server 也會釋放。
+    /// </summary>
+    public static async Task<IAsyncDisposable?> TryAcquireSessionLockAsync(string connectionString, string resource, CancellationToken ct)
+    {
+        var connection = new SqlConnection(connectionString);
+        try
+        {
+            await connection.OpenAsync(ct);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "EXEC @outcome = sys.sp_getapplock @Resource = @resource, @LockMode = 'Exclusive', @LockOwner = 'Session', @LockTimeout = 0";
+            var outcome = command.Parameters.Add("@outcome", SqlDbType.Int);
+            outcome.Direction = ParameterDirection.Output;
+            command.Parameters.Add(new SqlParameter("@resource", resource));
+            await command.ExecuteNonQueryAsync(ct);
+            if ((int)outcome.Value >= 0) return new SessionLock(connection, resource);
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
+        await connection.DisposeAsync();
+        return null;
+    }
+
+    private sealed class SessionLock(SqlConnection connection, string resource) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                // 連線關閉後會回到連線池而不是斷開，鎖不一定隨之釋放，所以明確釋放；失敗（連線已斷）時鎖本來就不在了。
+                await using var command = connection.CreateCommand();
+                command.CommandText = "EXEC sys.sp_releaseapplock @Resource = @resource, @LockOwner = 'Session'";
+                command.Parameters.Add(new SqlParameter("@resource", resource));
+                await command.ExecuteNonQueryAsync();
+            }
+            catch (SqlException)
+            {
+            }
+            finally
+            {
+                await connection.DisposeAsync();
+            }
+        }
+    }
 }

@@ -13,7 +13,7 @@
 ```sql
 -- 讀取角色（名稱自訂）：DBA 另建專用帳號，只加入這個角色
 CREATE ROLE ainexus_reader;
--- 出勤與組織匯入：假日、帳號對應（主管也經它對到使用者）、假單（含跨區間與假別）、出差單
+-- 出勤、組織匯入與日曆同步：假日、帳號對應（主管也經它對到使用者）、假單（含跨區間與假別）、出差單
 GRANT SELECT ON dbo.Pub_Days TO ainexus_reader;
 GRANT SELECT ON dbo.Sys_User TO ainexus_reader;
 GRANT SELECT ON dbo.Form_Leave TO ainexus_reader;

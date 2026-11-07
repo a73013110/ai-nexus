@@ -1,0 +1,352 @@
+<nx-feature-page
+  [title]="session.featureName('calendar-sync')"
+  description="公文系統的假單與出差單同步到 Google 共用日曆的情形。"
+  density="compact"
+  layoutMode="data"
+>
+  @if (manage()) {
+    <div page-actions class="page-actions">
+      <button
+        nxPending
+        type="button"
+        class="quiet-button calendar-sync-test"
+        [pending]="testing.pending()"
+        [disabled]="!status()?.calendarId"
+        (click)="testConnection()"
+      >
+        <nx-icon name="activity" />{{ testing.pending() ? '測試中…' : '測試連線' }}
+      </button>
+      <button
+        nxPending
+        type="button"
+        class="secondary-button calendar-sync-start"
+        [pending]="starting.pending()"
+        [disabled]="!status()?.enabled || status()?.running"
+        [title]="
+          status()?.enabled
+            ? '不等排程，立刻比對並推送；失敗的事件也會立即重試。'
+            : '這個站台沒有啟用同步。'
+        "
+        (click)="start()"
+      >
+        <nx-icon name="refresh" />{{ status()?.running ? '同步中…' : '立即同步' }}
+      </button>
+    </div>
+  }
+
+  @if (statusError() && !status()) {
+    <nx-notice tone="danger" [message]="statusError()"
+      ><button notice-actions type="button" class="secondary-button" (click)="reloadStatus()">
+        重試
+      </button></nx-notice
+    >
+  }
+  @if (status(); as current) {
+    @if (!current.enabled) {
+      <nx-notice tone="info" message="這個站台沒有啟用同步，只能查看紀錄。" />
+    } @else if (current.lastCheck?.status === 'failed') {
+      <nx-notice tone="danger" [message]="failureText(current.lastCheck.errorCode)" />
+    }
+    @if (current.lastCheck?.heldCount; as held) {
+      <nx-notice
+        tone="warning"
+        [message]="
+          held +
+          ' 個事件在公文系統已找不到，超過安全門檻，暫停移除。確認是單據撤回或銷單後，再按「確認移除」。'
+        "
+      >
+        @if (manage()) {
+          <button
+            nxPending
+            notice-actions
+            type="button"
+            class="secondary-button calendar-sync-confirm"
+            [pending]="starting.pending()"
+            (click)="start(true)"
+          >
+            確認移除
+          </button>
+        }
+      </nx-notice>
+    }
+  }
+  @if (starting.error()) {
+    <nx-notice
+      tone="danger"
+      [message]="starting.error()"
+      [dismissible]="true"
+      (dismissed)="starting.error.set('')"
+    />
+  }
+  @if (testing.error()) {
+    <nx-notice
+      tone="danger"
+      [message]="testing.error()"
+      [dismissible]="true"
+      (dismissed)="testing.error.set('')"
+    />
+  }
+  @if (connection(); as result) {
+    <nx-notice
+      class="calendar-sync-connection"
+      [tone]="result.succeeded ? 'success' : 'danger'"
+      [message]="
+        result.succeeded
+          ? '已連上「' +
+            (result.calendarSummary ?? status()?.calendarId) +
+            '」（' +
+            (result.calendarTimeZone ?? '時區未知') +
+            '）。'
+          : failureText(result.errorCode) +
+            (result.message ? '（Google：' + result.message + '）' : '')
+      "
+      [dismissible]="true"
+      (dismissed)="connection.set(null)"
+    />
+  }
+  @if (notice()) {
+    <nx-notice
+      tone="success"
+      [message]="notice()"
+      [dismissible]="true"
+      (dismissed)="notice.set('')"
+    />
+  }
+
+  <nx-stat-grid label="同步摘要">
+    @for (tile of tiles(); track tile.key) {
+      <nx-stat-tile
+        [label]="tile.label"
+        [value]="tile.value"
+        [loading]="!status() && !statusError()"
+        [tone]="tile.tone ?? 'neutral'"
+        [exact]="tile.exact ?? ''"
+      />
+    }
+  </nx-stat-grid>
+
+  <div class="page-toolbar">
+    <nx-view-switch
+      label="檢視"
+      appearance="segment"
+      [options]="views"
+      [value]="view()"
+      (valueChange)="view.set($any($event))"
+    />
+    @if (status(); as current) {
+      <p class="form-note">
+        日曆 <span class="calendar-sync-code">{{ current.calendarId ?? '未設定' }}</span
+        >・服務帳戶 <span class="calendar-sync-code">{{ current.serviceAccount ?? '未設定' }}</span
+        >・回看 {{ current.lookbackDays }} 天
+      </p>
+    }
+  </div>
+
+  @if (view() === 'events') {
+    @if (events.error() && events.rows().length) {
+      <nx-notice tone="danger" [message]="events.error()"
+        ><button
+          nxPending
+          notice-actions
+          type="button"
+          class="secondary-button"
+          [pending]="events.refreshing()"
+          (click)="events.reload()"
+        >
+          {{ events.refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
+      >
+    }
+    <nx-data-table
+      class="calendar-sync-table calendar-sync-events"
+      label="日曆事件"
+      [table]="events"
+      [stacked]="true"
+      preferenceKey="office-calendar-sync-events"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>日曆事件</h2>
+      </div>
+      <table>
+        <caption class="sr-only">
+          同步到 Google 日曆的請假與出差期間；欄位標題可排序與篩選。
+        </caption>
+        <colgroup>
+          <col nxTableColumn="startsAt" class="calendar-sync-time-column" />
+          <col nxTableColumn="applicantName" class="calendar-sync-name-column" />
+          <col nxTableColumn="kind" class="calendar-sync-short-column" />
+          <col nxTableColumn="flowStatus" class="calendar-sync-short-column" />
+          <col nxTableColumn="state" class="calendar-sync-state-column" />
+          <col nxTableColumn="desNo" class="calendar-sync-name-column" />
+          <col nxTableColumn="syncedAt" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th nxHeader="startsAt"></th>
+            <th nxHeader="applicantName"></th>
+            <th nxHeader="kind"></th>
+            <th nxHeader="flowStatus"></th>
+            <th nxHeader="state"></th>
+            <th nxHeader="desNo"></th>
+            <th nxHeader="syncedAt"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of eventRows(); track item.row.id) {
+            <tr>
+              <td nxTableColumn="startsAt">
+                <time [attr.datetime]="item.row.startsAt">{{ item.period }}</time>
+              </td>
+              <th scope="row" nxTableColumn="applicantName">
+                @if (item.row.htmlLink && !item.row.removed) {
+                  <a
+                    class="ui-table-link ui-truncate"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    [href]="item.row.htmlLink"
+                    [attr.aria-label]="
+                      '在 Google 日曆開啟：' + item.row.applicantName + '，' + item.period
+                    "
+                    >{{ item.row.applicantName }}<nx-icon name="external"
+                  /></a>
+                } @else {
+                  <span class="ui-truncate">{{ item.row.applicantName }}</span>
+                }
+                @if (item.row.agentName) {
+                  <small class="ui-truncate">代理人 {{ item.row.agentName }}</small>
+                }
+              </th>
+              <td nxTableColumn="kind" data-label="類別">{{ item.kind }}</td>
+              <td nxTableColumn="flowStatus" data-label="簽核">{{ item.flow }}</td>
+              <td nxTableColumn="state">
+                <nx-status-badge [tone]="item.state.tone" [state]="item.row.state">{{
+                  item.state.label
+                }}</nx-status-badge>
+                @if (item.problem) {
+                  <small
+                    class="ui-truncate"
+                    [title]="item.problem + (item.row.lastError ? '\n' + item.row.lastError : '')"
+                    >{{ item.problem }}</small
+                  >
+                } @else if (item.row.removed && item.row.state !== 'removed') {
+                  <small class="ui-truncate">等待從日曆刪除</small>
+                }
+              </td>
+              <td nxTableColumn="desNo" class="calendar-sync-code" data-label="文號">
+                {{ item.row.desNo }}
+              </td>
+              <td nxTableColumn="syncedAt" data-label="同步時間">
+                @if (item.row.syncedAt) {
+                  <time [attr.datetime]="item.row.syncedAt">{{ item.synced }}</time>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        loadingText="正在載入日曆事件…"
+        errorTitle="無法取得日曆事件"
+        emptyTitle="沒有符合條件的日曆事件"
+        emptyText="同步執行後，公文系統的假單與出差單會出現在這裡。"
+      />
+    </nx-data-table>
+  } @else {
+    @if (runs.error() && runs.rows().length) {
+      <nx-notice tone="danger" [message]="runs.error()"
+        ><button
+          nxPending
+          notice-actions
+          type="button"
+          class="secondary-button"
+          [pending]="runs.refreshing()"
+          (click)="runs.reload()"
+        >
+          {{ runs.refreshing() ? '重試中…' : '重試' }}
+        </button></nx-notice
+      >
+    }
+    <nx-data-table
+      class="calendar-sync-table calendar-sync-runs"
+      label="執行紀錄"
+      [table]="runs"
+      [stacked]="true"
+      preferenceKey="office-calendar-sync-runs"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>執行紀錄</h2>
+      </div>
+      <table>
+        <caption class="sr-only">
+          有異動、失敗或手動執行的同步；欄位標題可排序與篩選。
+        </caption>
+        <colgroup>
+          <col nxTableColumn="startedAt" class="calendar-sync-time-column" />
+          <col nxTableColumn="triggerKind" class="calendar-sync-name-column" />
+          <col nxTableColumn="status" />
+          <col nxTableColumn="createdCount" class="calendar-sync-count-column" />
+          <col nxTableColumn="updatedCount" class="calendar-sync-count-column" />
+          <col nxTableColumn="deletedCount" class="calendar-sync-count-column" />
+          <col nxTableColumn="failedCount" class="calendar-sync-count-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th nxHeader="startedAt"></th>
+            <th nxHeader="triggerKind"></th>
+            <th nxHeader="status"></th>
+            <th nxHeader="createdCount"></th>
+            <th nxHeader="updatedCount"></th>
+            <th nxHeader="deletedCount"></th>
+            <th nxHeader="failedCount"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of runRows(); track item.row.id) {
+            <tr>
+              <th scope="row" nxTableColumn="startedAt">
+                <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
+              </th>
+              <td nxTableColumn="triggerKind" data-label="觸發">
+                {{ item.trigger }}
+                @if (item.row.requestedByName) {
+                  <small class="ui-truncate">{{ item.row.requestedByName }}</small>
+                }
+              </td>
+              <td nxTableColumn="status">
+                <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
+                @if (item.problem) {
+                  <small
+                    class="ui-truncate"
+                    [title]="
+                      item.problem + (item.row.errorMessage ? '\n' + item.row.errorMessage : '')
+                    "
+                    >{{ item.problem }}</small
+                  >
+                }
+              </td>
+              <td nxTableColumn="createdCount" class="ui-table-numeric" data-label="新增">
+                {{ item.row.createdCount }}
+              </td>
+              <td nxTableColumn="updatedCount" class="ui-table-numeric" data-label="更新">
+                {{ item.row.updatedCount }}
+              </td>
+              <td nxTableColumn="deletedCount" class="ui-table-numeric" data-label="刪除">
+                {{ item.row.deletedCount }}
+              </td>
+              <td nxTableColumn="failedCount" class="ui-table-numeric" data-label="失敗">
+                {{ item.row.failedCount }}
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        loadingText="正在載入執行紀錄…"
+        errorTitle="無法取得執行紀錄"
+        emptyTitle="沒有符合條件的執行紀錄"
+        emptyText="沒有異動的排程輪不留紀錄；按「立即同步」會留下一筆。"
+      />
+    </nx-data-table>
+  }
+</nx-feature-page>
+<nx-confirm-dialog />

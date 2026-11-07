@@ -15,7 +15,9 @@ public static partial class DiagnosticRedactor
     {
         "IssueCode", "TraceId", "SpanId", "RequestId", "OperationId", "JobId", "RunId", "UserId", "Attempt", "Method", "Route", "StatusCode", "DurationMs",
         "ExternalService", "ErrorCode", "ErrorType", "Code", "SqlError", "SqlNumber", "RequestedMode", "ActualMode", "Reason", "Stage", "Kind", "Count", "RetryCount", "ElapsedMs", "Provider", "ProfileId", "Dimensions", "UntrustedClient", "ClientKind", "ClientFingerprint", "AttachmentId", "DocumentId", "CollectionId", "ResourceId", "ResourceType",
-        "ClientAddress", "UserAgent", "RequestProtocol", "RequestScheme", "RequestOutcome", "RequestAborted", "ResponseStarted", "MailMessageId", "AuditAction"
+        "ClientAddress", "UserAgent", "RequestProtocol", "RequestScheme", "RequestOutcome", "RequestAborted", "ResponseStarted", "MailMessageId", "AuditAction",
+        // 日曆同步一輪的數量。
+        "Created", "Updated", "Deleted", "Failed"
     };
 
     /// <summary>

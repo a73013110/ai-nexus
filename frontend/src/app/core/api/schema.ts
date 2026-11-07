@@ -2139,6 +2139,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar-sync/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetCalendarSyncStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sync/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListCalendarSyncEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sync/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListCalendarSyncRuns"];
+        put?: never;
+        post: operations["StartCalendarSyncRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sync/connection-test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TestCalendarSyncConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -5215,6 +5279,103 @@ export interface components {
             afternoonOff: boolean;
             remark: null | string;
         };
+        CalendarSyncCheck: {
+            /** Format: date-time */
+            at: string;
+            status: string;
+            errorCode: null | string;
+            /** Format: int32 */
+            heldCount: number;
+        };
+        CalendarSyncConnectionDto: {
+            succeeded: boolean;
+            errorCode: null | string;
+            message: null | string;
+            serviceAccount: null | string;
+            calendarSummary: null | string;
+            calendarTimeZone: null | string;
+            /** Format: int64 */
+            elapsedMs: number;
+        };
+        CalendarSyncEventDto: {
+            /** Format: uuid */
+            id: string;
+            desNo: string;
+            kind: string;
+            applicantName: string;
+            agentName: null | string;
+            flowStatus: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            state: string;
+            removed: boolean;
+            /** Format: int32 */
+            attempts: number;
+            /** Format: date-time */
+            nextAttemptAt: null | string;
+            /** Format: date-time */
+            lastAttemptAt: null | string;
+            lastErrorCode: null | string;
+            lastError: null | string;
+            /** Format: date-time */
+            syncedAt: null | string;
+            htmlLink: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CalendarSyncRunDto: {
+            /** Format: uuid */
+            id: string;
+            triggerKind: string;
+            /** Format: uuid */
+            requestedById: null | string;
+            requestedByName: null | string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            finishedAt: string;
+            status: string;
+            /** Format: int32 */
+            sourceCount: null | number;
+            /** Format: int32 */
+            createdCount: number;
+            /** Format: int32 */
+            updatedCount: number;
+            /** Format: int32 */
+            deletedCount: number;
+            /** Format: int32 */
+            failedCount: number;
+            /** Format: int32 */
+            heldCount: number;
+            errorCode: null | string;
+            errorMessage: null | string;
+        };
+        CalendarSyncRunRequest: {
+            confirmRemovals: boolean;
+        };
+        CalendarSyncStatusDto: {
+            enabled: boolean;
+            calendarId: null | string;
+            /** Format: int32 */
+            intervalSeconds: number;
+            /** Format: int32 */
+            lookbackDays: number;
+            serviceAccountConfigured: boolean;
+            serviceAccount: null | string;
+            running: boolean;
+            lastCheck: null | components["schemas"]["CalendarSyncCheck"];
+            lastRun: null | components["schemas"]["CalendarSyncRunDto"];
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            synced: number;
+            /** Format: int32 */
+            removed: number;
+        };
         CardAssignmentCreateRequest: {
             /** Format: uuid */
             cardId: string;
@@ -5948,7 +6109,7 @@ export interface components {
             icon: string;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "calendar-sync" | "calendar-sync.manage" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
@@ -7625,6 +7786,22 @@ export interface components {
             text: null | string;
             tone: string;
         };
+        TablePageOfCalendarSyncEventDto: {
+            items: components["schemas"]["CalendarSyncEventDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
+        TablePageOfCalendarSyncRunDto: {
+            items: components["schemas"]["CalendarSyncRunDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
         TablePageOfPunchDto: {
             items: components["schemas"]["PunchDto"][];
             /** Format: int32 */
@@ -8137,6 +8314,12 @@ export type AuthSessionDto = components['schemas']['AuthSessionDto'];
 export type BackupMessage = components['schemas']['BackupMessage'];
 export type CalendarDayDto = components['schemas']['CalendarDayDto'];
 export type CalendarDayRequest = components['schemas']['CalendarDayRequest'];
+export type CalendarSyncCheck = components['schemas']['CalendarSyncCheck'];
+export type CalendarSyncConnectionDto = components['schemas']['CalendarSyncConnectionDto'];
+export type CalendarSyncEventDto = components['schemas']['CalendarSyncEventDto'];
+export type CalendarSyncRunDto = components['schemas']['CalendarSyncRunDto'];
+export type CalendarSyncRunRequest = components['schemas']['CalendarSyncRunRequest'];
+export type CalendarSyncStatusDto = components['schemas']['CalendarSyncStatusDto'];
 export type CardAssignmentCreateRequest = components['schemas']['CardAssignmentCreateRequest'];
 export type CardAssignmentDto = components['schemas']['CardAssignmentDto'];
 export type CardAssignmentUpdateRequest = components['schemas']['CardAssignmentUpdateRequest'];
@@ -8383,6 +8566,8 @@ export type StatusDto = components['schemas']['StatusDto'];
 export type StopImpact = components['schemas']['StopImpact'];
 export type StopSummary = components['schemas']['StopSummary'];
 export type SubsystemFact = components['schemas']['SubsystemFact'];
+export type TablePageOfCalendarSyncEventDto = components['schemas']['TablePageOfCalendarSyncEventDto'];
+export type TablePageOfCalendarSyncRunDto = components['schemas']['TablePageOfCalendarSyncRunDto'];
 export type TablePageOfPunchDto = components['schemas']['TablePageOfPunchDto'];
 export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
@@ -11085,6 +11270,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CalendarDayDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetCalendarSyncStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarSyncStatusDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListCalendarSyncEvents: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfCalendarSyncEventDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListCalendarSyncRuns: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfCalendarSyncRunDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    StartCalendarSyncRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarSyncRunRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    TestCalendarSyncConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarSyncConnectionDto"];
                 };
             };
             default: components["responses"]["Problem"];
