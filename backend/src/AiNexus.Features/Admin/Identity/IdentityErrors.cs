@@ -64,6 +64,10 @@ internal static class IdentityErrors
     public static readonly Error DirectoryQueryInvalid = Error.Invalid("directory_query_invalid");
     // 預覽之後、寫入之前資料已被別人改動（同時登入、另一位管理員編輯）：該人不寫入，請重新預覽。
     public static readonly Error DirectoryChanged = Error.Conflict("directory_changed");
+    // 外部系統（API 用戶端）。帳密驗證 API 的帳密錯誤不用 401：401 留給「金鑰錯誤」，呼叫端才分得出要修自己的設定還是請使用者重輸密碼。
+    public static readonly Error CredentialsRejected = Error.Unprocessable("credentials_rejected");
+    public static readonly Error ApiClientNotFound = Error.NotFound("api_client_not_found");
+    public static readonly Error ApiClientNameTaken = Error.Conflict("api_client_name_taken");
 
     // AD 連線、設定或查詢失敗，由 ExternalServiceException 帶出；5xx，前端顯示查證代碼。
     public static readonly Error AdSearchUnavailable = Error.Unavailable("ad_search_unavailable");

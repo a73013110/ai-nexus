@@ -6,6 +6,7 @@ using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Admin.Identity.ApiClients;
 using AiNexus.Features.Admin.Identity.Authentication;
 using AiNexus.Features.Admin.Identity.Management;
 using AiNexus.Features.Admin.Identity.Ordering;
@@ -17,7 +18,7 @@ using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Admin.Identity;
 
-/// <summary>身分模組：Cookie 與 Negotiate 驗證、登入速率限制、帳密登入服務的註冊，以及管理端的帳號管理與首次管理員。</summary>
+/// <summary>身分模組：Cookie、Negotiate 與外部系統金鑰的驗證、登入速率限制、帳密登入服務的註冊，以及管理端的帳號管理、外部系統與首次管理員。</summary>
 public sealed class IdentityModule : IFeatureModule
 {
     /// <summary>帳密登入依來源位址的總上限；主要的防護是 <see cref="Authentication.LoginThrottle"/> 依帳號計算失敗次數。</summary>
@@ -40,7 +41,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
         services.AddSettings<SelfServiceOptions, SelfServiceOptionsValidator>(SelfServiceOptions.Section);
-        services.AddAuthentication("Session")
+        var authentication = services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
                 http.Request.Cookies.ContainsKey(SessionCookie) || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
@@ -58,6 +59,7 @@ public sealed class IdentityModule : IFeatureModule
                 options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AuthenticationRequired);
                 options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AccessDenied);
             });
+        ApiClientAccess.Add(services, authentication);
         services.AddRateLimiter(options => options.AddPolicy(LoginRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
             http.ClientAddress()?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = LoginsPerAddressPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }))
@@ -85,6 +87,13 @@ public sealed class IdentityModule : IFeatureModule
             .MapSlice<ImportDirectoryUsers>();
         api.MapGroup("/admin").RequireFeature(FeatureCatalog.IdentityUsersSync)
             .MapSlice<SyncDirectoryUsers>();
+        api.MapGroup("/admin/api-clients").RequireFeature(FeatureCatalog.IdentityApiClients)
+            .MapSlice<ListApiClients>()
+            .MapSlice<CreateApiClient>()
+            .MapSlice<RenameApiClient>()
+            .MapSlice<ReissueApiClientKey>()
+            .MapSlice<DeleteApiClient>();
+        api.MapSlice<VerifyCredentials>();
         api.MapAuthenticationEndpoints();
     }
 }

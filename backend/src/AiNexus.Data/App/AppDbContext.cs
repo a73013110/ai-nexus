@@ -79,6 +79,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
     public DbSet<ResourceAttachment> ResourceAttachments => Set<ResourceAttachment>();
 
     public DbSet<AdministratorBootstrap> AdministratorBootstraps => Set<AdministratorBootstrap>();
+    public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<User> Users => Set<User>();
     public DbSet<VerificationChallenge> VerificationChallenges => Set<VerificationChallenge>();
 

@@ -17,7 +17,7 @@ namespace AiNexus.Features.Admin.Identity.SelfService;
 /// 每個請求都由 Kerberos／NTLM 重新驗證，所以直接視為已步升。
 /// </summary>
 [Scoped]
-public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthenticator local, AppDbContext db, IOptions<SelfServiceOptions> options,
+public sealed class Reauthentication(DirectoryCredentials directory, LocalAuthenticator local, AppDbContext db, IOptions<SelfServiceOptions> options,
     IOptions<AdAuthenticationOptions> ad, TimeProvider clock)
 {
     /// <summary>這次請求是否由 session cookie 驗證（登入表單或本地密碼）；否則是每個請求都重新驗證的 Windows 身分。</summary>
@@ -55,7 +55,7 @@ public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthentica
         : user.AdEnabled && ad.Value.Configured && UserAccounts.DirectoryBound(user);
 
     /// <summary>
-    /// 以目前登入方式的密碼驗證本人。本地密碼沿用 <see cref="LocalAuthenticator"/> 的失敗計數與鎖定；AD 密碼必須驗出同一個 SID，
+    /// 以目前登入方式的密碼驗證本人。本地密碼沿用 <see cref="LocalAuthenticator"/> 的失敗計數與鎖定；AD 密碼與登入共用失敗計數、必須驗出同一個 SID，
     /// 成功時順便更新 <see cref="User.DirectoryVerifiedAt"/>。錯誤一律回 <c>reauthentication_failed</c>，不透露是哪一步失敗。
     /// </summary>
     public async Task<Result> VerifyPasswordAsync(HttpContext http, User user, string? password, CancellationToken ct)
@@ -68,7 +68,7 @@ public sealed class Reauthentication(IAdAuthenticator directory, LocalAuthentica
             return verified.IsSuccess && verified.Value.Id == user.Id ? Result.Success : IdentityErrors.ReauthenticationFailed;
         }
         if (user.AdAccount is null) return IdentityErrors.ReauthenticationFailed;
-        var identity = await directory.AuthenticateAsync(user.AdAccount, password, ct);
+        var identity = await directory.VerifyAsync(http.Response, user.AdAccount, password, ct);
         if (!identity.IsSuccess || identity.Value.Sid != user.Sid) return IdentityErrors.ReauthenticationFailed;
         user.DirectoryVerifiedAt = clock.GetUtcNow();
         await db.SaveChangesAsync(ct);

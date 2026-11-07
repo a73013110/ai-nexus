@@ -266,6 +266,16 @@ export const CATALOG_FEATURES = [
     managerScopes: [],
   },
   {
+    id: 'identity.api-clients',
+    kind: 'page',
+    module: 'identity',
+    name: '外部系統',
+    icon: 'integrations',
+    route: '/admin/identity/api-clients',
+    scopes: [],
+    managerScopes: [],
+  },
+  {
     id: 'access-control.roles',
     kind: 'page',
     module: 'access-control',

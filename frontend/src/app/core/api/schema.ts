@@ -598,6 +598,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/api-clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListApiClients"];
+        put?: never;
+        post: operations["CreateApiClient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/api-clients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["RenameApiClient"];
+        post?: never;
+        delete: operations["DeleteApiClient"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/api-clients/{id}/keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReissueApiClientKey"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/credential-verifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["VerifyCredentials"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/session": {
         parameters: {
             query?: never;
@@ -4819,6 +4883,32 @@ export interface components {
             /** Format: int32 */
             sorted: number;
         };
+        ApiClientCreateRequest: {
+            name: string;
+        };
+        ApiClientDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            rowVersion: number;
+            name: string;
+            keyHint: string;
+            /** Format: date-time */
+            keyIssuedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastUsedAt: null | string;
+        };
+        ApiClientKeyRequest: {
+            /** Format: int64 */
+            rowVersion: number;
+        };
+        ApiClientRenameRequest: {
+            name: string;
+            /** Format: int64 */
+            rowVersion: number;
+        };
         ArtifactDto: {
             resource: components["schemas"]["ResourceDto"];
             /** Format: int32 */
@@ -5392,6 +5482,10 @@ export interface components {
             /** Format: int32 */
             artifactVersion?: null | number;
         };
+        CredentialVerificationRequest: {
+            account: string;
+            password: string;
+        };
         CurrentReleaseDto: {
             version: string;
             revision: null | string;
@@ -5847,7 +5941,7 @@ export interface components {
             icon: string;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "identity.users" | "identity.users.import" | "identity.users.sync" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
@@ -6064,6 +6158,10 @@ export interface components {
             path: string;
             /** Format: uuid */
             collectionId: string;
+        };
+        IssuedApiClientKeyDto: {
+            client: components["schemas"]["ApiClientDto"];
+            key: string;
         };
         JobDto: {
             /** Format: uuid */
@@ -7933,6 +8031,12 @@ export interface components {
         VerificationCodeRequest: {
             purpose: string;
         };
+        VerifiedCredentialDto: {
+            sid: string;
+            account: string;
+            displayName: string;
+            email: null | string;
+        };
         WebSearchStatusDto: {
             available: boolean;
             notice: string;
@@ -7986,6 +8090,10 @@ export type AdminUserDetailDto = components['schemas']['AdminUserDetailDto'];
 export type AdminUserDto = components['schemas']['AdminUserDto'];
 export type AdminUserModelPolicyDto = components['schemas']['AdminUserModelPolicyDto'];
 export type AdminUsersDto = components['schemas']['AdminUsersDto'];
+export type ApiClientCreateRequest = components['schemas']['ApiClientCreateRequest'];
+export type ApiClientDto = components['schemas']['ApiClientDto'];
+export type ApiClientKeyRequest = components['schemas']['ApiClientKeyRequest'];
+export type ApiClientRenameRequest = components['schemas']['ApiClientRenameRequest'];
 export type ArtifactDto = components['schemas']['ArtifactDto'];
 export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
 export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
@@ -8049,6 +8157,7 @@ export type CreatedUserDto = components['schemas']['CreatedUserDto'];
 export type CreateRepositoryReviewRequest = components['schemas']['CreateRepositoryReviewRequest'];
 export type CreateRunRequest = components['schemas']['CreateRunRequest'];
 export type CreateShareRequest = components['schemas']['CreateShareRequest'];
+export type CredentialVerificationRequest = components['schemas']['CredentialVerificationRequest'];
 export type CurrentReleaseDto = components['schemas']['CurrentReleaseDto'];
 export type DashboardDto = components['schemas']['DashboardDto'];
 export type DashboardFactDto = components['schemas']['DashboardFactDto'];
@@ -8125,6 +8234,7 @@ export type GroupUpdateRequest = components['schemas']['GroupUpdateRequest'];
 export type HealthIssue = components['schemas']['HealthIssue'];
 export type HealthSummary = components['schemas']['HealthSummary'];
 export type ImportRepositoryFolderRequest = components['schemas']['ImportRepositoryFolderRequest'];
+export type IssuedApiClientKeyDto = components['schemas']['IssuedApiClientKeyDto'];
 export type JobDto = components['schemas']['JobDto'];
 export type KnowledgeHitDto = components['schemas']['KnowledgeHitDto'];
 export type KnowledgeSearchDto = components['schemas']['KnowledgeSearchDto'];
@@ -8309,6 +8419,7 @@ export type UserUnitDto = components['schemas']['UserUnitDto'];
 export type VerificationCodeConfirmation = components['schemas']['VerificationCodeConfirmation'];
 export type VerificationCodeDto = components['schemas']['VerificationCodeDto'];
 export type VerificationCodeRequest = components['schemas']['VerificationCodeRequest'];
+export type VerifiedCredentialDto = components['schemas']['VerifiedCredentialDto'];
 export type WebSearchStatusDto = components['schemas']['WebSearchStatusDto'];
 export type WebSourceDto = components['schemas']['WebSourceDto'];
 export type ResponseProblem = components['responses']['Problem'];
@@ -9328,6 +9439,152 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DirectoryOutcomesDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListApiClients: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiClientDto"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    CreateApiClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiClientCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedApiClientKeyDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    RenameApiClient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiClientRenameRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DeleteApiClient: {
+        parameters: {
+            query: {
+                rowVersion: number;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ReissueApiClientKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiClientKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IssuedApiClientKeyDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    VerifyCredentials: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CredentialVerificationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VerifiedCredentialDto"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -12,6 +12,8 @@ public static class IdentityAudit
     public static readonly AuditAction TestIdentityEnded = AuditAction.Authentication("identity.test_identity.ended", "結束測試身分");
     public static readonly AuditAction AccountCreated = AuditAction.Authentication("identity.account.created", "首次登入建立帳號");
     public static readonly AuditAction AdministratorGranted = AuditAction.Administration("identity.administrator.granted", "初始化管理員");
+    /// <summary>外部系統呼叫帳密驗證 API；稽核對象是呼叫的系統，明細只有帳號與方式。</summary>
+    public static readonly AuditAction CredentialsVerified = AuditAction.Authentication("identity.credentials.verified", "外部系統驗證帳密");
 
     public static readonly AuditAction UserRead = AuditAction.Access("identity.user.read", "查詢使用者");
     public static readonly AuditAction UserCreated = AuditAction.Administration("identity.user.created", "建立使用者");
@@ -33,4 +35,10 @@ public static class IdentityAudit
     public static readonly AuditAction DirectoryBatchSynced = AuditAction.Administration("identity.directory_batch.synced", "以 AD 資料更新使用者（批次）");
     public static readonly AuditAction UserImported = AuditAction.Administration("identity.user.imported", "從 AD 匯入使用者");
     public static readonly AuditAction UserSynced = AuditAction.Administration("identity.user.synced", "以 AD 資料更新使用者");
+
+    public static readonly AuditAction ApiClientRead = AuditAction.Access("identity.api_client.read", "查詢外部系統");
+    public static readonly AuditAction ApiClientCreated = AuditAction.Administration("identity.api_client.created", "新增外部系統");
+    public static readonly AuditAction ApiClientRenamed = AuditAction.Administration("identity.api_client.renamed", "修改外部系統名稱");
+    public static readonly AuditAction ApiClientKeyReissued = AuditAction.Administration("identity.api_client_key.created", "重新產生外部系統金鑰");
+    public static readonly AuditAction ApiClientDeleted = AuditAction.Administration("identity.api_client.deleted", "刪除外部系統");
 }

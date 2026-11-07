@@ -1,6 +1,8 @@
+using AiNexus.Features.Admin.Identity.ApiClients;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -35,6 +37,19 @@ public sealed class EndpointConventionTests
             .SelectMany(e => e.Metadata.GetOrderedMetadata<IAuthorizeData>()).Select(a => a.Policy).OfType<string>().Distinct().ToList();
         Assert.NotEmpty(names);
         foreach (var name in names) Assert.True(await provider.GetPolicyAsync(name) is not null, "Unregistered authorization policy: " + name);
+    }
+
+    // CSRF 只對「只接受 header 金鑰」的端點例外；cookie 端點借用 DisableAntiforgery 就會失去防護。
+    [Fact]
+    public async Task OnlyApiClientEndpointsSkipCsrf()
+    {
+        await using var factory = new AppFactory();
+        _ = factory.CreateClient();
+        var endpoints = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .Where(e => e.Metadata.GetMetadata<IAntiforgeryMetadata>() is { RequiresValidation: false }).ToList();
+        Assert.NotEmpty(endpoints);
+        Assert.All(endpoints, e => Assert.True(e.Metadata.GetOrderedMetadata<IAuthorizeData>().Any(a => a.Policy == ApiClientAccess.Policy)
+            && e.Metadata.GetMetadata<IAllowAnonymous>() is null, "Only API client endpoints may disable CSRF: " + e.DisplayName));
     }
 
     [Fact]

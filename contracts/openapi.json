@@ -1819,6 +1819,211 @@
         }
       }
     },
+    "/api/v1/admin/api-clients": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "ListApiClients",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApiClientDto"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "CreateApiClient",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiClientCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedApiClientKeyDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-clients/{id}": {
+      "put": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "RenameApiClient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiClientRenameRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "DeleteApiClient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "rowVersion",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-clients/{id}/keys": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "ReissueApiClientKey",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiClientKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IssuedApiClientKeyDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/credential-verifications": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "VerifyCredentials",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialVerificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifiedCredentialDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/auth/session": {
       "get": {
         "tags": [
@@ -11211,6 +11416,88 @@
           }
         }
       },
+      "ApiClientCreateRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiClientDto": {
+        "required": [
+          "id",
+          "rowVersion",
+          "name",
+          "keyHint",
+          "keyIssuedAt",
+          "createdAt",
+          "lastUsedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "keyHint": {
+            "type": "string"
+          },
+          "keyIssuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastUsedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "ApiClientKeyRequest": {
+        "required": [
+          "rowVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ApiClientRenameRequest": {
+        "required": [
+          "name",
+          "rowVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ArtifactDto": {
         "required": [
           "resource",
@@ -13452,6 +13739,21 @@
           }
         }
       },
+      "CredentialVerificationRequest": {
+        "required": [
+          "account",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "account": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
       "CurrentReleaseDto": {
         "required": [
           "version",
@@ -15314,6 +15616,7 @@
           "identity.users",
           "identity.users.import",
           "identity.users.sync",
+          "identity.api-clients",
           "access-control.roles",
           "access-control.groups",
           "access-control.features",
@@ -16203,6 +16506,21 @@
           "collectionId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "IssuedApiClientKeyDto": {
+        "required": [
+          "client",
+          "key"
+        ],
+        "type": "object",
+        "properties": {
+          "client": {
+            "$ref": "#/components/schemas/ApiClientDto"
+          },
+          "key": {
+            "type": "string"
           }
         }
       },
@@ -23027,6 +23345,32 @@
           }
         }
       },
+      "VerifiedCredentialDto": {
+        "required": [
+          "sid",
+          "account",
+          "displayName",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "sid": {
+            "type": "string"
+          },
+          "account": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "WebSearchStatusDto": {
         "required": [
           "available",
@@ -23543,6 +23887,16 @@
         "name": "以 AD 資料更新使用者",
         "icon": "repeat",
         "route": null,
+        "scopes": [ ],
+        "managerScopes": [ ]
+      },
+      {
+        "id": "identity.api-clients",
+        "kind": "page",
+        "module": "identity",
+        "name": "外部系統",
+        "icon": "integrations",
+        "route": "/admin/identity/api-clients",
         "scopes": [ ],
         "managerScopes": [ ]
       },

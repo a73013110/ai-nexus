@@ -6,4 +6,9 @@ export const identityRoutes: Routes = [
     path: 'users',
     loadComponent: () => import('./users-page').then((module) => module.UsersPage),
   }),
+  catalogRoute('identity.api-clients', {
+    path: 'api-clients',
+    loadComponent: () =>
+      import('./api-clients/api-clients-page').then((module) => module.ApiClientsPage),
+  }),
 ];

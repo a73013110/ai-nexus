@@ -1,0 +1,107 @@
+<nx-feature-page
+  [title]="session.featureName('identity.api-clients')"
+  description="發給其他系統呼叫 AD 帳密驗證的金鑰，一個系統一把；登入後的授權由對方系統決定。"
+  density="compact"
+  layoutMode="data"
+>
+  <button
+    page-actions
+    type="button"
+    class="primary-button api-client-create"
+    [disabled]="store.busy()"
+    (click)="create()"
+  >
+    <nx-icon name="plus" />新增外部系統
+  </button>
+  @if (store.notice()) {
+    <nx-notice
+      tone="danger"
+      [message]="store.notice()"
+      [dismissible]="true"
+      (dismissed)="store.notice.set('')"
+    />
+  }
+  @if (store.readError() && store.clients()) {
+    <nx-notice tone="danger" [message]="store.readError()"
+      ><button
+        nxPending
+        notice-actions
+        type="button"
+        class="secondary-button"
+        [pending]="store.refreshing()"
+        (click)="store.reload()"
+      >
+        {{ store.refreshing() ? '重試中…' : '重試' }}
+      </button></nx-notice
+    >
+  }
+  <nx-data-table
+    class="api-clients-table"
+    label="外部系統列表"
+    [table]="table"
+    [stacked]="true"
+    preferenceKey="admin-identity-api-clients"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>外部系統</h2>
+    </div>
+    <table>
+      <caption class="sr-only">
+        可呼叫帳密驗證的外部系統，預設依名稱排序；欄位標題可排序與篩選。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="name" />
+        <col nxTableColumn="key" class="api-clients-key-column" />
+        <col nxTableColumn="issued" class="api-clients-time-column" />
+        <col nxTableColumn="used" class="api-clients-time-column" />
+        <col class="api-clients-action-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th nxHeader="name"></th>
+          <th nxHeader="key"></th>
+          <th nxHeader="issued"></th>
+          <th nxHeader="used"></th>
+          <th scope="col"><span class="sr-only">操作</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.client.id) {
+          <tr>
+            <td nxTableColumn="name">
+              <strong class="ui-truncate" [title]="row.client.name">{{ row.client.name }}</strong>
+            </td>
+            <td nxTableColumn="key" data-label="金鑰">
+              <code class="api-clients-hint">ainexus_…{{ row.client.keyHint }}</code>
+            </td>
+            <td nxTableColumn="issued" data-label="金鑰產生於">{{ row.issued }}</td>
+            <td nxTableColumn="used" data-label="最近使用">
+              @if (row.used) {
+                <span [title]="row.usedTitle">{{ row.used }}</span>
+              } @else {
+                <span class="form-note">尚未使用</span>
+              }
+            </td>
+            <td data-stack="end">
+              <nx-action-menu
+                [label]="'外部系統操作：' + row.client.name"
+                [items]="row.actions"
+                [busy]="store.working('client:' + row.client.id)"
+                (action)="action(row.client, $event)"
+              />
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      loadingText="正在載入外部系統…"
+      errorTitle="無法取得外部系統"
+      emptyTitle="還沒有外部系統"
+      emptyText="新增後把金鑰交給對方，對方就能以 AD 驗證使用者的帳密。"
+    />
+  </nx-data-table>
+</nx-feature-page>
+<nx-name-dialog />
+<nx-api-client-key-dialog />
+<nx-confirm-dialog />

@@ -1,0 +1,17 @@
+.api-clients-table table {
+  table-layout: fixed;
+  min-width: 40rem;
+}
+.api-clients-key-column {
+  width: 10rem;
+}
+.api-clients-time-column {
+  width: 10rem;
+}
+.api-clients-action-column {
+  width: 3.25rem;
+}
+.api-clients-hint {
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}

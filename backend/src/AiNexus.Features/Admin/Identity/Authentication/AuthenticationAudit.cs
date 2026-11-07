@@ -15,9 +15,12 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 [Scoped]
 public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContextAccessor accessor)
 {
-    /// <summary><paramref name="failureCode"/> 為 null 是成功；失敗時 <paramref name="userId"/> 為 null（帳號未驗證，擁有者記空識別碼）。</summary>
+    /// <summary>
+    /// <paramref name="failureCode"/> 為 null 是成功；失敗時 <paramref name="userId"/> 為 null（帳號未驗證，擁有者記空識別碼）。
+    /// <paramref name="resource"/> 是稽核對象，預設為使用者本人；外部系統的帳密驗證記呼叫的系統，才查得到每個系統的呼叫紀錄。
+    /// </summary>
     public async Task WriteAsync(AuditAction action, Guid? userId, string? account, string? method, CancellationToken ct,
-        string? failureCode = null, string? issueCode = null)
+        string? failureCode = null, string? issueCode = null, Guid? resource = null)
     {
         var http = accessor.HttpContext;
         var actor = userId ?? Guid.Empty;
@@ -25,7 +28,7 @@ public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContex
         if (action == IdentityAudit.SignedOut && Guid.TryParse(http?.User.FindFirstValue(SessionIdentity.ActorId), out var administrator))
             actor = administrator;
         await using var scope = scopes.CreateAsyncScope();
-        var entry = scope.ServiceProvider.GetRequiredService<AuditTrail>().Record(action, userId ?? Guid.Empty, userId, userId, new
+        var entry = scope.ServiceProvider.GetRequiredService<AuditTrail>().Record(action, userId ?? Guid.Empty, resource ?? userId, userId, new
         {
             account = account is null ? null : DiagnosticRedactor.Text(account.Trim(), 240),
             authentication = method is "local" or "ad" or "windows" or "test" ? method : "unknown",

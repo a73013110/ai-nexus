@@ -70,6 +70,7 @@ public static class FeatureCatalog
     public const string IdentityUsers = "identity.users";
     public const string IdentityUsersImport = "identity.users.import";
     public const string IdentityUsersSync = "identity.users.sync";
+    public const string IdentityApiClients = "identity.api-clients";
     public const string AccessControlRoles = "access-control.roles";
     public const string AccessControlGroups = "access-control.groups";
     public const string AccessControlFeatures = "access-control.features";
@@ -156,6 +157,8 @@ public static class FeatureCatalog
         // 匯入會建立帳號（取得 member 的工作區），更新只套用目錄資料；分開授予，讓協助維護資料的人不必能開帳號。
         new(IdentityUsersImport, FeatureKind.Action, IdentityModule, "從 AD 匯入使用者", "import"),
         new(IdentityUsersSync, FeatureKind.Action, IdentityModule, "以 AD 資料更新使用者", "repeat"),
+        // 外部系統的金鑰能以 API 驗證任何人的 AD 帳密，與使用者管理分開授予。
+        new(IdentityApiClients, FeatureKind.Page, IdentityModule, "外部系統", "integrations"),
         new(AccessControlRoles, FeatureKind.Page, AccessControlModule, "角色", "lock"),
         new(AccessControlGroups, FeatureKind.Page, AccessControlModule, "功能群組與模型", "apps"),
         new(AccessControlFeatures, FeatureKind.Page, AccessControlModule, "功能", "list"),

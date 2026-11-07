@@ -82,4 +82,14 @@ export class IdentityApi {
   accountReviews = () => this.api.get('/api/v1/admin/account-reviews');
   syncDirectoryUsers = (userIds: string[]) =>
     this.api.post('/api/v1/admin/directory-syncs', { body: { userIds } });
+  /** 外部系統（`identity.api-clients`）：新增與重新產生回傳的金鑰只有這一次，伺服器只存雜湊。 */
+  apiClients = (signal?: AbortSignal) => this.api.get('/api/v1/admin/api-clients', { signal });
+  createApiClient = (name: string) =>
+    this.api.post('/api/v1/admin/api-clients', { body: { name } });
+  renameApiClient = (id: string, name: string, rowVersion: number) =>
+    this.api.put('/api/v1/admin/api-clients/{id}', { path: { id }, body: { name, rowVersion } });
+  reissueApiClientKey = (id: string, rowVersion: number) =>
+    this.api.post('/api/v1/admin/api-clients/{id}/keys', { path: { id }, body: { rowVersion } });
+  deleteApiClient = (id: string, rowVersion: number) =>
+    this.api.delete('/api/v1/admin/api-clients/{id}', { path: { id }, query: { rowVersion } });
 }
