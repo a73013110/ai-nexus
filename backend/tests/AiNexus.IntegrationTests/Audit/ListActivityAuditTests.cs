@@ -90,15 +90,15 @@ public sealed class ListActivityAuditTests
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         await SeedAsync(factory, new[] { AuditEvent.Completed, AuditEvent.Completed, "executor_lost", "price_exists" }
             .Select(result => new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.lifecycle.finished", Result = result }));
-        var failures = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.&result=failed"))!;
+        var failures = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=fixture&result=failed"))!;
         Assert.Equal(["price_exists", "executor_lost"], failures.Select(x => x.Result));
-        Assert.Equal(2, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.&result=success"))!.Length);
+        Assert.Equal(2, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=fixture&result=success"))!.Length);
         // 多個結果條件符合任一即可；群組與精確結果可以混用，同樣是符合任一。
-        var chosen = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.&result=executor_lost&result=price_exists"))!;
+        var chosen = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=fixture&result=executor_lost&result=price_exists"))!;
         Assert.Equal(["price_exists", "executor_lost"], chosen.Select(x => x.Result));
-        var mixed = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.&result=success&result=executor_lost"))!;
+        var mixed = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=fixture&result=success&result=executor_lost"))!;
         Assert.Equal(["executor_lost", AuditEvent.Completed, AuditEvent.Completed], mixed.Select(x => x.Result));
-        Assert.Equal(4, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.&result=failed&result=success"))!.Length);
+        Assert.Equal(4, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=fixture&result=failed&result=success"))!.Length);
     }
 
     [Fact]
@@ -108,12 +108,12 @@ public sealed class ListActivityAuditTests
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         await SeedAsync(factory, Enumerable.Range(0, 60).Select(_ => new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.page.created" }));
-        Assert.Equal(25, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page&take=25"))!.Length);
-        var first = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page&take=50"))!;
+        Assert.Equal(25, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page.created&take=25"))!.Length);
+        var first = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page.created&take=50"))!;
         Assert.Equal(50, first.Length);
-        var next = (await admin.GetFromJsonAsync<AuditDto[]>($"/api/v1/admin/audit?action=fixture.page&take=50&before={first[^1].Id}"))!;
+        var next = (await admin.GetFromJsonAsync<AuditDto[]>($"/api/v1/admin/audit?action=fixture.page.created&take=50&before={first[^1].Id}"))!;
         Assert.Equal(10, next.Length); Assert.Empty(first.Select(x => x.Id).Intersect(next.Select(x => x.Id)));
-        Assert.Equal(60, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page"))!.Length);
+        Assert.Equal(60, (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.page.created"))!.Length);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit?take=30")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit?take=1000")).StatusCode);
     }
@@ -157,7 +157,7 @@ public sealed class ListActivityAuditTests
             new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.export.created", DetailsJson = """{"resourceKey":"=HYPERLINK(\"evil\")"}""" },
             new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.export.created", Result = "fixture_failed" },
             .. Enumerable.Range(0, 4).Select(_ => new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.overflow.created" })]);
-        using var response = await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.export.&result=success&result=fixture_failed");
+        using var response = await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.export.created&result=success&result=fixture_failed");
         response.EnsureSuccessStatusCode();
         Assert.Equal("text/csv", response.Content.Headers.ContentType!.MediaType);
         Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
@@ -174,9 +174,9 @@ public sealed class ListActivityAuditTests
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var record = Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == AuditAudit.EventExported.Name));
             Assert.Equal((user.Id, AuditEvent.Completed, "access", FeatureCatalog.Audit), (record.OwnerId, record.Result, record.Category, record.FeatureId));
-            Assert.Contains("\"action\":\"fixture.export.\"", record.DetailsJson); Assert.Contains("\"result\":[\"success\",\"fixture_failed\"]", record.DetailsJson);
+            Assert.Contains("\"action\":\"fixture.export.created\"", record.DetailsJson); Assert.Contains("\"result\":[\"success\",\"fixture_failed\"]", record.DetailsJson);
         }
-        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.overflow.")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.overflow.created")).StatusCode);
         using (var scope = factory.Services.CreateScope())
         {
             // 超過上限被拒的嘗試同樣留有紀錄。
@@ -184,11 +184,11 @@ public sealed class ListActivityAuditTests
             var refused = Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == AuditAudit.EventExported.Name && x.DetailsJson!.Contains("fixture.overflow")));
             Assert.NotEqual(AuditEvent.Completed, refused.Result);
         }
-        Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/v1/admin/audit/export?action=fixture.export.")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/v1/admin/audit/export?action=fixture.export.created")).StatusCode);
     }
 
     [Fact]
-    public async Task ExportCombinesResultGroupsWithAnActionPrefix()
+    public async Task ExportCombinesResultGroupsWithAModule()
     {
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
@@ -197,15 +197,36 @@ public sealed class ListActivityAuditTests
             new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.multi.created" },
             new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.multi.updated", Result = "fixture_failed" },
             new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.multi.deleted", Result = "feature_forbidden" },
-            new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.other.created", Result = "fixture_failed" }]);
+            new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "other.multi.created", Result = "fixture_failed" }]);
         async Task<string[]> ActionsAsync(string query)
         {
             var text = (await admin.GetStringAsync("/api/v1/admin/audit/export?" + query)).TrimStart('\uFEFF');
             return text.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(line => line.Split("\",\"")[4]).Order().ToArray();
         }
-        // 群組與精確結果混用時符合任一即可；動作前綴排除不相干的 fixture.other。
-        Assert.Equal(["fixture.multi.created", "fixture.multi.updated"], await ActionsAsync("action=fixture.multi.&result=success&result=fixture_failed"));
-        Assert.Equal(["fixture.multi.deleted", "fixture.multi.updated"], await ActionsAsync("action=fixture.multi.&result=failed"));
+        // 群組與精確結果混用時符合任一即可；模組排除別的模組裡同名對象的動作（other.multi）。
+        Assert.Equal(["fixture.multi.created", "fixture.multi.updated"], await ActionsAsync("module=fixture&result=success&result=fixture_failed"));
+        Assert.Equal(["fixture.multi.deleted", "fixture.multi.updated"], await ActionsAsync("module=fixture&result=failed"));
+    }
+
+    [Fact]
+    public async Task ModuleMatchesTheFirstSegmentAndActionMatchesExactly()
+    {
+        await using var factory = new AppFactory(administrators: ["alice"]);
+        using var admin = await factory.SignedInAsync();
+        var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
+        await SeedAsync(factory, [
+            new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.card.created" },
+            new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture.card.created_draft" },
+            new AuditEvent { Category = "activity", OwnerId = user.Id, Action = "fixture-extra.card.created" }]);
+        async Task<string[]> ActionsAsync(string query)
+            => [.. (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?" + query))!.Select(x => x.Action).Order()];
+        // 模組以「名稱.」為界：fixture 不含 fixture-extra。動作不是前綴：created 不含 created_draft。
+        Assert.Equal(["fixture.card.created", "fixture.card.created_draft"], await ActionsAsync("module=fixture"));
+        Assert.Equal(["fixture.card.created"], await ActionsAsync("action=fixture.card.created"));
+        Assert.Equal(["fixture.card.created"], await ActionsAsync("module=fixture&action=fixture.card.created"));
+        Assert.Empty(await ActionsAsync("module=fixture-extra&action=fixture.card.created"));
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit?module=Fixture")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit?module=fixture.")).StatusCode);
     }
 
     [Fact]
@@ -214,7 +235,7 @@ public sealed class ListActivityAuditTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var statuses = new List<HttpStatusCode>();
-        for (var i = 0; i < 3; i++) statuses.Add((await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.none.")).StatusCode);
+        for (var i = 0; i < 3; i++) statuses.Add((await admin.GetAsync("/api/v1/admin/audit/export?module=none")).StatusCode);
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.OK, HttpStatusCode.TooManyRequests], statuses);
     }
 

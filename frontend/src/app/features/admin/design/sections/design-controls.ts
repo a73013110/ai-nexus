@@ -149,7 +149,7 @@ import { DesignSamples } from './design-samples';
       id="design-menus"
       title="選單與下拉"
       api="ActionMenu · Select · OptionTags"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項的狀態（停用、已隱藏）用 tags（optionTags()）標在名稱旁，已選時觸發鈕也標，不接進名稱或說明。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項的狀態（停用、已隱藏）用 tags（optionTags()）標在名稱旁，已選時觸發鈕也標，不接進名稱或說明。長清單給選項 group 分組（標題不可選），搜尋也比對組名與只供搜尋的 keywords（代碼）。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -176,6 +176,15 @@ import { DesignSamples } from './design-samples';
           [value]="person()"
           [options]="people"
           (valueChange)="person.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="Select groups">
+        <nx-select
+          label="示範動作"
+          [searchable]="true"
+          [value]="operation()"
+          [options]="operations"
+          (valueChange)="operation.set($event)"
         />
       </nx-design-example>
       <nx-design-example label="Select loading">
@@ -358,6 +367,16 @@ export class DesignControls {
     label: value,
   }));
   readonly levelValues = signal(['Warning', 'Error']);
+  readonly operation = signal('');
+  readonly operations: SelectOption[] = [
+    { value: '', label: '所有動作' },
+    ...[
+      ['notes.note.created', '新增筆記', '筆記'],
+      ['notes.note.deleted', '刪除筆記', '筆記'],
+      ['tasks.task.assigned', '指派工作', '工作'],
+      ['tasks.task.finished', '完成工作', '工作'],
+    ].map(([value, label, group]) => ({ value, label, group, keywords: value })),
+  ];
   readonly person = signal('lin');
   readonly people: SelectOption[] = [
     { value: 'lin', label: '林小安', description: 'lin', tags: optionTags('已隱藏') },

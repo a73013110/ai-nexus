@@ -8603,6 +8603,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
+                module?: string;
                 action?: string;
                 result?: string[];
                 from?: string;
@@ -8656,6 +8657,7 @@ export interface operations {
         parameters: {
             query?: {
                 search?: string;
+                module?: string;
                 action?: string;
                 result?: string[];
                 from?: string;

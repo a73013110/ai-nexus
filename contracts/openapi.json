@@ -264,6 +264,13 @@
             }
           },
           {
+            "name": "module",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "action",
             "in": "query",
             "schema": {
@@ -386,6 +393,13 @@
         "parameters": [
           {
             "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "module",
             "in": "query",
             "schema": {
               "type": "string"

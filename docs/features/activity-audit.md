@@ -33,8 +33,10 @@
 ## 畫面
 
 - 分類切換：登入與身分、管理異動、查閱與匯出、功能操作。值存在紀錄的 `Category` 欄位，篩選直接比對這個欄位。
-- 動作篩選：
-  - 每個模組先列「模組（全部）」，選它就是以模組前綴篩選；底下再列該模組在目前分類裡的動作。
+- 模組與動作篩選（`module`、`action`）：
+  - 模組只列目前分類下有動作的模組；選了模組，動作只列該模組的。
+  - 沒選模組時動作依模組分組；搜尋比對動作名稱、模組名稱與動作代碼。
+  - `module` 是動作名稱的第一段；`action` 精確比對完整名稱，不再當前綴。換分類時，不再適用的模組或動作會清掉。
   - 名稱都來自 catalog，新增動作不需要改前端。
 - 結果篩選：「完成」（`completed`）或「失敗或拒絕」（其他所有錯誤代碼）。
 - 其他條件：
@@ -74,6 +76,7 @@
 
 - `RequestAuditTests`：端點宣告、名稱唯一、查詢合併、失敗與拒絕的寫法。
 - `ListActivityAuditTests`、`AuditDataScopeTests`：篩選、資料範圍與匯出。
+- `AuditDetailTests`：`Describe`／`Record` 寫在呼叫處的明細鍵都在 `AuditRedactor` 白名單內（不在的鍵寫入時會被丟掉）。
 - `LoginAuditTests`：登入紀錄。
 - 前端：`audit-query.spec.ts`、`audit-presentation.spec.ts`、`audit-tour.spec.ts`。
 

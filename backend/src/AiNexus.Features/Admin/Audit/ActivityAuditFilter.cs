@@ -9,9 +9,13 @@ namespace AiNexus.Features.Admin.Audit;
 /// <summary>列表與匯出共用的稽核篩選條件；分頁只屬於列表。</summary>
 public sealed class ActivityAuditFilter
 {
+    private const int ModuleMaxLength = 40;
+
     /// <summary>比對帳號、顯示名稱、動作、TraceId、查證代碼或詳情文字；輸入 GUID 時改比對資源 ID 或操作者／擁有者／資料主體的使用者 ID。</summary>
     public string? Search { get; set; }
-    /// <summary>完整動作或模組前綴（例如 <c>attendance.</c>）。</summary>
+    /// <summary>模組（動作名稱的第一段，例如 <c>attendance</c>）；只篩模組時用它，不用動作前綴。</summary>
+    public string? Module { get; set; }
+    /// <summary>完整動作名稱，精確比對；與 <see cref="Module"/> 同時給時兩者都要符合。</summary>
     public string? Action { get; set; }
     /// <summary>符合任一結果即可。<c>success</c> 是 <c>completed</c>、<c>failed</c> 是其餘全部（錯誤代碼），其他值比對實際儲存的結果。</summary>
     public string[]? Result { get; set; }
@@ -28,7 +32,9 @@ public sealed class ActivityAuditFilter
             || Result?.Length > 10 || Result?.Any(x => x is null || x.Length > AuditEvent.ResultMaxLength) == true;
         var traceInvalid = TraceId is not null && (TraceId.Length != 32 || !TraceId.All(char.IsAsciiHexDigit));
         var categoryInvalid = !string.IsNullOrEmpty(Category) && !AuditCategories.Values.Contains(Category);
-        return !(textInvalid || From > Until || traceInvalid || categoryInvalid);
+        // 模組只檢查格式、不比對宣告清單：已移除模組的歷史紀錄仍要查得到。
+        var moduleInvalid = Module is { Length: > 0 } module && (module.Length > ModuleMaxLength || !module.All(c => char.IsAsciiLetterLower(c) || char.IsAsciiDigit(c) || c == '-'));
+        return !(textInvalid || From > Until || traceInvalid || categoryInvalid || moduleInvalid);
     }
 
     /// <summary>
@@ -56,7 +62,9 @@ public sealed class ActivityAuditFilter
             query = query.Where(x => x.entry.FeatureId == feature || x.entry.FeatureId!.StartsWith(children));
         }
         if (TraceId?.ToLowerInvariant() is { } trace) query = query.Where(x => x.entry.TraceId == trace);
-        if (!string.IsNullOrWhiteSpace(Action)) { var action = Action; query = query.Where(x => x.entry.Action.StartsWith(action)); }
+        // 動作用等號比對：IX_AuditEvents_Action_Id 可依 Id 順序直接讀，不必排序；模組是前綴範圍掃描。
+        if (!string.IsNullOrEmpty(Module)) { var prefix = Module + "."; query = query.Where(x => x.entry.Action.StartsWith(prefix)); }
+        if (!string.IsNullOrWhiteSpace(Action)) { var action = Action; query = query.Where(x => x.entry.Action == action); }
         if (Result?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() is { Length: > 0 } results)
         {
             bool success = results.Contains("success"), failed = results.Contains("failed");

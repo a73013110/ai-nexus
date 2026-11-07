@@ -48,9 +48,11 @@ import {
   AUDIT_RANGES,
   AUDIT_RESULTS,
   actionLabel,
+  actionOptions,
   actionsFor,
   auditFilters,
   auditQueryOptions,
+  moduleOptions,
 } from './audit-query';
 
 @Component({
@@ -110,22 +112,12 @@ export class ActivityAuditPage {
   ]);
   readonly query = queryState(auditQueryOptions(this.actions, this.modules));
   readonly draft = this.query.draft;
-  /** 每個模組先給「模組（全部）」（前綴篩選），再列該模組在目前分類下的動作。 */
-  readonly actionOptions = computed<SelectOption[]>(() => {
-    const actions = actionsFor(this.actions(), this.draft().category);
-    return [
-      { value: '', label: '所有動作' },
-      ...this.modules().flatMap((module) => {
-        const own = actions.filter((action) => action.module === module.value);
-        return own.length
-          ? [
-              { value: module.value + '.', label: module.label + '（全部）' },
-              ...own.map(({ value, label }) => ({ value, label })),
-            ]
-          : [];
-      }),
-    ];
-  });
+  readonly moduleOptions = computed(() =>
+    moduleOptions(this.actions(), this.modules(), this.draft().category),
+  );
+  readonly actionOptions = computed(() =>
+    actionOptions(this.actions(), this.modules(), this.draft().category, this.draft().module),
+  );
   readonly resultOptions: SelectOption[] = AUDIT_RESULTS;
   readonly ranges = AUDIT_RANGES;
   /** 已套用的條件；相對時間（最近 24 小時）以套用當下計算，條件不合法時不讀。 */
@@ -173,7 +165,7 @@ export class ActivityAuditPage {
       caller: !!auditCaller(entry.detailsJson),
       ...auditOutcome(entry.result),
       date: formatDate(entry.at),
-      action: actionLabel(entry.action, this.actions(), this.modules()),
+      action: actionLabel(entry.action, this.actions()),
       // 目錄還沒讀到時先留白，不先顯示原始代碼。
       category: this.catalog()
         ? this.categories().find((item) => item.value === entry.category)?.label || entry.category
@@ -213,15 +205,15 @@ export class ActivityAuditPage {
     });
   });
 
-  /** 分類切換立即套用；已選的動作（或模組）在新分類下沒有動作時一併清除，避免查出空結果。 */
+  /** 分類切換立即套用；已選的模組或動作在新分類下沒有動作時一併清除，避免查出空結果。 */
   changeCategory(category: string) {
-    const action = this.draft().action;
-    const keep =
-      !action ||
-      actionsFor(this.actions(), category).some((item) =>
-        action.endsWith('.') ? item.value.startsWith(action) : item.value === action,
-      );
-    this.query.commit({ category, ...(keep ? {} : { action: '' }) });
+    const { module, action } = this.draft();
+    const available = actionsFor(this.actions(), category);
+    this.query.commit({
+      category,
+      ...(module && !available.some((item) => item.module === module) ? { module: '' } : {}),
+      ...(action && !available.some((item) => item.value === action) ? { action: '' } : {}),
+    });
   }
   /** 表格讀取失敗後重試（表格自己重讀）時，動作目錄也失敗就一起重讀。 */
   retryCatalog() {

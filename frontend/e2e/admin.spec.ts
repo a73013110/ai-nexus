@@ -381,14 +381,14 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await firstPage.click();
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(firstPage).toBeDisabled();
-  await chooseSelect(page, "稽核動作", "對話（全部）");
+  await chooseSelect(page, "稽核模組", "對話");
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(page.getByText("條件已變更，按「查詢」套用")).toBeVisible();
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(table.locator(".audit-row")).toHaveCount(0);
   await expect(
     page.getByRole("list", { name: "已套用條件", exact: true }),
-  ).toContainText("動作：對話（全部）");
+  ).toContainText("模組：對話");
   // 沒有資料時只顯示空狀態，分頁列收起。
   await expect(nextPage).toHaveCount(0);
   await page.reload();
@@ -1828,8 +1828,10 @@ async function administration(page: Page) {
         audit
           .filter(
             (x) =>
+              (!url.searchParams.get("module") ||
+                x.action.startsWith(url.searchParams.get("module") + ".")) &&
               (!url.searchParams.get("action") ||
-                x.action.startsWith(url.searchParams.get("action")!)) &&
+                x.action === url.searchParams.get("action")) &&
               // success／failed 是伺服器端的群組：completed 與其餘錯誤代碼。
               (!url.searchParams.getAll("result").length ||
                 url.searchParams

@@ -171,3 +171,15 @@
 .select-option.is-multiple[aria-selected='true'] {
   color: var(--ink);
 }
+// 分組標題：不可選，字級與色調比選項低一階；第一組以外與上一組隔一段距離。
+.select-group {
+  padding: var(--p-space-2) var(--control-padding-inline) var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: var(--line-ui);
+}
+[role='group'] + [role='group'] .select-group {
+  margin-top: var(--p-space-1);
+  border-top: 1px solid var(--line);
+}

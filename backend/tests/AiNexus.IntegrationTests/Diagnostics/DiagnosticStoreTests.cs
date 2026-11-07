@@ -30,7 +30,7 @@ public sealed class DiagnosticStoreTests
         var legacy = new AuditEvent { Category = "activity", OwnerId = actor, Action = "fixture.legacy.updated" }; db.Add(legacy); await db.SaveChangesAsync();
         var raw = JsonSerializer.Serialize(new { password = Secret, before = new { token = Secret, enabled = true }, reason = Secret });
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [audit].[AuditEvents] SET [DetailsJson] = {raw} WHERE [Id] = {legacy.Id}");
-        var response = await client.GetStringAsync("/api/v1/admin/audit?action=fixture.legacy."); Assert.DoesNotContain(Secret, response);
+        var response = await client.GetStringAsync("/api/v1/admin/audit?action=fixture.legacy.updated"); Assert.Contains("fixture.legacy.updated", response); Assert.DoesNotContain(Secret, response);
         await factory.Services.GetRequiredService<IDiagnosticStore>().CleanupAsync(CancellationToken.None);
         var system = await client.GetStringAsync($"/api/v1/admin/audit?action={DiagnosticsAudit.ConfigurationActivated.Name}"); Assert.Contains("system", system); Assert.Contains("fingerprint", system);
         Assert.DoesNotContain("ainexus-test-", system); Assert.DoesNotContain("localhost:4318", system);

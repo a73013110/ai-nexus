@@ -58,7 +58,7 @@ public sealed class ManageUnitsTests
         for (var depth = 4; depth <= 8; depth++) parent = (await CreateUnitAsync(admin, $"第{depth}層", parent)).Id;
         await AssertCodeAsync(await admin.PostAsJsonAsync(Units, new UnitCreateRequest(parent, "太深", true)), HttpStatusCode.BadRequest, "organization_depth_exceeded");
         // 被拒絕的變更也留下錯誤代碼的稽核。
-        Assert.NotEmpty((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=organization.unit.&result=organization_unit_cycle"))!);
+        Assert.NotEmpty((await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?module=organization&result=organization_unit_cycle"))!);
     }
 
     [Fact]

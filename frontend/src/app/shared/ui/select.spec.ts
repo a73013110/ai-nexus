@@ -151,3 +151,62 @@ describe('Select tags', () => {
     ]);
   });
 });
+
+describe('Select groups', () => {
+  afterEach(() => TestBed.resetTestingModule());
+
+  const actions = [
+    { value: '', label: '所有動作' },
+    { value: 'chat.message.sent', label: '送出訊息', group: '對話', keywords: 'chat.message.sent' },
+    {
+      value: 'chat.run.cancelled',
+      label: '停止生成',
+      group: '對話',
+      keywords: 'chat.run.cancelled',
+    },
+    {
+      value: 'files.file.deleted',
+      label: '刪除檔案',
+      group: '檔案庫',
+      keywords: 'files.file.deleted',
+    },
+  ];
+
+  function setup() {
+    const fixture = TestBed.createComponent(Select);
+    fixture.componentRef.setInput('label', '動作');
+    fixture.componentRef.setInput('options', actions);
+    fixture.componentRef.setInput('searchable', true);
+    fixture.detectChanges();
+    return { fixture, host: fixture.nativeElement as HTMLElement };
+  }
+  const visible = (select: Select) => select.visibleOptions().map(({ option }) => option.value);
+
+  it('puts adjacent options of a group under one labelled heading', () => {
+    const { host } = setup();
+    const listbox = host.querySelector('[role="listbox"]')!;
+    const groups = [...listbox.querySelectorAll('[role="group"]')];
+    expect(
+      groups.map(
+        (group) => host.querySelector('#' + group.getAttribute('aria-labelledby'))!.textContent,
+      ),
+    ).toEqual(['對話', '檔案庫']);
+    expect(groups.map((group) => group.querySelectorAll('[role="option"]').length)).toEqual([2, 1]);
+    // 沒有分組的選項（所有動作）直接放在 listbox 底下，標題本身不是選項。
+    expect(listbox.querySelectorAll(':scope > [role="option"]').length).toBe(1);
+    expect(listbox.querySelectorAll('[role="option"]').length).toBe(4);
+  });
+
+  it('finds options by group name or hidden keywords and keeps ids for arrow keys', () => {
+    const { fixture, host } = setup();
+    const select = fixture.componentInstance;
+    select.filter('對話');
+    expect(visible(select)).toEqual(['chat.message.sent', 'chat.run.cancelled']);
+    select.filter('files.file');
+    fixture.detectChanges();
+    expect(visible(select)).toEqual(['files.file.deleted']);
+    expect(host.querySelector('[role="option"]')!.id).toBe(select.id + '-3');
+    expect(host.textContent).not.toContain('files.file.deleted');
+    expect(select.active()).toBe(3);
+  });
+});

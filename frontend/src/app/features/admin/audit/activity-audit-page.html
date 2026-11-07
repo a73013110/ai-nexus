@@ -39,6 +39,18 @@
           (input)="query.set('search', $any($event.target).value)"
       /></label>
       <div class="ui-field">
+        <span aria-hidden="true">模組</span>
+        <nx-select
+          label="稽核模組"
+          [searchable]="true"
+          [searchFrom]="10"
+          [options]="moduleOptions()"
+          [loading]="catalogLoading()"
+          [value]="draft().module"
+          (valueChange)="query.set('module', $event)"
+        />
+      </div>
+      <div class="ui-field">
         <span aria-hidden="true">動作</span>
         <nx-select
           label="稽核動作"

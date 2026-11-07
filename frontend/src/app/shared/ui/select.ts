@@ -13,6 +13,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Icon } from './icon';
 import { OptionTags, type OptionTag } from './option-tags';
 import { anchoredPopover } from '../browser/anchored-popover';
@@ -25,7 +26,17 @@ export interface SelectOption {
   description?: string;
   /** 名稱旁的狀態標籤，已選時也顯示在觸發鈕；搜尋找得到標籤文字。 */
   tags?: readonly OptionTag[];
+  /** 分組標題；相鄰且同組的選項排在同一個標題下，搜尋到組名時整組都列出。 */
+  group?: string;
+  /** 只給搜尋比對、不顯示的文字（代碼、別名）。 */
+  keywords?: string;
   disabled?: boolean;
+}
+
+/** 一段連續同組的選項；沒有 `group` 的選項自成一段、不加標題。 */
+interface SelectSection {
+  group?: string;
+  entries: { option: SelectOption; index: number }[];
 }
 
 /**
@@ -39,11 +50,13 @@ export interface SelectOption {
  * 焦點離開面板即關閉。
  * 選項來自 API 時傳 `loading`：觸發鈕轉圈、還對不到選項的值顯示「正在載入…」而不是 placeholder
  * （看起來會像沒選）；載入中仍可打開，選單裡是「正在載入選項…」而不是「沒有符合的選項」。
+ * 長清單可給選項 `group` 分組（標題不可選，報讀器以 `role="group"` 讀出組名），
+ * 搜尋比對名稱、說明、標籤、組名與 `keywords`。
  * 階層選項（單位）用 `TreeSelect`。
  */
 @Component({
   selector: 'nx-select',
-  imports: [Icon, OptionTags],
+  imports: [Icon, NgTemplateOutlet, OptionTags],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './select.scss',
   host: {
@@ -113,49 +126,63 @@ export interface SelectOption {
         </div>
         <p class="sr-only" role="status">{{ visibleOptions().length }} 個選項</p>
       }
+      <ng-template #optionRow let-entry>
+        @let option = entry.option; @let i = entry.index;
+        <button
+          type="button"
+          role="option"
+          tabindex="-1"
+          class="select-option"
+          [class.is-multiple]="multiple()"
+          [id]="id + '-' + i"
+          [attr.aria-selected]="isSelected(option.value)"
+          [attr.aria-disabled]="!!option.disabled"
+          [disabled]="option.disabled"
+          [class.is-active]="active() === i"
+          (pointermove)="active.set(i)"
+          (mousedown)="$event.preventDefault()"
+          (click)="choose(i)"
+        >
+          @if (multiple()) {
+            <span class="select-check" aria-hidden="true">
+              @if (isSelected(option.value)) {
+                <nx-icon name="check" />
+              }
+            </span>
+          }
+          <span>
+            <strong [attr.title]="option.label">{{ option.label }}</strong>
+            @if (option.description) {
+              <small>{{ option.description }}</small>
+            }
+          </span>
+          @if (option.tags?.length) {
+            <nx-option-tags [tags]="option.tags" />
+          }
+          @if (!multiple() && option.value === value()) {
+            <nx-icon name="check" />
+          }
+        </button>
+      </ng-template>
       <div
         role="listbox"
         [id]="id"
         [attr.aria-label]="label()"
         [attr.aria-multiselectable]="multiple() || null"
       >
-        @for (entry of visibleOptions(); track entry.option.value) {
-          @let option = entry.option; @let i = entry.index;
-          <button
-            type="button"
-            role="option"
-            tabindex="-1"
-            class="select-option"
-            [class.is-multiple]="multiple()"
-            [id]="id + '-' + i"
-            [attr.aria-selected]="isSelected(option.value)"
-            [attr.aria-disabled]="!!option.disabled"
-            [disabled]="option.disabled"
-            [class.is-active]="active() === i"
-            (pointermove)="active.set(i)"
-            (mousedown)="$event.preventDefault()"
-            (click)="choose(i)"
-          >
-            @if (multiple()) {
-              <span class="select-check" aria-hidden="true">
-                @if (isSelected(option.value)) {
-                  <nx-icon name="check" />
-                }
-              </span>
-            }
-            <span>
-              <strong [attr.title]="option.label">{{ option.label }}</strong>
-              @if (option.description) {
-                <small>{{ option.description }}</small>
+        @for (section of sections(); track $index) {
+          @if (section.group) {
+            <div role="group" [attr.aria-labelledby]="id + '-group-' + $index">
+              <div class="select-group" [id]="id + '-group-' + $index">{{ section.group }}</div>
+              @for (entry of section.entries; track entry.option.value) {
+                <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
               }
-            </span>
-            @if (option.tags?.length) {
-              <nx-option-tags [tags]="option.tags" />
+            </div>
+          } @else {
+            @for (entry of section.entries; track entry.option.value) {
+              <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
             }
-            @if (!multiple() && option.value === value()) {
-              <nx-icon name="check" />
-            }
-          </button>
+          }
         } @empty {
           @if (loading()) {
             <p class="select-empty" role="status">正在載入選項…</p>
@@ -185,15 +212,36 @@ export class Select {
   /** `inline` 去掉欄位外框，用在輸入區控制列這類工具列。 */
   readonly appearance = input<'field' | 'inline' | 'pill'>('field');
   readonly query = signal('');
-  readonly visibleOptions = computed(() =>
-    this.options()
+  /** 每個選項的搜尋文字，選項不變就不重算（長清單每打一個字都要比對全部）。 */
+  private readonly searchText = computed(() =>
+    this.options().map((option) =>
+      [
+        option.label,
+        option.description,
+        option.group,
+        option.keywords,
+        ...(option.tags ?? []).map((tag) => tag.label),
+      ]
+        .join(' ')
+        .toLocaleLowerCase(),
+    ),
+  );
+  readonly visibleOptions = computed(() => {
+    const query = this.query().trim().toLocaleLowerCase();
+    const text = this.searchText();
+    return this.options()
       .map((option, index) => ({ option, index }))
-      .filter(({ option }) =>
-        [option.label, option.description, ...(option.tags ?? []).map((tag) => tag.label)]
-          .join(' ')
-          .toLocaleLowerCase()
-          .includes(this.query().trim().toLocaleLowerCase()),
-      ),
+      .filter(({ index }) => !query || text[index].includes(query));
+  });
+  /** 依 `group` 把相鄰的可見選項分段；方向鍵仍依 `visibleOptions` 的順序移動。 */
+  readonly sections = computed(() =>
+    this.visibleOptions().reduce<SelectSection[]>((sections, entry) => {
+      const last = sections.at(-1);
+      const group = entry.option.group;
+      if (last && group && last.group === group) last.entries.push(entry);
+      else sections.push({ group, entries: [entry] });
+      return sections;
+    }, []),
   );
   readonly valueChange = output<string>();
   readonly valuesChange = output<string[]>();
