@@ -26,6 +26,10 @@
               "APP_VERSION": "'0.0.0-dev'"
             },
             "inlineStyleLanguage": "scss",
+            "loader": {
+              ".cs": "text",
+              ".java": "text"
+            },
             "stylePreprocessorOptions": {
               "includePaths": ["src/styles"]
             },

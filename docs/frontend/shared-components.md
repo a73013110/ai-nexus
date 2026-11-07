@@ -28,6 +28,12 @@
 - 下拉面板一律經 [`anchored-popover.ts`](../../frontend/src/app/shared/browser/anchored-popover.ts) 開關：給 `trigger`，按觸發鈕關閉不會被輕關閉後又打開；選擇器另給 `closeOnFocusOut`（Tab 離開即關）。選擇器常被欄位 `<label>` 包住，它保證點面板的空白或文字不會被 label 轉成觸發鈕的 click，焦點也不會落到面板外。
 - 可換月的日曆（`MonthCalendar`、`DateTimePicker`）在格子上以滾輪換月，一律掛 [`wheel-step.ts`](../../frontend/src/app/shared/browser/wheel-step.ts) 的 `nxWheelStep`（累積觸控板捲動、換完短暫冷卻）；新的日曆也用它，不自己處理 `wheel`。
 
+## 程式碼與範例
+
+- 唯讀長文字用 `CodeBlock`：`language` 上色並保留縮排。自己排版的原始碼掛 [`highlighted-code.ts`](../../frontend/src/app/shared/markdown/highlighted-code.ts) 的 `code[nxHighlightedCode]`，不自己設 `textContent` 或呼叫 `highlightWhenVisible`。
+- 給其他系統開發者的多語言範例用 [`code-samples.ts`](../../frontend/src/app/shared/ui/code-samples.ts) 的 `CodeSamples`，以 `@defer` 載入；要依讀者選的語言產生內容（例如下載整份說明）時讀 `selectedCodeSample`，不另存選擇。
+- 範例原文放成真的原始檔（`.cs`、`.java` 由 `angular.json` 的 text loader 匯入），能編譯或測試就接上；`{{name}}` 由 `values` 換成實際值，祕密不帶進範例。例：[外部系統的範例](../../frontend/src/app/features/admin/identity/api-clients/api-client-samples.ts)。
+
 ## 完成的條件
 
 - `/admin/design` 有範例：一個 `DesignSection`，放進所屬分類的檔案（`sections/design-<分類>.ts`），涵蓋空、載入、停用、錯誤等狀態；資料用本機假資料與虛構姓名，不呼叫 API。區段渲染後自行登記到側欄索引，不另維護清單。

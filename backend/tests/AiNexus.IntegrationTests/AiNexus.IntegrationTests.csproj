@@ -8,4 +8,8 @@
   </ItemGroup>
   <ItemGroup><ProjectReference Include="../../src/AiNexus.Host/AiNexus.Host.csproj" /></ItemGroup>
   <ItemGroup><Using Include="AiNexus.IntegrationTests.Support" /></ItemGroup>
+  <!-- 外部系統頁發給對方開發者的 C# 範例：原檔編進測試並實際呼叫，API 改了範例就跟著失敗（ApiClientTests）。 -->
+  <ItemGroup>
+    <Compile Include="../../../frontend/src/app/features/admin/identity/api-clients/samples/CredentialVerificationClient.cs" Link="Identity/CredentialVerificationClientSample.cs" />
+  </ItemGroup>
 </Project>

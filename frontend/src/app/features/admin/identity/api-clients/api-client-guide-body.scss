@@ -1,0 +1,116 @@
+// 說明文字一段一事，以 \n 分行（docs/frontend/microcopy.md）。
+.guide-note {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-sm);
+  line-height: 1.65;
+  white-space: pre-line;
+}
+.guide-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+}
+.guide-lead > .guide-note {
+  flex: 1 1 16rem;
+  color: var(--ink);
+}
+.guide-step {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+// 步驟編號是圓形標記，讀者一眼看出先後；報讀只讀標題（編號 aria-hidden）。
+.guide-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin: 0;
+  font-size: var(--p-font-base);
+  font-weight: 600;
+}
+.guide-heading > span {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+}
+code {
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
+}
+.guide-fields {
+  display: grid;
+  gap: var(--p-space-2);
+  margin: 0;
+}
+.guide-fields > div {
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: var(--p-space-3);
+  font-size: var(--p-font-sm);
+}
+.guide-fields dd {
+  margin: 0;
+  color: var(--secondary);
+}
+// 三類回應各一張卡，左緣色條與狀態標籤同色：成功、告訴使用者、系統問題。
+.guide-outcome {
+  --outcome-color: var(--secondary);
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--outcome-color);
+  border-radius: var(--radius-block);
+  background: var(--surface-subtle);
+}
+.guide-outcome[data-tone='success'] {
+  --outcome-color: var(--success);
+}
+.guide-outcome[data-tone='warning'] {
+  --outcome-color: var(--warning);
+}
+.guide-outcome[data-tone='danger'] {
+  --outcome-color: var(--danger);
+}
+.guide-outcome h4 {
+  margin: 0 0 var(--p-space-2);
+  color: var(--outcome-color);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+}
+.guide-outcome ul {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.guide-outcome li {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--p-space-3);
+}
+.guide-outcome nx-status-badge {
+  justify-self: start;
+  font-variant-numeric: tabular-nums;
+}
+.guide-case {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--p-space-1) var(--p-space-2);
+  margin: 0 0 0.125rem;
+  font-size: var(--p-font-sm);
+}
+.guide-case code {
+  color: var(--secondary);
+}

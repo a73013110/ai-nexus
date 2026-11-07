@@ -4,6 +4,9 @@
   density="compact"
   layoutMode="data"
 >
+  <button page-actions type="button" class="secondary-button" (click)="guide.open()">
+    <nx-icon name="document" />串接說明
+  </button>
   <button
     page-actions
     type="button"
@@ -158,5 +161,6 @@
   </nx-data-table>
 </nx-feature-page>
 <nx-api-client-dialog (created)="showKey($event)" (stale)="store.stale()" />
-<nx-api-client-key-dialog />
+<nx-api-client-key-dialog (guide)="guide.open()" />
+<nx-api-client-guide #guide />
 <nx-confirm-dialog />

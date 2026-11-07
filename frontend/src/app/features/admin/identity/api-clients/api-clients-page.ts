@@ -21,6 +21,7 @@ import { TableHeader } from '@shared/ui/table-header';
 import { localTable } from '@shared/ui/table-model';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { ApiClientDialog } from './api-client-dialog';
+import { ApiClientGuide } from './api-client-guide';
 import { ApiClientKeyDialog } from './api-client-key-dialog';
 import {
   API_CLIENT_SEARCH_MAX,
@@ -38,7 +39,8 @@ const count = new Intl.NumberFormat('zh-TW');
 
 /**
  * 外部系統（`identity.api-clients`）：發給其他系統呼叫 AD 帳密驗證的金鑰，一個系統一把。
- * 金鑰只在新增與重新產生後顯示一次；最近使用與近 30 天次數取自帳密驗證的稽核，有活動稽核權限時列選單可直接查看。
+ * 金鑰只在新增與重新產生後顯示一次，連同串接範例；頁首的「串接說明」是給對方開發者的呼叫方式與範例。
+ * 最近使用與近 30 天次數取自帳密驗證的稽核，有活動稽核權限時列選單可直接查看。
  * 清單只有個位數、一次讀完：狀態與搜尋在查詢列（寫進網址），排序與欄位篩選在表格，都在本機處理。
  */
 @Component({
@@ -46,6 +48,7 @@ const count = new Intl.NumberFormat('zh-TW');
   imports: [
     ActionMenu,
     ApiClientDialog,
+    ApiClientGuide,
     ApiClientKeyDialog,
     ConfirmDialog,
     DataTable,

@@ -9,6 +9,7 @@ using AiNexus.Features.Admin.Identity.ApiClients;
 using AiNexus.Features.Admin.Identity.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using YourCompany.Authentication;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 using static AiNexus.IntegrationTests.Support.ProblemAssertions;
 
@@ -197,6 +198,34 @@ public sealed class ApiClientTests
         // 換個入口不能多猜幾輪：網站登入同一帳號也被擋。
         using var web = f.CreateClient(); await Csrf(web);
         await AssertCodeAsync(await web.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("bob", "fixture-password")), HttpStatusCode.TooManyRequests, "login_rate_limited");
+    }
+
+    // 外部系統頁發給對方開發者的 C# 範例（frontend/…/api-clients/samples）原檔編進這個專案；這裡照範例的方式呼叫，
+    // 端點、回應結構或狀態碼改了，範例就跟著失敗，不會發出過時的程式碼。
+    [Fact]
+    public async Task TheCSharpSampleMapsEveryOutcome()
+    {
+        await using var f = new AppFactory(ldap: true, administrators: ["alice"]);
+        using var admin = f.CreateClient(); await Login(admin, "alice");
+        var issued = await CreateAsync(admin, "公文系統");
+        using var system = KeyClient(f, issued.Key);
+        var sample = new CredentialVerificationClient(system);
+
+        var verified = Assert.IsType<CredentialVerificationResult.Verified>(await sample.VerifyAsync("bob", "fixture-password"));
+        Assert.Equal("bob", verified.User.Account);
+        Assert.False(string.IsNullOrEmpty(verified.User.Sid));
+
+        for (var i = 0; i < IdentityModule.LoginFailuresPerAccount; i++)
+            Assert.IsType<CredentialVerificationResult.Rejected>(await sample.VerifyAsync("bob", "wrong"));
+        var limited = Assert.IsType<CredentialVerificationResult.RateLimited>(await sample.VerifyAsync("bob", "fixture-password"));
+        Assert.True(limited.RetryAfter > TimeSpan.Zero);
+
+        // 金鑰錯誤是設定問題，丟例外而不是當成密碼錯；帶著查證代碼給管理員查。
+        using var unknown = KeyClient(f, "ainexus_" + new string('A', 43));
+        var error = await Assert.ThrowsAsync<CredentialVerificationException>(
+            () => new CredentialVerificationClient(unknown).VerifyAsync("bob", "fixture-password"));
+        Assert.Equal(HttpStatusCode.Unauthorized, error.Status);
+        Assert.False(string.IsNullOrEmpty(error.IssueCode));
     }
 
     private static HttpClient KeyClient(AppFactory f, string key)

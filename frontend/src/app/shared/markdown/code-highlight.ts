@@ -15,6 +15,7 @@ import java from 'highlight.js/lib/languages/java';
 import powershell from 'highlight.js/lib/languages/powershell';
 import ini from 'highlight.js/lib/languages/ini';
 import diff from 'highlight.js/lib/languages/diff';
+import http from 'highlight.js/lib/languages/http';
 
 // 文法也會登記它們的別名（ts、cs、sh、html、yml、py、ps1、toml、patch）。
 for (const [name, language] of Object.entries({
@@ -33,6 +34,7 @@ for (const [name, language] of Object.entries({
   powershell,
   ini,
   diff,
+  http,
 }))
   hljs.registerLanguage(name, language);
 

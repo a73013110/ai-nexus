@@ -13,6 +13,7 @@ import { CodeBlock } from '@shared/markdown/code-block';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { ApprovalStep, ApprovalTimeline } from '@shared/ui/approval-timeline';
 import { ChangeList, FieldChange } from '@shared/ui/change-list';
+import { CodeSamples, type CodeSample } from '@shared/ui/code-samples';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
@@ -84,6 +85,7 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
     ApprovalTimeline,
     ChangeList,
     CodeBlock,
+    CodeSamples,
     CopyValue,
     DataTable,
     DataTableRow,
@@ -478,6 +480,19 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
     >
       <nx-markdown-view [content]="markdown" />
     </nx-design-section>
+    <nx-design-section
+      id="design-code-samples"
+      title="程式碼範例"
+      api="CodeSamples · CodeBlock"
+      description="給其他系統開發者的範例：一種語言一個分頁，每個檔案可複製並上色。範例原文以文字匯入，雙大括號佔位由 values 換成實際值；同一個 preferenceKey 記住選的語言。"
+    >
+      <nx-design-example label="兩種語言、多個檔案；沒給值的佔位保留原樣">
+        <nx-code-samples label="範例語言" [samples]="codeSamples" [values]="codeValues" />
+      </nx-design-example>
+      <nx-design-example label="單一檔案：上色、可橫向捲動">
+        <nx-code-block label="monthly-report.sql" language="sql" [value]="sql" />
+      </nx-design-example>
+    </nx-design-section>
     <nx-detail-drawer
       title="資料詳情示範"
       [attr.data-theme]="theme()"
@@ -767,6 +782,43 @@ export class DesignData {
       ],
     },
   ];
+  readonly codeSamples: readonly CodeSample[] = [
+    {
+      id: 'typescript',
+      label: 'TypeScript',
+      files: [
+        {
+          name: 'report-client.ts',
+          language: 'typescript',
+          source: `// 示範：網址由 values 帶入，金鑰從設定讀取
+const client = new ReportClient('{{baseUrl}}', process.env.REPORT_KEY);
+const report = await client.monthly({ month: '2026-10' });
+`,
+        },
+      ],
+    },
+    {
+      id: 'python',
+      label: 'Python',
+      files: [
+        {
+          name: 'report_client.py',
+          language: 'python',
+          source: `# 示範：{{token}} 沒有給值，保留原樣讓讀者自己填
+client = ReportClient('{{baseUrl}}', '{{token}}')
+report = client.monthly(month='2026-10')
+`,
+        },
+        { name: 'requirements.txt', language: 'plaintext', source: 'requests>=2.32\n' },
+      ],
+    },
+  ];
+  readonly codeValues = { baseUrl: 'https://reports.example/' };
+  readonly sql = `SELECT d.Name, COUNT(*) AS Visits
+FROM demo.Visits v JOIN demo.Departments d ON d.Id = v.DepartmentId
+WHERE v.VisitedAt >= '2026-10-01' AND v.VisitedAt < '2026-11-01'
+GROUP BY d.Name ORDER BY Visits DESC;
+`;
   readonly properties = JSON.stringify(
     { service: 'AiNexus.Host', attempts: 2, state: 'completed' },
     null,
