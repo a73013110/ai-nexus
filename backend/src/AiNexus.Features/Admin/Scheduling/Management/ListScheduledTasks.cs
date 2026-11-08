@@ -4,7 +4,6 @@ using AiNexus.Features.Admin.Scheduling.Engine;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Scheduling.Management;
 
@@ -36,7 +35,7 @@ public sealed record ScheduledTaskDto(
 
 /// <summary>
 /// <see cref="ServerTime"/> 讓前端以伺服器時間倒數，不受使用者電腦時鐘誤差影響；
-/// <see cref="ExecutesHere"/> 為 false 表示回應這個請求的程序不執行排程（<c>Scheduling:Execute</c>），由其他程序執行。
+/// <see cref="ExecutesHere"/> 為 false 表示回應這個請求的程序不執行排程，或只執行部分任務（<c>Scheduling:Execute</c>、<c>Scheduling:ExecuteOnly</c>），其餘由其他程序執行。
 /// </summary>
 public sealed record ScheduledTaskBoardDto(DateTimeOffset ServerTime, bool ExecutesHere, IReadOnlyList<ScheduledTaskDto> Tasks);
 
@@ -44,7 +43,7 @@ public sealed record ScheduledTaskBoardDto(DateTimeOffset ServerTime, bool Execu
 /// 所有排程任務的狀態，前端每幾秒輪詢一次：任務列每個任務一列，紀錄走 <c>ix_ScheduledTaskRuns_TaskKey_StartedAt</c> 各取最近幾輪，
 /// 不隨紀錄量變慢。只有營運資料（任務、時間、結果摘要），不含個人資料，所以不稽核。
 /// </summary>
-internal sealed class ListScheduledTasks(AppDbContext db, ScheduledTaskCatalog catalog, IServiceProvider services, IOptions<SchedulingOptions> options, TimeProvider clock) : IEndpointSlice
+internal sealed class ListScheduledTasks(AppDbContext db, ScheduledTaskCatalog catalog, IServiceProvider services, TimeProvider clock) : IEndpointSlice
 {
     public const int RecentRunCount = 24;
 
@@ -89,6 +88,6 @@ internal sealed class ListScheduledTasks(AppDbContext db, ScheduledTaskCatalog c
                 task?.RunRequestedAt, task?.CancelRequested ?? false, leased ? task?.LeaseHost : null, task?.ConsecutiveFailures ?? 0,
                 current, recent.FirstOrDefault(x => x.Status != ScheduledTaskRunStatuses.Running), recent);
         }).ToList();
-        return new(now, options.Value.Execute, tasks);
+        return new(now, catalog.All.All(x => x.ExecutesHere), tasks);
     }
 }

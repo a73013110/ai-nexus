@@ -15,7 +15,7 @@ public sealed record CalendarSyncParameters(bool ConfirmRemovals);
 public sealed class CalendarSyncTask(CalendarSyncRunner runner) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "calendar-sync.sync", "Google 日曆同步", "日曆同步", "把公文的假單與出差單同步成共用日曆上的事件。", Schedule.Every(TimeSpan.FromMinutes(5)))
+        "calendar-sync.sync", "Google 日曆同步", "日曆同步", "把公文的假單與出差單同步成共用日曆上的事件。")
     {
         Unavailable = services => services.GetRequiredService<IOptions<CalendarSyncOptions>>().Value.Enabled ? null : "CalendarSync:Enabled 未啟用",
     };

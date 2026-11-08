@@ -2,12 +2,15 @@ namespace AiNexus.Platform.Scheduling;
 
 /// <summary>
 /// 排程任務的宣告。<paramref name="Key"/> 是穩定識別（小寫、以點分隔模組與動作，例如 <c>mail.retention</c>），
-/// <paramref name="Category"/> 是管理頁分組用的模組名稱（例如「郵件」）。排程與逾時可由設定 <c>Scheduling:Tasks:&lt;Key&gt;</c> 覆寫。
+/// <paramref name="Category"/> 是管理頁分組用的模組名稱（例如「郵件」）。
+/// 排程、逾時與開關只寫在設定 <c>Scheduling:Tasks:&lt;Key&gt;</c>（appsettings.json 列出每個任務），程式不另宣告預設值；缺漏時啟動失敗。
 /// </summary>
-public sealed record ScheduledTaskDefinition(string Key, string Name, string Category, string Description, Schedule Schedule)
+public sealed record ScheduledTaskDefinition(string Key, string Name, string Category, string Description)
 {
-    /// <summary>一輪的上限；超過就取消並記為失敗，避免卡住的外部呼叫一直佔著租約。</summary>
-    public TimeSpan Timeout { get; init; } = TimeSpan.FromMinutes(30);
+    /// <summary>
+    /// 由任務性質決定、設定不能改的排程（目前只有 <see cref="Schedule.AtStartup"/>）；null 表示排程寫在設定的 <c>Schedule</c>。
+    /// </summary>
+    public Schedule? FixedSchedule { get; init; }
 
     /// <summary>連續失敗幾次才通知管理員；偶發的連線中斷下一輪通常就好了，不必每次都吵。</summary>
     public int NotifyAfterFailures { get; init; } = 3;

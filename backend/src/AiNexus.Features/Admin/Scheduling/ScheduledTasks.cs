@@ -10,7 +10,7 @@ namespace AiNexus.Features.Admin.Scheduling;
 
 /// <summary>
 /// 一個任務目前的狀態，給擁有任務的模組在自己的頁面或監控顯示（例如日曆同步的「最後檢查」）。
-/// <see cref="Interval"/> 是套用設定覆寫後的間隔，cron 與啟動任務為 null；<see cref="LastRun"/> 是最近一輪已結束的紀錄。
+/// <see cref="Interval"/> 是設定的間隔，cron 與啟動任務為 null；<see cref="LastRun"/> 是最近一輪已結束的紀錄。
 /// </summary>
 public sealed record ScheduledTaskState(bool Running, bool Requested, DateTimeOffset? NextRunAt, TimeSpan? Interval, ScheduledTaskRun? LastRun);
 

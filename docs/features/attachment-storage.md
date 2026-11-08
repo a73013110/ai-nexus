@@ -34,7 +34,7 @@
 
 ## 背景清理
 
-排程任務 `files.attachment-cleanup`（[背景作業](scheduling.md)，每小時；間隔改在 `Scheduling:Tasks`）執行：
+排程任務 `files.attachment-cleanup`（[背景作業](scheduling.md)，每天 02:00；排程在 `Scheduling:Tasks`）執行：
 
 - 未保存且沒有 durable 引用的 `ready` 草稿超過 `DraftRetentionDays`（預設 14 天）回收，私人閱讀器的衍生頁面一併移除；中斷的 `pending` 一小時後回收；每批最多 100 筆。
 - 上傳時只先回收上傳者本人的過期草稿，避免占用即將檢查的容量。

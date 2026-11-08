@@ -14,7 +14,7 @@ namespace AiNexus.Features.Admin.Scheduling.Engine;
 internal sealed class RunRetentionTask(AppDbContext db, IOptions<SchedulingOptions> options, TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "scheduling.run-retention", "執行紀錄清理", "背景作業", "刪除超過保存期的排程執行紀錄；沒事可做的紀錄保存期較短。", Schedule.Daily(3, 30));
+        "scheduling.run-retention", "執行紀錄清理", "背景作業", "刪除超過保存期的排程執行紀錄；沒事可做的紀錄保存期較短。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {

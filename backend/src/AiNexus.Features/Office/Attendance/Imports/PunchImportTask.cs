@@ -20,7 +20,7 @@ public sealed partial class PunchImportTask(
     TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "attendance.punch-import", "打卡檔匯入", "出勤", "掃描打卡機輸出的每日檔，匯入新的或有變動的檔。", Schedule.Every(TimeSpan.FromMinutes(5)))
+        "attendance.punch-import", "打卡檔匯入", "出勤", "掃描打卡機輸出的每日檔，匯入新的或有變動的檔。")
     {
         Unavailable = services => services.GetRequiredService<IOptions<AttendanceOptions>>().Value.Import.Enabled ? null : "Attendance:Import:Enabled 未啟用",
     };

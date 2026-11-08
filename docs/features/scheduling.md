@@ -3,7 +3,8 @@
 結論：「背景作業」頁（`/admin/scheduling`，功能 `scheduling`）列出系統定期執行的所有任務與使用者送出的佇列工作：下次何時跑、正在跑什麼、結果如何；有 `scheduling.manage` 時可立即執行、停止、暫停與恢復。寫任務的方式見 [排程任務](../architecture/scheduled-tasks.md)。
 
 - 授權：`scheduling`（看）與 `scheduling.manage`（操作），初始都給 administrators 群組；選單在「監控與紀錄」。
-- 開發與正式共用資料庫：只有 `Scheduling:Execute` 為 `true` 的站台會執行任務。回應頁面的站台不執行時，頁面上方會提示。
+- 開發與正式共用資料庫：只有 `Scheduling:Execute` 為 `true` 的站台會執行任務（預設 `false`，正式站打開）；`Scheduling:ExecuteOnly` 可限定只執行哪些任務。回應頁面的站台不執行或只執行部分任務時，頁面上方會提示。
+- 每個任務的排程、逾時與開關只寫在 `appsettings.json` 的 `Scheduling:Tasks`，環境設定檔覆寫要改的欄位，見 [排程任務](../architecture/scheduled-tasks.md#設定與執行位置)。
 
 ## 排程任務
 

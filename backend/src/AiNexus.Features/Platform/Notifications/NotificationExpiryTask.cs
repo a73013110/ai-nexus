@@ -15,7 +15,7 @@ public sealed class NotificationExpiryTask(AppDbContext db, TimeProvider clock) 
     public static readonly TimeSpan UnreadFor = TimeSpan.FromDays(7);
 
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "notifications.expire-unread", "過期通知標為已讀", "通知", "未讀超過 7 天的通知改為已讀，通知中心仍查得到。", Schedule.Every(TimeSpan.FromHours(1)));
+        "notifications.expire-unread", "過期通知標為已讀", "通知", "未讀超過 7 天的通知改為已讀，通知中心仍查得到。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
         => TaskOutcome.Count(await ExpireAsync(ct), total => $"{total:N0} 則改為已讀");

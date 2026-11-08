@@ -15,7 +15,7 @@ public sealed class RunEventRetentionTask(AppDbContext db, TimeProvider clock) :
     public static readonly TimeSpan Retention = TimeSpan.FromHours(24);
 
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "chat.run-event-retention", "生成事件清理", "聊天", "刪除已結束超過 24 小時的生成重播事件；對話與訊息不受影響。", Schedule.Every(TimeSpan.FromHours(1)));
+        "chat.run-event-retention", "生成事件清理", "聊天", "刪除已結束超過 24 小時的生成重播事件；對話與訊息不受影響。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
         => TaskOutcome.Count(await CleanupAsync(ct), total => $"刪除 {total:N0} 筆事件");

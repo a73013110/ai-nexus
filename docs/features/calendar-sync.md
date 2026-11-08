@@ -15,7 +15,7 @@
 - 推送失敗記在列上（原因代碼、訊息），依 1、2、4… 分鐘退避到 `MaxRetryDelayMinutes`；Google 給 `Retry-After` 時取較長者。憑證、權限或日曆找不到時整輪停下，不讓每列各記一次。
 - GD 連不上時這一輪不比對、不刪除任何事件。
 - **安全閥**：要移除的數量 ≥ `RemovalHoldMinimum` 且超過窗內事件的 `RemovalHoldRatio` 時暫停移除，管理頁按「確認移除」才執行。新增與更新照常。
-- 開發與正式共用資料庫：列以日曆 ID 區隔，同時只有一輪由排程租約保證，執行的站台由 `Scheduling:Execute` 決定。`Enabled` 預設 `false`，只在正式站打開。
+- 開發與正式共用資料庫：列以日曆 ID 區隔，同時只有一輪由排程租約保證（所有日曆共用 `calendar-sync.sync` 這一把），執行的站台由 `Scheduling:Execute` 決定。`Enabled` 預設 `false`，只在正式站打開。
 
 ## 設定
 
@@ -27,6 +27,16 @@
 4. 確認無誤後設 `CalendarSync:Enabled=true`、回收集區。啟用時讀不到金鑰會啟動失敗。
 
 `Google:DelegatedUser` 在用 Workspace 網域委派、以某個成員身分寫入時填（舊系統就是這樣，沿用同一把金鑰與委派帳號即可）；分享日曆給服務帳戶的做法留空。網域委派要在管理控制台替該用戶端 ID 授權 `https://www.googleapis.com/auth/calendar`（舊系統已授權）；要求的範圍不在清單裡時換權杖會被拒（`unauthorized_client`），測試連線會顯示原因。委派帳號也要能編輯目標日曆（擁有者或已共用「變更活動」）。
+
+## 開發機測試
+
+用正式金鑰加一個測試日曆跑完整同步，正式日曆不受影響；但讀的是正式 GD，測試日曆上會出現真實同事的假單，測完要清掉。
+
+1. `.local/config/appsettings.Local.json`：`CalendarSync` 設 `Enabled=true`、`CalendarId`＝測試日曆、`LookbackDays` 調小；`Scheduling` 設 `Execute=true`、`ExecuteOnly=["calendar-sync.sync"]`，要看得快再加 `Tasks:calendar-sync.sync:Schedule="00:01:00"`。重新啟動。
+2. 依序確認：測試連線顯示測試日曆名稱；第一輪後事件數與 Google 一致，抽查文號、時間、代理人、狀態；再同步一次三個數字都是 0；推送中途停站、重啟後接著推完且不重複；暫時取消日曆共用時這一輪記為失敗、事件留在待同步，加回後立即同步就補上。
+3. 收尾：`CalendarSync:Enabled` 與 `Scheduling:Execute` 改回 `false`，刪掉測試日曆，再手動刪除 `calendarsync.CalendarEvents`、`calendarsync.SyncRuns` 裡該日曆 ID 的列（否則日曆清單一直列出它）。
+
+正式站上線本功能後，開發機測試會和正式站搶同一把租約：輪到開發機時正式日曆那一輪延後。只在短時間內測試。
 
 ## 管理頁
 

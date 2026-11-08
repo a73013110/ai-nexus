@@ -24,6 +24,6 @@ public sealed class SchedulingModule : IFeatureModule
         .MapSlice<PauseScheduledTask>()
         .MapSlice<ResumeScheduledTask>();
 
-    /// <summary>任務 Key 重複、格式不符或設定覆寫寫錯任務名稱時啟動失敗。</summary>
+    /// <summary>任務 Key 重複、格式不符，或 <c>Scheduling:Tasks</c> 缺漏、寫錯任務名稱時啟動失敗。</summary>
     public static void VerifyStartup(IServiceProvider services) => _ = services.GetRequiredService<ScheduledTaskCatalog>();
 }

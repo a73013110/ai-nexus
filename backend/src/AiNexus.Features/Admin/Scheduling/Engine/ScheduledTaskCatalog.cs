@@ -6,8 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Scheduling.Engine;
 
-/// <summary>一個任務實際生效的排程：程式宣告加上 <c>Scheduling:Tasks</c> 的覆寫。</summary>
-public sealed record ScheduledTaskPlan(ScheduledTaskRegistration Registration, Schedule Schedule, TimeSpan Timeout, bool Enabled)
+/// <summary>
+/// 一個任務實際生效的設定：排程（設定或任務固定的）、逾時與開關。<see cref="ExecutesHere"/> 是這個程序是否執行它
+/// （<c>Scheduling:Execute</c> 與 <c>Scheduling:ExecuteOnly</c>）；不執行時其他程序照樣可以執行。
+/// </summary>
+public sealed record ScheduledTaskPlan(ScheduledTaskRegistration Registration, Schedule Schedule, TimeSpan Timeout, bool Enabled, bool ExecutesHere)
 {
     public ScheduledTaskDefinition Definition => Registration.Definition;
     public string Key => Registration.Definition.Key;
@@ -18,8 +21,8 @@ public sealed record ScheduledTaskPlan(ScheduledTaskRegistration Registration, S
 }
 
 /// <summary>
-/// 已註冊的排程任務。建立時檢查 Key 的格式與唯一性、設定覆寫的鍵都是已註冊的任務，任何一項不符就讓啟動失敗
-/// （<see cref="SchedulingModule.VerifyStartup"/>），不會等到排程時才默默略過。
+/// 已註冊的排程任務與它們的設定。建立時檢查 Key 的格式與唯一性、每個任務都有完整設定、設定與 <c>ExecuteOnly</c> 只指向已註冊的任務，
+/// 任何一項不符就列出全部問題讓啟動失敗（<see cref="SchedulingModule.VerifyStartup"/>），不會等到排程時才默默略過。
 /// </summary>
 [Singleton]
 public sealed partial class ScheduledTaskCatalog
@@ -28,38 +31,43 @@ public sealed partial class ScheduledTaskCatalog
 
     public ScheduledTaskCatalog(IEnumerable<ScheduledTaskRegistration> registrations, IOptions<SchedulingOptions> options)
     {
-        var settings = options.Value.Tasks;
+        var scheduling = options.Value;
         var all = registrations.ToList();
-        if (all.FirstOrDefault(x => !KeyFormat().IsMatch(x.Definition.Key) || x.Definition.Key.Length > ScheduledTask.KeyMaxLength) is { } invalid)
-            throw new InvalidOperationException($"Scheduled task key '{invalid.Definition.Key}' must be lower-case words separated by dots, at most {ScheduledTask.KeyMaxLength} characters.");
-        var duplicates = all.GroupBy(x => x.Definition.Key, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
-        if (duplicates.Count > 0)
-            throw new InvalidOperationException("Each scheduled task key can be registered only once: " + string.Join(", ", duplicates));
-        var unknown = settings.Keys.Where(key => all.All(x => x.Definition.Key != key)).ToList();
-        if (unknown.Count > 0)
-            throw new InvalidOperationException("Scheduling:Tasks names unknown tasks: " + string.Join(", ", unknown));
+        var problems = new List<string>();
+        problems.AddRange(all.Where(x => !KeyFormat().IsMatch(x.Definition.Key) || x.Definition.Key.Length > ScheduledTask.KeyMaxLength)
+            .Select(x => $"Key '{x.Definition.Key}' must be lower-case words separated by dots, at most {ScheduledTask.KeyMaxLength} characters."));
+        problems.AddRange(all.GroupBy(x => x.Definition.Key, StringComparer.Ordinal).Where(g => g.Count() > 1)
+            .Select(g => $"Key '{g.Key}' is registered more than once."));
+        var keys = all.Select(x => x.Definition.Key).ToHashSet(StringComparer.Ordinal);
+        problems.AddRange(scheduling.Tasks.Keys.Where(key => !keys.Contains(key)).Select(key => $"Scheduling:Tasks:{key} is not a registered task."));
+        problems.AddRange(scheduling.ExecuteOnly.Where(key => !keys.Contains(key)).Select(key => $"Scheduling:ExecuteOnly names '{key}', which is not a registered task."));
 
-        byKey = all.Select(registration => Plan(registration, settings.GetValueOrDefault(registration.Definition.Key)))
-            .ToDictionary(x => x.Key, StringComparer.Ordinal);
-        All = [.. byKey.Values.OrderBy(x => x.Definition.Category, StringComparer.Ordinal).ThenBy(x => x.Definition.Name, StringComparer.Ordinal)];
+        var plans = new List<ScheduledTaskPlan>();
+        foreach (var registration in all)
+        {
+            var key = registration.Definition.Key;
+            var settings = scheduling.Tasks.GetValueOrDefault(key);
+            var fixedSchedule = registration.Definition.FixedSchedule;
+            // 格式已由 SchedulingOptions 的驗證把關，這裡只檢查有沒有填、該不該填。
+            var schedule = fixedSchedule ?? (settings?.Schedule is { } value ? Schedule.Parse(value) : null);
+            if (settings is null) problems.Add($"Scheduling:Tasks:{key} is missing; list every task in appsettings.json.");
+            else if (fixedSchedule is not null && settings.Schedule is not null) problems.Add($"Scheduling:Tasks:{key}:Schedule cannot be set; the task runs {fixedSchedule.Description}.");
+            else if (schedule is null) problems.Add($"Scheduling:Tasks:{key}:Schedule is required.");
+            if (settings is not null && settings.Timeout is null) problems.Add($"Scheduling:Tasks:{key}:Timeout is required.");
+            if (settings is { Timeout: { } timeout } && schedule is not null)
+                plans.Add(new(registration, schedule, timeout, settings.Enabled, scheduling.ExecutesTask(key)));
+        }
+        if (problems.Count > 0)
+            throw new InvalidOperationException("Scheduled task configuration is invalid:\n" + string.Join('\n', problems));
+
+        byKey = plans.ToDictionary(x => x.Key, StringComparer.Ordinal);
+        All = [.. plans.OrderBy(x => x.Definition.Category, StringComparer.Ordinal).ThenBy(x => x.Definition.Name, StringComparer.Ordinal)];
     }
 
     /// <summary>依分類、名稱排序，管理頁直接沿用這個順序。</summary>
     public IReadOnlyList<ScheduledTaskPlan> All { get; }
 
     public ScheduledTaskPlan? Find(string key) => byKey.GetValueOrDefault(key);
-
-    private static ScheduledTaskPlan Plan(ScheduledTaskRegistration registration, ScheduledTaskSettings? settings)
-    {
-        var definition = registration.Definition;
-        var schedule = settings switch
-        {
-            { Interval: { } interval } => Schedule.Every(interval),
-            { Cron: { } cron } => Schedule.Cron(cron, "cron：" + cron),
-            _ => definition.Schedule,
-        };
-        return new(registration, schedule, settings?.Timeout ?? definition.Timeout, settings?.Enabled ?? true);
-    }
 
     [GeneratedRegex("^[a-z0-9-]+(\\.[a-z0-9-]+)+$")]
     private static partial Regex KeyFormat();

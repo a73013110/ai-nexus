@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Data.App;
@@ -32,10 +33,10 @@ public sealed class ProbeTask(Probe probe) : IScheduledTask
 {
     public const string Key = "test.probe";
     public static readonly TimeSpan Interval = TimeSpan.FromMinutes(10);
+    public static readonly TimeSpan Timeout = TimeSpan.FromMinutes(1);
 
-    public static ScheduledTaskDefinition Definition { get; } = new(Key, "測試任務", "測試", "整合測試用的任務。", Schedule.Every(Interval))
+    public static ScheduledTaskDefinition Definition { get; } = new(Key, "測試任務", "測試", "整合測試用的任務。")
     {
-        Timeout = TimeSpan.FromMinutes(1),
         Unavailable = services => services.GetRequiredService<Probe>().Unavailable,
     };
 
@@ -50,7 +51,10 @@ public sealed class StartupProbeTask : IScheduledTask
 {
     public const string Key = "test.startup";
 
-    public static ScheduledTaskDefinition Definition { get; } = new(Key, "測試啟動任務", "測試", "整合測試用的啟動任務。", Schedule.AtStartup(TimeSpan.FromMinutes(1)));
+    public static ScheduledTaskDefinition Definition { get; } = new(Key, "測試啟動任務", "測試", "整合測試用的啟動任務。")
+    {
+        FixedSchedule = Schedule.AtStartup(TimeSpan.FromMinutes(1)),
+    };
 
     public Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct) => Task.FromResult(TaskOutcome.Done());
 }
@@ -98,7 +102,7 @@ public sealed class SchedulingTests
         public ValueTask DisposeAsync() => Factory.DisposeAsync();
     }
 
-    private static async Task<Harness> StartAsync(string[]? administrators = null)
+    private static async Task<Harness> StartAsync(string[]? administrators = null, Action<SchedulingOptions>? scheduling = null)
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
         var probe = new Probe();
@@ -107,6 +111,14 @@ public sealed class SchedulingTests
             services.AddSingleton(probe);
             services.AddScheduledTask<ProbeTask>();
             services.AddScheduledTask<StartupProbeTask>();
+            // 預設不執行（開發機共用資料庫）；這裡的測試扮演執行排程的程序。
+            services.PostConfigure<SchedulingOptions>(options =>
+            {
+                options.Execute = true;
+                options.Tasks[ProbeTask.Key] = new() { Schedule = ProbeTask.Interval.ToString("c", CultureInfo.InvariantCulture), Timeout = ProbeTask.Timeout };
+                options.Tasks[StartupProbeTask.Key] = new() { Timeout = ProbeTask.Timeout };
+                scheduling?.Invoke(options);
+            });
         });
         var harness = new Harness(factory, clock, probe);
         await harness.Runner.InitializeAsync(Ct);
@@ -265,7 +277,7 @@ public sealed class SchedulingTests
         Assert.NotNull(claim);
         var execution = app.Runner.ExecuteAsync(claim, CancellationToken.None);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
-        app.Clock.Advance(ProbeTask.Definition.Timeout);
+        app.Clock.Advance(ProbeTask.Timeout);
         await execution.WaitAsync(TimeSpan.FromSeconds(10), Ct);
         var timedOut = (await app.RunsAsync())[^1];
         Assert.Equal((ScheduledTaskRunStatuses.Failed, SchedulingErrors.TaskTimedOut.Code), (timedOut.Status, timedOut.ErrorCode));
@@ -361,6 +373,21 @@ public sealed class SchedulingTests
         (await admin.PostAsync($"/api/v1/background-jobs/{jobId}/cancel", null, Ct)).EnsureSuccessStatusCode();
         queue = (await admin.GetFromJsonAsync<TablePage<QueuedJobDto>>("/api/v1/background-jobs", Ct))!;
         Assert.True(queue.Items[0].CancelRequested || queue.Items[0].Status == RunStates.Cancelled);
+    }
+
+    [Fact]
+    public async Task ExecuteOnlyLimitsThisProcessToTheListedTasks()
+    {
+        await using var app = await StartAsync(administrators: ["alice"], scheduling: options => options.ExecuteOnly = [StartupProbeTask.Key]);
+        // 一次認領所有到期任務：應用程式本身註冊的任務也到期了，只有列出的那個會被認領。
+        Assert.Equal([StartupProbeTask.Key], (await app.Runner.ClaimDueAsync(100, Ct)).Select(x => x.Plan.Key));
+        // 手動要求照樣記下，留給執行它的程序。
+        Assert.True((await app.TasksAsync(x => x.RequestRunAsync(ProbeTask.Key, null, null, Ct))).IsSuccess);
+        Assert.Empty(await app.Runner.ClaimDueAsync(100, Ct));
+
+        using var admin = await app.Factory.SignedInAsync();
+        var board = (await admin.GetFromJsonAsync<ScheduledTaskBoardDto>("/api/v1/scheduled-tasks", Ct))!;
+        Assert.False(board.ExecutesHere);
     }
 
     [Fact]

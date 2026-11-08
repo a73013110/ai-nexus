@@ -1,9 +1,9 @@
 # 刷卡匯入
 
-結論：打卡機每天輸出的檔由排程任務 `attendance.punch-import`（[背景作業](scheduling.md)，每 5 分鐘）定期掃描匯入 `attendance.Punches`，一個檔一個交易、任何一行錯誤整檔失敗；匯入紀錄頁（`attendance.imports`）可查詢與手動重匯。卡號歸戶與授權見 [出勤打卡](attendance.md)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。
+結論：打卡機每天輸出的檔由排程任務 `attendance.punch-import`（[背景作業](scheduling.md)，排程在 `Scheduling:Tasks`）定期掃描匯入 `attendance.Punches`，一個檔一個交易、任何一行錯誤整檔失敗；匯入紀錄頁（`attendance.imports`）可查詢與手動重匯。卡號歸戶與授權見 [出勤打卡](attendance.md)，取捨見 [ADR 0018](../decisions/0018-attendance-cards-and-punches.md)。
 
 - **來源**：HAMS 轉出的 `yyyyMMdd.txt`（正式機是同機的 `C:\Export\`；開發機預設讀每晚複製過去的網路共用），其他檔名一律不匯入。轉出的時機見 [打卡機主機排程](../operations/attendance-hams.md)。IIS 應用程式集區的身分必須能讀取該資料夾（網路共用要授權給集區身分或電腦帳號）。
-- **設定**：`Attendance:Import`，預設值與說明見 [AttendanceOptions](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceOptions.cs)。重點是 `SourceDirectory`、`Enabled`（只管定期掃描，手動重匯不受影響）；掃描間隔改在 `Scheduling:Tasks:attendance.punch-import`。開發機讀不到共用時在 `.local/config/appsettings.Local.json` 設 `Enabled` 為 `false`。外部設定不會自動重新載入，改完要回收應用程式集區。
+- **設定**：`Attendance:Import`，預設值與說明見 [AttendanceOptions](../../backend/src/AiNexus.Features/Office/Attendance/AttendanceOptions.cs)。重點是 `SourceDirectory`、`Enabled`（只管定期掃描，手動重匯不受影響）；掃描排程在 `Scheduling:Tasks:attendance.punch-import`。開發機讀不到共用時在 `.local/config/appsettings.Local.json` 設 `Enabled` 為 `false`。外部設定不會自動重新載入，改完要回收應用程式集區。
 - **換來源資料夾**：檔案列以檔名記錄已匯入的版本（修改時間與大小），不記資料夾；複製時保留修改時間，所以從共用改指 `C:\Export\` 只會重匯版本不同的檔。排程只新增，就算重匯也不會少刷卡。
 - **掃描**：新部署立即掃一次，之後依間隔；背景作業頁可立即執行。修改時間或大小與上次成功匯入的不同、從沒匯入過、被標記重匯，或最近一次失敗就匯入；最近一次失敗而檔案沒變，要等 `FailedRetrySeconds`（預設 900）。修改時間距今不到 `SettleSeconds`（預設 30）的檔先等，避免讀到寫到一半的檔。
 - **解析**：每行 `機器代號:卡號:yyyyMMdd:HHmmss:事件代號`，第一欄與最後一欄原樣保存（實際是 HAMS 轉出範本的固定字 `001`、`11`，見 ADR 0018）。打卡機實際把整行包在雙引號裡，整行或各欄外圍成對的雙引號先去掉，剩下的雙引號視為格式錯誤：留著會存成 `"001`，與舊系統轉入的 `001` 被當成兩筆刷卡。刷卡時間以 +08:00 存放，出勤日依刷卡時間而非檔名。UTF-8（可有 BOM）或 UTF-16；空行與 Ctrl-Z 檔尾略過。**任何一行格式錯誤整個檔案匯入失敗**，不略過：匯入紀錄沒有略過筆數可記，靜默少一筆刷卡會變成假缺勤。

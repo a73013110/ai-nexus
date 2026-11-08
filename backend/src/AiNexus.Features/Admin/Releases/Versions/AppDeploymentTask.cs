@@ -11,8 +11,9 @@ namespace AiNexus.Features.Admin.Releases.Versions;
 public sealed partial class AppDeploymentTask(AppDbContext db, AppRelease release, TimeProvider clock, ILogger<AppDeploymentTask> logger) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "releases.record-deployment", "記錄部署", "版本", "新版本第一次啟動時在部署歷史記一列。", Schedule.AtStartup(TimeSpan.FromMinutes(5)))
+        "releases.record-deployment", "記錄部署", "版本", "新版本第一次啟動時在部署歷史記一列。")
     {
+        FixedSchedule = Schedule.AtStartup(TimeSpan.FromMinutes(5)),
         Unavailable = services => services.GetRequiredService<AppRelease>().Packaged ? null : "只有發布包會記錄部署",
     };
 

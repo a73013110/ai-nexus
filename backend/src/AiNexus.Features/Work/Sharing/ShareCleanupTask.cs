@@ -6,7 +6,7 @@ namespace AiNexus.Features.Work.Sharing;
 internal sealed class ShareCleanupTask(ShareService shares) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "sharing.cleanup", "分享清理", "分享", "移除過期或已撤銷分享的檔案授權，並清空過期分享的快照。", Schedule.Every(TimeSpan.FromMinutes(20)));
+        "sharing.cleanup", "分享清理", "分享", "移除過期或已撤銷分享的檔案授權，並清空過期分享的快照。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
         => TaskOutcome.Count(await shares.PurgeExpiredAsync(ct), total => $"清理 {total:N0} 筆");

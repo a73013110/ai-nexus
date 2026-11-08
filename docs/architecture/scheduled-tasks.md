@@ -5,14 +5,12 @@
 ## 寫一個任務
 
 1. 在模組的能力資料夾新增 `<名詞>Task.cs`，實作 `IScheduledTask`；組合產生器會註冊（scoped，每輪一個 DI 範圍），不必在 `AddServices` 寫。
-2. `Definition`：`Key`（`<module>.<動作>`，小寫 kebab，寫進資料庫，改名＝新任務）、名稱、分類（管理頁分組，用模組的中文名）、一句說明、`Schedule`。
-   - `Schedule.Every(間隔)`：上一輪結束後隔多久；新任務立即跑一次。
-   - `Schedule.Daily(時, 分)`、`Schedule.Cron(運算式, 說法)`：台灣時間。
-   - `Schedule.AtStartup(重試間隔)`：每次啟動跑一次，失敗才重試。
-   - 選填：`Timeout`（預設 30 分鐘）、`NotifyAfterFailures`（預設連續 3 次才通知）、`Unavailable`（功能沒開時回傳原因；只讀設定，每次排程前都會呼叫）。
-3. `RunAsync` 回傳 [`TaskOutcome`](../../backend/src/AiNexus.Platform/Scheduling/TaskOutcome.cs)：`Done(摘要)`、`Idle()`（沒事可做，紀錄只留 2 天）、`Count(筆數, 摘要)`、`Failed(錯誤)`。摘要是給管理員看的一句話，不放個人資料。
-4. 長工作在迴圈裡呼叫 `context.Report(階段, 完成, 總數)`；只寫記憶體，續租時一併存檔，呼叫幾次都不會多打資料庫。
-5. 範例：[`NotificationExpiryTask`](../../backend/src/AiNexus.Features/Platform/Notifications/NotificationExpiryTask.cs)（最小）、[`CalendarSyncTask`](../../backend/src/AiNexus.Features/Office/CalendarSync/Sync/CalendarSyncTask.cs)（手動參數、失敗對應）。
+2. `Definition`：`Key`（`<module>.<動作>`，小寫 kebab，寫進資料庫，改名＝新任務）、名稱、分類（管理頁分組，用模組的中文名）、一句說明。
+   - 選填：`NotifyAfterFailures`（預設連續 3 次才通知）、`Unavailable`（功能沒開時回傳原因；只讀設定，每次排程前都會呼叫）、`FixedSchedule`（排程由任務性質決定時，目前只有 `Schedule.AtStartup(重試間隔)`：每次啟動跑一次，失敗才重試）。
+3. 在 `appsettings.json` 的 `Scheduling:Tasks` 加一列 `{ "Enabled", "Schedule", "Timeout" }`。排程與逾時只寫在設定，程式沒有預設值；漏列或缺欄位時啟動失敗。
+4. `RunAsync` 回傳 [`TaskOutcome`](../../backend/src/AiNexus.Platform/Scheduling/TaskOutcome.cs)：`Done(摘要)`、`Idle()`（沒事可做，紀錄只留 2 天）、`Count(筆數, 摘要)`、`Failed(錯誤)`。摘要是給管理員看的一句話，不放個人資料。
+5. 長工作在迴圈裡呼叫 `context.Report(階段, 完成, 總數)`；只寫記憶體，續租時一併存檔，呼叫幾次都不會多打資料庫。
+6. 範例：[`NotificationExpiryTask`](../../backend/src/AiNexus.Features/Platform/Notifications/NotificationExpiryTask.cs)（最小）、[`CalendarSyncTask`](../../backend/src/AiNexus.Features/Office/CalendarSync/Sync/CalendarSyncTask.cs)（手動參數、失敗對應）。
 
 ## 必須可重複執行
 
@@ -36,8 +34,10 @@
 
 ## 設定與執行位置
 
-- `Scheduling:Execute`：這個程序是否執行排程。開發機與正式站共用資料庫，開發機在 `appsettings.Local.json` 設 `false`，否則兩邊搶著用不同版本的程式跑同一批任務。
-- `Scheduling:Tasks:<Key>`：個別覆寫 `Enabled`、`Interval` 或 `Cron`、`Timeout`；鍵必須是已註冊的任務，啟動時驗證。其他鍵見 [設定](../development/configuration.md)。
+- `Scheduling:Execute`：這個程序是否執行排程，預設 `false`，只有正式站在 `appsettings.Production.json` 設 `true`。開發機與正式站共用資料庫，開發機執行等於用不同版本的程式跑同一批任務。
+- `Scheduling:ExecuteOnly`：非空時只執行列出的任務 Key（仍要 `Execute=true`）。開發機要試某個任務時用它，其他任務留給正式站。
+- `Scheduling:Tasks:<Key>`：每個任務的唯一設定來源，`appsettings.json` 列出全部，環境設定檔只寫要改的欄位。`Schedule` 寫間隔（`00:05:00`，上一輪結束後隔多久，新任務立即跑一次）或五欄 cron（`30 3 * * *`，台灣時間），同一個鍵，覆寫時整個取代；`FixedSchedule` 的任務不能填。缺任務、缺欄位、鍵不是已註冊的任務都會在啟動時一次列出、拒絕啟動。
+- 每天一次的清理排在凌晨並互相錯開；要讓人第一時間看到的檢查排在上班時間（結構異動檢查 08:00）。
 - 不是定期工作的 `BackgroundService` 仍然存在：使用者送出的佇列（`BackgroundJobWorker`、`MailDispatcher`、`GenerationWorker`）、取樣器（`RuntimeSampler`）、日誌管線（`DiagnosticWorker`，清理本機日誌檔，每個程序都要做，不能只由持有租約的那個做）。佇列工作在管理頁另一個檢視列出。
 
 ## 測試

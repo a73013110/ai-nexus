@@ -67,7 +67,7 @@ public sealed partial class ScheduledTaskRunner(
             }
         }
 
-        var startup = catalog.All.Where(x => x.Schedule.RunsAtStartup).Select(x => x.Key).ToList();
+        var startup = catalog.All.Where(x => x.Schedule.RunsAtStartup && x.ExecutesHere).Select(x => x.Key).ToList();
         foreach (var key in startup) startupPending[key] = 0;
         if (startup.Count > 0)
             await db.ScheduledTasks.Where(x => startup.Contains(x.Key))
@@ -75,7 +75,7 @@ public sealed partial class ScheduledTaskRunner(
     }
 
     /// <summary>
-    /// 認領最多 <paramref name="limit"/> 個到期（未暫停且 <c>NextRunAt</c> 已到）或有手動要求的任務；不能執行的任務略過。
+    /// 認領最多 <paramref name="limit"/> 個到期（未暫停且 <c>NextRunAt</c> 已到）或有手動要求的任務；不能執行或不歸這個程序執行（<c>ExecuteOnly</c>）的任務略過。
     /// 認領時清掉手動要求，所以一個要求只會執行一次；執行中才送達的要求留到這一輪結束後。
     /// </summary>
     public async Task<IReadOnlyList<ScheduledTaskClaim>> ClaimDueAsync(int limit, CancellationToken ct)
@@ -84,7 +84,7 @@ public sealed partial class ScheduledTaskRunner(
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = clock.GetUtcNow();
-        var runnable = catalog.All.Where(x => x.UnavailableReason(scope.ServiceProvider) is null).Select(x => x.Key).ToList();
+        var runnable = catalog.All.Where(x => x.ExecutesHere && x.UnavailableReason(scope.ServiceProvider) is null).Select(x => x.Key).ToList();
         if (runnable.Count == 0) return [];
         var foreignStartup = catalog.All.Where(x => x.Schedule.RunsAtStartup && !startupPending.ContainsKey(x.Key)).Select(x => x.Key).ToList();
 

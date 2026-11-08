@@ -24,7 +24,7 @@ public sealed partial class SchemaChangeWatchTask(
 
     // 一次失敗就通知：這個檢查一天才跑一次，等三次就是三天沒人看著結構。
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "releases.schema-change-watch", "結構異動檢查", "版本", "比對資料庫結構與這一版應有的結構，出現新的異動時通知版本頁的管理者。", Schedule.Daily(8, 0))
+        "releases.schema-change-watch", "結構異動檢查", "版本", "比對資料庫結構與這一版應有的結構，出現新的異動時通知版本頁的管理者。")
     {
         NotifyAfterFailures = 1,
     };

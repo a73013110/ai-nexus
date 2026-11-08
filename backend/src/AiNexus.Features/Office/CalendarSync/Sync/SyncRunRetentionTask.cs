@@ -13,7 +13,7 @@ namespace AiNexus.Features.Office.CalendarSync.Sync;
 internal sealed class SyncRunRetentionTask(AppDbContext db, IOptions<CalendarSyncOptions> options, TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "calendar-sync.run-retention", "同步紀錄清理", "日曆同步", "刪除超過保存期的日曆同步紀錄。", Schedule.Daily(4, 0));
+        "calendar-sync.run-retention", "同步紀錄清理", "日曆同步", "刪除超過保存期的日曆同步紀錄。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {

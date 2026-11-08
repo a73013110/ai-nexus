@@ -20,7 +20,7 @@ public sealed record MailPurge(int Expired, int Contents, int Recipients, int Re
 public sealed class MailRetentionTask(AppDbContext db, AuditTrail audit, IOptions<MailOptions> options, TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "mail.retention", "郵件保存期清理", "郵件", "結束逾期未寄的信，依保存期刪內文、清收件原址、刪舊紀錄。", Schedule.Every(TimeSpan.FromHours(1)));
+        "mail.retention", "郵件保存期清理", "郵件", "結束逾期未寄的信，依保存期刪內文、清收件原址、刪舊紀錄。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {

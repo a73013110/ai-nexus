@@ -18,6 +18,7 @@
 | `Diagnostics.Directory` | `D:\CoreProject\AiNexus\data\diagnostics`，實體本機目錄、app 外、不可映射為網站 URL |
 | `Inference.Providers.<provider>.Enabled`、`Inference.DefaultModelId` | Google／Ollama 可同時啟用；DefaultModelId 使用完整 `provider/model` 路由 |
 | `Knowledge.Embedding.Provider` | 與對話分開設定；離線使用 ollama 或暫用 none |
+| `Scheduling.Execute` | true。預設 false（開發機共用資料庫），正式站漏設時所有背景作業都不會執行 |
 | `Attendance.Import.SourceDirectory` | `C:\Export\`（與 HAMS 同機，集區身分要能讀取，見 [打卡機主機排程](attendance-hams.md)） |
 
 `Identity.ActiveDirectory.Mode`（Ldap）與附件容量沿用預設，不必寫入。AD 的 `Server` 預設連 `Domain`（DNS 解析到網域控制站）、`SearchBase` 預設由 `Domain` 推出 `DC=…`、`UseLdaps` 預設 false（389 StartTLS），只有要指定網域控制站、縮小搜尋範圍或改走 636 時才填。

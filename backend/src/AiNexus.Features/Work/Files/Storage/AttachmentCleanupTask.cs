@@ -6,7 +6,7 @@ namespace AiNexus.Features.Work.Files.Storage;
 internal sealed class AttachmentCleanupTask(AttachmentLifecycle lifecycle) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "files.attachment-cleanup", "附件清理", "檔案", "回收過期的上傳草稿、補刪待刪的檔案，並刪除儲存區裡沒有紀錄的孤兒檔。", Schedule.Every(TimeSpan.FromHours(1)));
+        "files.attachment-cleanup", "附件清理", "檔案", "回收過期的上傳草稿、補刪待刪的檔案，並刪除儲存區裡沒有紀錄的孤兒檔。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {
