@@ -19,6 +19,8 @@ public sealed class CalendarEvent
     public const int ErrorCodeMaxLength = 64;
     public const int ErrorMaxLength = 500;
     public const int HashLength = 32;
+    public const int CauseMaxLength = 32;
+    public const int ChangesMaxLength = 1000;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public string CalendarId { get; set; } = "";
@@ -72,6 +74,15 @@ public sealed class CalendarEvent
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
+    /// <summary>
+    /// 這一列為什麼排進推送（<see cref="CalendarEventCauses"/>），推送成功後清空。
+    /// 規劃與推送可能隔好幾輪（退避、限速、一輪的上限），原因要跟著待推送的列走，推送時才寫得進當輪的明細。
+    /// </summary>
+    public string? PendingCause { get; set; }
+
+    /// <summary>待推送的欄位變更（JSON 陣列：field、from、to），生命週期同 <see cref="PendingCause"/>。</summary>
+    public string? PendingChangesJson { get; set; }
+
     /// <summary>新列的 Google event id：主鍵的 32 位小寫十六進位字串，落在 Google 允許的字元（a–v、0–9）內。</summary>
     public static string NewGoogleEventId(Guid id) => id.ToString("N");
 }
@@ -88,6 +99,25 @@ public static class CalendarEventStates
     public const string Failed = "failed";
     public const string Synced = "synced";
     public const string Removed = "removed";
+}
+
+/// <summary>事件被排進推送或移除的原因；前端依代碼顯示說明，寫入後不可改。</summary>
+public static class CalendarEventCauses
+{
+    /// <summary>內容變了；沒有欄位變更時是事件格式改版或舊系統轉入。</summary>
+    public const string Content = "content";
+    public const string Restored = "restored";
+
+    /// <summary>單據不再是流程中或核准（退回、銷單、退回結案、暫存）。</summary>
+    public const string FormStatus = "form_status";
+    public const string FormMissing = "form_missing";
+
+    /// <summary>單據仍有效，但這一段期間已不在單據上。</summary>
+    public const string SegmentGone = "segment_gone";
+
+    /// <summary>判定移除時查不到單據現況（GD 暫時不可用）。</summary>
+    public const string Unknown = "unknown";
+    public const string Reset = "reset";
 }
 
 internal sealed class CalendarEventConfiguration : IEntityTypeConfiguration<CalendarEvent>
@@ -111,5 +141,7 @@ internal sealed class CalendarEventConfiguration : IEntityTypeConfiguration<Cale
         calendarEvent.Property(x => x.LastErrorCode).HasMaxLength(CalendarEvent.ErrorCodeMaxLength);
         calendarEvent.Property(x => x.LastError).HasMaxLength(CalendarEvent.ErrorMaxLength);
         calendarEvent.Property(x => x.LegacyUuid).HasMaxLength(200);
+        calendarEvent.Property(x => x.PendingCause).HasMaxLength(CalendarEvent.CauseMaxLength);
+        calendarEvent.Property(x => x.PendingChangesJson).HasMaxLength(CalendarEvent.ChangesMaxLength);
     }
 }

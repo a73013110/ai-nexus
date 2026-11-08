@@ -14,6 +14,7 @@ CREATE TABLE [calendarsync].[SyncRuns] (
     [HeldCount]     INT                NOT NULL,
     [ErrorCode]     NVARCHAR (64)      NULL,
     [ErrorMessage]  NVARCHAR (1000)    NULL,
+    [LookbackDays]  INT                NULL,
     CONSTRAINT [pk_SyncRuns] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [ck_SyncRuns_Counts] CHECK ([CreatedCount]>=(0) AND [UpdatedCount]>=(0) AND [DeletedCount]>=(0) AND [FailedCount]>=(0) AND [HeldCount]>=(0) AND ([SourceCount] IS NULL OR [SourceCount]>=(0))),
     CONSTRAINT [ck_SyncRuns_Error] CHECK ([Status]=N'failed' OR [Status]=N'held' OR [ErrorCode] IS NULL),
@@ -91,6 +92,11 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'被安全�
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'資料的主鍵識別碼。', @level0type = N'SCHEMA', @level0name = N'calendarsync', @level1type = N'TABLE', @level1name = N'SyncRuns', @level2type = N'COLUMN', @level2name = N'Id';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'這一輪比對的回看天數（站台設定 CalendarSync:LookbackDays 的當下值）；舊紀錄為空值。', @level0type = N'SCHEMA', @level0name = N'calendarsync', @level1type = N'TABLE', @level1name = N'SyncRuns', @level2type = N'COLUMN', @level2name = N'LookbackDays';
 
 
 GO

@@ -5,6 +5,7 @@ using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Office.CalendarSync.Management;
 
@@ -35,20 +36,25 @@ public sealed record CalendarSyncEventDto(
 
 /// <summary>
 /// 日曆上的事件，預設依開始時間新到舊；<c>calendarId</c> 只看一個日曆，省略時看全部（管理頁預設帶本站設定的日曆）。
+/// 預設只列同步還在管的事件（與比對同一個範圍，走同一個索引）；<c>history=true</c> 才含窗外的舊事件與已移除的列。
 /// 排序、篩選與分頁走共用的 <see cref="TableRequest"/>（ADR 0026）。誰在什麼時候請假是個人資料，查詢寫稽核。
 /// </summary>
-internal sealed class ListCalendarSyncEvents(AppDbContext db) : IEndpointSlice
+internal sealed class ListCalendarSyncEvents(AppDbContext db, IOptions<CalendarSyncOptions> options, TimeProvider clock) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
-        .MapGet("/events", ([AsParameters] TableRequest table, string? calendarId, ListCalendarSyncEvents handler, CancellationToken ct)
-            => handler.HandleAsync(table, calendarId, ct))
+        .MapGet("/events", ([AsParameters] TableRequest table, string? calendarId, bool? history, ListCalendarSyncEvents handler, CancellationToken ct)
+            => handler.HandleAsync(table, calendarId, history == true, ct))
         .Audited(CalendarSyncAudit.EventRead)
         .WithName("ListCalendarSyncEvents");
 
-    public Task<Result<TablePage<CalendarSyncEventDto>>> HandleAsync(TableRequest table, string? calendarId, CancellationToken ct)
-        => db.CalendarEvents.AsNoTracking().OfCalendar(calendarId).ToTablePageAsync(table, Columns, rows => rows.Select(x => new CalendarSyncEventDto(
+    public Task<Result<TablePage<CalendarSyncEventDto>>> HandleAsync(TableRequest table, string? calendarId, bool history, CancellationToken ct)
+    {
+        var rows = db.CalendarEvents.AsNoTracking().OfCalendar(calendarId);
+        if (!history) rows = rows.InSyncWindow(options.Value.WindowStart(clock.GetUtcNow()));
+        return rows.ToTablePageAsync(table, Columns, page => page.Select(x => new CalendarSyncEventDto(
             x.Id, x.CalendarId, x.DesNo, x.Kind, x.ApplicantName, x.AgentName, x.FlowStatus, x.StartsAt, x.EndsAt, x.State, x.RemovedAt != null, x.Attempts, x.NextAttemptAt,
             x.LastAttemptAt, x.LastErrorCode, x.LastError, x.SyncedAt, x.HtmlLink, x.UpdatedAt)), ct);
+    }
 
     /// <summary>欄位 ID 與 <see cref="CalendarSyncEventDto"/> 的屬性同名，前端在本機排序時直接取同名欄位。</summary>
     private static readonly TableColumns<CalendarEvent> Columns = new TableColumns<CalendarEvent>

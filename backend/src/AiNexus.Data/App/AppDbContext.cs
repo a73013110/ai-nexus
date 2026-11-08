@@ -68,6 +68,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
 
     public DbSet<CalendarEvent> CalendarEvents => Set<CalendarEvent>();
     public DbSet<SyncRun> SyncRuns => Set<SyncRun>();
+    public DbSet<SyncRunItem> SyncRunItems => Set<SyncRunItem>();
 
     public DbSet<ResourceGroup> ResourceGroups => Set<ResourceGroup>();
     public DbSet<ResourceMember> ResourceMembers => Set<ResourceMember>();

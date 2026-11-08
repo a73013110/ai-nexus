@@ -15,6 +15,9 @@ public static class CalendarSyncErrors
     /// <summary>還沒設定日曆 ID，連線測試沒有對象。</summary>
     public static readonly Error CalendarNotConfigured = Error.Unprocessable("calendar_sync_calendar_not_configured");
 
+    /// <summary>這一輪已超過保存期被清掉，或日曆重設過。</summary>
+    public static readonly Error RunNotFound = Error.NotFound("calendar_sync_run_not_found");
+
     // 以下是排程任務一輪的失敗（代碼必須與 CalendarSyncFailures 相同，前端依它顯示說明；單元測試比對），不回給任何請求；
     // 一律 Unavailable：分類只影響 HTTP 狀態，背景任務用不到，用 4xx 反而要為不會顯示的提示審一句話。
     public static readonly Error GoogleNotConfigured = Error.Unavailable("google_not_configured");

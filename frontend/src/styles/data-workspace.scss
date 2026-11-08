@@ -143,9 +143,6 @@ select:where(.ui-input) {
 .ui-table-scroll :is(td, th).ui-table-numeric {
   text-align: end;
 }
-.ui-table-numeric .ui-table-sort {
-  justify-content: flex-end;
-}
 // Row states, the one definition for every table (docs/frontend/data-workspace.md): a clickable row
 // (`nxTableRow`) tints on hover; the row whose detail or dialog is open (`is-selected`) takes the
 // accent tint; keyboard focus on the row's action draws one ring around the row instead of a

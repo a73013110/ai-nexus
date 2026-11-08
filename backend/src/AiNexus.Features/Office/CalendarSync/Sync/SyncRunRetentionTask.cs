@@ -8,7 +8,7 @@ namespace AiNexus.Features.Office.CalendarSync.Sync;
 
 /// <summary>
 /// 刪除超過 <see cref="CalendarSyncOptions.RunRetentionDays"/> 的同步紀錄。依開始時間分批刪除（<see cref="Batches"/>，走 <c>ix_SyncRuns_StartedAt</c>）。
-/// 不看 <c>CalendarSync:Enabled</c>：關閉同步後舊紀錄仍要照保存期清掉。
+/// 逐筆明細（<c>SyncRunItems</c>）由外鍵連帶刪除，所以保存期相同、不必另外清。不看 <c>CalendarSync:Enabled</c>：關閉同步後舊紀錄仍要照保存期清掉。
 /// </summary>
 internal sealed class SyncRunRetentionTask(AppDbContext db, IOptions<CalendarSyncOptions> options, TimeProvider clock) : IScheduledTask
 {

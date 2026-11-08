@@ -2203,6 +2203,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar-sync/runs/{runId}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListCalendarSyncRunItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar-sync/reset": {
         parameters: {
             query?: never;
@@ -5439,6 +5455,11 @@ export interface components {
             afternoonOff: boolean;
             remark: null | string;
         };
+        CalendarEventFieldChange: {
+            field: string;
+            from: null | string;
+            to: null | string;
+        };
         CalendarSyncCalendarDto: {
             calendarId: string;
             configured: boolean;
@@ -5524,6 +5545,24 @@ export interface components {
             failedCount: number;
             /** Format: int32 */
             heldCount: number;
+            errorCode: null | string;
+            errorMessage: null | string;
+            /** Format: int32 */
+            lookbackDays: null | number;
+        };
+        CalendarSyncRunItemDto: {
+            /** Format: uuid */
+            eventId: string;
+            outcome: string;
+            desNo: string;
+            kind: string;
+            applicantName: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            cause: null | string;
+            changes: components["schemas"]["CalendarEventFieldChange"][];
             errorCode: null | string;
             errorMessage: null | string;
         };
@@ -7968,6 +8007,14 @@ export interface components {
             offset: number;
             complete: boolean;
         };
+        TablePageOfCalendarSyncRunItemDto: {
+            items: components["schemas"]["CalendarSyncRunItemDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
         TablePageOfPunchDto: {
             items: components["schemas"]["PunchDto"][];
             /** Format: int32 */
@@ -8577,12 +8624,14 @@ export type AuthSessionDto = components['schemas']['AuthSessionDto'];
 export type BackupMessage = components['schemas']['BackupMessage'];
 export type CalendarDayDto = components['schemas']['CalendarDayDto'];
 export type CalendarDayRequest = components['schemas']['CalendarDayRequest'];
+export type CalendarEventFieldChange = components['schemas']['CalendarEventFieldChange'];
 export type CalendarSyncCalendarDto = components['schemas']['CalendarSyncCalendarDto'];
 export type CalendarSyncCheck = components['schemas']['CalendarSyncCheck'];
 export type CalendarSyncConnectionDto = components['schemas']['CalendarSyncConnectionDto'];
 export type CalendarSyncEventDto = components['schemas']['CalendarSyncEventDto'];
 export type CalendarSyncResetRequest = components['schemas']['CalendarSyncResetRequest'];
 export type CalendarSyncRunDto = components['schemas']['CalendarSyncRunDto'];
+export type CalendarSyncRunItemDto = components['schemas']['CalendarSyncRunItemDto'];
 export type CalendarSyncRunRequest = components['schemas']['CalendarSyncRunRequest'];
 export type CalendarSyncStatusDto = components['schemas']['CalendarSyncStatusDto'];
 export type CardAssignmentCreateRequest = components['schemas']['CardAssignmentCreateRequest'];
@@ -8833,6 +8882,7 @@ export type StopSummary = components['schemas']['StopSummary'];
 export type SubsystemFact = components['schemas']['SubsystemFact'];
 export type TablePageOfCalendarSyncEventDto = components['schemas']['TablePageOfCalendarSyncEventDto'];
 export type TablePageOfCalendarSyncRunDto = components['schemas']['TablePageOfCalendarSyncRunDto'];
+export type TablePageOfCalendarSyncRunItemDto = components['schemas']['TablePageOfCalendarSyncRunItemDto'];
 export type TablePageOfPunchDto = components['schemas']['TablePageOfPunchDto'];
 export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
@@ -11596,6 +11646,7 @@ export interface operations {
                 sort?: string;
                 filter?: string[];
                 calendarId?: string;
+                history?: boolean;
             };
             header?: never;
             path?: never;
@@ -11661,6 +11712,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListCalendarSyncRunItems: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfCalendarSyncRunItemDto"];
+                };
             };
             default: components["responses"]["Problem"];
         };

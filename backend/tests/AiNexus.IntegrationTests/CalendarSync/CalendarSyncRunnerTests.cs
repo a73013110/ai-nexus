@@ -134,6 +134,138 @@ public sealed class CalendarSyncRunnerTests
         });
     }
 
+    private static async Task<HttpClient> ViewerAsync(Scenario s)
+    {
+        var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+        await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync);
+        return await s.Factory.SignedInAsync("bob");
+    }
+
+    private static async Task<List<CalendarSyncRunItemDto>> ItemsAsync(HttpClient viewer, Guid runId)
+    {
+        var page = await viewer.GetFromJsonAsync<TablePage<CalendarSyncRunItemDto>>($"/api/v1/calendar-sync/runs/{runId}/items", TestContext.Current.CancellationToken);
+        return [.. page!.Items];
+    }
+
+    [Fact]
+    public async Task EachRunRecordsWhatHappenedToEveryEventAndWhy()
+    {
+        await RunAsync(async s =>
+        {
+            var viewer = await ViewerAsync(s);
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Send");
+            s.Gd.AddLeave("L-2", "G002", "A", Day.AddHours(8.5), Day.AddHours(12), "Decide");
+            s.Gd.AddLeave("L-3", "G002", "A", Day.AddHours(13), Day.AddHours(18), "Decide");
+            var first = await s.RunAsync();
+            var created = await ItemsAsync(viewer, first.Run!.Id);
+            Assert.All(created, x => Assert.Equal((SyncRunItemOutcomes.Created, null), (x.Outcome, x.Cause)));
+            Assert.Equal(first.Created, created.Count);
+
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Decide'");
+            s.Gd.Update("Form_Leave", "L-2", "FlowOver = 'Cancel'");
+            s.Gd.Remove("Form_Leave", "L-3");
+            var second = await s.RunAsync(confirmRemovals: true);
+            var items = (await ItemsAsync(viewer, second.Run!.Id)).ToDictionary(x => x.DesNo);
+
+            Assert.Equal(new CalendarEventFieldChange("flowStatus", "Send", "Decide"), Assert.Single(items["L-1"].Changes));
+            Assert.Equal((SyncRunItemOutcomes.Updated, CalendarEventCauses.Content), (items["L-1"].Outcome, items["L-1"].Cause));
+            Assert.Equal((SyncRunItemOutcomes.Deleted, CalendarEventCauses.FormStatus), (items["L-2"].Outcome, items["L-2"].Cause));
+            Assert.Equal(new CalendarEventFieldChange("flowStatus", "Decide", "Cancel"), Assert.Single(items["L-2"].Changes));
+            Assert.Equal((SyncRunItemOutcomes.Deleted, CalendarEventCauses.FormMissing), (items["L-3"].Outcome, items["L-3"].Cause));
+            Assert.Equal("王大明", items["L-1"].ApplicantName);
+            Assert.Equal(30, second.Run.LookbackDays);
+
+            Assert.All(await s.RowsAsync(), x => Assert.Null(x.PendingCause));
+        });
+    }
+
+    [Fact]
+    public async Task AFailedPushIsListedWithItsErrorAndKeepsItsCauseUntilItSucceeds()
+    {
+        await RunAsync(async s =>
+        {
+            var viewer = await ViewerAsync(s);
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Send");
+            await s.RunAsync();
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Decide'");
+            s.Google.RejectDescriptionContaining = "L-1";
+
+            var failed = await s.RunAsync();
+            var item = Assert.Single(await ItemsAsync(viewer, failed.Run!.Id));
+            Assert.Equal((SyncRunItemOutcomes.Failed, CalendarSyncFailures.GoogleRejected), (item.Outcome, item.ErrorCode));
+            Assert.NotNull(item.ErrorMessage);
+            Assert.Equal(CalendarEventCauses.Content, Assert.Single(await s.RowsAsync()).PendingCause);
+
+            s.Google.RejectDescriptionContaining = null;
+            var retried = await s.RunAsync(manual: true);
+            var success = Assert.Single(await ItemsAsync(viewer, retried.Run!.Id));
+            Assert.Equal(new CalendarEventFieldChange("flowStatus", "Send", "Decide"), Assert.Single(success.Changes));
+            Assert.Null(success.ErrorCode);
+        });
+    }
+
+    [Fact]
+    public async Task HeldRemovalsAreListedBeforeTheyAreConfirmed()
+    {
+        await RunAsync(async s =>
+        {
+            var viewer = await ViewerAsync(s);
+            foreach (var n in Enumerable.Range(1, 4)) s.Gd.AddLeave($"L-{n}", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+            foreach (var n in Enumerable.Range(1, 4)) s.Gd.Update("Form_Leave", $"L-{n}", "FlowOver = 'Cancel'");
+
+            var held = await s.RunAsync();
+
+            var items = await ItemsAsync(viewer, held.Run!.Id);
+            Assert.Equal(4, items.Count);
+            Assert.All(items, x => Assert.Equal((SyncRunItemOutcomes.Held, CalendarEventCauses.FormStatus), (x.Outcome, x.Cause)));
+            Assert.All(await s.RowsAsync(), x => Assert.Null(x.PendingCause));
+        });
+    }
+
+    [Fact]
+    public async Task ItemsOfAnUnknownRunAreNotFound()
+    {
+        await RunAsync(async s =>
+        {
+            var viewer = await ViewerAsync(s);
+
+            await ProblemAssertions.AssertCodeAsync(await viewer.GetAsync($"/api/v1/calendar-sync/runs/{Guid.NewGuid()}/items"), HttpStatusCode.NotFound, "calendar_sync_run_not_found");
+        });
+    }
+
+    [Fact]
+    public async Task TheEventListShowsOnlyWhatSyncStillManagesUnlessHistoryIsAsked()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Gd.AddLeave("L-2", "G002", "A", Day.AddHours(8.5), Day.AddHours(12), "Decide");
+            await s.RunAsync();
+            s.Gd.Update("Form_Leave", "L-2", "FlowOver = 'Cancel'");
+            await s.RunAsync();
+            var ct = TestContext.Current.CancellationToken;
+            using (var scope = s.Factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var old = DateTimeOffset.UtcNow.AddDays(-400);
+                db.CalendarEvents.Add(new CalendarEvent
+                {
+                    CalendarId = CalendarId, DesNo = "L-9", Kind = CalendarEventKinds.Leave, ApplicantName = "陳小華", FlowStatus = "Decide",
+                    StartsAt = old, EndsAt = old.AddHours(1), ContentHash = new byte[CalendarEvent.HashLength], GoogleEventId = "old-9",
+                    State = CalendarEventStates.Synced, CreatedAt = old, UpdatedAt = old
+                });
+                await db.SaveChangesAsync(ct);
+            }
+            var viewer = await ViewerAsync(s);
+
+            async Task<string[]> DesNosAsync(string query)
+                => [.. (await viewer.GetFromJsonAsync<TablePage<CalendarSyncEventDto>>("/api/v1/calendar-sync/events" + query, ct))!.Items.Select(x => x.DesNo).Order()];
+            Assert.Equal(["L-1"], await DesNosAsync(""));
+            Assert.Equal(["L-1", "L-2", "L-9"], await DesNosAsync("?history=true"));
+        });
+    }
+
     [Fact]
     public async Task EachSegmentOfAMultiPeriodLeaveIsItsOwnEvent()
     {
@@ -318,6 +450,8 @@ public sealed class CalendarSyncRunnerTests
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 Assert.Equal(["other@example.test"], await db.SyncRuns.Select(x => x.CalendarId).ToListAsync(ct));
+                // 明細隨紀錄連帶刪除，保存期清理與重設都不必另外處理。
+                Assert.Empty(await db.SyncRunItems.ToListAsync(ct));
             }
             Assert.Contains("\"events\":2", Assert.Single(await AttendanceApi.AuditAsync(s.Factory, CalendarSyncAudit.Cleared.Name)).Details);
 

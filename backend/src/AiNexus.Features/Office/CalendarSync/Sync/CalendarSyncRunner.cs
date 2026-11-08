@@ -77,6 +77,8 @@ public sealed partial class CalendarSyncRunner(
                     .SetProperty(x => x.NextAttemptAt, (DateTimeOffset?)null)
                     .SetProperty(x => x.LastErrorCode, (string?)null)
                     .SetProperty(x => x.LastError, (string?)null)
+                    .SetProperty(x => x.PendingCause, CalendarEventCauses.Reset)
+                    .SetProperty(x => x.PendingChangesJson, (string?)null)
                     .SetProperty(x => x.UpdatedAt, now), ct);
 
             var stalled = 0;
@@ -124,9 +126,8 @@ public sealed partial class CalendarSyncRunner(
     private async Task PlanAsync(CalendarSyncOptions settings, bool confirmRemovals, Tally run, CancellationToken ct)
     {
         var calendarId = settings.CalendarId;
-        var windowStart = clock.GetUtcNow().AddDays(-settings.LookbackDays);
-        var known = await db.CalendarEvents.AsNoTracking()
-            .Where(x => x.CalendarId == calendarId && x.State != CalendarEventStates.Removed && x.EndsAt >= windowStart)
+        var windowStart = settings.WindowStart(clock.GetUtcNow());
+        var known = await db.CalendarEvents.AsNoTracking().OfCalendar(calendarId).InSyncWindow(windowStart)
             .Select(x => new KnownEvent(x.Id, x.DesNo, x.SegmentKey, x.ContentHash, x.State, true, x.RemovedAt != null)).ToListAsync(ct);
 
         var desired = await source.ReadWindowAsync(windowStart, ct);
@@ -157,7 +158,7 @@ public sealed partial class CalendarSyncRunner(
         known = [.. known.DistinctBy(x => x.Id)];
 
         var plan = CalendarSyncPlanner.Plan(desired, known, settings.RemovalHoldRatio, settings.RemovalHoldMinimum, confirmRemovals);
-        if (plan.HeldRemovals > 0) run.Hold(plan.HeldRemovals);
+        if (plan.HeldRemovals.Count > 0) run.Hold(plan.HeldRemovals);
         if (plan.Total > 0) await ApplyAsync(calendarId, plan, ct);
     }
 
@@ -180,17 +181,24 @@ public sealed partial class CalendarSyncRunner(
         foreach (var change in plan.Changes)
         {
             var row = rows[change.Id];
+            CalendarEventChanges.NoteUpdate(row, change.Segment);
             row.RemovedAt = null;
             Describe(row, change.Segment, change.ContentHash, now);
         }
-        foreach (var id in plan.Removals)
+        var removed = plan.Removals.Select(id => rows[id]).ToList();
+        var flows = await ReadFlowsAsync(removed, ct);
+        foreach (var row in removed)
         {
-            var row = rows[id];
+            CalendarEventChanges.NoteRemoval(row, flows);
             row.RemovedAt = now;
             Queue(row, now);
         }
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>要移除的列，它們的單現在是什麼狀態；說明原因用，查不到（null）也照常移除。</summary>
+    private async Task<IReadOnlyDictionary<string, string>?> ReadFlowsAsync(IReadOnlyCollection<CalendarEvent> rows, CancellationToken ct)
+        => rows.Count == 0 ? null : await source.ReadFlowStatusesAsync([.. rows.Select(x => x.DesNo).Distinct(StringComparer.Ordinal)], ct);
 
     private static void Describe(CalendarEvent row, AbsenceSegment segment, byte[] hash, DateTimeOffset now)
     {
@@ -269,7 +277,8 @@ public sealed partial class CalendarSyncRunner(
             row.NextAttemptAt = now + (outcome.RetryAfter > backoff ? outcome.RetryAfter.Value : backoff);
             row.LastErrorCode = CalendarSyncFailures.Of(outcome.Status);
             row.LastError = Clip(outcome.Message ?? outcome.Status.ToString(), CalendarEvent.ErrorMaxLength);
-            run.Failed++;
+            // 待推送的原因留著：下次重試成功時，那一輪的明細才寫得出來。
+            run.Track(row, SyncRunItemOutcomes.Failed);
             return;
         }
 
@@ -282,12 +291,14 @@ public sealed partial class CalendarSyncRunner(
         row.NextAttemptAt = null;
         row.LastErrorCode = null;
         row.LastError = null;
-        switch (outcome.Result)
+        run.Track(row, outcome.Result switch
         {
-            case PushResult.Created: run.Created++; break;
-            case PushResult.Updated: run.Updated++; break;
-            default: run.Deleted++; break;
-        }
+            PushResult.Created => SyncRunItemOutcomes.Created,
+            PushResult.Updated => SyncRunItemOutcomes.Updated,
+            _ => SyncRunItemOutcomes.Deleted,
+        });
+        row.PendingCause = null;
+        row.PendingChangesJson = null;
     }
 
     private async Task<CalendarSyncOutcome> FinishAsync(CalendarSyncOptions settings, CalendarSyncRequest? request, Tally run, CancellationToken ct)
@@ -323,8 +334,12 @@ public sealed partial class CalendarSyncRunner(
                 HeldCount = run.Held,
                 ErrorCode = status is SyncRunStatuses.Failed or SyncRunStatuses.Held ? run.ErrorCode : null,
                 ErrorMessage = run.ErrorMessage is { } message ? Clip(message, SyncRun.ErrorMessageMaxLength) : null,
+                LookbackDays = settings.LookbackDays,
             };
             db.SyncRuns.Add(record);
+            await TrackHeldAsync(run, CancellationToken.None);
+            foreach (var item in run.Items.Values) item.RunId = record.Id;
+            db.SyncRunItems.AddRange(run.Items.Values);
             if (changed)
                 audit.Record(CalendarSyncAudit.Synced, Guid.Empty, resource: record.Id,
                     details: new { automatic = request is null, created = run.Created, updated = run.Updated, deleted = run.Deleted, failed = run.Failed });
@@ -340,18 +355,40 @@ public sealed partial class CalendarSyncRunner(
         return new(status, run.ErrorCode, run.Created, run.Updated, run.Deleted, run.Failed, run.Held, record);
     }
 
+    /// <summary>
+    /// 被擋下的移除也列進明細：管理員按「確認移除」前要看得到是哪些單、為什麼不見。
+    /// 只在這一輪要寫紀錄時才查：同一個問題持續時每一輪都會規劃出同一批，不必每輪讀一次。
+    /// </summary>
+    private async Task TrackHeldAsync(Tally run, CancellationToken ct)
+    {
+        if (run.HeldIds.Count == 0) return;
+        var rows = new List<CalendarEvent>(run.HeldIds.Count);
+        foreach (var chunk in run.HeldIds.Chunk(1000))
+            rows.AddRange(await db.CalendarEvents.AsNoTracking().Where(x => chunk.Contains(x.Id)).ToListAsync(ct));
+        var flows = await ReadFlowsAsync(rows, ct);
+        foreach (var row in rows)
+        {
+            CalendarEventChanges.NoteRemoval(row, flows);
+            run.Items[row.Id] = SyncRunItem.Snapshot(row, SyncRunItemOutcomes.Held);
+        }
+    }
+
     private static string Clip(string text, int max) => text.Length <= max ? text : text[..max];
 
-    /// <summary>一輪的累計。失敗與擋下分開記：擋下時其餘照常做完，失敗（GD、憑證）則是整輪的原因。</summary>
+    /// <summary>一輪的累計與逐筆明細。失敗與擋下分開記：擋下時其餘照常做完，失敗（GD、憑證）則是整輪的原因。</summary>
     private sealed class Tally(DateTimeOffset startedAt)
     {
         public DateTimeOffset StartedAt { get; } = startedAt;
         public int? SourceCount { get; set; }
-        public int Created { get; set; }
-        public int Updated { get; set; }
-        public int Deleted { get; set; }
-        public int Failed { get; set; }
-        public int Held { get; set; }
+        public int Created { get; private set; }
+        public int Updated { get; private set; }
+        public int Deleted { get; private set; }
+        public int Failed { get; private set; }
+        public IReadOnlyList<Guid> HeldIds { get; private set; } = [];
+        public int Held => HeldIds.Count;
+
+        /// <summary>依事件 ID：重設日曆會重試同一列，只留最後的結果。</summary>
+        public Dictionary<Guid, SyncRunItem> Items { get; } = [];
         public string? ErrorCode { get; private set; }
         public string? ErrorMessage { get; private set; }
 
@@ -361,11 +398,24 @@ public sealed partial class CalendarSyncRunner(
             ErrorMessage = message;
         }
 
-        public void Hold(int count)
+        /// <summary>記下一列的推送結果；數量與明細由這裡一起累計，兩邊不會對不起來。</summary>
+        public void Track(CalendarEvent row, string outcome)
         {
-            Held = count;
+            Items[row.Id] = SyncRunItem.Snapshot(row, outcome);
+            switch (outcome)
+            {
+                case SyncRunItemOutcomes.Created: Created++; break;
+                case SyncRunItemOutcomes.Updated: Updated++; break;
+                case SyncRunItemOutcomes.Deleted: Deleted++; break;
+                default: Failed++; break;
+            }
+        }
+
+        public void Hold(IReadOnlyList<Guid> ids)
+        {
+            HeldIds = ids;
             ErrorCode ??= CalendarSyncFailures.RemovalsHeld;
-            ErrorMessage ??= $"{count} removals exceed the safety threshold and wait for confirmation.";
+            ErrorMessage ??= $"{ids.Count} removals exceed the safety threshold and wait for confirmation.";
         }
     }
 

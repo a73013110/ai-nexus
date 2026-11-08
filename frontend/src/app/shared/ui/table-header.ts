@@ -36,8 +36,22 @@ import type { ColumnFilter } from './table-model';
       gap: var(--p-space-1);
       min-width: 0;
     }
+    /*
+     * 數字欄：標題要貼齊下方靠右的數字，排序與篩選圖示都放在標題左側。
+     * 放右側時圖示會把標題推開，窄欄裡數字看起來像是隔壁欄的。還沒排序的隱形圖示不佔位，篩選鈕才緊鄰自己的標題。
+     */
+    :host(.ui-table-numeric) .ui-table-sort-idle {
+      display: none;
+    }
     :host(.ui-table-numeric) .ui-table-heading {
       justify-content: flex-end;
+    }
+    :host(.ui-table-numeric) .ui-table-sort {
+      width: auto;
+    }
+    :host(.ui-table-numeric) .ui-table-sort nx-icon,
+    :host(.ui-table-numeric) .ui-table-filter-trigger {
+      order: -1;
     }
     .ui-table-sort-idle {
       opacity: 0;

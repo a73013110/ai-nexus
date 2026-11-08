@@ -42,6 +42,9 @@ public sealed class SyncRun
     public string? ErrorCode { get; set; }
 
     public string? ErrorMessage { get; set; }
+
+    /// <summary>這一輪比對的回看天數；設定因站台而異（共用資料庫），紀錄才看得出當時的範圍。明細上線前的紀錄為 null。</summary>
+    public int? LookbackDays { get; set; }
 }
 
 public static class SyncRunTriggers

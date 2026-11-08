@@ -1,29 +1,31 @@
 CREATE TABLE [calendarsync].[CalendarEvents] (
-    [Id]            UNIQUEIDENTIFIER   NOT NULL,
-    [CalendarId]    NVARCHAR (200)     NOT NULL,
-    [DesNo]         NVARCHAR (20)      NOT NULL,
-    [SegmentKey]    NVARCHAR (40)      NOT NULL,
-    [Kind]          NVARCHAR (16)      NOT NULL,
-    [ApplicantName] NVARCHAR (50)      NOT NULL,
-    [AgentName]     NVARCHAR (50)      NULL,
-    [FlowStatus]    NVARCHAR (16)      NOT NULL,
-    [StartsAt]      DATETIMEOFFSET (7) NOT NULL,
-    [EndsAt]        DATETIMEOFFSET (7) NOT NULL,
-    [ContentHash]   BINARY (32)        NOT NULL,
-    [GoogleEventId] NVARCHAR (1024)    NOT NULL,
-    [SyncedHash]    BINARY (32)        NULL,
-    [HtmlLink]      NVARCHAR (1000)    NULL,
-    [State]         NVARCHAR (16)      NOT NULL,
-    [RemovedAt]     DATETIMEOFFSET (7) NULL,
-    [Attempts]      INT                NOT NULL,
-    [NextAttemptAt] DATETIMEOFFSET (7) NULL,
-    [LastAttemptAt] DATETIMEOFFSET (7) NULL,
-    [LastErrorCode] NVARCHAR (64)      NULL,
-    [LastError]     NVARCHAR (500)     NULL,
-    [SyncedAt]      DATETIMEOFFSET (7) NULL,
-    [LegacyUuid]    NVARCHAR (200)     NULL,
-    [CreatedAt]     DATETIMEOFFSET (7) NOT NULL,
-    [UpdatedAt]     DATETIMEOFFSET (7) NOT NULL,
+    [Id]                 UNIQUEIDENTIFIER   NOT NULL,
+    [CalendarId]         NVARCHAR (200)     NOT NULL,
+    [DesNo]              NVARCHAR (20)      NOT NULL,
+    [SegmentKey]         NVARCHAR (40)      NOT NULL,
+    [Kind]               NVARCHAR (16)      NOT NULL,
+    [ApplicantName]      NVARCHAR (50)      NOT NULL,
+    [AgentName]          NVARCHAR (50)      NULL,
+    [FlowStatus]         NVARCHAR (16)      NOT NULL,
+    [StartsAt]           DATETIMEOFFSET (7) NOT NULL,
+    [EndsAt]             DATETIMEOFFSET (7) NOT NULL,
+    [ContentHash]        BINARY (32)        NOT NULL,
+    [GoogleEventId]      NVARCHAR (1024)    NOT NULL,
+    [SyncedHash]         BINARY (32)        NULL,
+    [HtmlLink]           NVARCHAR (1000)    NULL,
+    [State]              NVARCHAR (16)      NOT NULL,
+    [RemovedAt]          DATETIMEOFFSET (7) NULL,
+    [Attempts]           INT                NOT NULL,
+    [NextAttemptAt]      DATETIMEOFFSET (7) NULL,
+    [LastAttemptAt]      DATETIMEOFFSET (7) NULL,
+    [LastErrorCode]      NVARCHAR (64)      NULL,
+    [LastError]          NVARCHAR (500)     NULL,
+    [SyncedAt]           DATETIMEOFFSET (7) NULL,
+    [LegacyUuid]         NVARCHAR (200)     NULL,
+    [CreatedAt]          DATETIMEOFFSET (7) NOT NULL,
+    [UpdatedAt]          DATETIMEOFFSET (7) NOT NULL,
+    [PendingCause]       NVARCHAR (32)      NULL,
+    [PendingChangesJson] NVARCHAR (1000)    NULL,
     CONSTRAINT [pk_CalendarEvents] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [ck_CalendarEvents_Attempts] CHECK ([Attempts]>=(0)),
     CONSTRAINT [ck_CalendarEvents_Error] CHECK ([State]=N'failed' OR [LastErrorCode] IS NULL AND [LastError] IS NULL),
@@ -145,6 +147,16 @@ EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'舊系統 E
 GO
 
 EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'下一次可以推送的時間；待同步時為空值或規劃當下，失敗時依退避延後。', @level0type = N'SCHEMA', @level0name = N'calendarsync', @level1type = N'TABLE', @level1name = N'CalendarEvents', @level2type = N'COLUMN', @level2name = N'NextAttemptAt';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'這一列排進推送的原因：content、restored、form_status、form_missing、segment_gone、unknown、reset；新事件或推送成功後為空值。', @level0type = N'SCHEMA', @level0name = N'calendarsync', @level1type = N'TABLE', @level1name = N'CalendarEvents', @level2type = N'COLUMN', @level2name = N'PendingCause';
+
+
+GO
+
+EXECUTE sp_addextendedproperty @name = N'MS_Description', @value = N'待推送的欄位變更（JSON 陣列：field、from、to）；推送成功後為空值。', @level0type = N'SCHEMA', @level0name = N'calendarsync', @level1type = N'TABLE', @level1name = N'CalendarEvents', @level2type = N'COLUMN', @level2name = N'PendingChangesJson';
 
 
 GO

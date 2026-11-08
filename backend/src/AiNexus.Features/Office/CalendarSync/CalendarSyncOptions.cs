@@ -47,6 +47,9 @@ public sealed class CalendarSyncOptions : IValidatableObject
     /// <summary>執行紀錄（<c>calendarsync.SyncRuns</c>）的保存天數。</summary>
     [Range(7, 3650)] public int RunRetentionDays { get; set; } = 180;
 
+    /// <summary>期間窗的起點：結束時間不早於它的事件才比對。</summary>
+    public DateTimeOffset WindowStart(DateTimeOffset now) => now.AddDays(-LookbackDays);
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (Enabled && string.IsNullOrWhiteSpace(CalendarId))

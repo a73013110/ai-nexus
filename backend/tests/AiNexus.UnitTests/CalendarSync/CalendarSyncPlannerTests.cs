@@ -66,11 +66,11 @@ public sealed class CalendarSyncPlannerTests
         var known = Enumerable.Range(1, 5).Select(x => Known(Segment($"A00{x}"))).ToList();
         var held = Plan([Segment("A001")], known);
         Assert.Empty(held.Removals);
-        Assert.Equal(4, held.HeldRemovals);
+        Assert.Equal(4, held.HeldRemovals.Count);
 
         var confirmed = Plan([Segment("A001")], known, confirm: true);
         Assert.Equal(4, confirmed.Removals.Count);
-        Assert.Equal(0, confirmed.HeldRemovals);
+        Assert.Empty(confirmed.HeldRemovals);
     }
 
     [Fact]
@@ -79,6 +79,6 @@ public sealed class CalendarSyncPlannerTests
         var known = Enumerable.Range(1, 3).Select(x => Known(Segment($"A00{x}"))).ToList();
         var plan = Plan([Segment("A001")], known);
         Assert.Equal(2, plan.Removals.Count);
-        Assert.Equal(0, plan.HeldRemovals);
+        Assert.Empty(plan.HeldRemovals);
     }
 }

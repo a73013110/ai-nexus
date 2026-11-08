@@ -143,6 +143,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
     '還沒設定要同步的 Google 日曆 ID，請先在設定加上 CalendarSync:CalendarId。',
   calendar_sync_disabled: '這個站台沒有啟用 Google 日曆同步，無法手動同步。',
   calendar_sync_reset_mismatch: '本站設定的日曆已經換了，請重新整理頁面，確認日曆後再重設。',
+  calendar_sync_run_not_found: '找不到這一輪同步紀錄，可能已超過保存期；請重新整理。',
   scheduled_task_not_found: '找不到這個排程任務，可能已在新版移除；請重新整理頁面。',
   scheduled_task_unavailable: '這個排程任務在本站沒有啟用，無法手動執行；原因見任務說明。',
   invalid_file_name: '檔案名稱不正確或過長。',

@@ -5049,6 +5049,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "history",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -5150,6 +5157,73 @@
         "responses": {
           "204": {
             "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/calendar-sync/runs/{runId}/items": {
+      "get": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "ListCalendarSyncRunItems",
+        "parameters": [
+          {
+            "name": "runId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfCalendarSyncRunItemDto"
+                }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/Problem"
@@ -13326,6 +13400,31 @@
           }
         }
       },
+      "CalendarEventFieldChange": {
+        "required": [
+          "field",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "to": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CalendarSyncCalendarDto": {
         "required": [
           "calendarId",
@@ -13575,7 +13674,8 @@
           "failedCount",
           "heldCount",
           "errorCode",
-          "errorMessage"
+          "errorMessage",
+          "lookbackDays"
         ],
         "type": "object",
         "properties": {
@@ -13639,6 +13739,79 @@
           "heldCount": {
             "type": "integer",
             "format": "int32"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lookbackDays": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "CalendarSyncRunItemDto": {
+        "required": [
+          "eventId",
+          "outcome",
+          "desNo",
+          "kind",
+          "applicantName",
+          "startsAt",
+          "endsAt",
+          "cause",
+          "changes",
+          "errorCode",
+          "errorMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "eventId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outcome": {
+            "type": "string"
+          },
+          "desNo": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "applicantName": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cause": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarEventFieldChange"
+            }
           },
           "errorCode": {
             "type": [
@@ -22991,6 +23164,34 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/CalendarSyncRunDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TablePageOfCalendarSyncRunItemDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarSyncRunItemDto"
             }
           },
           "total": {

@@ -8,6 +8,9 @@ public static class CalendarSyncAudit
     /// <summary>事件清單列出誰在什麼時候請假、出差，屬於個人資料的查閱。</summary>
     public static readonly AuditAction EventRead = AuditAction.Access("calendar-sync.event.read", "查詢日曆同步事件");
     public static readonly AuditAction RunRead = AuditAction.Access("calendar-sync.run.read", "查詢日曆同步紀錄");
+
+    /// <summary>一輪的明細列出哪些人的假單被同步或移除，屬於個人資料的查閱。</summary>
+    public static readonly AuditAction RunItemRead = AuditAction.Access("calendar-sync.item.read", "查詢日曆同步明細");
     public static readonly AuditAction RunRequested = AuditAction.Administration("calendar-sync.run.requested", "手動同步 Google 日曆");
     public static readonly AuditAction ResetRequested = AuditAction.Administration("calendar-sync.reset.requested", "要求重設 Google 日曆");
     public static readonly AuditAction ConnectionTested = AuditAction.Administration("calendar-sync.connection.verified", "測試 Google 日曆連線");

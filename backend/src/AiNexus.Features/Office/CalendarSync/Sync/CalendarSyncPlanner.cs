@@ -15,8 +15,8 @@ public sealed record EventChange(Guid Id, AbsenceSegment Segment, byte[] Content
 /// <summary>新的一段期間。</summary>
 public sealed record EventCreation(AbsenceSegment Segment, byte[] ContentHash);
 
-/// <summary>一輪的規劃結果；<see cref="HeldRemovals"/> 大於 0 表示安全閥擋下了移除，<see cref="Removals"/> 為空。</summary>
-public sealed record CalendarSyncPlan(IReadOnlyList<EventCreation> Creations, IReadOnlyList<EventChange> Changes, IReadOnlyList<Guid> Removals, int HeldRemovals)
+/// <summary>一輪的規劃結果；<see cref="HeldRemovals"/> 不為空表示安全閥擋下了這些移除，<see cref="Removals"/> 為空。</summary>
+public sealed record CalendarSyncPlan(IReadOnlyList<EventCreation> Creations, IReadOnlyList<EventChange> Changes, IReadOnlyList<Guid> Removals, IReadOnlyList<Guid> HeldRemovals)
 {
     public int Total => Creations.Count + Changes.Count + Removals.Count;
 }
@@ -47,6 +47,6 @@ public static class CalendarSyncPlanner
             .Select(x => x.Id).ToList();
         var active = known.Count(x => x.InWindow && x.State != CalendarEventStates.Removed);
         var hold = !confirmRemovals && removals.Count >= holdMinimum && removals.Count > active * holdRatio;
-        return hold ? new(creations, changes, [], removals.Count) : new(creations, changes, removals, 0);
+        return hold ? new(creations, changes, [], removals) : new(creations, changes, removals, []);
     }
 }

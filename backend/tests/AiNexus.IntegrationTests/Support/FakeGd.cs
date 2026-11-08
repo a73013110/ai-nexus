@@ -134,6 +134,9 @@ internal sealed class FakeGd : IDisposable
     public void Update(string table, string desNo, string set, object? parameters = null)
         => Execute($"UPDATE [dbo].[{table}] SET {set} WHERE {(table == "Sys_User" ? "ID" : "DesNo")} = '{desNo}'", parameters);
 
+    /// <summary>刪掉一張表單，模擬單據在公文系統已不存在。</summary>
+    public void Remove(string table, string desNo) => Execute($"DELETE [dbo].[{table}] WHERE DesNo = '{desNo}'");
+
     /// <summary>加一個部門；<paramref name="parent"/> 照 GD 的寫法，0 表示最上層。<paramref name="deputies"/> 是 <c>DEP_ACHIEF</c> 的原始字串。</summary>
     public void AddDepartment(int no, string? name, int? parent = 0, string? chief = null, string? deputies = null, int? order = null, bool disabled = false)
         => Execute("INSERT [dbo].[Sys_User_DEPT_BAS] (DEP_NO, DEP_NAME, PARENT_NO, DEP_CHIEF, DEP_ACHIEF, OrderBy, [Disable]) VALUES (@no, @name, @parent, @chief, @deputies, @order, @disabled)",

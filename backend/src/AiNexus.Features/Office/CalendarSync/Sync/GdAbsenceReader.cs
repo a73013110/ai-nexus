@@ -51,6 +51,13 @@ public sealed class GdAbsenceReader(ExternalDatabase<GdDatabase> gd)
     private static readonly string WindowSql = Template.Replace("/*filter*/", "s.[EndsAt] >= @WindowStart", StringComparison.Ordinal);
     private static readonly string ByDesNoSql = Template.Replace("/*filter*/", "s.[DesNo] IN @DesNos", StringComparison.Ordinal);
 
+    // 不限流程狀態：要知道的正是單為什麼不再同步（退回、銷單、退回結案）。
+    private const string FlowSql = """
+        SELECT [DesNo], [FlowOver] AS FlowStatus FROM [dbo].[Form_Leave] WHERE [DesNo] IN @DesNos
+        UNION ALL
+        SELECT [DesNo], [FlowOver] FROM [dbo].[Form_Travel] WHERE [DesNo] IN @DesNos
+        """;
+
     /// <summary>結束時間不早於 <paramref name="windowStart"/> 的期間；GD 不可用時回 null（與空清單不同，呼叫端不可據此移除任何事件）。</summary>
     public async Task<IReadOnlyList<AbsenceSegment>?> ReadWindowAsync(DateTimeOffset windowStart, CancellationToken ct)
     {
@@ -64,6 +71,13 @@ public sealed class GdAbsenceReader(ExternalDatabase<GdDatabase> gd)
         if (desNos.Count == 0) return [];
         var rows = await gd.QueryInAsync<Row>(ByDesNoSql, desNos, batch => new { DesNos = batch }, ct);
         return rows is null ? null : Map(rows);
+    }
+
+    /// <summary>指定文號目前的流程狀態（文號 → FlowOver），查無此單的文號不在結果裡；GD 不可用時回 null。</summary>
+    public async Task<IReadOnlyDictionary<string, string>?> ReadFlowStatusesAsync(IReadOnlyCollection<string> desNos, CancellationToken ct)
+    {
+        var rows = await gd.QueryInAsync<FlowRow>(FlowSql, desNos, batch => new { DesNos = batch }, ct);
+        return rows?.DistinctBy(x => x.DesNo.Trim(), StringComparer.Ordinal).ToDictionary(x => x.DesNo.Trim(), x => x.FlowStatus.Trim(), StringComparer.Ordinal);
     }
 
     private static List<AbsenceSegment> Map(IEnumerable<Row> rows)
@@ -85,6 +99,12 @@ public sealed class GdAbsenceReader(ExternalDatabase<GdDatabase> gd)
 
     [return: NotNullIfNotNull(nameof(text))]
     private static string? Clip(string? text) => text is null || text.Length <= CalendarEvent.NameMaxLength ? text : text[..CalendarEvent.NameMaxLength];
+
+    private sealed class FlowRow
+    {
+        public string DesNo { get; init; } = "";
+        public string FlowStatus { get; init; } = "";
+    }
 
     private sealed class Row
     {

@@ -56,7 +56,7 @@
         tone="warning"
         [message]="
           held +
-          ' 個事件在公文系統已找不到，超過安全門檻，暫停移除。確認是單據撤回或銷單後，再按「確認移除」。'
+          ' 個事件在公文系統已找不到，超過安全門檻，暫停移除。\n到「執行紀錄」開啟這一輪，可看到是哪些單與原因。\n確認無誤後，再按「確認移除」。'
         "
       >
         @if (manage()) {
@@ -149,6 +149,15 @@
       [value]="calendar() ?? ''"
       (valueChange)="chooseCalendar($event)"
     />
+    @if (view() === 'events') {
+      <nx-select
+        appearance="pill"
+        label="事件範圍"
+        [options]="eventScopes"
+        [value]="history() ? 'history' : 'current'"
+        (valueChange)="history.set($event === 'history')"
+      />
+    }
     @if (status(); as current) {
       <p class="form-note">
         @if (current.lastCheck; as check) {
@@ -159,7 +168,7 @@
         } @else {
           尚未執行同步
         }
-        ・回看 {{ current.lookbackDays }} 天{{ current.enabled ? '' : '・本站未啟用同步' }}
+        ・本站回看 {{ current.lookbackDays }} 天{{ current.enabled ? '' : '・本站未啟用同步' }}
       </p>
     }
   </div>
@@ -334,6 +343,8 @@
           }
           <col nxTableColumn="triggerKind" class="calendar-sync-name-column" />
           <col nxTableColumn="status" />
+          <col nxTableColumn="duration" class="calendar-sync-count-column" />
+          <col nxTableColumn="sourceCount" class="calendar-sync-count-column" />
           <col nxTableColumn="createdCount" class="calendar-sync-count-column" />
           <col nxTableColumn="updatedCount" class="calendar-sync-count-column" />
           <col nxTableColumn="deletedCount" class="calendar-sync-count-column" />
@@ -347,6 +358,8 @@
             }
             <th nxHeader="triggerKind"></th>
             <th nxHeader="status"></th>
+            <th nxHeader="duration"></th>
+            <th nxHeader="sourceCount"></th>
             <th nxHeader="createdCount"></th>
             <th nxHeader="updatedCount"></th>
             <th nxHeader="deletedCount"></th>
@@ -355,9 +368,24 @@
         </thead>
         <tbody>
           @for (item of runRows(); track item.row.id) {
-            <tr>
+            <tr
+              nxTableRow
+              [class.is-selected]="selectedRunId() === item.row.id"
+              (rowActivate)="openRun(item.row.id)"
+            >
               <th scope="row" nxTableColumn="startedAt">
-                <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
+                <button
+                  type="button"
+                  class="ui-table-link ui-truncate"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'檢視同步明細：' + item.time"
+                  [attr.aria-controls]="runDrawer()?.drawerId()"
+                  [attr.aria-expanded]="selectedRunId() === item.row.id"
+                  (click)="openRun(item.row.id)"
+                >
+                  <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
+                </button>
               </th>
               @if (allCalendars()) {
                 <td nxTableColumn="calendarId" class="calendar-sync-code" data-label="日曆">
@@ -384,6 +412,12 @@
                   >
                 }
               </td>
+              <td nxTableColumn="duration" class="ui-table-numeric" data-label="耗時">
+                {{ item.duration }}
+              </td>
+              <td nxTableColumn="sourceCount" class="ui-table-numeric" data-label="來源">
+                {{ item.row.sourceCount }}
+              </td>
               <td nxTableColumn="createdCount" class="ui-table-numeric" data-label="新增">
                 {{ item.row.createdCount }}
               </td>
@@ -408,5 +442,12 @@
       />
     </nx-data-table>
   }
+  <nx-calendar-sync-run-drawer
+    [run]="selectedRun()"
+    [index]="selectedRunIndex()"
+    [count]="runs.rows().length"
+    (move)="adjacentRun($event)"
+    (closed)="selectedRunId.set(null)"
+  />
 </nx-feature-page>
 <nx-confirm-dialog />

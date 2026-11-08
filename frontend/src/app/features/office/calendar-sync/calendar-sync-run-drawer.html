@@ -1,0 +1,141 @@
+<nx-detail-drawer
+  title="同步明細"
+  preferenceKey="calendar-sync-run"
+  defaultSize="wide"
+  (closed)="closed.emit()"
+>
+  <nx-drawer-pager
+    drawer-actions
+    noun="執行紀錄"
+    [index]="index()"
+    [count]="count()"
+    (move)="move.emit($event)"
+  />
+  @if (summary(); as item) {
+    <nx-drawer-summary [heading]="item.time" [subtitle]="item.trigger">
+      <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
+    </nx-drawer-summary>
+  }
+  @if (summary(); as item) {
+    <div class="ui-drawer-sections ui-table-fill">
+      @if (item.problem) {
+        <nx-notice [tone]="item.tone" [message]="item.problem" />
+      }
+      <section aria-labelledby="run-info-heading">
+        <h3 class="ui-section-heading" id="run-info-heading">基本資訊</h3>
+        <dl class="ui-description-list">
+          <div>
+            <dt>耗時</dt>
+            <dd>{{ item.duration }}</dd>
+          </div>
+          <div>
+            <dt>公文系統筆數</dt>
+            <dd>{{ item.source }}</dd>
+          </div>
+          <div>
+            <dt>比對範圍</dt>
+            <dd>{{ item.window }}</dd>
+          </div>
+          <div>
+            <dt>新增</dt>
+            <dd>{{ item.run.createdCount }}</dd>
+          </div>
+          <div>
+            <dt>更新</dt>
+            <dd>{{ item.run.updatedCount }}</dd>
+          </div>
+          <div>
+            <dt>刪除</dt>
+            <dd>{{ item.run.deletedCount }}</dd>
+          </div>
+          <div>
+            <dt>失敗</dt>
+            <dd>{{ item.run.failedCount }}</dd>
+          </div>
+          @if (item.run.heldCount) {
+            <div>
+              <dt>等待確認移除</dt>
+              <dd>{{ item.run.heldCount }}</dd>
+            </div>
+          }
+          @if (item.run.errorMessage) {
+            <div class="ui-description-wide">
+              <dt>訊息</dt>
+              <dd>{{ item.run.errorMessage }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+      <!-- 明細表格放最後：資訊在上，表格吃剩下的高度到抽屜底，分頁列貼底。 -->
+      <nx-data-table
+        class="run-items"
+        label="事件明細"
+        [table]="items"
+        [stacked]="true"
+        preferenceKey="office-calendar-sync-run-items"
+      >
+        <div table-toolbar class="ui-table-toolbar">
+          <h3>事件明細</h3>
+        </div>
+        <table>
+          <caption class="sr-only">
+            這一輪處理的事件、結果與原因；欄位標題可排序與篩選。
+          </caption>
+          <colgroup>
+            <col nxTableColumn="outcome" class="run-items-outcome-column" />
+            <col nxTableColumn="applicantName" class="run-items-name-column" />
+            <col nxTableColumn="startsAt" class="run-items-time-column" />
+            <col nxTableColumn="reason" />
+            <col nxTableColumn="desNo" class="run-items-code-column" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th nxHeader="outcome"></th>
+              <th nxHeader="applicantName"></th>
+              <th nxHeader="startsAt"></th>
+              <th nxHeader="reason"></th>
+              <th nxHeader="desNo"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of itemRows(); track entry.row.eventId) {
+              <tr>
+                <td nxTableColumn="outcome">
+                  <nx-status-badge [tone]="entry.outcome.tone">{{
+                    entry.outcome.label
+                  }}</nx-status-badge>
+                </td>
+                <th scope="row" nxTableColumn="applicantName">
+                  <span class="ui-truncate">{{ entry.row.applicantName }}</span>
+                  <small>{{ entry.kind }}</small>
+                </th>
+                <td nxTableColumn="startsAt" data-label="期間">
+                  <time [attr.datetime]="entry.row.startsAt">{{ entry.period }}</time>
+                </td>
+                <td nxTableColumn="reason" data-label="原因">
+                  <div class="run-items-reason">
+                    @for (reason of entry.reasons; track reason) {
+                      <span>{{ reason }}</span>
+                    }
+                    @if (entry.problem) {
+                      <small [title]="entry.row.errorMessage ?? ''">{{ entry.problem }}</small>
+                    }
+                  </div>
+                </td>
+                <td nxTableColumn="desNo" class="run-items-code" data-label="文號">
+                  {{ entry.row.desNo }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <nx-table-state
+          loadingText="正在載入事件明細…"
+          errorTitle="無法取得事件明細"
+          emptyTitle="沒有事件明細"
+          emptyText="這一輪沒有推送事件，或是在明細功能上線前執行的。"
+        />
+      </nx-data-table>
+    </div>
+  }
+</nx-detail-drawer>
