@@ -32,6 +32,11 @@ export const adminRoutes: Routes = [
       (module) => module.monitoringRoutes,
     ),
   ),
+  moduleRoute('scheduling', () =>
+    import('@features/admin/scheduling/scheduling.routes').then(
+      (module) => module.schedulingRoutes,
+    ),
+  ),
   moduleRoute('audit', () =>
     import('@features/admin/audit/audit.routes').then((module) => module.auditRoutes),
   ),

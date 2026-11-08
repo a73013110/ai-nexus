@@ -72,6 +72,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 活動稽核 | 每個請求的登入、查閱、異動與拒絕紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
 | 功能使用量 | 依稽核統計各功能的使用人數、次數與失敗 | [功能使用量](docs/features/feature-usage.md) |
 | 系統日誌 | 查證代碼、錯誤與耗時、關聯流程；查詢／詳情／匯出分別授權 | [系統日誌](docs/features/system-logs.md) |
+| 背景作業 | 排程任務的倒數、執行中進度與最近幾輪結果，手動執行／停止／暫停；全部使用者的佇列工作 | [背景作業](docs/features/scheduling.md) |
 | 即時監控 | 在線人員與工作階段、API／SQL／HTTP 負載、操作時間軸 | [監控](docs/features/monitoring.md) |
 | 版本 | 使用者選單的版本與本版更新、新版提示、版本對照、正式機結構異動與並排差異、部署歷史 | [版本與結構異動](docs/features/releases.md) |
 | 郵件 | 系統信 outbox、SMTP／Google relay、重試與暫停、寄送紀錄、重寄與測試信 | [郵件寄送](docs/features/mail.md) |

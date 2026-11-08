@@ -11,6 +11,34 @@ public static class CalendarSyncErrors
 
     /// <summary>還沒設定日曆 ID，連線測試沒有對象。</summary>
     public static readonly Error CalendarNotConfigured = Error.Unprocessable("calendar_sync_calendar_not_configured");
+
+    // 以下是排程任務一輪的失敗（代碼必須與 CalendarSyncFailures 相同，前端依它顯示說明；單元測試比對），不回給任何請求；
+    // 一律 Unavailable：分類只影響 HTTP 狀態，背景任務用不到，用 4xx 反而要為不會顯示的提示審一句話。
+    public static readonly Error GoogleNotConfigured = Error.Unavailable("google_not_configured");
+    public static readonly Error GoogleCredentialsRejected = Error.Unavailable("google_credentials_rejected");
+    public static readonly Error GoogleForbidden = Error.Unavailable("google_forbidden");
+    public static readonly Error GoogleCalendarNotFound = Error.Unavailable("google_calendar_not_found");
+    public static readonly Error GoogleRateLimited = Error.Unavailable("google_rate_limited");
+    public static readonly Error GoogleUnavailable = Error.Unavailable("google_unavailable");
+    public static readonly Error GoogleRejected = Error.Unavailable("google_rejected");
+    public static readonly Error GdUnavailable = Error.Unavailable("gd_unavailable");
+    public static readonly Error RemovalsHeld = Error.Unavailable("removals_held");
+    public static readonly Error Unexpected = Error.Unavailable("unexpected");
+
+    /// <summary>一輪的失敗原因代碼對應的錯誤；不認得的代碼視為非預期。</summary>
+    public static Error Failure(string? code) => code switch
+    {
+        CalendarSyncFailures.GoogleNotConfigured => GoogleNotConfigured,
+        CalendarSyncFailures.GoogleCredentialsRejected => GoogleCredentialsRejected,
+        CalendarSyncFailures.GoogleForbidden => GoogleForbidden,
+        CalendarSyncFailures.GoogleCalendarNotFound => GoogleCalendarNotFound,
+        CalendarSyncFailures.GoogleRateLimited => GoogleRateLimited,
+        CalendarSyncFailures.GoogleUnavailable => GoogleUnavailable,
+        CalendarSyncFailures.GoogleRejected => GoogleRejected,
+        CalendarSyncFailures.GdUnavailable => GdUnavailable,
+        CalendarSyncFailures.RemovalsHeld => RemovalsHeld,
+        _ => Unexpected,
+    };
 }
 
 /// <summary>

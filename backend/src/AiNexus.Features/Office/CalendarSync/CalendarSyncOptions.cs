@@ -11,14 +11,11 @@ public sealed class CalendarSyncOptions : IValidatableObject
 {
     public const string Section = "CalendarSync";
 
-    /// <summary>是否執行背景同步與手動同步；關閉時管理頁仍可查看紀錄與測試連線。</summary>
+    /// <summary>是否執行背景同步與手動同步；關閉時管理頁仍可查看紀錄與測試連線。間隔是排程任務 <c>calendar-sync.sync</c> 的設定（<c>Scheduling:Tasks</c>）。</summary>
     public bool Enabled { get; set; }
 
     /// <summary>目標 Google 日曆的 ID（日曆設定的「整合日曆」，例如 <c>xxxx@group.calendar.google.com</c>）；日曆要分享給服務帳戶並給「變更活動」權限。</summary>
     [MaxLength(200)] public string CalendarId { get; set; } = "";
-
-    /// <summary>兩輪同步之間的間隔。</summary>
-    [Range(60, 3600)] public int IntervalSeconds { get; set; } = 300;
 
     /// <summary>
     /// 比對的期間窗：結束時間在這麼多天以前到未來的表單。窗外已同步的事件不再比對、也不刪除，

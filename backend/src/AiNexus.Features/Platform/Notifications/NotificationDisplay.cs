@@ -22,6 +22,8 @@ internal static class NotificationDisplay
         "repository-review" => FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "?review=" + id,
         // 結構異動是整個資料庫的狀態，沒有單一資料列可指，id 不使用。
         "schema-changes" => FeatureCatalog.RouteOf(FeatureCatalog.Releases),
+        // 排程任務以 Key 識別，id 是 Key 的雜湊，只用來讓同一任務的提醒互相取代，跳轉不使用。
+        "scheduled-task" => FeatureCatalog.RouteOf(FeatureCatalog.Scheduling),
         _ => null,
     };
 

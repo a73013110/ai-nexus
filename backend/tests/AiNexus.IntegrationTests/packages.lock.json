@@ -811,6 +811,7 @@
       "ainexus.platform": {
         "type": "Project",
         "dependencies": {
+          "Cronos": "[0.13.0, )",
           "Dapper": "[2.1.89, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "FluentValidation": "[12.1.1, )",
@@ -820,6 +821,12 @@
           "OpenTelemetry.Extensions.Hosting": "[1.19.1, )",
           "PuppeteerSharp": "[25.15.0, )"
         }
+      },
+      "Cronos": {
+        "type": "CentralTransitive",
+        "requested": "[0.13.0, )",
+        "resolved": "0.13.0",
+        "contentHash": "Nkve+Yi0+ol3ntSBRHeW0ka9cJQ8vndSUvvkXqF9LVqwpoqWueyxu/HS275r98RDOmF7/mzRnZW5XXUBXob+TA=="
       },
       "Dapper": {
         "type": "CentralTransitive",

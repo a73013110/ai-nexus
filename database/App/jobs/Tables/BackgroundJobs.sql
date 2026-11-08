@@ -54,6 +54,12 @@ CREATE NONCLUSTERED INDEX [IX_BackgroundJobs_SubjectId]
 
 GO
 
+CREATE NONCLUSTERED INDEX [ix_BackgroundJobs_CreatedAt]
+    ON [jobs].[BackgroundJobs]([CreatedAt] DESC);
+
+
+GO
+
 CREATE UNIQUE NONCLUSTERED INDEX [IX_BackgroundJobs_ActiveKey]
     ON [jobs].[BackgroundJobs]([ActiveKey] ASC) WHERE ([ActiveKey] IS NOT NULL);
 

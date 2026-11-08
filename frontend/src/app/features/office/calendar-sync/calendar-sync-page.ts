@@ -40,7 +40,7 @@ import {
 /** 同步進行中或剛按下立即同步時，狀態每 3 秒讀一次；平常 30 秒。 */
 const ACTIVE_POLL = 3000;
 const IDLE_POLL = 30000;
-/** 按下立即同步後最多加快輪詢多久；比一輪同步的時間長，又不會在被略過時一直快速輪詢。 */
+/** 按下立即同步後最多加快輪詢多久；比一輪同步的時間長，又不會在排程沒有執行（例如開發機）時一直快速輪詢。 */
 const AWAIT_LIMIT = 120000;
 
 const VIEWS = [
@@ -123,8 +123,8 @@ export class CalendarSyncPage {
   readonly failedTone = eventState('failed').tone;
 
   /**
-   * 按下立即同步後加快輪詢，到下一輪結束（`lastCheck.at` 改變）為止；背景工作可能還在前一輪，所以不看 `running`。
-   * 最多加快 {@link AWAIT_LIMIT}：另一個站台持有同步鎖時這一輪會被略過，`lastCheck` 不會變，不能一直每 3 秒讀。
+   * 按下立即同步後加快輪詢，到下一輪結束（`lastCheck.at` 改變）為止；正在跑的一輪結束後才會接著跑手動要求的這一輪，所以不看 `running`。
+   * 最多加快 {@link AWAIT_LIMIT}：回應的站台不執行排程（`Scheduling:Execute`）而其他站台也沒在跑時，`lastCheck` 不會變，不能一直每 3 秒讀。
    */
   private readonly awaitingUntil = signal<number | null>(null);
   private readonly statusRead = apiResource({

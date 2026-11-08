@@ -18,7 +18,7 @@ namespace AiNexus.Features.Office.Attendance;
 /// 假單與出差單由 <see cref="GdFormReader"/> 經 Gd 模組的 <see cref="GdAccounts"/> 與 <c>ExternalDatabase&lt;GdDatabase&gt;</c> 唯讀查詢公文系統（GD），連不上時降級而不拋例外；GD 的可用性接到即時監控（<c>gd</c>）。
 /// 單張表單的內容（<see cref="GetGdForm"/>）另用 Gd 模組的流程與附件讀取，附件經 RemoteFiles 的短期憑證下載。
 /// 假日設定經同一個 <c>ExternalDatabase&lt;GdDatabase&gt;</c> 查詢，經 <see cref="GdCalendarWriter"/> 回寫，兩者用同一個 <c>Databases:Gd</c>；設為 <c>ReadOnly=true</c> 時只停用回寫。
-/// 刷卡匯入由 <see cref="PunchImportWorker"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期區間重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
+/// 刷卡匯入由 <see cref="PunchImportTask"/> 定期掃描打卡機輸出資料夾，HR 也可以手動指定日期區間重匯；匯入狀態接到即時監控（<c>attendance-import</c>）。
 /// </summary>
 public sealed class AttendanceModule : IFeatureModule
 {

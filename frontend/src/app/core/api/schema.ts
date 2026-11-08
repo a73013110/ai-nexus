@@ -4732,6 +4732,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/scheduled-tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListScheduledTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-tasks/{key}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListScheduledTaskRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-tasks/{key}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RunScheduledTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-tasks/{key}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelScheduledTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-tasks/{key}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PauseScheduledTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/scheduled-tasks/{key}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResumeScheduledTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/background-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListQueuedJobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/background-jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelQueuedJob"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6128,7 +6256,7 @@ export interface components {
             icon: string;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "calendar-sync" | "calendar-sync.manage" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "calendar-sync" | "calendar-sync.manage" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "scheduling" | "scheduling.manage" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
@@ -8253,6 +8381,103 @@ export interface components {
             /** Format: date-time */
             retrievedAt: string;
         };
+        QueuedJobDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            label: string;
+            ownerName: string;
+            status: string;
+            stage: string;
+            /** Format: int32 */
+            attempt: number;
+            /** Format: int32 */
+            completedUnits: number;
+            /** Format: int32 */
+            totalUnits: null | number;
+            cancelRequested: boolean;
+            /** Format: date-time */
+            leaseUntil: null | string;
+            errorCode: null | string;
+            errorMessage: null | string;
+            issueCode: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        ScheduledTaskBoardDto: {
+            /** Format: date-time */
+            serverTime: string;
+            executesHere: boolean;
+            tasks: components["schemas"]["ScheduledTaskDto"][];
+        };
+        ScheduledTaskDto: {
+            key: string;
+            name: string;
+            category: string;
+            description: string;
+            schedule: string;
+            scheduleKind: string;
+            /** Format: int32 */
+            intervalSeconds: null | number;
+            /** Format: int32 */
+            timeoutSeconds: number;
+            unavailableReason: null | string;
+            isPaused: boolean;
+            pausedByName: null | string;
+            /** Format: date-time */
+            pausedAt: null | string;
+            /** Format: date-time */
+            nextRunAt: null | string;
+            /** Format: date-time */
+            runRequestedAt: null | string;
+            cancelRequested: boolean;
+            host: null | string;
+            /** Format: int32 */
+            consecutiveFailures: number;
+            currentRun: null | components["schemas"]["ScheduledTaskRunDto"];
+            lastRun: null | components["schemas"]["ScheduledTaskRunDto"];
+            recentRuns: components["schemas"]["ScheduledTaskRunDto"][];
+        };
+        ScheduledTaskRunDto: {
+            /** Format: uuid */
+            id: string;
+            taskKey: string;
+            triggerKind: string;
+            requestedByName: null | string;
+            host: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            finishedAt: null | string;
+            status: string;
+            stage: null | string;
+            /** Format: int32 */
+            completedUnits: null | number;
+            /** Format: int32 */
+            totalUnits: null | number;
+            summary: null | string;
+            errorCode: null | string;
+            errorMessage: null | string;
+            issueCode: null | string;
+        };
+        TablePageOfQueuedJobDto: {
+            items: components["schemas"]["QueuedJobDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
+        TablePageOfScheduledTaskRunDto: {
+            items: components["schemas"]["ScheduledTaskRunDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
     };
     responses: {
         /** @description Problem details */
@@ -8634,6 +8859,12 @@ export type VerificationCodeRequest = components['schemas']['VerificationCodeReq
 export type VerifiedCredentialDto = components['schemas']['VerifiedCredentialDto'];
 export type WebSearchStatusDto = components['schemas']['WebSearchStatusDto'];
 export type WebSourceDto = components['schemas']['WebSourceDto'];
+export type QueuedJobDto = components['schemas']['QueuedJobDto'];
+export type ScheduledTaskBoardDto = components['schemas']['ScheduledTaskBoardDto'];
+export type ScheduledTaskDto = components['schemas']['ScheduledTaskDto'];
+export type ScheduledTaskRunDto = components['schemas']['ScheduledTaskRunDto'];
+export type TablePageOfQueuedJobDto = components['schemas']['TablePageOfQueuedJobDto'];
+export type TablePageOfScheduledTaskRunDto = components['schemas']['TablePageOfScheduledTaskRunDto'];
 export type ResponseProblem = components['responses']['Problem'];
 export type $defs = Record<string, never>;
 export interface operations {
@@ -14661,6 +14892,188 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListScheduledTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledTaskBoardDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListScheduledTaskRuns: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfScheduledTaskRunDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    RunScheduledTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    CancelScheduledTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    PauseScheduledTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ResumeScheduledTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListQueuedJobs: {
+        parameters: {
+            query?: {
+                offset?: number;
+                limit?: number;
+                sort?: string;
+                filter?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TablePageOfQueuedJobDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    CancelQueuedJob: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedJobDto"];
+                };
             };
             default: components["responses"]["Problem"];
         };

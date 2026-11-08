@@ -9,6 +9,8 @@ const TARGETS = new Map<string, { feature: RoutedId; suffix: (id: string) => str
   ['repository-review', { feature: 'repositories', suffix: (id) => `?review=${id}` }],
   // 結構異動是整個資料庫的狀態，id 不使用（伺服器送空的 GUID）。
   ['schema-changes', { feature: 'releases', suffix: () => '' }],
+  // 排程任務連續失敗：id 由任務 key 雜湊而來，頁面不必反查；失敗的任務在背景作業頁本來就排在最前面。
+  ['scheduled-task', { feature: 'scheduling', suffix: () => '' }],
 ]);
 
 /** 通知指向的功能；不認得的種類為 `null`。 */

@@ -15,7 +15,6 @@ public sealed class FilesOptions : IValidatableObject
     public long DefaultOwnerLimitBytes { get; set; } = DefaultLimitBytes;
     /// <summary>站台目錄之外的絕對路徑；開發環境預設為 <c>.local/data/attachments</c>。</summary>
     public string StoragePath { get; set; } = "";
-    [Range(1, 1440)] public int CleanupIntervalMinutes { get; set; } = 60;
     [Range(1000, 256000)] public int MaxExtractedCharacters { get; set; } = 64000;
     [Range(1, 100)] public int MaxPdfPages { get; set; } = 40;
     [Range(1024, 16384)] public int ImageTokenEstimate { get; set; } = 4096;

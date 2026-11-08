@@ -10765,6 +10765,291 @@
           }
         }
       }
+    },
+    "/api/v1/scheduled-tasks": {
+      "get": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "ListScheduledTasks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduledTaskBoardDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/scheduled-tasks/{key}/runs": {
+      "get": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "ListScheduledTaskRuns",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfScheduledTaskRunDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/scheduled-tasks/{key}/run": {
+      "post": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "RunScheduledTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/scheduled-tasks/{key}/cancel": {
+      "post": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "CancelScheduledTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/scheduled-tasks/{key}/pause": {
+      "post": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "PauseScheduledTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/scheduled-tasks/{key}/resume": {
+      "post": {
+        "tags": [
+          "Scheduling"
+        ],
+        "operationId": "ResumeScheduledTask",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/background-jobs": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "operationId": "ListQueuedJobs",
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TablePageOfQueuedJobDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/background-jobs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "operationId": "CancelQueuedJob",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedJobDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -16291,6 +16576,8 @@
           "mail.messages",
           "mail.messages.resend",
           "releases",
+          "scheduling",
+          "scheduling.manage",
           "quality",
           "quality.retrieval",
           "design"
@@ -24127,6 +24414,408 @@
             "format": "date-time"
           }
         }
+      },
+      "QueuedJobDto": {
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "ownerName",
+          "status",
+          "stage",
+          "attempt",
+          "completedUnits",
+          "totalUnits",
+          "cancelRequested",
+          "leaseUntil",
+          "errorCode",
+          "errorMessage",
+          "issueCode",
+          "createdAt",
+          "updatedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "ownerName": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "attempt": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completedUnits": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalUnits": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "cancelRequested": {
+            "type": "boolean"
+          },
+          "leaseUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ScheduledTaskBoardDto": {
+        "required": [
+          "serverTime",
+          "executesHere",
+          "tasks"
+        ],
+        "type": "object",
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "executesHere": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledTaskDto"
+            }
+          }
+        }
+      },
+      "ScheduledTaskDto": {
+        "required": [
+          "key",
+          "name",
+          "category",
+          "description",
+          "schedule",
+          "scheduleKind",
+          "intervalSeconds",
+          "timeoutSeconds",
+          "unavailableReason",
+          "isPaused",
+          "pausedByName",
+          "pausedAt",
+          "nextRunAt",
+          "runRequestedAt",
+          "cancelRequested",
+          "host",
+          "consecutiveFailures",
+          "currentRun",
+          "lastRun",
+          "recentRuns"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "scheduleKind": {
+            "type": "string"
+          },
+          "intervalSeconds": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unavailableReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isPaused": {
+            "type": "boolean"
+          },
+          "pausedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pausedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "nextRunAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "runRequestedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "cancelRequested": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "consecutiveFailures": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currentRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScheduledTaskRunDto"
+              }
+            ]
+          },
+          "lastRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScheduledTaskRunDto"
+              }
+            ]
+          },
+          "recentRuns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledTaskRunDto"
+            }
+          }
+        }
+      },
+      "ScheduledTaskRunDto": {
+        "required": [
+          "id",
+          "taskKey",
+          "triggerKind",
+          "requestedByName",
+          "host",
+          "startedAt",
+          "finishedAt",
+          "status",
+          "stage",
+          "completedUnits",
+          "totalUnits",
+          "summary",
+          "errorCode",
+          "errorMessage",
+          "issueCode"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "taskKey": {
+            "type": "string"
+          },
+          "triggerKind": {
+            "type": "string"
+          },
+          "requestedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "host": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "stage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "completedUnits": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "totalUnits": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "errorMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "issueCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TablePageOfQueuedJobDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QueuedJobDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TablePageOfScheduledTaskRunDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduledTaskRunDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
       }
     },
     "responses": {
@@ -24178,6 +24867,9 @@
     },
     {
       "name": "Releases"
+    },
+    {
+      "name": "Scheduling"
     },
     {
       "name": "Attendance"
@@ -24360,6 +25052,11 @@
         "id": "releases",
         "area": "admin",
         "name": "版本"
+      },
+      {
+        "id": "scheduling",
+        "area": "admin",
+        "name": "背景作業"
       },
       {
         "id": "quality",
@@ -24818,6 +25515,26 @@
         "name": "版本與結構異動",
         "icon": "history",
         "route": "/admin/releases",
+        "scopes": [ ],
+        "managerScopes": [ ]
+      },
+      {
+        "id": "scheduling",
+        "kind": "page",
+        "module": "scheduling",
+        "name": "背景作業",
+        "icon": "clock",
+        "route": "/admin/scheduling",
+        "scopes": [ ],
+        "managerScopes": [ ]
+      },
+      {
+        "id": "scheduling.manage",
+        "kind": "action",
+        "module": "scheduling",
+        "name": "執行、停止與暫停排程任務",
+        "icon": "play",
+        "route": null,
         "scopes": [ ],
         "managerScopes": [ ]
       },

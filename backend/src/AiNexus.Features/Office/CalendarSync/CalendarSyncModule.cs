@@ -10,10 +10,10 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Office.CalendarSync;
 
 /// <summary>
-/// Google 日曆同步：<see cref="Sync.CalendarSyncWorker"/> 定期把 GD 的假單、出差單（簽核中與已核准，回看 <c>LookbackDays</c> 天）
+/// Google 日曆同步：排程任務 <see cref="Sync.CalendarSyncTask"/> 定期把 GD 的假單、出差單（簽核中與已核准，回看 <c>LookbackDays</c> 天）
 /// 同步成共用日曆上的事件。每段期間在 <c>calendarsync.CalendarEvents</c> 一列，推送冪等（事件 ID 由列 ID 決定），失敗依退避重試。
 /// Google 的呼叫交給 Google 模組（<see cref="IGoogleCalendar"/>）；管理頁看狀態、事件與執行紀錄，可立即同步與測試連線。
-/// 只在設定 <c>CalendarSync:Enabled</c> 的站台執行；開發與正式共用資料庫，列以日曆 ID 區隔，執行以 applock 保證只有一個。
+/// 只在設定 <c>CalendarSync:Enabled</c> 的站台執行；開發與正式共用資料庫，列以日曆 ID 區隔，排程任務的租約保證同時只有一個程序在同步。
 /// </summary>
 public sealed class CalendarSyncModule : IFeatureModule
 {

@@ -96,9 +96,10 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
         return await db.BackgroundJobs.SingleOrDefaultAsync(x => x.Kind == EmbeddingClearHandler.JobKind && x.SubjectId == subject && x.ActiveKey != null, ct)
             ?? jobs.Enqueue(actor, null, subject, EmbeddingClearHandler.JobKind, $"清除 {profile.Model} 退役向量");
     }
-    /// <summary>清除保留期已過的退役向量。由背景工作者呼叫，所以直接分批刪完；每批各自提交、不持鎖，理由同 <see cref="EmbeddingClearHandler"/>。</summary>
-    public async Task CleanupExpiredAsync(CancellationToken ct)
+    /// <summary>清除保留期已過的退役向量，回傳刪除的向量數。由排程任務呼叫，所以直接分批刪完；每批各自提交、不持鎖，理由同 <see cref="EmbeddingClearHandler"/>。</summary>
+    public async Task<int> CleanupExpiredAsync(CancellationToken ct)
     {
+        var total = 0;
         var expired = (await db.EmbeddingProfiles.AsNoTracking().Where(x => x.Status == "retired" && x.RetiredAt != null).ToListAsync(ct))
             .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.Embedding.RetiredRetentionDays)).ToArray();
         foreach (var profile in expired)
@@ -107,9 +108,11 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
             int deleted;
             do { deleted = await vectors.DeleteRetiredBatchAsync(profile, ct); cleared += deleted; } while (deleted > 0);
             if (cleared == 0) continue;
+            total += cleared;
             audit.Record(KnowledgeAudit.ProfileCleared, Guid.Empty, details: new { profileId = profile.Id, vectors = cleared, automatic = true });
             await db.SaveChangesAsync(ct);
         }
+        return total;
     }
     public async Task<Result<EmbeddingProfile>> RequireAsync(int id, CancellationToken ct)
         => await db.EmbeddingProfiles.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) is { } profile ? profile : KnowledgeErrors.ProfileNotFound;

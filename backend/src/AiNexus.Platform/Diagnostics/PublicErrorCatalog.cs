@@ -89,6 +89,8 @@ public static class PublicErrorCatalog
         ["authentication_required"] = "請先登入工作區。",
         ["calendar_sync_calendar_not_configured"] = "還沒設定要同步的 Google 日曆 ID，請先在設定加上 CalendarSync:CalendarId。",
         ["calendar_sync_disabled"] = "這個站台沒有啟用 Google 日曆同步，無法手動同步。",
+        ["scheduled_task_not_found"] = "找不到這個排程任務，可能已在新版移除；請重新整理頁面。",
+        ["scheduled_task_unavailable"] = "這個排程任務在本站沒有啟用，無法手動執行；原因見任務說明。",
         ["client_issue_invalid"] = "問題回報格式不正確。",
         ["collection_limit"] = "個人知識庫數量已達上限。",
         ["context_budget_exceeded"] = "提問超過此模型的上下文預算，請縮短內容或選擇較大上下文的模型。",

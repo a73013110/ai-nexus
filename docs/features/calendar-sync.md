@@ -1,6 +1,6 @@
 # Google 日曆同步
 
-結論：`CalendarSyncWorker` 定期把公文系統（GD）的假單與出差單同步成 Google 共用日曆上的事件，取代 ADAuthentication 的 `EDocSyncToGoogleCalendar`。管理頁（`/office/calendar-sync`）看狀態、事件與執行紀錄，可立即同步與測試連線。取捨見 [ADR 0034](../decisions/0034-calendar-sync.md)。
+結論：排程任務 `calendar-sync.sync`（[背景作業](scheduling.md)）定期把公文系統（GD）的假單與出差單同步成 Google 共用日曆上的事件，取代 ADAuthentication 的 `EDocSyncToGoogleCalendar`。管理頁（`/office/calendar-sync`）看狀態、事件與執行紀錄，可立即同步與測試連線。取捨見 [ADR 0034](../decisions/0034-calendar-sync.md)。
 
 ## 同步什麼
 
@@ -15,7 +15,7 @@
 - 推送失敗記在列上（原因代碼、訊息），依 1、2、4… 分鐘退避到 `MaxRetryDelayMinutes`；Google 給 `Retry-After` 時取較長者。憑證、權限或日曆找不到時整輪停下，不讓每列各記一次。
 - GD 連不上時這一輪不比對、不刪除任何事件。
 - **安全閥**：要移除的數量 ≥ `RemovalHoldMinimum` 且超過窗內事件的 `RemovalHoldRatio` 時暫停移除，管理頁按「確認移除」才執行。新增與更新照常。
-- 開發與正式共用資料庫：列以日曆 ID 區隔，執行以 applock 保證同時只有一個站台在跑。`Enabled` 預設 `false`，只在正式站打開。
+- 開發與正式共用資料庫：列以日曆 ID 區隔，同時只有一輪由排程租約保證，執行的站台由 `Scheduling:Execute` 決定。`Enabled` 預設 `false`，只在正式站打開。
 
 ## 設定
 
@@ -39,7 +39,7 @@
 ## 監控與日誌
 
 - 即時監控 `calendar-sync`：條件見 [監控來源](../architecture/monitoring-sources.md)。
-- 日誌 3700～3706（見 [日誌事件](../architecture/log-events.md)），只在狀態轉換時記，中斷期間不每輪洗版。
+- 日誌 3700～3704（見 [日誌事件](../architecture/log-events.md)），只在狀態轉換時記，中斷期間不每輪洗版。
 
 ## 從舊系統轉入
 

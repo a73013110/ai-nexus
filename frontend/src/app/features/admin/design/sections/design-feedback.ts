@@ -21,6 +21,7 @@ import { AssistantConversation } from '@features/platform/assistant/assistant-co
 import { AssistantPanel } from '@features/platform/assistant/assistant-panel';
 import type { ModelsDto } from '@core/api/schema';
 import { ApiError } from '@core/errors/safe-errors';
+import { DesignRunTiming } from './design-run-timing';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples, jobStates } from './design-samples';
 
@@ -110,6 +111,7 @@ function designAnswer(signal: AbortSignal) {
     AssistantPanel,
     CountBadge,
     DesignExample,
+    DesignRunTiming,
     DesignSection,
     EmptyState,
     FloatingPanel,

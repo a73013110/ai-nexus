@@ -23,7 +23,7 @@ public sealed record SchemaDefinitionDto(string SchemaName, string Name, string 
 /// update.sql 的前置檢查用同一支，所以網站與更新包對「異動」的判定一致。
 /// </summary>
 [Scoped]
-internal sealed partial class SchemaChangeReader(ISqlDatabase<AppDbContext> sql, ILogger<SchemaChangeReader> logger)
+public sealed partial class SchemaChangeReader(ISqlDatabase<AppDbContext> sql, ILogger<SchemaChangeReader> logger)
 {
     /// <summary>快照是空的（還沒有任何 update.sql 或建庫腳本寫入）時回傳空清單；是否有快照由 <see cref="HasSnapshotAsync"/> 分辨。</summary>
     public async Task<IReadOnlyList<SchemaChangeDto>> ListAsync(CancellationToken ct)

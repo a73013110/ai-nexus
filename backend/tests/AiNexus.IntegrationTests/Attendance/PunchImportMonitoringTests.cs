@@ -1,6 +1,11 @@
+using AiNexus.Data.App;
+using AiNexus.Data.App.Scheduling;
+using AiNexus.Features.Office.Attendance;
+using AiNexus.Features.Office.Attendance.Imports;
 using AiNexus.Features.Platform.Gd;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Monitoring;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using static AiNexus.IntegrationTests.Support.PunchSource;
 
@@ -61,6 +66,22 @@ public sealed class PunchImportMonitoringTests
         Assert.Equal(0, Fact(recovered, "failed_files"));
     }
 
+    /// <summary>排程引擎在測試裡不啟動，直接寫一筆它會留下的執行紀錄。</summary>
+    private static async Task RecordRunAsync(PunchImportSession session, string status, string? errorCode)
+    {
+        using var scope = session.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var at = session.Clock.GetUtcNow();
+        if (!await db.ScheduledTasks.AnyAsync(x => x.Key == PunchImportTask.Definition.Key, TestContext.Current.CancellationToken))
+            db.ScheduledTasks.Add(new() { Key = PunchImportTask.Definition.Key, UpdatedAt = at });
+        db.ScheduledTaskRuns.Add(new()
+        {
+            TaskKey = PunchImportTask.Definition.Key, TriggerKind = ScheduledTaskTriggers.Scheduled, Host = "test",
+            StartedAt = at, FinishedAt = at, Status = status, ErrorCode = errorCode,
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+    }
+
     /// <summary>測試時鐘從 2026-10-22（週四）10:00 開始；HAMS 沒有新刷卡就不寫檔，週末沒有匯入是正常的。</summary>
     [Fact]
     public async Task AWeekendWithoutImportsIsHealthyButAWholeMissedWorkdayIsNot()
@@ -107,15 +128,21 @@ public sealed class PunchImportMonitoringTests
     }
 
     [Fact]
-    public async Task AnUnreadableSourceFolderIsFailingAndADisabledImportIsIdle()
+    public async Task AnUnreadableSourceFolderIsFailingUntilAScanSucceedsAndADisabledImportIsIdle()
     {
         await using var session = await PunchImportSession.CreateAsync();
         session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
         await session.ScanAsync();
-        Directory.Delete(session.Source.Folder, recursive: true);
-        await session.ScanAsync();
+        // 來源讀不到沒有匯入列可看，監控讀排程任務最近一輪的結果，所以不論哪個程序掃描都一樣。
+        await RecordRunAsync(session, ScheduledTaskRunStatuses.Failed, AttendanceErrors.PunchSourceUnavailable.Code);
 
-        Assert.Equal(SubsystemStates.Failing, (await ReadAsync(session)).Status);
+        var down = await ReadAsync(session);
+        Assert.Equal(SubsystemStates.Failing, down.Status);
+        Assert.Equal("讀不到", down.Facts.Single(x => x.Id == "source").Text);
+
+        session.Clock.Advance(TimeSpan.FromMinutes(5));
+        await RecordRunAsync(session, ScheduledTaskRunStatuses.Idle, null);
+        Assert.Equal(SubsystemStates.Healthy, (await ReadAsync(session)).Status);
 
         await using var disabled = await PunchImportSession.CreateAsync(options => options.Import.Enabled = false);
         Assert.Equal(SubsystemStates.Idle, (await ReadAsync(disabled)).Status);

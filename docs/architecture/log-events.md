@@ -7,7 +7,7 @@
 - `backend/src` 內呼叫 `LogInformation`／`LogWarning` 等擴充方法會因 CA1848 編譯失敗（`.editorconfig`）。改在記錄的類別內宣告 `private static partial void LogXxx(ILogger logger, ...)`，類別加 `partial`。
 - 每個 `[LoggerMessage]` 要有 `EventId`（正整數）與以點分隔的 `EventName`；兩者在全部組件內不可重複，由 `LoggingTests` 檢查。
 - 模板只放受核准的屬性名（`DiagnosticRedactor.Fields`）；例外型別用 `{ErrorType}`，不要放例外訊息。
-- 範圍：1xxx HTTP 與錯誤、2xxx 檢索、3xxx 背景工作與生成、4xxx 前端回報、5xxx 服務生命週期、6xxx 檔案與分享、7xxx 身分與目錄。新事件取該區下一個號碼，並補進下表。
+- 範圍：1xxx HTTP 與錯誤、2xxx 檢索、3xxx 背景工作與生成（排程任務的失敗由引擎記 3801，任務本身不另記）、4xxx 前端回報、5xxx 服務生命週期、6xxx 檔案與分享、7xxx 身分與目錄。新事件取該區下一個號碼，並補進下表。
 - 等級不由事件決定時（`Issues.Report`），方法加 `LogLevel level` 參數、屬性不設 `Level`。被診斷 provider 刻意保留在最低等級以下的事件（`http.rejected`）要設 `SkipEnabledCheck = true`，否則產生的程式會先檢查 `IsEnabled` 而把它丟掉。
 - 框架或套件自己的日誌沒有 EventId 時，provider 以 Category＋模板的 SHA-256 產生穩定 ID；這不是業務識別，追查時同時看 Category。
 
@@ -19,10 +19,8 @@
 | 1003 | `audit.failure_unrecorded` | `Admin/Identity/RequestAudit.cs` |
 | 1004 | `admin_write.held_too_long` | `Admin/AccessControl/AdministrativeWrite.cs` |
 | 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` | `Knowledge/Retrieval/RetrievalDiagnostics.cs`、`Knowledge/Embeddings/RetrievalHttp.cs` |
-| 2003 | `embedding.bootstrap_deferred` | `Knowledge/Embeddings/EmbeddingBootstrapWorker.cs` |
 | 3000 / 3001 | `job.started` / `job.finished` | `Jobs/BackgroundJobWorker.cs` |
 | 3002 / 3003 | `job.queue_unavailable` / `job.lease_renewal_failed` | 同上 |
-| 3004 | `replay.cleanup_failed` | `Chat/Runs/RunEventRetentionWorker.cs` |
 | 3005 | `repository_review.brief_rejected` | `Repositories/Reviews/RepositoryReviewHandler.cs` |
 | 3006 | `monitoring.source_unavailable` | `Monitoring/Snapshots/SubsystemReadings.cs` |
 | 3100 / 3101 | `generation.started` / `generation.finished` | `Chat/Runs/GenerationWorker.cs`、`RunService.cs` |
@@ -30,26 +28,25 @@
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
 | 3300 / 3301 / 3302 | `mail.batch_sent` / `mail.delivery_retry` / `mail.delivery_failed` | `Mail/Delivery/MailDispatcher.cs` |
 | 3303 / 3304 / 3305 | `mail.transport_unavailable` / `mail.transport_restored` / `mail.queue_unavailable` | 同上 |
-| 3306 | `mail.retention_failed` | `Mail/Delivery/MailRetentionWorker.cs` |
 | 3307 | `mail.queue_advanced` | `Mail/Delivery/MailDispatcher.cs` |
 | 3308 | `mail.diagnosed` | `Mail/Transport/DiagnoseMailTransport.cs` |
 | 3400 / 3401 / 3402 | `attendance.import_succeeded` / `attendance.import_failed` / `attendance.import_requeued` | `Attendance/Imports/PunchImporter.cs` |
-| 3403 / 3404 / 3405 / 3406 | `attendance.source_unavailable` / `attendance.source_restored` / `attendance.import_aborted` / `attendance.scan_aborted` | `Attendance/Imports/PunchImportWorker.cs` |
+| 3405 | `attendance.import_aborted` | `Attendance/Imports/PunchImportTask.cs` |
 | 3407 / 3408 | `database.external_unavailable` / `database.external_restored`（所有外部資料庫共用，`Database` 欄位區分） | `Platform/Data/External/ExternalDatabase.cs` |
 | 3409 / 3410 | `attendance.calendar_write_failed` / `attendance.calendar_commit_failed` | `Attendance/Gd/GdCalendarWriter.cs` |
 | 3411 | `database.external_query_rejected` | 同上 |
-| 3500 / 3501 / 3502 | `releases.schema_changes_read` / `releases.schema_changes_found` / `releases.schema_check_failed` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatch.cs` |
-| 3600 | `notifications.expiry_failed` | `Notifications/NotificationExpiryWorker.cs` |
+| 3500 / 3501 | `releases.schema_changes_read` / `releases.schema_changes_found` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatchTask.cs` |
 | 3700 | `google.token_rejected` | `Platform/Google/GoogleAccessTokens.cs` |
 | 3701 / 3702 / 3703 / 3704 | `calendar_sync.synced` / `calendar_sync.run_failed` / `calendar_sync.restored` / `calendar_sync.removals_held` | `CalendarSync/Sync/CalendarSyncRunner.cs` |
-| 3705 / 3706 | `calendar_sync.run_aborted` / `calendar_sync.retention_failed` | `CalendarSync/Sync/CalendarSyncWorker.cs` |
+| 3800 / 3801 | `scheduling.run_started` / `scheduling.run_finished` | `Scheduling/Engine/ScheduledTaskRunner.cs` |
+| 3802 / 3803 / 3804 | `scheduling.heartbeat_failed` / `scheduling.finish_failed` / `scheduling.alert_failed` | 同上 |
+| 3805 | `scheduling.loop_failed` | `Scheduling/Engine/ScheduledTaskHost.cs` |
 | 3200 | `inference.provider_refused` | `Inference/Models/ModelCatalog.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
 | 5003 / 5004 / 5005 | `database.read_committed_snapshot_off` / `database.schema_mismatch` / `database.schema_drift` | `AiNexus.Data/App/DatabaseSchema.cs` |
-| 5006 / 5007 | `releases.app_deployed` / `releases.app_deployment_unrecorded` | `Releases/Versions/AppDeploymentRecorder.cs` |
-| 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
-| 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
+| 5006 | `releases.app_deployed` | `Releases/Versions/AppDeploymentTask.cs` |
+| 6001 / 6002 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` | `Files/Storage/AttachmentLifecycle.cs` |
 | 6201 | `gd.file_unavailable` | `Platform/Gd/GdFileSource.cs` |
 | 7001 | `identity.directory_rename_skipped` | `Identity/Users/DirectoryAccounts.cs` |
 | 7002 | `identity.directory_provisioned` | `Identity/Provisioning/DirectoryProvisioning.cs` |

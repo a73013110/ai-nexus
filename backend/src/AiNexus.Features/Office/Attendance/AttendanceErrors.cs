@@ -5,6 +5,9 @@ namespace AiNexus.Features.Office.Attendance;
 /// <summary>出勤模組的預期失敗。</summary>
 public static class AttendanceErrors
 {
+    /// <summary>排程掃描讀不到打卡檔的來源資料夾（網路共用不通或權限不足）；沒有檔案可記，所以算排程任務的失敗。</summary>
+    public static readonly Error PunchSourceUnavailable = Error.Unavailable("attendance_punch_source_unavailable");
+
     public static readonly Error CardNotFound = Error.NotFound("attendance_card_not_found");
     public static readonly Error CardNumberDuplicate = Error.Conflict("attendance_card_number_duplicate");
 

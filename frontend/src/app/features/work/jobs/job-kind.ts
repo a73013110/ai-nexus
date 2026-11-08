@@ -26,6 +26,16 @@ const KINDS: Record<string, { name: string; icon: string }> = {
   'repository-import': { name: '程式庫匯入', icon: 'git' },
 };
 
+/** 表格篩選用的類型與狀態選項；新增類型只改上面的對照表。 */
+export const JOB_KIND_OPTIONS = Object.entries(KINDS).map(([value, kind]) => ({
+  value,
+  label: kind.name,
+}));
+export const JOB_STATUS_OPTIONS = Object.entries(STATUSES).map(([value, status]) => ({
+  value,
+  label: status.label,
+}));
+
 /** 使用者閱讀的背景工作類型名稱。 */
 export function jobKindName(kind: string) {
   return KINDS[kind]?.name || '背景處理';

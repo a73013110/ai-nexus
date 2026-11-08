@@ -104,9 +104,9 @@ public sealed class ListNotificationsTests
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await db.Notifications.Where(x => x.OwnerId == other)
-                .ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow - NotificationExpiryWorker.UnreadFor - TimeSpan.FromHours(1)));
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow - NotificationExpiryTask.UnreadFor - TimeSpan.FromHours(1)));
         }
-        Assert.Equal(1, await ActivatorUtilities.CreateInstance<NotificationExpiryWorker>(factory.Services).ExpireAsync(CancellationToken.None));
+        Assert.Equal(1, await factory.InScopeAsync((NotificationExpiryTask task) => task.ExpireAsync(CancellationToken.None)));
         Assert.Equal(0, await UnreadAsync(bob));
     }
 }

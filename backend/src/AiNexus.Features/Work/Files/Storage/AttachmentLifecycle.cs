@@ -91,17 +91,17 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
     }
 
     /// <summary>
-    /// 最多回收 100 筆過期草稿。排程 Worker 回收所有人的；上傳時會傳入 <paramref name="owner"/>，
+    /// 最多回收 100 筆過期草稿，回傳筆數。排程任務回收所有人的；上傳時會傳入 <paramref name="owner"/>，
     /// 讓該擁有者的過期草稿不再計入即將檢查的配額，且只有他們的位元組會在這次呼叫中同步刪除。
     /// </summary>
-    public async Task ReclaimAsync(CancellationToken ct, Guid? owner = null)
+    public async Task<int> ReclaimAsync(CancellationToken ct, Guid? owner = null)
     {
         var now = clock.GetUtcNow();
         var cutoff = now.AddDays(-options.Value.DraftRetentionDays);
         var interrupted = now.AddHours(-1);
         var candidates = await ExpiredDrafts(cutoff, interrupted).AsNoTracking().Where(x => owner == null || x.OwnerId == owner)
             .OrderBy(x => x.CreatedAt).Take(100).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct);
-        if (owner is not null && candidates.Count == 0) return;
+        if (owner is not null && candidates.Count == 0) return 0;
         var reclaimed = new List<Guid>();
         foreach (var group in candidates.GroupBy(x => x.OwnerId))
         {
@@ -116,32 +116,41 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
         }
         if (owner is null) await DeletePendingAsync(null, ct);
         else if (reclaimed.Count > 0) await DeletePendingAsync(reclaimed, ct);
+        return reclaimed.Count;
     }
 
-    // 對帳只在排程 Worker 做，不在每次上傳時做。寬限期保護剛寫入的檔案；
-    // 一般上傳會先在 SQL 提交預約，之後才會出現檔案。
-    public async Task ReconcileAsync(CancellationToken ct)
+    // 對帳只在排程任務做，不在每次上傳時做。寬限期保護剛寫入的檔案；
+    // 一般上傳會先在 SQL 提交預約，之後才會出現檔案。回傳刪除的孤兒檔數。
+    public async Task<int> ReconcileAsync(CancellationToken ct)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
+        var removed = 0;
         await foreach (var key in storage.StaleKeysAsync(clock.GetUtcNow().AddDays(-1), ct))
         {
             keys.Add(key);
             if (keys.Count < 100) continue;
-            await RemoveUntrackedAsync(keys, ct);
+            removed += await RemoveUntrackedAsync(keys, ct);
             keys.Clear();
         }
-        if (keys.Count > 0) await RemoveUntrackedAsync(keys, ct);
+        if (keys.Count > 0) removed += await RemoveUntrackedAsync(keys, ct);
+        return removed;
     }
 
-    private async Task RemoveUntrackedAsync(IReadOnlySet<string> keys, CancellationToken ct)
+    private async Task<int> RemoveUntrackedAsync(IReadOnlySet<string> keys, CancellationToken ct)
     {
         var tracked = await db.Attachments.Where(x => keys.Contains(x.StorageKey)).Select(x => x.StorageKey).ToHashSetAsync(ct);
+        var removed = 0;
         foreach (var key in keys.Where(x => !tracked.Contains(x)))
         {
-            try { await storage.DeleteAsync(key, ct); }
+            try
+            {
+                await storage.DeleteAsync(key, ct);
+                removed++;
+            }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             { LogUntrackedDeletionDeferred(logger, key, ex.GetType().Name); }
         }
+        return removed;
     }
 
     [LoggerMessage(EventId = 6001, EventName = "attachment.delete_deferred", Level = LogLevel.Warning, Message = "Attachment {AttachmentId} deletion awaits retry ({ErrorType}).")]
@@ -149,28 +158,4 @@ public sealed partial class AttachmentLifecycle(AppDbContext db, IAttachmentStor
 
     [LoggerMessage(EventId = 6002, EventName = "attachment.untracked_delete_deferred", Level = LogLevel.Warning, Message = "Untracked attachment {StorageKey} deletion awaits retry ({ErrorType}).")]
     private static partial void LogUntrackedDeletionDeferred(ILogger logger, string storageKey, string errorType);
-}
-
-public sealed partial class AttachmentCleanupWorker(IServiceScopeFactory scopes, IOptions<FilesOptions> options, StorageReadiness readiness, ILogger<AttachmentCleanupWorker> logger) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        if (!readiness.Configured) return;
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(options.Value.CleanupIntervalMinutes));
-        do
-        {
-            try
-            {
-                using var scope = scopes.CreateScope();
-                var lifecycle = scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>();
-                await lifecycle.ReclaimAsync(stoppingToken);
-                await lifecycle.ReconcileAsync(stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-            catch (Exception ex) { LogCleanupDeferred(logger, ex.GetType().Name); }
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
-    }
-
-    [LoggerMessage(EventId = 6003, EventName = "attachment.cleanup_deferred", Level = LogLevel.Warning, Message = "Attachment cleanup awaits retry ({ErrorType}).")]
-    private static partial void LogCleanupDeferred(ILogger logger, string errorType);
 }

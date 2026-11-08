@@ -1,18 +1,20 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.CalendarSync;
-using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Office.CalendarSync.Sync;
 
-/// <summary>一輪的結果；<see cref="Run"/> 是寫入的執行紀錄（沒有異動的排程輪不寫，為 null）。<see cref="Skipped"/> 表示另一個程序正在同步。</summary>
-public sealed record CalendarSyncOutcome(string Status, string? ErrorCode, int Created, int Updated, int Deleted, int Failed, int Held, SyncRun? Run, bool Skipped = false);
+/// <summary>手動同步的請求：操作者與是否確認被安全閥擋下的移除。</summary>
+public sealed record CalendarSyncRequest(Guid RequestedBy, bool ConfirmRemovals);
+
+/// <summary>一輪的結果；<see cref="Run"/> 是寫入的執行紀錄（沒有異動的排程輪不寫，為 null）。</summary>
+public sealed record CalendarSyncOutcome(string Status, string? ErrorCode, int Created, int Updated, int Deleted, int Failed, int Held, SyncRun? Run);
 
 /// <summary>
 /// 執行一輪同步：讀 GD → 比對（<see cref="CalendarSyncPlanner"/>）→ 寫入待同步 → 推到 Google（<see cref="CalendarEventPusher"/>）→ 記錄。
 /// <list type="bullet">
-/// <item><b>單一執行者</b>：開發機與正式站共用資料庫，以連線擁有的應用程式鎖確保同一時間只有一個程序在同步；拿不到就略過這一輪。</item>
+/// <item><b>單一執行者</b>：由排程任務（<see cref="CalendarSyncTask"/>）的租約保證，開發機與正式站共用資料庫也不會同時同步。</item>
 /// <item><b>GD 不可用不刪除</b>：讀不到 GD 時不規劃（空清單與讀不到不同），只把先前排定的推送做完。</item>
 /// <item><b>推送平行、寫回分批</b>：每批同時送出 <see cref="CalendarSyncOptions.MaxParallelism"/> 個請求，結果一批寫回一次；
 /// 中途程序結束，已推送卻沒寫回的事件下一輪再推一次，推送是冪等的所以不會重複。</item>
@@ -25,45 +27,27 @@ public sealed partial class CalendarSyncRunner(
     GdAbsenceReader source,
     CalendarEventPusher pusher,
     AuditTrail audit,
-    CalendarSyncState state,
     IOptions<CalendarSyncOptions> options,
     TimeProvider clock,
     ILogger<CalendarSyncRunner> logger)
 {
-    private const string LockResource = "calendarsync.run";
-
     public async Task<CalendarSyncOutcome> RunAsync(CalendarSyncRequest? request, CancellationToken ct)
     {
         var settings = options.Value;
-        await using var runLock = await ApplicationLocks.TryAcquireSessionLockAsync(db.Database.GetConnectionString()!, LockResource, ct);
-        if (runLock is null) return new(SyncRunStatuses.Succeeded, null, 0, 0, 0, 0, 0, null, Skipped: true);
-
-        state.Started();
         var run = new Tally(clock.GetUtcNow());
-        var finished = false;
         try
         {
-            try
-            {
-                await PlanAsync(settings, request?.ConfirmRemovals == true, run, ct);
-                await PushAsync(settings, manual: request is not null, run, ct);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-            {
-                // 資料庫中斷、程式錯誤：已寫回的推送結果保留，這一輪記為失敗，下一輪從待同步的列接著做。
-                // 沒寫進去的變更要丟掉，否則寫執行紀錄時會連同它們再存一次、以同樣的原因失敗，這一輪就沒有紀錄。
-                db.ChangeTracker.Clear();
-                run.Fail(CalendarSyncFailures.Unexpected, ex.GetType().Name);
-            }
-            var outcome = await FinishAsync(settings, request, run, ct);
-            finished = true;
-            return outcome;
+            await PlanAsync(settings, request?.ConfirmRemovals == true, run, ct);
+            await PushAsync(settings, manual: request is not null, run, ct);
         }
-        finally
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
-            // 取消或連紀錄都寫不進去時，也要結束「執行中」，否則管理頁會一直顯示正在同步。
-            if (!finished) state.Finished(new(clock.GetUtcNow(), SyncRunStatuses.Failed, CalendarSyncFailures.Unexpected, 0));
+            // 資料庫中斷、程式錯誤：已寫回的推送結果保留，這一輪記為失敗，下一輪從待同步的列接著做。
+            // 沒寫進去的變更要丟掉，否則寫執行紀錄時會連同它們再存一次、以同樣的原因失敗，這一輪就沒有紀錄。
+            db.ChangeTracker.Clear();
+            run.Fail(CalendarSyncFailures.Unexpected, ex.GetType().Name);
         }
+        return await FinishAsync(settings, request, run, ct);
     }
 
     private async Task PlanAsync(CalendarSyncOptions settings, bool confirmRemovals, Tally run, CancellationToken ct)
@@ -239,12 +223,15 @@ public sealed partial class CalendarSyncRunner(
             : run.Held > 0 ? SyncRunStatuses.Held
             : run.Failed > 0 ? SyncRunStatuses.Partial
             : SyncRunStatuses.Succeeded;
-        var previous = state.LastCheck;
+        // 上一筆紀錄的問題就是目前持續中的問題：問題出現、換了原因或恢復時都會寫一筆，所以最新一筆一定反映最近的轉換。
+        var previous = await db.SyncRuns.AsNoTracking().Where(x => x.CalendarId == settings.CalendarId)
+            .OrderByDescending(x => x.StartedAt).Select(x => x.ErrorCode).FirstOrDefaultAsync(CancellationToken.None);
         var changed = run.Created + run.Updated + run.Deleted > 0;
-        // 同一個問題持續時不每一輪都寫紀錄：只在問題出現或換了原因時寫一次，其他輪看記憶體中的最後檢查。
-        var newProblem = run.ErrorCode is not null && previous?.ErrorCode != run.ErrorCode;
+        // 同一個問題持續時不每一輪都寫紀錄：只在問題出現、換了原因或恢復時寫一次，其他輪看排程任務的執行紀錄。
+        var newProblem = run.ErrorCode is not null && previous != run.ErrorCode;
+        var restored = run.ErrorCode is null && previous is not null;
         SyncRun? record = null;
-        if (request is not null || changed || run.Failed > 0 || newProblem)
+        if (request is not null || changed || run.Failed > 0 || newProblem || restored)
         {
             record = new SyncRun
             {
@@ -272,16 +259,9 @@ public sealed partial class CalendarSyncRunner(
         }
 
         // 日誌也只在狀態轉換時記，中斷期間不每一輪洗版。
-        var transitioned = state.Finished(new(finishedAt, status, run.ErrorCode, run.Held));
-        if (run.ErrorCode is null)
-        {
-            if (transitioned) LogRestored(logger);
-        }
-        else if (run.ErrorCode == CalendarSyncFailures.RemovalsHeld)
-        {
-            if (previous?.HeldCount is not > 0) LogRemovalsHeld(logger, run.Held);
-        }
-        else if (newProblem) LogRunFailed(logger, run.ErrorCode);
+        if (restored) LogRestored(logger);
+        else if (newProblem && run.ErrorCode == CalendarSyncFailures.RemovalsHeld) LogRemovalsHeld(logger, run.Held);
+        else if (newProblem) LogRunFailed(logger, run.ErrorCode!);
         if (changed) LogSynced(logger, run.Created, run.Updated, run.Deleted, run.Failed);
         return new(status, run.ErrorCode, run.Created, run.Updated, run.Deleted, run.Failed, run.Held, record);
     }

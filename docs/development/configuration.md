@@ -40,6 +40,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Files` | [`FilesOptions`](../../backend/src/AiNexus.Features/Work/Files/FilesOptions.cs) | — |
 | `Export.Pdf` | [`PdfOptions`](../../backend/src/AiNexus.Platform/Export/PdfOptions.cs) | — |
 | `Mail` | [`MailOptions`](../../backend/src/AiNexus.Features/Admin/Mail/MailOptions.cs)（[郵件](../features/mail.md)） | `Smtp.Password` |
+| `Scheduling` | [`SchedulingOptions`](../../backend/src/AiNexus.Features/Admin/Scheduling/SchedulingOptions.cs) | — |
 | `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Admin/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
 | `ReverseProxy` | [`ReverseProxyOptions`](../../backend/src/AiNexus.Platform/Http/ReverseProxyOptions.cs) | — |
@@ -57,12 +58,11 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 ## 第一次設定
 
-`./scripts/Configure-Local.ps1` 第一次從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼與 Google key（Enter 保留舊值）；秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接編輯 `.local/config/appsettings.Local.json`。IIS 的步驟見 [IIS 外部設定](../operations/iis-configuration.md)。
+`./scripts/Configure-Local.ps1` 第一次從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼與 Google key；秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接編輯 `.local/config/appsettings.Local.json`。IIS 的步驟見 [IIS 外部設定](../operations/iis-configuration.md)。
 
 ## 程式碼表達不了的注意事項
 
-- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。
-- **SQL 憑證**：`TrustServerCertificate=true` 只略過 SQL 憑證鏈驗證，連線仍加密；Production 也可用。
+- **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。`TrustServerCertificate=true` 只略過憑證鏈驗證，連線仍加密，Production 可用。
 - **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不列入模型清單。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不同台時，`Inference.Providers.Ollama.Endpoint` 要改成 GPU 主機位址（localhost 指 IIS 主機）。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。

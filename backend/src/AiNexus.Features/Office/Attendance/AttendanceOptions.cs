@@ -119,8 +119,6 @@ public sealed class PunchImportOptions : IValidatableObject
     /// </summary>
     [Required, MaxLength(260)] public string SourceDirectory { get; set; } = @"\\192.168.2.233\Data\HAMS\";
 
-    [Range(10, 86400)] public int ScanIntervalSeconds { get; set; } = 300;
-
     /// <summary>
     /// 最後修改時間離現在不到這麼久的檔案先不匯入：打卡機可能還在寫，讀到半行會讓整檔匯入失敗（失敗不影響資料，只是多一筆失敗紀錄與警示）。
     /// 0 表示不等待。

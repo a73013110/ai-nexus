@@ -1,6 +1,8 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Admin.Identity;
+using AiNexus.Features.Admin.Scheduling;
+using AiNexus.Features.Office.CalendarSync.Sync;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
@@ -14,22 +16,21 @@ namespace AiNexus.Features.Office.CalendarSync.Management;
 public sealed record CalendarSyncRunRequest(bool ConfirmRemovals);
 
 /// <summary>
-/// 立即同步一輪：排進背景工作後就回 204，不在請求內等 Google（第一次同步可能有數百筆）；管理頁輪詢狀態看結果。
+/// 立即同步一輪：排進排程任務後就回 204，不在請求內等 Google（第一次同步可能有數百筆）；管理頁輪詢狀態看結果。正在同步時排在這一輪之後。
 /// 手動同步不等失敗事件的退避時間，修好設定或權限後按一次就全部補上。未啟用時拒絕：只在正式站啟用，避免開發機改到正式日曆。
 /// </summary>
-internal sealed class StartCalendarSyncRun(CalendarSyncState state, AuditTrail audit, IOptions<CalendarSyncOptions> options) : IEndpointSlice
+internal sealed class StartCalendarSyncRun(ScheduledTasks tasks, AuditTrail audit, IOptions<CalendarSyncOptions> options) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
-        .MapPost("/runs", (CalendarSyncRunRequest body, ICurrentUser user, StartCalendarSyncRun handler) => handler.Handle(user.Id, body))
+        .MapPost("/runs", (CalendarSyncRunRequest body, ICurrentUser user, StartCalendarSyncRun handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct))
         .RequireFeature(FeatureCatalog.CalendarSyncManage)
         .Audited(CalendarSyncAudit.RunRequested)
         .WithName("StartCalendarSyncRun");
 
-    public Result Handle(Guid actor, CalendarSyncRunRequest request)
+    public async Task<Result> HandleAsync(Guid actor, CalendarSyncRunRequest request, CancellationToken ct)
     {
         audit.Describe(details: new { confirmRemovals = request.ConfirmRemovals });
         if (!options.Value.Enabled) return CalendarSyncErrors.Disabled;
-        state.Request(new(actor, request.ConfirmRemovals));
-        return Result.Success;
+        return await tasks.RequestRunAsync(CalendarSyncTask.Definition.Key, actor, new CalendarSyncParameters(request.ConfirmRemovals), ct);
     }
 }

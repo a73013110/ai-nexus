@@ -14,28 +14,28 @@ public sealed class SchemaChangeWatchTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using (await factory.SignedInAsync()) { }
         using (await factory.SignedInAsync("bob")) { }
-        var watch = ActivatorUtilities.CreateInstance<SchemaChangeWatch>(factory.Services);
+        Task<int> CheckAsync() => factory.InScopeAsync((SchemaChangeWatchTask task) => task.CheckAsync(CancellationToken.None));
 
-        Assert.Equal(0, await watch.CheckAsync(CancellationToken.None));
+        Assert.Equal(0, await CheckAsync());
         await SnapshotAsync(factory);
-        Assert.Equal(0, await watch.CheckAsync(CancellationToken.None));
+        Assert.Equal(0, await CheckAsync());
         Assert.Empty(await NotificationsAsync(factory));
 
         await HotfixProcedureAsync(factory, "operations", "usp_ListAdminUsers");
-        Assert.Equal(1, await watch.CheckAsync(CancellationToken.None));
-        Assert.Equal(1, await watch.CheckAsync(CancellationToken.None));
+        Assert.Equal(1, await CheckAsync());
+        Assert.Equal(1, await CheckAsync());
         // 只有版本頁的持有者（alice）收到，同一份異動清單不重複通知。
         var first = Assert.Single(await NotificationsAsync(factory));
         Assert.Equal(("alice", "schema-changes", false), first);
 
         await ExecuteAsync(factory, "CREATE TABLE [dbo].[Users_bak] ([Id] int NOT NULL);");
-        Assert.Equal(2, await watch.CheckAsync(CancellationToken.None));
+        Assert.Equal(2, await CheckAsync());
         // 新的異動清單取代舊的：兩則都在，但只有最新一則未讀。
         Assert.Equal([true, false], (await NotificationsAsync(factory)).Select(x => x.Read));
 
         // 異動回收（快照跟上目前結構）後，提醒自動撤下。
         await SnapshotAsync(factory);
-        Assert.Equal(0, await watch.CheckAsync(CancellationToken.None));
+        Assert.Equal(0, await CheckAsync());
         Assert.All(await NotificationsAsync(factory), x => Assert.True(x.Read));
     }
 

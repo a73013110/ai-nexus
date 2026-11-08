@@ -25,7 +25,7 @@
 
 - `Interrupts`：只在程序記憶體裡、停站即失敗、要使用者重來的工作。
 - `Resumes`：已存在資料庫、重啟後自動接續的工作，只是晚一點完成。
-- 目前：生成佇列回報排隊加生成中的回答為 `Interrupts`；背景工作、郵件回報等待加執行中為 `Resumes`。新增持有工作的背景服務（程序內佇列、durable job 以外的長工作）時一併回報，否則監控頁會說「可以停站」。
+- 目前：生成佇列回報排隊加生成中的回答為 `Interrupts`；背景工作、郵件回報等待加執行中、排程任務回報執行中為 `Resumes`。新增持有工作的背景服務（程序內佇列、durable job 以外的長工作）時一併回報，否則監控頁會說「可以停站」。
 
 [`StopReadiness`](../../backend/src/AiNexus.Features/Admin/Monitoring/Snapshots/StopReadiness.cs) 加總成快照的 `stop`：有 `Interrupts` 就是 `interrupts`；否則只要有子系統讀不到（尚未讀取或讀取失敗）就是 `unknown`，不在看不到的時候說可以停；其餘為 `clear`。
 
@@ -36,9 +36,10 @@
 | `generation` | Inference | 3 秒 | `GenerationScheduler` 記憶體計數 | 工作者未就緒 failing；佇列滿或排隊數 > 工作者 degraded |
 | `model-providers` | Inference | 15 秒 | `ModelCatalog` 既有快取（10 秒） | 全部不可用 failing；部分不可用 degraded |
 | `jobs` | Jobs | 30 秒 | `(Status, LeaseUntil, CreatedAt)` 索引 | 執行中租約過期或 1 小時內有失敗 degraded |
+| `scheduled-tasks` | Scheduling | 30 秒 | `ScheduledTasks` 每任務一列（只讀可執行的任務） | 過了執行時間 2 分鐘未開始、租約過期待接手，或最近一次失敗 degraded |
 | `mail` | Mail | 30 秒 | Pending 篩選索引、斷路器記憶體狀態 | 斷路器開著 failing；1 小時內有失敗或最久等待 > 10 分鐘 degraded；傳輸停用 idle |
-| `attendance-import` | Attendance | 30 秒 | `PunchFiles` 的最近一次匯入、`PunchImports` 的 `StartedAt` 索引、掃描結果（記憶體）；上次成功早於昨天才查 GD 行事曆 | 來源資料夾讀不到 failing；有檔案最近一次匯入失敗，或上次成功後有工作日整天過去（GD 行事曆）degraded；未啟用 idle |
-| `calendar-sync` | CalendarSync | 30 秒 | `ix_CalendarEvents_CalendarId_NextAttemptAt`（只含待同步與失敗）、最近一輪結果（記憶體） | 最近一輪無法執行 failing；有推送失敗、安全閥擋下移除，或待同步超過兩輪 degraded；未啟用 idle |
+| `attendance-import` | Attendance | 30 秒 | `PunchFiles` 的最近一次匯入、`PunchImports` 的 `StartedAt` 索引、排程任務最近一輪的結果；上次成功早於昨天才查 GD 行事曆 | 來源資料夾讀不到 failing；有檔案最近一次匯入失敗，或上次成功後有工作日整天過去（GD 行事曆）degraded；未啟用 idle |
+| `calendar-sync` | CalendarSync | 30 秒 | `ix_CalendarEvents_CalendarId_NextAttemptAt`（只含待同步與失敗）、最近一輪結果（排程任務的執行紀錄） | 最近一輪無法執行 failing；有推送失敗、安全閥擋下移除，或待同步超過兩輪 degraded；未啟用 idle |
 | `gd` | Gd（Platform 的 `ExternalDatabaseMonitoring`，每個[外部資料庫](external-databases.md)一張） | 30 秒 | 實際存取結果（出勤、組織匯入；記憶體）；30 秒內沒有存取時先 `SELECT 1` 探測 | 連不上或逾時 failing；1 小時內有查詢被拒（表、欄位、授權）degraded；未設定 idle |
 | `log-pipeline` | Diagnostics | 5 秒 | `DiagnosticHealth` 記憶體計數，日誌管線的完整指標（日誌頁只取 `Degraded`） | 有寫入失敗、遺失、損毀或待補寫 degraded |
 | `knowledge-index` | Knowledge | 30 秒 | 文件狀態索引，只數未完成與失敗 | 有失敗文件 degraded |

@@ -23,28 +23,28 @@ public sealed class MailRetentionTests
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().OutboundMessages.Where(x => x.Id == pending)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, MailStates.Queued).SetProperty(x => x.SentAt, (DateTimeOffset?)null));
-        var worker = ActivatorUtilities.CreateInstance<MailRetentionWorker>(factory.Services);
+        Task<MailPurge> PurgeAsync() => factory.InScopeAsync((MailRetentionTask task) => task.PurgeAsync(CancellationToken.None));
 
         clock.Advance(TimeSpan.FromDays(31));
-        Assert.Equal(new MailPurge(0, 1, 0, 0), await worker.PurgeAsync(CancellationToken.None));
+        Assert.Equal(new MailPurge(0, 1, 0, 0), await PurgeAsync());
         Assert.Null(await ContentAsync(factory, old));
         // 尚未結束的信不清理。
         Assert.NotNull(await ContentAsync(factory, pending));
 
         clock.Advance(TimeSpan.FromDays(60));
-        Assert.Equal(new MailPurge(0, 0, 1, 0), await worker.PurgeAsync(CancellationToken.None));
+        Assert.Equal(new MailPurge(0, 0, 1, 0), await PurgeAsync());
         var purged = await MessageAsync(factory, old);
         Assert.Null(purged.RecipientAddress);
         Assert.Equal("o***d@company.com", purged.RecipientMasked);
 
         clock.Advance(TimeSpan.FromDays(275));
-        Assert.Equal(new MailPurge(0, 0, 0, 1), await worker.PurgeAsync(CancellationToken.None));
+        Assert.Equal(new MailPurge(0, 0, 0, 1), await PurgeAsync());
         using var check = factory.Services.CreateScope();
         var db = check.ServiceProvider.GetRequiredService<AppDbContext>();
         Assert.Equal([pending], await db.OutboundMessages.Select(x => x.Id).ToListAsync());
         Assert.False(await db.DeliveryAttempts.AnyAsync(x => x.MessageId == old));
         // 每一輪清到資料就記一筆系統稽核，只有筆數；沒清到的一輪不記。
-        Assert.Equal(MailPurge.None, await worker.PurgeAsync(CancellationToken.None));
+        Assert.Equal(MailPurge.None, await PurgeAsync());
         var cleared = await db.AuditEvents.AsNoTracking().Where(x => x.Action == MailAudit.MessageCleared.Name).OrderBy(x => x.Id).ToListAsync();
         Assert.Equal(3, cleared.Count);
         Assert.All(cleared, x => Assert.Equal((Guid.Empty, AuditEvent.Completed), (x.OwnerId, x.Result)));
@@ -59,7 +59,7 @@ public sealed class MailRetentionTests
         await using var factory = new AppFactory(clock: clock);
         var id = await EnqueueAsync(factory, new Code(), "123456", "chen@company.com", new(ExpiresAt: clock.GetUtcNow().AddMinutes(15)));
         clock.Advance(TimeSpan.FromMinutes(16));
-        Assert.Equal(new MailPurge(1, 0, 0, 0), await ActivatorUtilities.CreateInstance<MailRetentionWorker>(factory.Services).PurgeAsync(CancellationToken.None));
+        Assert.Equal(new MailPurge(1, 0, 0, 0), await factory.InScopeAsync((MailRetentionTask task) => task.PurgeAsync(CancellationToken.None)));
         Assert.Equal((MailStates.Failed, MailFailures.Expired), ((await MessageAsync(factory, id)).Status, (await MessageAsync(factory, id)).ErrorCode));
         Assert.Null(await ContentAsync(factory, id));
     }

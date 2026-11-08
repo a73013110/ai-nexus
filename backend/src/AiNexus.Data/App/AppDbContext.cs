@@ -19,6 +19,7 @@ using AiNexus.Data.App.Prompts;
 using AiNexus.Data.App.Quality;
 using AiNexus.Data.App.Releases;
 using AiNexus.Data.App.Repositories;
+using AiNexus.Data.App.Scheduling;
 using AiNexus.Data.App.Sharing;
 using AiNexus.Data.App.WebSearches;
 using AiNexus.Platform.Diagnostics;
@@ -134,6 +135,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
     public DbSet<RepositoryPin> RepositoryPins => Set<RepositoryPin>();
     public DbSet<RepositoryReviewResult> RepositoryReviewResults => Set<RepositoryReviewResult>();
     public DbSet<RepositoryReview> RepositoryReviews => Set<RepositoryReview>();
+
+    public DbSet<ScheduledTaskRun> ScheduledTaskRuns => Set<ScheduledTaskRun>();
+    public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();
 
     public DbSet<ShareLink> ShareLinks => Set<ShareLink>();
     public DbSet<ShareRecipient> ShareRecipients => Set<ShareRecipient>();

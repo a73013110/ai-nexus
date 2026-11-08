@@ -90,6 +90,8 @@ public static class FeatureCatalog
     public const string MailMessages = "mail.messages";
     public const string MailMessagesResend = "mail.messages.resend";
     public const string Releases = "releases";
+    public const string Scheduling = "scheduling";
+    public const string SchedulingManage = "scheduling.manage";
     public const string Quality = "quality";
     public const string QualityRetrieval = "quality.retrieval";
     public const string Design = "design";
@@ -122,6 +124,7 @@ public static class FeatureCatalog
     private static readonly ModuleDefinition DiagnosticsModule = new("diagnostics", Admin, "診斷");
     private static readonly ModuleDefinition MailModule = new("mail", Admin, "郵件");
     private static readonly ModuleDefinition ReleasesModule = new(Releases, Admin, "版本");
+    private static readonly ModuleDefinition SchedulingModule = new(Scheduling, Admin, "背景作業");
     private static readonly ModuleDefinition QualityModule = new(Quality, Admin, "品質評測");
     private static readonly ModuleDefinition DesignModule = new(Design, Admin, "介面元件");
 
@@ -129,7 +132,7 @@ public static class FeatureCatalog
     [
         DashboardModule, ChatModule, ProjectsModule, FilesModule, KnowledgeModule, ArtifactsModule, SharingModule, JobsModule, RepositoriesModule, AttendanceModule,
         CalendarSyncModule, IdentityModule, AccessControlModule, OrganizationModule, OperationsModule, BillingModule, MonitoringModule, AuditModule, DiagnosticsModule,
-        MailModule, ReleasesModule, QualityModule, DesignModule,
+        MailModule, ReleasesModule, SchedulingModule, QualityModule, DesignModule,
     ];
 
     /// <summary>宣告順序即輸出到 OpenAPI 的順序。圖示名稱必須是前端 <c>shared/ui/icon.ts</c> 已有的名稱。</summary>
@@ -183,6 +186,9 @@ public static class FeatureCatalog
         new(MailMessagesResend, FeatureKind.Action, MailModule, "重寄與重試郵件", "repeat"),
         // 異動清單會顯示 procedure 本文，獨立授予（ADR 0028）。
         new(Releases, FeatureKind.Page, ReleasesModule, "版本與結構異動", "history"),
+        new(Scheduling, FeatureKind.Page, SchedulingModule, "背景作業", "clock"),
+        // 執行、停止與暫停會影響全站的資料清理與外部同步，與檢視分開授予。
+        new(SchedulingManage, FeatureKind.Action, SchedulingModule, "執行、停止與暫停排程任務", "play"),
         new(Quality, FeatureKind.Page, QualityModule, "品質評測", "shield"),
         new(QualityRetrieval, FeatureKind.Page, QualityModule, "檢索評測", "search"),
         // 介面元件工作臺是純前端頁面、沒有 API；獨立成一個 grant 才能單獨授予。

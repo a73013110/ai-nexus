@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.CalendarSync;
+using AiNexus.Features.Admin.Scheduling;
 using AiNexus.Platform.Monitoring;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -8,10 +9,10 @@ namespace AiNexus.Features.Office.CalendarSync;
 
 /// <summary>
 /// Google 日曆同步的監控。未啟用 idle；最近一輪無法執行（GD、憑證、權限、日曆）failing；有推送失敗的事件、安全閥擋下移除，
-/// 或待同步的事件放超過兩輪 degraded；其餘 healthy。啟動後還沒跑完第一輪時看資料庫裡的列。
+/// 或待同步的事件放超過兩輪 degraded；其餘 healthy。最近一輪讀排程任務的執行紀錄，所以不論哪個程序執行都看得到。
 /// 數字走 <c>ix_CalendarEvents_CalendarId_NextAttemptAt</c>（只含待同步與失敗的列），不掃整張表。
 /// </summary>
-internal sealed class CalendarSyncMonitoring(AppDbContext db, CalendarSyncState state, IOptions<CalendarSyncOptions> options, TimeProvider clock) : IMonitoringSource
+internal sealed class CalendarSyncMonitoring(AppDbContext db, ScheduledTasks tasks, IOptions<CalendarSyncOptions> options, TimeProvider clock) : IMonitoringSource
 {
     public string Id => "calendar-sync";
     public string Name => "Google 日曆同步";
@@ -31,8 +32,9 @@ internal sealed class CalendarSyncMonitoring(AppDbContext db, CalendarSyncState 
         var pending = queue.FirstOrDefault(x => x.State == CalendarEventStates.Pending);
         // 每輪最多推 MaxPushesPerRun 筆：大量待同步（第一次轉入）要好幾輪才推完，容許的時間跟著輪數放寬，正常排隊不算卡住。
         var rounds = pending is null ? 0 : (pending.Count + settings.MaxPushesPerRun - 1) / settings.MaxPushesPerRun;
-        var stale = pending is not null && now - pending.Oldest > TimeSpan.FromSeconds(settings.IntervalSeconds * (rounds + 1) + 60);
-        var check = state.LastCheck;
+        var progress = await CalendarSyncChecks.ReadAsync(tasks, db, settings.CalendarId, ct);
+        var stale = pending is not null && now - pending.Oldest > progress.Interval * (rounds + 1) + TimeSpan.FromMinutes(1);
+        var check = progress.LastCheck;
         double? sinceCheck = check is null ? null : Math.Max(0, Math.Round((now - check.At).TotalSeconds));
 
         var (status, summary) =

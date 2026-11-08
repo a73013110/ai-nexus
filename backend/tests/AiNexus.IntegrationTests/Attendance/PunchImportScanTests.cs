@@ -2,10 +2,9 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Attendance;
 using AiNexus.Data.App.Audit;
 using AiNexus.Features.Office.Attendance;
-using AiNexus.Features.Office.Attendance.Imports;
+using AiNexus.Platform.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using static AiNexus.IntegrationTests.Support.PunchSource;
 
 namespace AiNexus.IntegrationTests.Attendance;
@@ -159,29 +158,22 @@ public sealed class PunchImportScanTests
     }
 
     [Fact]
-    public async Task AnUnreadableSourceFolderIsReportedOnceAndRecovers()
+    public async Task AnUnreadableSourceFolderFailsTheRunAndRecovers()
     {
         await using var session = await PunchImportSession.CreateAsync();
-        var state = session.Factory.Services.GetRequiredService<PunchImportState>();
-        var log = new LogRecorder<PunchImportWorker>();
         Directory.Delete(session.Source.Folder, recursive: true);
 
-        var down = await session.ScanAsync(log);
+        var down = await session.RunAsync();
 
-        Assert.Equal(new PunchScanResult(false, 0, 0, 0, 0), down);
-        Assert.NotNull(state.SourceError);
-        // 沒有檔案可記錄，所以不會有匯入列。
+        // 沒有檔案可記錄，所以不會有匯入列；失敗留在排程的執行紀錄，監控讀它。
+        Assert.Equal(TaskOutcomeKind.Failed, down.Kind);
+        Assert.Equal(AttendanceErrors.PunchSourceUnavailable, down.Error);
         Assert.Empty(await session.ImportsAsync());
-        // 中斷期間每個週期都讀不到，日誌只在轉換時記一次。
-        Assert.False((await session.ScanAsync(log)).SourceAvailable);
-        Assert.Equal([(3403, LogLevel.Warning)], log.Recorded);
 
         Directory.CreateDirectory(session.Source.Folder);
         session.Source.Write(Oct1, [Line("A001", 10, 1, 8, 0)]);
-        var up = await session.ScanAsync(log);
+        var up = await session.ScanAsync();
 
         Assert.Equal((true, 1), (up.SourceAvailable, up.Imported));
-        Assert.Null(state.SourceError);
-        Assert.Equal([3403, 3404], log.Recorded.Select(x => x.Id));
     }
 }

@@ -11,7 +11,7 @@ namespace AiNexus.Features.Admin.Mail;
 
 /// <summary>
 /// 郵件寄送平台：其他模組透過 <see cref="MailOutbox"/> 在自己的交易內入列，<see cref="MailDispatcher"/> 在背景寄出，
-/// <see cref="MailRetentionWorker"/> 依保存期限清理。傳輸由 <c>Mail:Transport</c> 決定（SMTP、pickup 目錄或停用）。
+/// <see cref="MailRetentionTask"/> 依保存期限清理。傳輸由 <c>Mail:Transport</c> 決定（SMTP、pickup 目錄或停用）。
 /// 管理端的寄送紀錄（查詢、詳情、重寄、立即重試、以任一登記的系統信寄測試信）用來查證「到底有沒有寄出」，連線診斷用來查「為什麼寄不出」。
 /// </summary>
 public sealed class MailModule : IFeatureModule

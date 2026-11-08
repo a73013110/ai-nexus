@@ -28,6 +28,13 @@
 - 下拉面板一律經 [`anchored-popover.ts`](../../frontend/src/app/shared/browser/anchored-popover.ts) 開關：給 `trigger`，按觸發鈕關閉不會被輕關閉後又打開；選擇器另給 `closeOnFocusOut`（Tab 離開即關）。選擇器常被欄位 `<label>` 包住，它保證點面板的空白或文字不會被 label 轉成觸發鈕的 click，焦點也不會落到面板外。
 - 可換月的日曆（`MonthCalendar`、`DateTimePicker`）在格子上以滾輪換月，一律掛 [`wheel-step.ts`](../../frontend/src/app/shared/browser/wheel-step.ts) 的 `nxWheelStep`（累積觸控板捲動、換完短暫冷卻）；新的日曆也用它，不自己處理 `wheel`。
 
+## 計時與執行狀態
+
+- 排程任務、背景工作這類「下次何時跑、正在跑、跑得如何」的畫面用這一組，範例在 `/admin/design` 的「執行與計時」；用法見 [背景作業頁](../../frontend/src/app/features/admin/scheduling/scheduling-page.html)。
+- 倒數與經過時間用 `TickingTime`，裝飾性的圓環用 `TimerRing`；兩者都讀 [`ServerClock`](../../frontend/src/app/shared/browser/server-clock.ts)，頁面讀到伺服器時間就 `sync()`，同一頁的數字同時跳、不受使用者電腦時鐘誤差影響。不自己寫 `setInterval`。
+- 一次執行的狀態圖示用 `RunState`，最近幾輪用 `RunStrip`（顏色是結果、高度是耗時）。
+- 只有「後來才出現」的項目播進場動效：用 [`arrivals()`](../../frontend/src/app/shared/browser/arrivals.ts) 判斷，不要在第一次顯示後才加動效 class（已存在的元素一樣會播）。
+
 ## 程式碼與範例
 
 - 唯讀長文字用 `CodeBlock`：`language` 上色並保留縮排。自己排版的原始碼掛 [`highlighted-code.ts`](../../frontend/src/app/shared/markdown/highlighted-code.ts) 的 `code[nxHighlightedCode]`，不自己設 `textContent` 或呼叫 `highlightWhenVisible`。

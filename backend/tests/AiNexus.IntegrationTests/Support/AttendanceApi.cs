@@ -7,6 +7,7 @@ using AiNexus.Features.Office.Attendance;
 using AiNexus.Features.Office.Attendance.Cards;
 using AiNexus.Features.Office.Attendance.Imports;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
@@ -208,9 +209,13 @@ internal sealed class PunchImportSession : IAsyncDisposable
         return new() { Source = source, Factory = factory, Hr = await factory.SignedInAsync("hr"), HrId = hrId };
     }
 
-    /// <summary>執行一次排程掃描（hosted worker 在測試裡不啟動，由測試直接驅動）；<paramref name="log"/> 用來檢查 worker 的日誌。</summary>
-    public Task<PunchScanResult> ScanAsync(LogRecorder<PunchImportWorker>? log = null)
-        => ActivatorUtilities.CreateInstance<PunchImportWorker>(Factory.Services, log is null ? [] : [log]).ScanAsync(CancellationToken.None);
+    /// <summary>執行一次掃描（排程引擎在測試裡不啟動，由測試直接驅動）。</summary>
+    public Task<PunchScanResult> ScanAsync()
+        => ActivatorUtilities.CreateInstance<PunchImportTask>(Factory.Services).ScanAsync(CancellationToken.None);
+
+    /// <summary>以排程執行一輪的方式呼叫任務，取得它回報給引擎的結果。</summary>
+    public Task<TaskOutcome> RunAsync()
+        => ActivatorUtilities.CreateInstance<PunchImportTask>(Factory.Services).RunAsync(new(ScheduledTaskTrigger.Scheduled, null, null), CancellationToken.None);
 
     public async Task<Result<PunchImport>> ReimportAsync(string name, Guid? requestedBy = null)
     {
