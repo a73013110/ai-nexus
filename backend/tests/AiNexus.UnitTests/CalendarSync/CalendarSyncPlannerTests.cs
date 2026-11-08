@@ -51,6 +51,16 @@ public sealed class CalendarSyncPlannerTests
     }
 
     [Fact]
+    public void ARowWaitingForRemovalIsNotQueuedAgainButIsRevivedWhenWanted()
+    {
+        var segment = Segment("A001");
+        var removing = Known(segment, CalendarEventStates.Failed) with { Removing = true };
+
+        Assert.Equal(0, Plan([], [removing]).Total);
+        Assert.Equal(removing.Id, Assert.Single(Plan([segment], [removing]).Changes).Id);
+    }
+
+    [Fact]
     public void MassRemovalsAreHeldUntilConfirmed()
     {
         var known = Enumerable.Range(1, 5).Select(x => Known(Segment($"A00{x}"))).ToList();

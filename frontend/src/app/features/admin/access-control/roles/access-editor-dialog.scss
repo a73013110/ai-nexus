@@ -31,7 +31,6 @@
 }
 .access-scope-head h4 {
   @include optical.label-line-truncate;
-  min-width: 0;
   margin: 0;
   font-size: var(--text-label);
   font-weight: 600;

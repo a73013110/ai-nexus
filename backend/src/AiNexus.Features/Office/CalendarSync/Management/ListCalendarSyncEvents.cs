@@ -5,7 +5,6 @@ using AiNexus.Platform.Data.Tables;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Office.CalendarSync.Management;
 
@@ -15,6 +14,7 @@ namespace AiNexus.Features.Office.CalendarSync.Management;
 /// </summary>
 public sealed record CalendarSyncEventDto(
     Guid Id,
+    string CalendarId,
     string DesNo,
     string Kind,
     string ApplicantName,
@@ -34,23 +34,21 @@ public sealed record CalendarSyncEventDto(
     DateTimeOffset UpdatedAt);
 
 /// <summary>
-/// 目前設定的日曆上的事件，預設依開始時間新到舊；排序、篩選與分頁走共用的 <see cref="TableRequest"/>（ADR 0026）。
-/// 誰在什麼時候請假是個人資料，查詢寫稽核。
+/// 日曆上的事件，預設依開始時間新到舊；<c>calendarId</c> 只看一個日曆，省略時看全部（管理頁預設帶本站設定的日曆）。
+/// 排序、篩選與分頁走共用的 <see cref="TableRequest"/>（ADR 0026）。誰在什麼時候請假是個人資料，查詢寫稽核。
 /// </summary>
-internal sealed class ListCalendarSyncEvents(AppDbContext db, IOptions<CalendarSyncOptions> options) : IEndpointSlice
+internal sealed class ListCalendarSyncEvents(AppDbContext db) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
-        .MapGet("/events", ([AsParameters] TableRequest table, ListCalendarSyncEvents handler, CancellationToken ct) => handler.HandleAsync(table, ct))
+        .MapGet("/events", ([AsParameters] TableRequest table, string? calendarId, ListCalendarSyncEvents handler, CancellationToken ct)
+            => handler.HandleAsync(table, calendarId, ct))
         .Audited(CalendarSyncAudit.EventRead)
         .WithName("ListCalendarSyncEvents");
 
-    public Task<Result<TablePage<CalendarSyncEventDto>>> HandleAsync(TableRequest table, CancellationToken ct)
-    {
-        var calendarId = options.Value.CalendarId;
-        return db.CalendarEvents.AsNoTracking().Where(x => x.CalendarId == calendarId).ToTablePageAsync(table, Columns, rows => rows.Select(x => new CalendarSyncEventDto(
-            x.Id, x.DesNo, x.Kind, x.ApplicantName, x.AgentName, x.FlowStatus, x.StartsAt, x.EndsAt, x.State, x.RemovedAt != null, x.Attempts, x.NextAttemptAt,
+    public Task<Result<TablePage<CalendarSyncEventDto>>> HandleAsync(TableRequest table, string? calendarId, CancellationToken ct)
+        => db.CalendarEvents.AsNoTracking().OfCalendar(calendarId).ToTablePageAsync(table, Columns, rows => rows.Select(x => new CalendarSyncEventDto(
+            x.Id, x.CalendarId, x.DesNo, x.Kind, x.ApplicantName, x.AgentName, x.FlowStatus, x.StartsAt, x.EndsAt, x.State, x.RemovedAt != null, x.Attempts, x.NextAttemptAt,
             x.LastAttemptAt, x.LastErrorCode, x.LastError, x.SyncedAt, x.HtmlLink, x.UpdatedAt)), ct);
-    }
 
     /// <summary>欄位 ID 與 <see cref="CalendarSyncEventDto"/> 的屬性同名，前端在本機排序時直接取同名欄位。</summary>
     private static readonly TableColumns<CalendarEvent> Columns = new TableColumns<CalendarEvent>
@@ -59,6 +57,7 @@ internal sealed class ListCalendarSyncEvents(AppDbContext db, IOptions<CalendarS
         CompleteUpTo = 1000
     }
         .Range("startsAt", x => x.StartsAt)
+        .Text("calendarId", x => x.CalendarId)
         .Range("endsAt", x => x.EndsAt)
         .Text("desNo", x => x.DesNo)
         .Text("applicantName", x => x.ApplicantName)

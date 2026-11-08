@@ -11,8 +11,8 @@ namespace AiNexus.Features.Platform.Google.Calendar;
 public interface IGoogleCalendar
 {
     /// <summary>
-    /// 讀日曆的名稱與時區，用來確認日曆 ID 正確、服務帳戶有權限。走事件清單（取 0 筆）而不是 <c>calendars.get</c>：
-    /// 後者需要整個日曆的範圍，服務帳戶只拿 <see cref="GoogleCalendarClient.Scope"/>。
+    /// 讀日曆的名稱與時區，用來確認日曆 ID 正確、服務帳戶有權限。走事件清單（取 1 筆、只要名稱與時區）而不是 <c>calendars.get</c>：
+    /// 同步要的是讀寫事件，只看得到日曆、讀不到事件時這裡就要失敗。
     /// </summary>
     Task<GoogleResponse<GoogleCalendarInfo>> GetCalendarAsync(string calendarId, CancellationToken ct);
 
@@ -34,8 +34,11 @@ public sealed class GoogleCalendarClient(IHttpClientFactory clients, IOptions<Go
 {
     public const string HttpClientName = "Google.Calendar";
 
-    /// <summary>讀寫事件需要的範圍；服務帳戶只拿到這一個。</summary>
-    public const string Scope = "https://www.googleapis.com/auth/calendar.events";
+    /// <summary>
+    /// 換權杖時要求的範圍。網域委派只發管理控制台替用戶端 ID 列出的範圍（字串要完全相同，<c>calendar</c> 不涵蓋 <c>calendar.events</c>），
+    /// 舊系統的金鑰授權的是整個日曆，沿用同一把金鑰就要同一個範圍；改成較窄的範圍前要先在管理控制台加上它。
+    /// </summary>
+    public const string Scope = "https://www.googleapis.com/auth/calendar";
 
     private HttpClient Http => clients.CreateClient(HttpClientName);
     private TimeSpan Timeout => TimeSpan.FromSeconds(options.Value.TimeoutSeconds);

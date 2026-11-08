@@ -42,9 +42,7 @@
     >
   }
   @if (status(); as current) {
-    @if (!current.enabled) {
-      <nx-notice tone="info" message="這個站台沒有啟用同步，只能查看紀錄。" />
-    } @else if (current.lastCheck?.status === 'failed') {
+    @if (current.enabled && current.lastCheck?.status === 'failed') {
       <nx-notice tone="danger" [message]="failureText(current.lastCheck.errorCode)" />
     }
     @if (current.lastCheck?.heldCount; as held) {
@@ -92,13 +90,19 @@
       [tone]="result.succeeded ? 'success' : 'danger'"
       [message]="
         result.succeeded
-          ? '已連上「' +
+          ? '已用 ' +
+            (result.serviceAccount ?? '服務帳戶') +
+            ' 連上「' +
             (result.calendarSummary ?? status()?.calendarId) +
             '」（' +
             (result.calendarTimeZone ?? '時區未知') +
             '）。'
           : failureText(result.errorCode) +
-            (result.message ? '（Google：' + result.message + '）' : '')
+            (result.message ? '（Google：' + result.message + '）' : '') +
+            (result.serviceAccount
+              ? '
+服務帳戶：' + result.serviceAccount
+              : '')
       "
       [dismissible]="true"
       (dismissed)="connection.set(null)"
@@ -113,18 +117,6 @@
     />
   }
 
-  <nx-stat-grid label="同步摘要">
-    @for (tile of tiles(); track tile.key) {
-      <nx-stat-tile
-        [label]="tile.label"
-        [value]="tile.value"
-        [loading]="!status() && !statusError()"
-        [tone]="tile.tone ?? 'neutral'"
-        [exact]="tile.exact ?? ''"
-      />
-    }
-  </nx-stat-grid>
-
   <div class="page-toolbar">
     <nx-view-switch
       label="檢視"
@@ -133,11 +125,27 @@
       [value]="view()"
       (valueChange)="view.set($any($event))"
     />
+    <nx-select
+      class="calendar-sync-calendar"
+      appearance="pill"
+      label="日曆"
+      placeholder="全部日曆"
+      [options]="calendarOptions()"
+      [loading]="calendarsLoading()"
+      [value]="calendar() ?? ''"
+      (valueChange)="chooseCalendar($event)"
+    />
     @if (status(); as current) {
       <p class="form-note">
-        日曆 <span class="calendar-sync-code">{{ current.calendarId ?? '未設定' }}</span
-        >・服務帳戶 <span class="calendar-sync-code">{{ current.serviceAccount ?? '未設定' }}</span
-        >・回看 {{ current.lookbackDays }} 天
+        @if (current.lastCheck; as check) {
+          最近檢查
+          <time [attr.datetime]="check.at" [title]="formatDate(check.at)">{{
+            relativeTime(check.at)
+          }}</time>
+        } @else {
+          尚未執行同步
+        }
+        ・回看 {{ current.lookbackDays }} 天{{ current.enabled ? '' : '・本站未啟用同步' }}
       </p>
     }
   </div>
@@ -161,11 +169,20 @@
       class="calendar-sync-table calendar-sync-events"
       label="日曆事件"
       [table]="events"
+      [columns]="eventColumns()"
       [stacked]="true"
       preferenceKey="office-calendar-sync-events"
     >
       <div table-toolbar class="ui-table-toolbar">
-        <h2>日曆事件</h2>
+        <h2>
+          日曆事件
+          @if (counts().pending) {
+            <nx-status-badge [tone]="pendingTone">{{ counts().pending }} 待同步</nx-status-badge>
+          }
+          @if (counts().failed) {
+            <nx-status-badge [tone]="failedTone">{{ counts().failed }} 推送失敗</nx-status-badge>
+          }
+        </h2>
       </div>
       <table>
         <caption class="sr-only">
@@ -173,6 +190,9 @@
         </caption>
         <colgroup>
           <col nxTableColumn="startsAt" class="calendar-sync-time-column" />
+          @if (allCalendars()) {
+            <col nxTableColumn="calendarId" class="calendar-sync-calendar-column" />
+          }
           <col nxTableColumn="applicantName" class="calendar-sync-name-column" />
           <col nxTableColumn="kind" class="calendar-sync-short-column" />
           <col nxTableColumn="flowStatus" class="calendar-sync-short-column" />
@@ -183,6 +203,9 @@
         <thead>
           <tr>
             <th nxHeader="startsAt"></th>
+            @if (allCalendars()) {
+              <th nxHeader="calendarId"></th>
+            }
             <th nxHeader="applicantName"></th>
             <th nxHeader="kind"></th>
             <th nxHeader="flowStatus"></th>
@@ -197,6 +220,13 @@
               <td nxTableColumn="startsAt">
                 <time [attr.datetime]="item.row.startsAt">{{ item.period }}</time>
               </td>
+              @if (allCalendars()) {
+                <td nxTableColumn="calendarId" class="calendar-sync-code" data-label="日曆">
+                  <span class="ui-truncate" [title]="item.row.calendarId">{{
+                    item.row.calendarId
+                  }}</span>
+                </td>
+              }
               <th scope="row" nxTableColumn="applicantName">
                 @if (item.row.htmlLink && !item.row.removed) {
                   <a
@@ -270,6 +300,7 @@
       class="calendar-sync-table calendar-sync-runs"
       label="執行紀錄"
       [table]="runs"
+      [columns]="runColumns()"
       [stacked]="true"
       preferenceKey="office-calendar-sync-runs"
     >
@@ -282,6 +313,9 @@
         </caption>
         <colgroup>
           <col nxTableColumn="startedAt" class="calendar-sync-time-column" />
+          @if (allCalendars()) {
+            <col nxTableColumn="calendarId" class="calendar-sync-calendar-column" />
+          }
           <col nxTableColumn="triggerKind" class="calendar-sync-name-column" />
           <col nxTableColumn="status" />
           <col nxTableColumn="createdCount" class="calendar-sync-count-column" />
@@ -292,6 +326,9 @@
         <thead>
           <tr>
             <th nxHeader="startedAt"></th>
+            @if (allCalendars()) {
+              <th nxHeader="calendarId"></th>
+            }
             <th nxHeader="triggerKind"></th>
             <th nxHeader="status"></th>
             <th nxHeader="createdCount"></th>
@@ -306,6 +343,13 @@
               <th scope="row" nxTableColumn="startedAt">
                 <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
               </th>
+              @if (allCalendars()) {
+                <td nxTableColumn="calendarId" class="calendar-sync-code" data-label="日曆">
+                  <span class="ui-truncate" [title]="item.row.calendarId">{{
+                    item.row.calendarId
+                  }}</span>
+                </td>
+              }
               <td nxTableColumn="triggerKind" data-label="觸發">
                 {{ item.trigger }}
                 @if (item.row.requestedByName) {

@@ -30,6 +30,7 @@ public sealed class CalendarSyncModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api) => api.MapGroup("/calendar-sync").RequireFeature(FeatureCatalog.CalendarSync)
         .MapSlice<GetCalendarSyncStatus>()
+        .MapSlice<ListCalendarSyncCalendars>()
         .MapSlice<ListCalendarSyncEvents>()
         .MapSlice<ListCalendarSyncRuns>()
         .MapSlice<StartCalendarSyncRun>()

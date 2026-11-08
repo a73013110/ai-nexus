@@ -10,7 +10,7 @@
 ## 規則
 
 - 與指示物並排的**單行標題**（勾選框、單選、選單與 select 選項的名稱）用 `@include optical.label-line`。
-- 標題要以刪節號截斷時用 `optical.label-line-truncate`：修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與下伸部（g、y），它改用 `overflow: clip` 加裁切邊界。不要自己把 `text-box` 與 `overflow: hidden` 寫在一起。
+- 標題要以刪節號截斷時用 `optical.label-line-truncate`：修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與下伸部（g、y），它改用 `overflow: clip` 加裁切邊界，並把 `min-width` 歸零（`clip` 不是捲動容器，flex／grid 子項的最小寬度仍是整串文字），放進任何排版都會截斷，外層不必再補 `min-width: 0` 或 `minmax(0, 1fr)`。不要自己把 `text-box` 與 `overflow: hidden` 寫在一起。
 - 有說明行時，指示物只對齊**標題那一行**（grid：指示物與標題同一列、說明在下一列），說明再長也不會把方框拉到兩行中間。修剪後的標題沒有行距，標題與說明之間用 `gap`（`--p-space-1`）。
 - 多行內容的區塊（卡片標題＋說明、段落）不修剪；置中對齊的是整塊。
 - 可能換行的說明句前的圖示用 `optical.line-icon`（容器 `align-items: flex-start`）：圖示對齊第一行，不手調 `margin-top`。頭像這類不是圖示的指示物傳入它的高度，例：標籤旁的「頭像＋姓名＋單位」，頭像對齊姓名那一行、與標籤同一條中線。

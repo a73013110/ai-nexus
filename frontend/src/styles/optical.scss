@@ -32,8 +32,10 @@
 
 /// 同上，但放不下時以刪節號截斷。修剪後的盒子只有大寫字高，`overflow: hidden` 會切掉中文字與
 /// 下伸部（g、y）；改用 `clip` 並把裁切邊界往外放，只截斷行尾、不切字的上下緣。
+/// `clip` 不是捲動容器，在 flex／grid 裡最小寬度仍是整串文字，所以一併歸零，放進哪種排版都會截斷。
 @mixin label-line-truncate {
   @include label-line;
+  min-width: 0;
   overflow: clip;
   overflow-clip-margin: 0.5em;
   text-overflow: ellipsis;

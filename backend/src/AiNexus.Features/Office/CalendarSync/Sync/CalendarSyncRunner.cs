@@ -51,6 +51,8 @@ public sealed partial class CalendarSyncRunner(
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
             {
                 // 資料庫中斷、程式錯誤：已寫回的推送結果保留，這一輪記為失敗，下一輪從待同步的列接著做。
+                // 沒寫進去的變更要丟掉，否則寫執行紀錄時會連同它們再存一次、以同樣的原因失敗，這一輪就沒有紀錄。
+                db.ChangeTracker.Clear();
                 run.Fail(CalendarSyncFailures.Unexpected, ex.GetType().Name);
             }
             var outcome = await FinishAsync(settings, request, run, ct);
@@ -70,7 +72,7 @@ public sealed partial class CalendarSyncRunner(
         var windowStart = clock.GetUtcNow().AddDays(-settings.LookbackDays);
         var known = await db.CalendarEvents.AsNoTracking()
             .Where(x => x.CalendarId == calendarId && x.State != CalendarEventStates.Removed && x.EndsAt >= windowStart)
-            .Select(x => new KnownEvent(x.Id, x.DesNo, x.SegmentKey, x.ContentHash, x.State, true)).ToListAsync(ct);
+            .Select(x => new KnownEvent(x.Id, x.DesNo, x.SegmentKey, x.ContentHash, x.State, true, x.RemovedAt != null)).ToListAsync(ct);
 
         var desired = await source.ReadWindowAsync(windowStart, ct);
         if (desired is not null)
@@ -95,7 +97,7 @@ public sealed partial class CalendarSyncRunner(
         {
             known.AddRange(await db.CalendarEvents.AsNoTracking()
                 .Where(x => x.CalendarId == calendarId && chunk.Contains(x.DesNo))
-                .Select(x => new KnownEvent(x.Id, x.DesNo, x.SegmentKey, x.ContentHash, x.State, false)).ToListAsync(ct));
+                .Select(x => new KnownEvent(x.Id, x.DesNo, x.SegmentKey, x.ContentHash, x.State, false, x.RemovedAt != null)).ToListAsync(ct));
         }
         known = [.. known.DistinctBy(x => x.Id)];
 

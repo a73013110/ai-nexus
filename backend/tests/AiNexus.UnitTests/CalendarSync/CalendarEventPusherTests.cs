@@ -66,6 +66,16 @@ public sealed class CalendarEventPusherTests
     }
 
     [Fact]
+    public async Task ALegacyEventDeletedBeforeAdoptionIsCreatedAgainWithoutStoppingTheRun()
+    {
+        var google = new ScriptedCalendar { Found = [new GoogleCalendarEvent { Id = "legacy123" }], Update = GoogleStatus.NotFound };
+        var item = Item(legacy: "uuid-1");
+        var outcome = await new CalendarEventPusher(google).PushAsync(item, CancellationToken.None);
+        Assert.Equal(PushResult.Created, outcome.Result);
+        Assert.Equal(["find:UUID=uuid-1", "update:legacy123", "insert:" + item.GoogleEventId], google.Calls);
+    }
+
+    [Fact]
     public async Task RemovingAnUnconfirmedLegacyRowDeletesTheLegacyEvent()
     {
         var google = new ScriptedCalendar { Found = [new GoogleCalendarEvent { Id = "legacy123" }] };

@@ -16,12 +16,11 @@ import { action } from '@shared/browser/action';
 import { formatDate, formatNumber, relativeTime } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
-import type { BadgeTone } from '@shared/ui/count-badge';
 import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { StatGrid, StatTile } from '@shared/ui/stat-tile';
+import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { endpointTable } from '@shared/ui/table-model';
@@ -50,18 +49,11 @@ const VIEWS = [
 ] as const;
 type View = (typeof VIEWS)[number]['value'];
 
-interface StatItem {
-  key: string;
-  label: string;
-  value: string | null;
-  tone?: BadgeTone;
-  exact?: string;
-}
-
 /**
- * Google 日曆同步（`calendar-sync`）：上方是狀態與數量，下方切換日曆事件與執行紀錄。
- * 有 `calendar-sync.manage` 時可立即同步、確認被安全閥擋下的移除與測試連線。
- * 一輪結束（`lastCheck.at` 改變）時重讀目前的表格；事件沒有詳情，Google 上的事件以連結開啟。
+ * Google 日曆同步（`calendar-sync`）：一張表為主的資料頁，工具列切換日曆事件／執行紀錄與要看的日曆，
+ * 待同步與推送失敗的數量放在表格標題旁。開發與正式共用資料庫，預設看本站設定的日曆；選「全部日曆」時表格多一欄日曆。
+ * 有 `calendar-sync.manage` 時可立即同步、確認被安全閥擋下的移除與測試連線（這些都只作用在本站設定的日曆）。
+ * 一輪結束（`lastCheck.at` 改變）時重讀目前的表格與日曆清單；事件沒有詳情，Google 上的事件以連結開啟。
  */
 @Component({
   selector: 'nx-calendar-sync-page',
@@ -73,8 +65,7 @@ interface StatItem {
     Icon,
     Notice,
     PendingButton,
-    StatGrid,
-    StatTile,
+    Select,
     StatusBadge,
     TableHeader,
     TableState,
@@ -106,6 +97,13 @@ interface StatItem {
     .calendar-sync-count-column {
       --column-width: 5rem;
     }
+    /* 日曆 ID 很長：選單限寬、名稱截斷（滑過看全文），選項面板跟著觸發鈕的寬度。 */
+    .calendar-sync-calendar {
+      max-width: min(22rem, 100%);
+    }
+    .calendar-sync-calendar-column {
+      --column-width: 16rem;
+    }
     .calendar-sync-code {
       font-family: var(--font-code);
     }
@@ -120,6 +118,9 @@ export class CalendarSyncPage {
   readonly manage = computed(() => this.session.has('calendar-sync.manage'));
   readonly failureText = failureText;
   readonly formatDate = formatDate;
+  readonly relativeTime = relativeTime;
+  readonly pendingTone = eventState('pending').tone;
+  readonly failedTone = eventState('failed').tone;
 
   /**
    * 按下立即同步後加快輪詢，到下一輪結束（`lastCheck.at` 改變）為止；背景工作可能還在前一輪，所以不看 `running`。
@@ -136,34 +137,53 @@ export class CalendarSyncPage {
   readonly statusError = this.statusRead.error;
   readonly lastCheckAt = computed(() => this.status()?.lastCheck?.at ?? null);
 
-  readonly tiles = computed((): StatItem[] => {
+  private readonly calendarsRead = apiResource({
+    feature: 'calendar-sync',
+    loader: (_params, signal) => this.api.calendars(signal),
+  });
+  readonly calendarsLoading = this.calendarsRead.loading;
+  /** 使用者選的日曆；null 表示還沒選，跟著本站設定。空字串是全部日曆。 */
+  private readonly chosenCalendar = signal<string | null>(null);
+  /** 目前看的日曆；讀到狀態前為 undefined，表格先不讀，免得先讀全部再換成本站的日曆。 */
+  readonly calendar = computed(() => {
+    const chosen = this.chosenCalendar();
+    if (chosen !== null) return chosen;
     const status = this.status();
-    const check = status?.lastCheck;
-    const count = (value: number | undefined) => (value === undefined ? null : formatNumber(value));
+    return status ? (status.calendarId ?? '') : undefined;
+  });
+  readonly allCalendars = computed(() => this.calendar() === '');
+  readonly calendarOptions = computed((): SelectOption[] => {
+    const calendars = this.calendarsRead.value() ?? [];
+    const total = calendars.reduce((sum, item) => sum + item.total, 0);
     return [
-      { key: 'pending', label: '待同步', value: count(status?.pending) },
-      {
-        key: 'failed',
-        label: '推送失敗',
-        value: count(status?.failed),
-        tone: status?.failed ? 'danger' : 'neutral',
-      },
-      { key: 'synced', label: '已同步', value: count(status?.synced) },
-      {
-        key: 'check',
-        label: '最近檢查',
-        value: check ? relativeTime(check.at) : status ? '尚未執行' : null,
-        exact: check ? formatDate(check.at) : '',
-      },
+      ...calendars.map((item) => ({
+        value: item.calendarId,
+        label: item.calendarId,
+        description: `${formatNumber(item.total)} 筆事件`,
+        tags: item.configured ? [{ label: '本站設定' }] : undefined,
+      })),
+      { value: '', label: '全部日曆', description: `${formatNumber(total)} 筆事件` },
     ];
+  });
+  /** 表格標題旁的待同步與推送失敗數量，跟著目前看的日曆。 */
+  readonly counts = computed(() => {
+    const calendar = this.calendar();
+    const rows = (this.calendarsRead.value() ?? []).filter(
+      (item) => !calendar || item.calendarId === calendar,
+    );
+    return {
+      pending: rows.reduce((sum, item) => sum + item.pending, 0),
+      failed: rows.reduce((sum, item) => sum + item.failed, 0),
+    };
   });
 
   readonly events = endpointTable({
     feature: 'calendar-sync',
-    params: () => (this.view() === 'events' ? true : undefined),
-    load: (_params, table, signal) => this.api.events(table, signal),
+    params: () => (this.view() === 'events' ? this.calendar() : undefined),
+    load: (calendar, table, signal) => this.api.events(calendar, table, signal),
     columns: [
       { id: 'startsAt', label: '期間', hideable: false, sort: 'desc', filter: 'date' },
+      { id: 'calendarId', label: '日曆', sort: true, filter: 'text' },
       { id: 'applicantName', label: '申請人', hideable: false, sort: true, filter: 'text' },
       {
         id: 'kind',
@@ -185,6 +205,8 @@ export class CalendarSyncPage {
     ],
     sort: { column: 'startsAt', direction: 'desc' },
   });
+  /** 只看一個日曆時「日曆」欄沒有資訊，也不列在欄位選擇裡。 */
+  readonly eventColumns = computed(() => this.pickable(this.events.columns));
   readonly eventRows = computed(() =>
     this.events.rows().map((row) => ({
       row,
@@ -199,10 +221,11 @@ export class CalendarSyncPage {
 
   readonly runs = endpointTable({
     feature: 'calendar-sync',
-    params: () => (this.view() === 'runs' ? true : undefined),
-    load: (_params, table, signal) => this.api.runs(table, signal),
+    params: () => (this.view() === 'runs' ? this.calendar() : undefined),
+    load: (calendar, table, signal) => this.api.runs(calendar, table, signal),
     columns: [
       { id: 'startedAt', label: '時間', hideable: false, sort: 'desc', filter: 'date' },
+      { id: 'calendarId', label: '日曆', sort: true, filter: 'text' },
       {
         id: 'triggerKind',
         label: '觸發',
@@ -218,6 +241,7 @@ export class CalendarSyncPage {
     ],
     sort: { column: 'startedAt', direction: 'desc' },
   });
+  readonly runColumns = computed(() => this.pickable(this.runs.columns));
   readonly runRows = computed(() =>
     this.runs.rows().map((row) => ({
       row,
@@ -244,11 +268,16 @@ export class CalendarSyncPage {
         untracked(() => {
           this.events.reload();
           this.runs.reload();
+          this.calendarsRead.reload();
           if (this.awaitingUntil() !== null) this.awaitingUntil.set(null);
         });
       }
       seen = at;
     });
+  }
+
+  chooseCalendar(calendarId: string) {
+    this.chosenCalendar.set(calendarId);
   }
 
   async start(confirmRemovals = false) {
@@ -267,6 +296,7 @@ export class CalendarSyncPage {
     this.awaitingUntil.set(Date.now() + AWAIT_LIMIT);
     this.notice.set('已排入同步，完成後下方會自動更新。');
     this.statusRead.reload();
+    this.calendarsRead.reload();
   }
 
   async testConnection() {
@@ -277,5 +307,11 @@ export class CalendarSyncPage {
 
   reloadStatus() {
     this.statusRead.reload();
+  }
+
+  private pickable<T extends { id: string }>(columns: readonly T[]): T[] {
+    return this.allCalendars()
+      ? [...columns]
+      : columns.filter((column) => column.id !== 'calendarId');
   }
 }

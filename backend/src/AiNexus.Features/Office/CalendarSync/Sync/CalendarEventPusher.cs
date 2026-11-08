@@ -48,7 +48,9 @@ public sealed class CalendarEventPusher(IGoogleCalendar calendar)
             {
                 if (item.Removed) return await DeleteAsync(item, legacyId, ct);
                 var adopted = await calendar.UpdateEventAsync(item.CalendarId, legacyId, CalendarEventContent.Render(item.Id, legacyId, item.Segment), ct);
-                return adopted.IsOk ? new(item.Id, PushResult.Created, legacyId, adopted.Value!.HtmlLink) : Failure(item, legacyId, adopted);
+                if (adopted.IsOk) return new(item.Id, PushResult.Created, legacyId, adopted.Value!.HtmlLink);
+                // 找到之後才被刪掉：當成沒有舊事件，照一般流程建立。404 在這裡是事件不見，不是日曆找不到，不能停下整輪。
+                if (adopted.Status is not (GoogleStatus.NotFound or GoogleStatus.Gone)) return Failure(item, legacyId, adopted);
             }
         }
         if (item.Removed) return await DeleteAsync(item, eventId, ct);

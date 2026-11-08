@@ -2155,6 +2155,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar-sync/calendars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListCalendarSyncCalendars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar-sync/events": {
         parameters: {
             query?: never;
@@ -5279,6 +5295,16 @@ export interface components {
             afternoonOff: boolean;
             remark: null | string;
         };
+        CalendarSyncCalendarDto: {
+            calendarId: string;
+            configured: boolean;
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            failed: number;
+        };
         CalendarSyncCheck: {
             /** Format: date-time */
             at: string;
@@ -5300,6 +5326,7 @@ export interface components {
         CalendarSyncEventDto: {
             /** Format: uuid */
             id: string;
+            calendarId: string;
             desNo: string;
             kind: string;
             applicantName: string;
@@ -5328,6 +5355,7 @@ export interface components {
         CalendarSyncRunDto: {
             /** Format: uuid */
             id: string;
+            calendarId: string;
             triggerKind: string;
             /** Format: uuid */
             requestedById: null | string;
@@ -5366,15 +5394,6 @@ export interface components {
             serviceAccount: null | string;
             running: boolean;
             lastCheck: null | components["schemas"]["CalendarSyncCheck"];
-            lastRun: null | components["schemas"]["CalendarSyncRunDto"];
-            /** Format: int32 */
-            pending: number;
-            /** Format: int32 */
-            failed: number;
-            /** Format: int32 */
-            synced: number;
-            /** Format: int32 */
-            removed: number;
         };
         CardAssignmentCreateRequest: {
             /** Format: uuid */
@@ -8314,6 +8333,7 @@ export type AuthSessionDto = components['schemas']['AuthSessionDto'];
 export type BackupMessage = components['schemas']['BackupMessage'];
 export type CalendarDayDto = components['schemas']['CalendarDayDto'];
 export type CalendarDayRequest = components['schemas']['CalendarDayRequest'];
+export type CalendarSyncCalendarDto = components['schemas']['CalendarSyncCalendarDto'];
 export type CalendarSyncCheck = components['schemas']['CalendarSyncCheck'];
 export type CalendarSyncConnectionDto = components['schemas']['CalendarSyncConnectionDto'];
 export type CalendarSyncEventDto = components['schemas']['CalendarSyncEventDto'];
@@ -11296,6 +11316,27 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
+    ListCalendarSyncCalendars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarSyncCalendarDto"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
     ListCalendarSyncEvents: {
         parameters: {
             query?: {
@@ -11303,6 +11344,7 @@ export interface operations {
                 limit?: number;
                 sort?: string;
                 filter?: string[];
+                calendarId?: string;
             };
             header?: never;
             path?: never;
@@ -11329,6 +11371,7 @@ export interface operations {
                 limit?: number;
                 sort?: string;
                 filter?: string[];
+                calendarId?: string;
             };
             header?: never;
             path?: never;

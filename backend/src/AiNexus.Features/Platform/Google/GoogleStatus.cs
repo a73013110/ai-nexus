@@ -42,9 +42,6 @@ public readonly record struct GoogleResponse<T>(GoogleStatus Status, T? Value = 
 {
     public bool IsOk => Status == GoogleStatus.Ok;
 
-    /// <summary>換下一筆也會一樣失敗的錯誤：設定、權限或憑證問題，呼叫端應停止這一批。</summary>
-    public bool IsServiceFailure => Status is GoogleStatus.CredentialRejected or GoogleStatus.NotConfigured or GoogleStatus.Forbidden;
-
     public static GoogleResponse<T> Ok(T value) => new(GoogleStatus.Ok, value);
 
     /// <summary>把失敗轉成另一個值型別的回應（成功不能轉，因為沒有值）。</summary>

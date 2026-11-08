@@ -10,6 +10,7 @@ using AiNexus.Features.Platform.Gd;
 using AiNexus.Features.Platform.Google;
 using AiNexus.Features.Platform.Google.Calendar;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Data.Tables;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -245,6 +246,35 @@ public sealed class CalendarSyncRunnerTests
     }
 
     [Fact]
+    public async Task AFailedRemovalKeepsItsBackoffAndIsRevivedWhenTheFormReturns()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Cancel'");
+            s.Google.Failure = GoogleStatus.Unavailable;
+
+            Assert.Equal(1, (await s.RunAsync()).Failed);
+            var failed = Assert.Single(await s.RowsAsync());
+            Assert.Equal((CalendarEventStates.Failed, 1), (failed.State, failed.Attempts));
+
+            // 下一個排程輪還在退避：不重排、不歸零，也不再打 Google。
+            Assert.Equal(0, (await s.RunAsync()).Failed);
+            var waiting = Assert.Single(await s.RowsAsync());
+            Assert.Equal((CalendarEventStates.Failed, 1, failed.NextAttemptAt), (waiting.State, waiting.Attempts, waiting.NextAttemptAt));
+
+            // 單又回來：救回同一列，事件留在日曆上。
+            s.Google.Failure = null;
+            s.Gd.Update("Form_Leave", "L-1", "FlowOver = 'Decide'");
+            Assert.Equal(1, (await s.RunAsync()).Updated);
+            var revived = Assert.Single(await s.RowsAsync());
+            Assert.Equal((CalendarEventStates.Synced, null), (revived.State, revived.RemovedAt));
+            Assert.Single(s.Google.Events);
+        });
+    }
+
+    [Fact]
     public async Task PagesAndActionsRequireTheirFeatures()
     {
         await RunAsync(async s =>
@@ -257,10 +287,51 @@ public sealed class CalendarSyncRunnerTests
             Assert.Equal(HttpStatusCode.Forbidden, (await carol.GetAsync("/api/v1/calendar-sync/status")).StatusCode);
             var status = await viewer.GetFromJsonAsync<CalendarSyncStatusDto>("/api/v1/calendar-sync/status");
             Assert.Equal((false, CalendarId), (status!.Enabled, status.CalendarId));
+            Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/calendars")).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/events")).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/runs")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/v1/calendar-sync/runs", new { confirmRemovals = false })).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/v1/calendar-sync/connection-test", null)).StatusCode);
+        });
+    }
+
+    [Fact]
+    public async Task OtherCalendarsInTheSharedDatabaseAreListedAndFilterable()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Gd.AddLeave("L-2", "G002", "A", Day.AddHours(8.5), Day.AddHours(12), "Decide");
+            await s.RunAsync();
+            // 另一個站台（或舊系統轉入）的日曆：同一個資料庫、不同的日曆 ID。
+            using (var scope = s.Factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var now = DateTimeOffset.UtcNow;
+                db.CalendarEvents.Add(new CalendarEvent
+                {
+                    CalendarId = "other@example.test", DesNo = "L-9", Kind = CalendarEventKinds.Leave, ApplicantName = "陳小華", FlowStatus = "Decide",
+                    StartsAt = now, EndsAt = now.AddHours(1), ContentHash = new byte[CalendarEvent.HashLength], GoogleEventId = "legacy-9",
+                    State = CalendarEventStates.Failed, CreatedAt = now, UpdatedAt = now
+                });
+                await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+            var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+            await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync);
+            var viewer = await s.Factory.SignedInAsync("bob");
+            var ct = TestContext.Current.CancellationToken;
+
+            var calendars = await viewer.GetFromJsonAsync<List<CalendarSyncCalendarDto>>("/api/v1/calendar-sync/calendars", ct);
+            Assert.Equal([new(CalendarId, true, 2, 0, 0), new("other@example.test", false, 1, 0, 1)], calendars);
+
+            async Task<string[]> DesNosAsync(string query)
+                => [.. (await viewer.GetFromJsonAsync<TablePage<CalendarSyncEventDto>>("/api/v1/calendar-sync/events" + query, ct))!.Items.Select(x => x.DesNo).Order()];
+            Assert.Equal(["L-1", "L-2"], await DesNosAsync("?calendarId=" + Uri.EscapeDataString(CalendarId)));
+            Assert.Equal(["L-9"], await DesNosAsync("?calendarId=other%40example.test"));
+            Assert.Equal(["L-1", "L-2", "L-9"], await DesNosAsync(""));
+
+            var runs = await viewer.GetFromJsonAsync<TablePage<CalendarSyncRunDto>>("/api/v1/calendar-sync/runs?calendarId=other%40example.test", ct);
+            Assert.Empty(runs!.Items);
         });
     }
 

@@ -4977,6 +4977,32 @@
         }
       }
     },
+    "/api/v1/calendar-sync/calendars": {
+      "get": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "ListCalendarSyncCalendars",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarSyncCalendarDto"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/calendar-sync/events": {
       "get": {
         "tags": [
@@ -5015,6 +5041,13 @@
               "items": {
                 "type": "string"
               }
+            }
+          },
+          {
+            "name": "calendarId",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -5073,6 +5106,13 @@
               "items": {
                 "type": "string"
               }
+            }
+          },
+          {
+            "name": "calendarId",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -12975,6 +13015,36 @@
           }
         }
       },
+      "CalendarSyncCalendarDto": {
+        "required": [
+          "calendarId",
+          "configured",
+          "total",
+          "pending",
+          "failed"
+        ],
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string"
+          },
+          "configured": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "CalendarSyncCheck": {
         "required": [
           "at",
@@ -13057,6 +13127,7 @@
       "CalendarSyncEventDto": {
         "required": [
           "id",
+          "calendarId",
           "desNo",
           "kind",
           "applicantName",
@@ -13080,6 +13151,9 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "calendarId": {
+            "type": "string"
           },
           "desNo": {
             "type": "string"
@@ -13165,6 +13239,7 @@
       "CalendarSyncRunDto": {
         "required": [
           "id",
+          "calendarId",
           "triggerKind",
           "requestedById",
           "requestedByName",
@@ -13185,6 +13260,9 @@
           "id": {
             "type": "string",
             "format": "uuid"
+          },
+          "calendarId": {
+            "type": "string"
           },
           "triggerKind": {
             "type": "string"
@@ -13274,12 +13352,7 @@
           "serviceAccountConfigured",
           "serviceAccount",
           "running",
-          "lastCheck",
-          "lastRun",
-          "pending",
-          "failed",
-          "synced",
-          "removed"
+          "lastCheck"
         ],
         "type": "object",
         "properties": {
@@ -13321,32 +13394,6 @@
                 "$ref": "#/components/schemas/CalendarSyncCheck"
               }
             ]
-          },
-          "lastRun": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/CalendarSyncRunDto"
-              }
-            ]
-          },
-          "pending": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "failed": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "synced": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "removed": {
-            "type": "integer",
-            "format": "int32"
           }
         }
       },

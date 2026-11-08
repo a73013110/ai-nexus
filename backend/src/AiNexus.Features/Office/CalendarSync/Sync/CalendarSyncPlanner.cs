@@ -5,8 +5,9 @@ namespace AiNexus.Features.Office.CalendarSync.Sync;
 /// <summary>
 /// 已記錄的一列，規劃只需要的部分。<paramref name="InWindow"/> 表示它還在日曆上（沒有移除）、結束時間在期間窗內，
 /// 是「GD 沒有就移除」的候選；窗外的列只在 GD 又出現同一段時才會被更新或救回。
+/// <paramref name="Removing"/> 表示已排定移除、還沒推送成功（可能正在退避）。
 /// </summary>
-public sealed record KnownEvent(Guid Id, string DesNo, string SegmentKey, byte[] ContentHash, string State, bool InWindow);
+public sealed record KnownEvent(Guid Id, string DesNo, string SegmentKey, byte[] ContentHash, string State, bool InWindow, bool Removing = false);
 
 /// <summary>要改內容（或從移除救回）的既有列。</summary>
 public sealed record EventChange(Guid Id, AbsenceSegment Segment, byte[] ContentHash);
@@ -37,10 +38,13 @@ public static class CalendarSyncPlanner
             wanted.Add(segment.Key);
             var hash = CalendarEventContent.Hash(segment);
             if (!rows.TryGetValue(segment.Key, out var row)) creations.Add(new(segment, hash));
-            else if (row.State == CalendarEventStates.Removed || !row.ContentHash.AsSpan().SequenceEqual(hash)) changes.Add(new(row.Id, segment, hash));
+            // 排定移除、還沒推送的列在 GD 又出現時，內容沒變也要救回，否則推送照樣會把它刪掉。
+            else if (row.State == CalendarEventStates.Removed || row.Removing || !row.ContentHash.AsSpan().SequenceEqual(hash)) changes.Add(new(row.Id, segment, hash));
         }
 
-        var removals = known.Where(x => x.InWindow && x.State != CalendarEventStates.Removed && !wanted.Contains((x.DesNo, x.SegmentKey))).Select(x => x.Id).ToList();
+        // 已排定移除的不再排一次：重排會把失敗次數與退避歸零，刪除一直失敗時每一輪都會重打 Google。
+        var removals = known.Where(x => x.InWindow && x.State != CalendarEventStates.Removed && !x.Removing && !wanted.Contains((x.DesNo, x.SegmentKey)))
+            .Select(x => x.Id).ToList();
         var active = known.Count(x => x.InWindow && x.State != CalendarEventStates.Removed);
         var hold = !confirmRemovals && removals.Count >= holdMinimum && removals.Count > active * holdRatio;
         return hold ? new(creations, changes, [], removals.Count) : new(creations, changes, removals, 0);

@@ -64,7 +64,6 @@
   color: var(--select-trigger-color, var(--secondary));
   font-size: var(--text-caption);
   cursor: pointer;
-  text-overflow: ellipsis;
 }
 :host(.select-inline) .select-trigger:hover {
   background: var(--hover);
