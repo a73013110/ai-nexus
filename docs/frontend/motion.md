@@ -47,7 +47,7 @@
 - 開啟時由下方小幅位移＋微縮彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 留在 top layer）；手機 sheet 見 [手機](mobile.md)。
 - 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點；宿主等 `exitFinished()`（`exit-motion.ts`）才清空內容，不帶著空白退場。
 - 尺寸跟著內容：`nxCompactDialog` 內建 `FrameMotion`，`nxViewMotion` 換檢視（例：頁籤）或 `size` 改變時外框過渡到新寬高，不固定高度；關閉即忘記尺寸，開啟不過渡。非 dialog 浮層掛 `nxFrameMotion`（通知中心）。
-- 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
+- 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。放大與縮小是 `width` 過渡，重排只在抽屜內部。
 - sheet 與抽屜可滑動關閉，未達距離或速度以 `--ease-spring` 彈回，見 [手機](mobile.md#滑動關閉)。
 
 ## 浮層（popover）

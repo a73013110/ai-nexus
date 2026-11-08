@@ -152,7 +152,11 @@
       emptyText="試著擴大時間範圍，或移除部分條件。"
     />
   </nx-data-table>
-  <nx-detail-drawer title="匯入詳情" (closed)="selectedId.set(null)">
+  <nx-detail-drawer
+    title="匯入詳情"
+    preferenceKey="attendance-import"
+    (closed)="selectedId.set(null)"
+  >
     <nx-drawer-pager
       drawer-actions
       noun="匯入紀錄"
@@ -160,19 +164,18 @@
       [count]="table.rows().length"
       (move)="adjacent($event)"
     />
-    <div drawer-summary class="ui-drawer-summary">
-      @if (selected(); as item) {
-        <div>
-          <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge
-          ><time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
-        </div>
-        <h3 class="imports-file">{{ item.row.fileName }}</h3>
-        <span class="ui-drawer-subtitle"
-          >{{ item.trigger
-          }}{{ item.row.requestedByName ? '・' + item.row.requestedByName : '' }}</span
-        >
-      }
-    </div>
+    @if (selected(); as item) {
+      <nx-drawer-summary
+        mono
+        [heading]="item.row.fileName"
+        [subtitle]="
+          item.trigger + (item.row.requestedByName ? '・' + item.row.requestedByName : '')
+        "
+      >
+        <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
+        <time [attr.datetime]="item.row.startedAt">{{ item.time }}</time>
+      </nx-drawer-summary>
+    }
     @if (selected(); as item) {
       <div class="ui-drawer-sections" [class.ui-table-fill]="item.row.isCurrent">
         @if (item.row.errorMessage) {

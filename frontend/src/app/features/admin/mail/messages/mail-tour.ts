@@ -86,13 +86,13 @@ export function mailDetailTour(options: {
         title: '立即重試',
         description:
           '不等下次嘗試時間，現在就寄同一封（Message-ID 不變）；郵件伺服器暫停寄送中也會一併恢復。',
-        side: 'bottom',
+        side: 'top',
       },
       options.action === 'resend' && {
         target: `${DRAWER} .mail-resend`,
         title: '重寄',
         description: '以原內容建立一封新信，原紀錄不變，新信記下重寄來源；連點也只會建立一封。',
-        side: 'bottom',
+        side: 'top',
       },
       options.attempts && {
         target: `${DRAWER} .mail-attempts`,

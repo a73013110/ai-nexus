@@ -16,7 +16,7 @@ import {
   toneOf,
 } from './monitoring-format';
 
-/** 詳情抽屜 `drawer-summary` 的內容：狀態、時間、標題與副標。 */
+/** 詳情抽屜 `nx-drawer-summary` 的內容：狀態、時間、標題與副標。 */
 export interface MonitoringSummary {
   tone: BadgeTone;
   status: string;
@@ -67,7 +67,7 @@ export function monitoringSummary(
 
 /**
  * 監控詳情的內容：主要數據 → 關聯（可複製的識別碼）→ 收合的原始資料。狀態與標題由頁面放在抽屜的
- * `drawer-summary`（`monitoringSummary`），與日誌、稽核的詳情同一骨架。
+ * `nx-drawer-summary`（`monitoringSummary`），與日誌、稽核的詳情同一骨架。
  */
 @Component({
   selector: 'nx-monitoring-inspector',

@@ -1,0 +1,31 @@
+.ui-drawer-summary {
+  display: grid;
+  gap: var(--p-space-1);
+  padding: 0 var(--drawer-gutter) var(--p-space-3);
+}
+.ui-drawer-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1) var(--p-space-3);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.ui-drawer-status:empty {
+  display: none;
+}
+.ui-drawer-summary h3 {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ui-drawer-summary h3.is-mono {
+  font-family: var(--font-code);
+}
+.ui-drawer-summary p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  overflow-wrap: anywhere;
+}

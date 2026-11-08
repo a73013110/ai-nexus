@@ -155,7 +155,12 @@
     </div>
   }
 </nx-feature-page>
-<nx-detail-drawer [title]="drawerTitle()" [tour]="drawerTour()" (closed)="drawerOpen.set(false)">
+<nx-detail-drawer
+  [title]="drawerTitle()"
+  preferenceKey="monitoring"
+  [tour]="drawerTour()"
+  (closed)="drawerOpen.set(false)"
+>
   @if (selectedSession()) {
     <nx-drawer-pager
       drawer-actions
@@ -165,20 +170,14 @@
       (move)="showAdjacentSession($event)"
     />
   }
-  <div drawer-summary class="ui-drawer-summary">
-    @if (summary(); as item) {
-      <div>
-        <nx-status-badge [tone]="item.tone">{{ item.status }}</nx-status-badge>
-        @if (item.at) {
-          <time [attr.datetime]="item.at">{{ time(item.at) }}</time>
-        }
-      </div>
-      <h3>{{ item.title }}</h3>
-      @if (item.subtitle) {
-        <span class="ui-drawer-subtitle">{{ item.subtitle }}</span>
+  @if (summary(); as item) {
+    <nx-drawer-summary [heading]="item.title" [subtitle]="item.subtitle">
+      <nx-status-badge [tone]="item.tone">{{ item.status }}</nx-status-badge>
+      @if (item.at) {
+        <time [attr.datetime]="item.at">{{ time(item.at) }}</time>
       }
-    }
-  </div>
+    </nx-drawer-summary>
+  }
   <nx-monitoring-inspector
     [selectedSession]="selectedSession()"
     [liveSession]="liveSession()"

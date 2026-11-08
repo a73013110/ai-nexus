@@ -203,7 +203,12 @@
         (retry)="retryCatalog()"
       />
     </nx-data-table>
-    <nx-detail-drawer title="稽核詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
+    <nx-detail-drawer
+      title="稽核詳情"
+      preferenceKey="audit-event"
+      [tour]="drawerTour()"
+      (closed)="selectedId.set(null)"
+    >
       <nx-drawer-pager
         drawer-actions
         noun="稽核"
@@ -211,23 +216,17 @@
         [count]="rows().length"
         (move)="adjacent($event)"
       />
-      <div drawer-summary class="ui-drawer-summary">
-        @if (selected(); as row) {
-          <div>
-            <nx-status-badge [tone]="row.rejected ? 'warning' : 'neutral'">{{
-              row.result
-            }}</nx-status-badge
-            ><time [attr.datetime]="row.entry.at">{{ row.date }}</time>
-          </div>
-          <h3>{{ row.action }}</h3>
-          <span class="ui-drawer-subtitle"
-            >{{ row.actor }}
-            @if (row.entry.actingAs) {
-              · 測試身分 {{ row.entry.actingAs }}
-            }
-          </span>
-        }
-      </div>
+      @if (selected(); as row) {
+        <nx-drawer-summary
+          [heading]="row.action"
+          [subtitle]="row.actor + (row.entry.actingAs ? ' · 測試身分 ' + row.entry.actingAs : '')"
+        >
+          <nx-status-badge [tone]="row.rejected ? 'warning' : 'neutral'">{{
+            row.result
+          }}</nx-status-badge>
+          <time [attr.datetime]="row.entry.at">{{ row.date }}</time>
+        </nx-drawer-summary>
+      }
       @if (selected(); as row) {
         <section aria-label="稽核紀錄資訊">
           @if (row.changes.length) {

@@ -512,41 +512,6 @@ col {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-// 摘要與內文的上下留白都對齊內文的內距（--p-space-4）。摘要下面緊接內文時不留下內距：內文自己有
-// 上內距，兩份疊起來標題與第一個區塊之間會空出一大段；下面接頁籤時保留，頁籤不貼著副標。
-.ui-drawer-summary {
-  padding: var(--p-space-4) var(--p-space-4) var(--p-space-3);
-  flex: none;
-}
-.ui-drawer-summary:has(+ .ui-drawer-body) {
-  padding-bottom: 0;
-}
-// 手機上抽屜內文的內距縮成 --p-space-3（detail-drawer.scss），摘要跟著縮，左右才對齊。
-@include bp.below(phone) {
-  .ui-drawer-summary {
-    padding: var(--p-space-3) var(--p-space-3) var(--p-space-2);
-  }
-}
-.ui-drawer-summary > div {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-}
-.ui-drawer-summary time,
-.ui-drawer-subtitle {
-  font-size: var(--p-font-xs);
-  color: var(--secondary);
-  overflow-wrap: anywhere;
-}
-.ui-drawer-summary h3 {
-  margin: var(--p-space-2) 0 0.125rem;
-  font-size: var(--p-font-base);
-  overflow-wrap: anywhere;
-}
-// 沒有狀態列時標題就在最上面，上距交給摘要的內距。
-.ui-drawer-summary h3:first-child {
-  margin-top: 0;
-}
 .ui-section-heading {
   margin: var(--p-space-4) 0 var(--p-space-2);
   font-size: var(--p-font-sm);
@@ -589,6 +554,11 @@ col {
 }
 .ui-description-wide {
   grid-column: 1 / -1;
+}
+@container drawer (min-width: 46rem) {
+  .ui-description-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .ui-data-table td strong {
   font-size: var(--p-font-data);

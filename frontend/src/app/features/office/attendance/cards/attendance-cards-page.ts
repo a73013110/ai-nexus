@@ -17,6 +17,7 @@ import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -58,6 +59,7 @@ const EMPTY_TEXT: Record<CardStatus, string> = {
     DataTableColumn,
     DataTableRow,
     DetailDrawer,
+    DrawerSummary,
     FeaturePage,
     Field,
     Icon,

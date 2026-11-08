@@ -14,6 +14,7 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
@@ -52,6 +53,7 @@ import { ReimportDialog, reimportOutcome } from './reimport-dialog';
     DataTableColumn,
     DataTableRow,
     DetailDrawer,
+    DrawerSummary,
     DrawerPager,
     FeaturePage,
     Field,

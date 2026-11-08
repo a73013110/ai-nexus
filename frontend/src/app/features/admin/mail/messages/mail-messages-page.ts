@@ -21,6 +21,8 @@ import { formatDate } from '@shared/browser/format';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableColumn, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerFoot } from '@shared/ui/drawer-foot';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
@@ -63,6 +65,8 @@ import { mailDetailTour, mailMessagesTour } from './mail-tour';
     DataTableColumn,
     DataTableRow,
     DetailDrawer,
+    DrawerFoot,
+    DrawerSummary,
     DrawerPager,
     FeaturePage,
     Field,
@@ -204,19 +208,25 @@ export class MailMessagesPage {
         })
       : null,
   );
-  /** 動作的條件與模板相同：等待中可立即重試，否則看伺服器的 `canResend`；詳情載入前不給導覽。 */
+  /** 抽屜底部的動作：等待中可立即重試，否則看伺服器的 `canResend`，都不行時說明原因。 */
+  readonly detailFoot = computed(() => {
+    const view = this.detail();
+    if (!view || this.detailError() || !this.session.has('mail.messages.resend')) return null;
+    const { message, canResend } = view.detail;
+    if (message.status === 'queued')
+      return {
+        action: 'retry' as const,
+        note: '不等下次嘗試時間，現在就寄這一封；暫停寄送中也會一併恢復。',
+      };
+    if (canResend) return { action: 'resend' as const, note: '以原內容建立一封新信，原紀錄不變。' };
+    return view.blocked ? { action: null, note: view.blocked } : null;
+  });
+  /** 詳情載入前不給導覽。 */
   readonly drawerTour = computed(() => {
     const view = this.detail();
     if (!view) return null;
-    const { message, canResend } = view.detail;
     return mailDetailTour({
-      action: !this.session.has('mail.messages.resend')
-        ? null
-        : message.status === 'queued'
-          ? 'retry'
-          : canResend
-            ? 'resend'
-            : null,
+      action: this.detailFoot()?.action ?? null,
       attempts: view.attempts.length > 0,
       logs: this.logsName(),
     });

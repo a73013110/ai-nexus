@@ -2,11 +2,13 @@ import { uniqueId } from '../browser/unique-id';
 import {
   ChangeDetectionStrategy,
   Component,
+  contentChild,
   DestroyRef,
   ElementRef,
   effect,
   inject,
   input,
+  linkedSignal,
   output,
   signal,
   untracked,
@@ -16,13 +18,27 @@ import { below } from '../browser/breakpoints';
 import { exitFinished } from '../browser/exit-motion';
 import { mediaQuery } from '../browser/media-query';
 import { bringToFront, ownsEscape } from '../browser/top-layer';
+import { DrawerSummary } from './drawer-summary';
 import { Icon } from './icon';
 import { ProductTourButton } from './product-tour-button';
 import type { ProductTourDefinition } from './product-tour';
 
+export type DrawerSize = 'standard' | 'wide';
+
+const STORAGE_PREFIX = 'ai-nexus.drawer.';
+
+function storedSize(key: string): DrawerSize | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_PREFIX + key);
+    return stored === 'standard' || stored === 'wide' ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * 桌面版的非模態檢視器；窄螢幕時變成原生模態。重讀時舊內容留著，由呼叫端在內容區加
- * `.is-refreshing` 與 `aria-busy`，不換回骨架。
+ * 詳情抽屜：桌面版非模態，窄螢幕變原生模態。內容依序是 `drawer-actions`（上下筆、操作）、`nx-drawer-summary`、
+ * `drawer-tabs`、內文與 `nx-drawer-foot`。重讀時舊內容留著，由呼叫端在內容區加 `.is-refreshing` 與 `aria-busy`。
  * 非模態時同時是 manual popover：和對話框、放大的表格一樣在 top layer，依開啟順序疊放；
  * 仍是開著的 `dialog[open]`，關閉、焦點還原與 `close` 事件照對話框的規則。
  */
@@ -35,55 +51,66 @@ import type { ProductTourDefinition } from './product-tour';
     [id]="id"
     popover="manual"
     class="ui-detail-drawer ui-density-compact"
-    [class.is-wide]="wide()"
+    [attr.data-size]="size()"
     [attr.aria-labelledby]="id + '-title'"
     [attr.aria-modal]="modal() ? 'true' : null"
     (cancel)="onCancel($event)"
     (close)="didClose()"
   >
-    <header class="ui-drawer-header">
-      <h2 [id]="id + '-title'">{{ title() }}</h2>
-      <div class="ui-drawer-actions">
-        <ng-content select="[drawer-actions]" />
-        <button
-          type="button"
-          class="icon-button drawer-resize"
-          [attr.aria-label]="wide() ? '縮小詳情面板' : '展開詳情面板'"
-          [title]="wide() ? '縮小詳情面板' : '展開詳情面板'"
-          [attr.aria-pressed]="wide()"
-          (click)="wide.set(!wide())"
-        >
-          <nx-icon [name]="wide() ? 'minimize' : 'maximize'" />
-        </button>
-        @if (tour(); as definition) {
-          <nx-product-tour-button [tour]="definition" [compact]="true" />
-        }
-        <button
-          type="button"
-          autofocus
-          class="icon-button"
-          [attr.aria-label]="'關閉' + title()"
-          [title]="'關閉' + title()"
-          (click)="close()"
-        >
-          <nx-icon name="close" />
-        </button>
+    <header class="ui-drawer-header" [class.has-summary]="summary()">
+      <div class="ui-drawer-bar">
+        <h2 [id]="id + '-title'">{{ title() }}</h2>
+        <div class="ui-drawer-actions">
+          <ng-content select="[drawer-actions]" />
+          <button
+            type="button"
+            class="icon-button drawer-resize"
+            [attr.aria-label]="size() === 'wide' ? '縮小詳情面板' : '展開詳情面板'"
+            [title]="size() === 'wide' ? '縮小詳情面板' : '展開詳情面板'"
+            [attr.aria-pressed]="size() === 'wide'"
+            (click)="toggleSize()"
+          >
+            <nx-icon [name]="size() === 'wide' ? 'minimize' : 'maximize'" />
+          </button>
+          @if (tour(); as definition) {
+            <nx-product-tour-button [tour]="definition" [compact]="true" />
+          }
+          <button
+            type="button"
+            autofocus
+            class="icon-button"
+            [attr.aria-label]="'關閉' + title()"
+            [title]="'關閉' + title()"
+            (click)="close()"
+          >
+            <nx-icon name="close" />
+          </button>
+        </div>
       </div>
+      <ng-content select="nx-drawer-summary" />
+      <ng-content select="[drawer-tabs]" />
     </header>
-    <ng-content select="[drawer-summary]" />
-    <ng-content select="[drawer-tabs]" />
     <div #body class="ui-drawer-body"><ng-content /></div>
+    <ng-content select="nx-drawer-foot" />
   </dialog>`,
   styleUrl: './detail-drawer.scss',
 })
 export class DetailDrawer {
+  /** 抽屜的無障礙名稱；有摘要時是摘要上方的小標，沒有摘要時就是標題。 */
   readonly title = input.required<string>();
+  /** 記住這種抽屜的大小；必填，每種抽屜各自一把，換頁或重新整理都沿用。 */
+  readonly preferenceKey = input.required<string>();
+  /** 使用者還沒調整過時的大小；差異比對這類需要寬度的內容用 `wide`。 */
+  readonly defaultSize = input<DrawerSize>('standard');
   readonly closed = output<void>();
   /** 抽屜內容的導覽；觸發鈕在關閉鈕之前。 */
   readonly tour = input<ProductTourDefinition | null>(null);
-  readonly wide = signal(false);
+  readonly size = linkedSignal<DrawerSize>(
+    () => storedSize(this.preferenceKey()) ?? this.defaultSize(),
+  );
   readonly modal = signal(false);
   readonly id = uniqueId('nx-drawer');
+  protected readonly summary = contentChild(DrawerSummary);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   /** 較窄的視口使用模態抽屜；較寬的則保留頁面可在其旁邊操作。 */
@@ -147,6 +174,15 @@ export class DetailDrawer {
   resetScroll() {
     this.body().nativeElement.scrollTop = 0;
   }
+  toggleSize() {
+    const size = this.size() === 'wide' ? 'standard' : 'wide';
+    this.size.set(size);
+    try {
+      localStorage.setItem(STORAGE_PREFIX + this.preferenceKey(), size);
+    } catch {
+      /* 選用偏好。 */
+    }
+  }
   onCancel(event: Event) {
     event.preventDefault();
     this.close();
@@ -168,7 +204,6 @@ export class DetailDrawer {
     const dialog = this.dialog().nativeElement;
     void exitFinished(dialog).then(() => {
       if (this.destroyed || dialog.open) return;
-      this.wide.set(false);
       this.closed.emit();
     });
   }

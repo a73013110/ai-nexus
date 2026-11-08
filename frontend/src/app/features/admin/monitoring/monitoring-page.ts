@@ -17,6 +17,7 @@ import { action } from '@shared/browser/action';
 import { readAttachment, saveAttachment } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { EmptyState } from '@shared/ui/empty-state';
 import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
@@ -54,6 +55,7 @@ const DRAWER_TITLES = {
     PendingButton,
     RefreshButton,
     DetailDrawer,
+    DrawerSummary,
     DrawerPager,
     EmptyState,
     FeaturePage,

@@ -1,4 +1,10 @@
-<nx-detail-drawer class="log-detail" title="診斷詳情" [tour]="tour()" (closed)="closed.emit()">
+<nx-detail-drawer
+  class="log-detail"
+  title="診斷詳情"
+  preferenceKey="system-log"
+  [tour]="tour()"
+  (closed)="closed.emit()"
+>
   <nx-drawer-pager
     drawer-actions
     noun="日誌"
@@ -6,16 +12,12 @@
     [count]="count()"
     (move)="move.emit($event)"
   />
-  <div drawer-summary class="ui-drawer-summary">
-    @if (current(); as entry) {
-      <div>
-        <nx-status-badge [tone]="tone(entry.level)">{{ entry.level }}</nx-status-badge
-        ><time [attr.datetime]="entry.at">{{ date(entry.at) }}</time>
-      </div>
-      <h3>{{ entry.eventName }}</h3>
-      <span class="ui-drawer-subtitle">{{ entry.category }}</span>
-    }
-  </div>
+  @if (current(); as entry) {
+    <nx-drawer-summary [heading]="entry.eventName" [subtitle]="entry.category">
+      <nx-status-badge [tone]="tone(entry.level)">{{ entry.level }}</nx-status-badge>
+      <time [attr.datetime]="entry.at">{{ date(entry.at) }}</time>
+    </nx-drawer-summary>
+  }
   <nx-tabs
     #detailTabs
     drawer-tabs

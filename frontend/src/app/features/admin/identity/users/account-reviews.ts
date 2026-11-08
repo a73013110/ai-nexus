@@ -54,7 +54,7 @@ import { AccountReviewItems } from './account-review-items';
     >
       <nx-icon name="tasks" />帳號待辦<nx-count-badge [count]="users().length" tone="warning" />
     </button>
-    <nx-detail-drawer title="帳號待辦">
+    <nx-detail-drawer title="帳號待辦" preferenceKey="account-reviews">
       <div
         class="account-reviews"
         [class.is-refreshing]="store.reviewsRead.refreshing() && !!store.reviews()"

@@ -15,16 +15,6 @@ code {
 .mail-attempts-column {
   --column-width: 4.5rem;
 }
-.mail-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--p-space-2);
-}
-.mail-actions .form-note {
-  margin: 0;
-}
 .mail-attempts {
   display: grid;
   gap: var(--p-space-2);

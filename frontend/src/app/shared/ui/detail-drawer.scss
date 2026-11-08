@@ -4,33 +4,41 @@
 :host {
   display: contents;
 }
+// 和對話框同一種表面（一圈細線、分層陰影、12px 圓角），離視窗邊一段距離浮著；手機貼滿。
 .ui-detail-drawer {
+  --drawer-inset: var(--dialog-inset);
+  --drawer-size: var(--drawer-width);
+  // 標題列、摘要、內文與底部的左右內距都取這一個，才對得齊。
+  --drawer-gutter: var(--p-space-4);
   position: fixed;
-  inset: 0 0 0 auto;
-  width: min(var(--drawer-width), 100vw);
-  max-width: 100vw;
-  height: 100dvh;
-  max-height: 100dvh;
+  inset: var(--drawer-inset) var(--drawer-inset) var(--drawer-inset) auto;
+  width: min(var(--drawer-size), 100vw - 2 * var(--drawer-inset));
+  max-width: none;
+  height: calc(100dvh - 2 * var(--drawer-inset));
+  max-height: none;
   margin: 0;
   padding: 0;
-  border: 0;
-  border-inline-start: 1px solid var(--line);
-  border-radius: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--dialog-radius);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
-  // Layout stays outside [open]: the exit keeps `display` but would drop the rest at once.
+  // 版面寫在 [open] 之外：退場時 `display` 還在，寫在裡面會立刻掉回橫排。
   flex-direction: column;
   opacity: 0;
   translate: 1.5rem 0;
   transition:
     opacity var(--motion) var(--ease-exit),
     translate var(--motion) var(--ease-exit),
+    width var(--motion) var(--ease-exit),
     overlay var(--motion) allow-discrete,
     display var(--motion) allow-discrete;
 }
-// Slides in from the edge and back out, like the dialogs (styles/dialogs.scss): `overlay` and
-// `display` keep it painted for the exit, while it takes no clicks or focus.
+.ui-detail-drawer[data-size='wide'] {
+  --drawer-size: var(--drawer-width-wide);
+}
+// 從右緣滑入滑出，作法同對話框（styles/dialogs.scss）：`overlay` 與 `display` 讓退場畫得完，期間不接點擊與焦點。
 .ui-detail-drawer:not([open]) {
   pointer-events: none;
   interactivity: inert;
@@ -41,9 +49,6 @@
   translate: 0 0;
   transition-duration: var(--motion-panel);
   transition-timing-function: var(--ease);
-}
-.ui-detail-drawer.is-wide {
-  width: min(72rem, 100vw);
 }
 // 非模態的抽屜也在 top layer、也有 ::backdrop（不接指標）；遮罩只在模態（窄螢幕）時淡入。
 .ui-detail-drawer::backdrop {
@@ -66,42 +71,59 @@
     opacity: 0;
   }
 }
+// 標題列、摘要與頁籤是同一塊不捲動的底，只在底部畫一條線；頁籤的線併進這條，第一個標籤與內文對齊。
 .ui-drawer-header {
+  --tabs-rule: 0;
+  --tabs-inset: calc(var(--drawer-gutter) - var(--p-space-3));
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+.ui-drawer-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex: none;
   gap: var(--p-space-3);
-  padding: var(--p-space-3) var(--p-space-4);
-  border-bottom: 1px solid var(--line);
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--drawer-gutter);
 }
-.ui-drawer-header h2 {
+.ui-drawer-bar h2 {
+  min-width: 0;
   margin: 0;
-  font-size: var(--p-font-base);
+  font-size: var(--text-heading);
   font-weight: 600;
+  overflow-wrap: anywhere;
+}
+// 有摘要時紀錄名稱才是視覺上的標題，功能名退成小標。
+.has-summary h2 {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 400;
 }
 .ui-drawer-actions {
   display: flex;
   align-items: center;
+  flex: none;
   gap: var(--p-space-1);
 }
+// 具名容器：內容依抽屜寬度換版面（例如 `.ui-description-list`），放大才不只是變寬。
 .ui-drawer-body {
+  container: drawer / inline-size;
   flex: 1;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  padding-block: var(--p-space-4);
-  @include scroll-pad.inline(var(--p-space-4));
+  padding-block: var(--drawer-gutter);
+  @include scroll-pad.inline(var(--drawer-gutter));
 }
 @include bp.below(phone) {
+  .ui-detail-drawer {
+    --drawer-inset: 0px;
+    --drawer-gutter: var(--p-space-3);
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
   .drawer-resize {
     display: none;
-  }
-  .ui-drawer-header {
-    padding: var(--p-space-2) var(--p-space-3);
-  }
-  .ui-drawer-body {
-    padding-block: var(--p-space-3);
-    @include scroll-pad.inline(var(--p-space-3));
   }
 }

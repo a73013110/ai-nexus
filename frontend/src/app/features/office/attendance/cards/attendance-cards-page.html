@@ -143,7 +143,12 @@
     />
   </nx-data-table>
 </nx-feature-page>
-<nx-detail-drawer title="卡片詳情" [tour]="drawerTour()" (closed)="closed()">
+<nx-detail-drawer
+  title="卡片詳情"
+  preferenceKey="attendance-card"
+  [tour]="drawerTour()"
+  (closed)="closed()"
+>
   @if (store.canMaintain() && store.selected(); as card) {
     <nx-action-menu
       drawer-actions
@@ -153,19 +158,13 @@
       (action)="cardAction(card, $event)"
     />
   }
-  <div drawer-summary class="ui-drawer-summary">
-    @if (store.selected(); as card) {
+  @if (store.selected(); as card) {
+    <nx-drawer-summary mono [heading]="card.cardNumber" [subtitle]="card.note">
       @if (card.hiddenFromRecords) {
-        <div>
-          <nx-status-badge tone="neutral">在出勤紀錄隱藏</nx-status-badge>
-        </div>
+        <nx-status-badge tone="neutral">在出勤紀錄隱藏</nx-status-badge>
       }
-      <h3 class="cards-number">{{ card.cardNumber }}</h3>
-      @if (card.note) {
-        <span class="ui-drawer-subtitle">{{ card.note }}</span>
-      }
-    }
-  </div>
+    </nx-drawer-summary>
+  }
   @if (store.selected(); as card) {
     <div class="ui-drawer-sections ui-table-fill">
       @if (drawerError()) {

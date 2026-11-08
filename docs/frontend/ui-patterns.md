@@ -35,9 +35,8 @@
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消。危險動作一律經過確認。
-- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal。
+- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal；組成見[詳情抽屜](detail-drawer.md)。
 - 與頁面並用、長時間開著的工具（助理）用 `FloatingPanel`：可拖動、調整大小、全螢幕或縮成[動態島](motion.md#動態島)，沒有關閉。
-- 抽屜內容由數個區塊（提示、卡片、帶標題的段落）組成時包在 `.ui-drawer-sections`。
 - 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 - 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用；其他系統的檔案以 `ReaderTarget.remote` 預覽；`layout` 選 `cards`／`tiles`／`rows`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。

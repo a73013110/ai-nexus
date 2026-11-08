@@ -217,7 +217,12 @@
         (retry)="reloadStatus()"
       />
     </nx-data-table>
-    <nx-detail-drawer title="郵件詳情" [tour]="drawerTour()" (closed)="selectedId.set(null)">
+    <nx-detail-drawer
+      title="郵件詳情"
+      preferenceKey="mail-message"
+      [tour]="drawerTour()"
+      (closed)="selectedId.set(null)"
+    >
       <nx-drawer-pager
         drawer-actions
         noun="郵件"
@@ -225,18 +230,14 @@
         [count]="table.rows().length"
         (move)="adjacent($event)"
       />
-      <div drawer-summary class="ui-drawer-summary">
-        @if (selected(); as row) {
-          <div>
-            <nx-status-badge [tone]="row.status.tone" [state]="row.status.label">{{
-              row.status.label
-            }}</nx-status-badge
-            ><time [attr.datetime]="row.message.createdAt">{{ row.date }}</time>
-          </div>
-          <h3>{{ row.message.subject }}</h3>
-          <span class="ui-drawer-subtitle">{{ row.message.recipient }}</span>
-        }
-      </div>
+      @if (selected(); as row) {
+        <nx-drawer-summary [heading]="row.message.subject" [subtitle]="row.message.recipient">
+          <nx-status-badge [tone]="row.status.tone" [state]="row.status.label">{{
+            row.status.label
+          }}</nx-status-badge>
+          <time [attr.datetime]="row.message.createdAt">{{ row.date }}</time>
+        </nx-drawer-summary>
+      }
       @if (detailError()) {
         <nx-notice tone="danger" [message]="detailError()"
           ><button
@@ -254,41 +255,6 @@
         <section aria-label="郵件寄送資訊">
           @if (detailAction.error()) {
             <nx-notice tone="danger" [message]="detailAction.error()" />
-          }
-          @if (session.has('mail.messages.resend')) {
-            @if (view.detail.message.status === 'queued') {
-              <div class="mail-actions">
-                <button
-                  nxPending
-                  type="button"
-                  class="secondary-button mail-retry"
-                  [pending]="detailAction.pendingFor('retry')"
-                  (click)="retry()"
-                >
-                  <nx-icon name="play" />{{
-                    detailAction.pendingFor('retry') ? '排入中…' : '立即重試'
-                  }}
-                </button>
-                <p class="form-note">不等下次嘗試時間，現在就寄這一封；暫停寄送中也會一併恢復。</p>
-              </div>
-            } @else if (view.detail.canResend) {
-              <div class="mail-actions">
-                <button
-                  nxPending
-                  type="button"
-                  class="secondary-button mail-resend"
-                  [pending]="detailAction.pendingFor('resend')"
-                  (click)="resend()"
-                >
-                  <nx-icon name="repeat" />{{
-                    detailAction.pendingFor('resend') ? '重寄中…' : '重寄'
-                  }}
-                </button>
-                <p class="form-note">以原內容建立一封新信，原紀錄不變。</p>
-              </div>
-            } @else if (view.blocked) {
-              <p class="form-note">{{ view.blocked }}</p>
-            }
           }
           <h3 class="ui-section-heading">寄送嘗試</h3>
           @if (view.attempts.length) {
@@ -430,6 +396,31 @@
           }
           <span class="sr-only">正在載入郵件詳情…</span>
         </div>
+      }
+      @if (detailFoot(); as foot) {
+        <nx-drawer-foot [note]="foot.note">
+          @if (foot.action === 'retry') {
+            <button
+              nxPending
+              type="button"
+              class="secondary-button mail-retry"
+              [pending]="detailAction.pendingFor('retry')"
+              (click)="retry()"
+            >
+              <nx-icon name="play" />{{ detailAction.pendingFor('retry') ? '排入中…' : '立即重試' }}
+            </button>
+          } @else if (foot.action === 'resend') {
+            <button
+              nxPending
+              type="button"
+              class="secondary-button mail-resend"
+              [pending]="detailAction.pendingFor('resend')"
+              (click)="resend()"
+            >
+              <nx-icon name="repeat" />{{ detailAction.pendingFor('resend') ? '重寄中…' : '重寄' }}
+            </button>
+          }
+        </nx-drawer-foot>
       }
     </nx-detail-drawer>
     <nx-mail-test-dialog [from]="status()?.fromAddress ?? ''" (sent)="testSent($event)" />

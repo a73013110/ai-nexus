@@ -15,6 +15,7 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate, formatDay, formatNumber, formatPercent } from '@shared/browser/format';
 import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -50,6 +51,7 @@ const isoDay = (date: Date) =>
     DataTable,
     DataTableRow,
     DetailDrawer,
+    DrawerSummary,
     FeaturePage,
     Icon,
     Notice,

@@ -36,8 +36,8 @@ export interface TabItem {
       display: flex;
       gap: var(--p-space-1);
       min-height: min-content;
-      padding-inline: var(--p-space-3);
-      border-bottom: 1px solid var(--line);
+      padding-inline: var(--tabs-inset, var(--p-space-3));
+      border-bottom: var(--tabs-rule, 1px solid var(--line));
       overflow-x: auto;
       scrollbar-width: none;
     }

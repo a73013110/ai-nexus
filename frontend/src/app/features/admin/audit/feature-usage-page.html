@@ -141,15 +141,17 @@
         (retry)="read.reload()"
       />
     </nx-data-table>
-    <nx-detail-drawer title="功能使用量" (closed)="selectedId.set(null)">
-      <div drawer-summary class="ui-drawer-summary">
-        @if (selected(); as row) {
-          <h3>{{ row.name }}</h3>
-          <span class="ui-drawer-subtitle"
-            >{{ format(row.users) }} 人 · {{ format(row.events) }} 次 · {{ periodLabel() }}</span
-          >
-        }
-      </div>
+    <nx-detail-drawer
+      title="功能使用量"
+      preferenceKey="feature-usage"
+      (closed)="selectedId.set(null)"
+    >
+      @if (selected(); as row) {
+        <nx-drawer-summary
+          [heading]="row.name"
+          [subtitle]="format(row.users) + ' 人 · ' + format(row.events) + ' 次 · ' + periodLabel()"
+        />
+      }
       @if (selected(); as row) {
         <section class="usage-detail" aria-label="功能使用量詳情">
           @if (detailRead.error()) {

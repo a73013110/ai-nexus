@@ -17,6 +17,8 @@ import { CodeSamples, type CodeSample } from '@shared/ui/code-samples';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerFoot } from '@shared/ui/drawer-foot';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { FileList, FileListItem } from '@shared/ui/file-list';
@@ -92,6 +94,8 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
     DesignExample,
     DesignSection,
     DetailDrawer,
+    DrawerFoot,
+    DrawerSummary,
     DrawerPager,
     Field,
     FileList,
@@ -495,6 +499,7 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
     </nx-design-section>
     <nx-detail-drawer
       title="資料詳情示範"
+      preferenceKey="design-data"
       [attr.data-theme]="theme()"
       (closed)="selected.set(null)"
     >
@@ -505,10 +510,10 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
         [count]="shownRows().length"
         (move)="inspectAdjacent($event)"
       />
-      <div drawer-summary class="ui-drawer-summary">
-        <h3>{{ event() }}</h3>
-        <span class="ui-drawer-subtitle">共用詳情面板 · 本地範例</span>
-      </div>
+      <nx-drawer-summary [heading]="event()" subtitle="共用詳情面板 · 本地範例">
+        <nx-status-badge tone="success">完成</nx-status-badge>
+        <time datetime="2026-01-05T09:30:00+08:00">2026/01/05 09:30</time>
+      </nx-drawer-summary>
       <nx-tabs
         #detailTabs
         drawer-tabs
@@ -545,6 +550,9 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
           <nx-code-block label="示範屬性 JSON" [value]="properties" />
         }
       </section>
+      <nx-drawer-foot note="固定在底部，不隨內文捲動。">
+        <button type="button" class="secondary-button">示範動作</button>
+      </nx-drawer-foot>
     </nx-detail-drawer>`,
 })
 export class DesignData {

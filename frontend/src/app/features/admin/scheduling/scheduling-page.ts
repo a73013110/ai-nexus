@@ -23,6 +23,7 @@ import { ServerClock } from '@shared/browser/server-clock';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
@@ -72,6 +73,7 @@ type View = (typeof VIEWS)[number]['value'];
     DataTable,
     DataTableColumn,
     DetailDrawer,
+    DrawerSummary,
     FeaturePage,
     Icon,
     Notice,

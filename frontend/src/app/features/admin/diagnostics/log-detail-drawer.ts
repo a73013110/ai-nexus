@@ -15,6 +15,7 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { CodeBlock } from '@shared/markdown/code-block';
 import { formatDate } from '@shared/browser/format';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Icon } from '@shared/ui/icon';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DrawerPager } from '@shared/ui/drawer-pager';
@@ -51,6 +52,7 @@ const outcomes: Record<string, string> = {
     CodeBlock,
     CopyValue,
     DetailDrawer,
+    DrawerSummary,
     DrawerPager,
     EmptyState,
     Icon,

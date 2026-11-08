@@ -225,13 +225,17 @@
       </div>
     }
 
-    <nx-detail-drawer title="排程任務" (closed)="selectedKey.set(null)">
-      <div drawer-summary class="ui-drawer-summary">
-        @if (selected(); as task) {
-          <h3>{{ task.name }}</h3>
-          <span class="ui-drawer-subtitle">{{ task.category }}・{{ task.schedule }}</span>
-        }
-      </div>
+    <nx-detail-drawer
+      title="排程任務"
+      preferenceKey="scheduled-task"
+      (closed)="selectedKey.set(null)"
+    >
+      @if (selected(); as task) {
+        <nx-drawer-summary
+          [heading]="task.name"
+          [subtitle]="task.category + '・' + task.schedule"
+        />
+      }
       @if (selected(); as task) {
         <div class="ui-drawer-sections ui-table-fill">
           <p class="scheduling-description">{{ task.description }}</p>

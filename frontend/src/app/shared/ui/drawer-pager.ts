@@ -16,9 +16,14 @@ import { Icon } from './icon';
       display: flex;
       align-items: center;
       gap: var(--p-space-1);
+      border-radius: var(--radius-action);
+      background: var(--surface-inset);
       color: var(--secondary);
       font-size: var(--p-font-xs);
       font-variant-numeric: tabular-nums;
+    }
+    span {
+      padding-inline-start: var(--p-space-3);
     }
   `,
   template: `@if (index() >= 0) {

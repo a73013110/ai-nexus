@@ -222,16 +222,18 @@
       </nx-data-table>
     }
     <nx-detail-drawer
-      [title]="selected() ? objectName(selected()!) : '結構異動'"
+      title="結構異動"
+      preferenceKey="schema-change"
+      defaultSize="wide"
       (closed)="closeDetail()"
     >
       @if (selected(); as change) {
-        <div drawer-summary class="releases-summary">
-          <span>{{ typeNames[change.type] ?? change.type }}</span>
+        <nx-drawer-summary mono [heading]="objectName(change)">
           <nx-status-badge [tone]="changeTone(change.change)">{{
             changeNames[change.change] ?? change.change
           }}</nx-status-badge>
-        </div>
+          <span>{{ typeNames[change.type] ?? change.type }}</span>
+        </nx-drawer-summary>
       }
       @if (detail.value(); as object) {
         <nx-schema-diff

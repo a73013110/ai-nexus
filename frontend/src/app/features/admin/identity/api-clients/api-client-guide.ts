@@ -10,7 +10,7 @@ import { ApiClientGuideBody } from './api-client-guide-body';
   selector: 'nx-api-client-guide',
   imports: [ApiClientGuideBody, DetailDrawer],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<nx-detail-drawer title="串接說明">
+  template: `<nx-detail-drawer title="串接說明" preferenceKey="api-client-guide">
     @if (opened()) {
       @defer {
         <nx-api-client-guide-body />
