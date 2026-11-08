@@ -36,6 +36,12 @@ public sealed class CalendarSyncRunnerTests
             return await scope.ServiceProvider.GetRequiredService<CalendarSyncRunner>().RunAsync(request, TestContext.Current.CancellationToken);
         }
 
+        public async Task<CalendarSyncOutcome> ResetAsync()
+        {
+            using var scope = Factory.Services.CreateScope();
+            return await scope.ServiceProvider.GetRequiredService<CalendarSyncRunner>().ResetAsync(new(Guid.Empty, false), TestContext.Current.CancellationToken);
+        }
+
         public async Task<List<CalendarEvent>> RowsAsync()
         {
             using var scope = Factory.Services.CreateScope();
@@ -79,6 +85,7 @@ public sealed class CalendarSyncRunnerTests
                 options.CalendarId = CalendarId;
                 options.Enabled = enabled;
                 options.RemovalHoldMinimum = 3;
+                options.RateLimitPauseSeconds = 1;
             });
             services.RemoveAll<IGoogleCalendar>();
             services.AddSingleton<IGoogleCalendar>(google);
@@ -275,6 +282,116 @@ public sealed class CalendarSyncRunnerTests
     }
 
     [Fact]
+    public async Task ResetDeletesThisCalendarsEventsAndRecordsAndTheNextRunStartsOver()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            s.Gd.AddLeave("L-2", "G002", "A", Day.AddHours(8.5), Day.AddHours(12), "Decide");
+            await s.RunAsync(manual: true);
+            // 已經移除的列與另一個日曆的列、紀錄：前者一起清掉，後者不動。
+            s.Gd.Update("Form_Leave", "L-2", "FlowOver = 'Cancel'");
+            await s.RunAsync(manual: true);
+            var ct = TestContext.Current.CancellationToken;
+            using (var scope = s.Factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var now = DateTimeOffset.UtcNow;
+                db.CalendarEvents.Add(new CalendarEvent
+                {
+                    CalendarId = "other@example.test", DesNo = "L-9", Kind = CalendarEventKinds.Leave, ApplicantName = "陳小華", FlowStatus = "Decide",
+                    StartsAt = now, EndsAt = now.AddHours(1), ContentHash = new byte[CalendarEvent.HashLength], GoogleEventId = "other-9",
+                    State = CalendarEventStates.Synced, CreatedAt = now, UpdatedAt = now
+                });
+                db.SyncRuns.Add(new SyncRun { CalendarId = "other@example.test", TriggerKind = SyncRunTriggers.Manual, StartedAt = now, FinishedAt = now, Status = SyncRunStatuses.Succeeded });
+                await db.SaveChangesAsync(ct);
+            }
+            // Google 上手動建立的事件不是本系統記錄的，不刪。
+            s.Google.Events["manual-1"] = new GoogleCalendarEvent { Id = "manual-1", Summary = "部門聚餐" };
+
+            var reset = await s.ResetAsync();
+
+            Assert.Equal((SyncRunStatuses.Succeeded, 1), (reset.Status, reset.Deleted));
+            Assert.Equal(["manual-1"], s.Google.Events.Keys);
+            Assert.Equal(["L-9"], (await s.RowsAsync()).Select(x => x.DesNo));
+            using (var scope = s.Factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                Assert.Equal(["other@example.test"], await db.SyncRuns.Select(x => x.CalendarId).ToListAsync(ct));
+            }
+            Assert.Contains("\"events\":2", Assert.Single(await AttendanceApi.AuditAsync(s.Factory, CalendarSyncAudit.Cleared.Name)).Details);
+
+            Assert.Equal(1, (await s.RunAsync()).Created);
+            Assert.Equal(2, s.Google.Events.Count);
+        });
+    }
+
+    [Fact]
+    public async Task AResetWaitsOutGoogleRateLimitsAndGivesUpWhenTheyNeverLift()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+
+            s.Google.Failure = GoogleStatus.RateLimited;
+            var stopped = await s.ResetAsync();
+            Assert.Equal((SyncRunStatuses.Failed, CalendarSyncFailures.GoogleRateLimited), (stopped.Status, stopped.ErrorCode));
+            Assert.Single(s.Google.Events);
+            Assert.Single(await s.RowsAsync());
+
+            // 限速只擋一次：暫停後接著刪完，不算失敗。
+            s.Google.Failure = null;
+            s.Google.RateLimitedDeletes = 1;
+            Assert.Equal(SyncRunStatuses.Succeeded, (await s.ResetAsync()).Status);
+            Assert.Equal(0, s.Google.RateLimitedDeletes);
+            Assert.Empty(s.Google.Events);
+            Assert.Empty(await s.RowsAsync());
+        });
+    }
+
+    [Fact]
+    public async Task AResetThatGoogleRefusesKeepsTheRowsAndReportsWhy()
+    {
+        await RunAsync(async s =>
+        {
+            s.Gd.AddLeave("L-1", "G001", "A", Day.AddHours(8.5), Day.AddHours(18), "Decide");
+            await s.RunAsync();
+            s.Google.Failure = GoogleStatus.Unavailable;
+
+            var reset = await s.ResetAsync();
+
+            Assert.Equal((SyncRunStatuses.Failed, CalendarSyncFailures.GoogleUnavailable), (reset.Status, reset.ErrorCode));
+            Assert.Single(s.Google.Events);
+            var row = Assert.Single(await s.RowsAsync());
+            Assert.Equal(CalendarEventStates.Failed, row.State);
+            Assert.NotNull(row.RemovedAt);
+
+            // 再按一次重設，接著把剩下的刪完。
+            s.Google.Failure = null;
+            Assert.Equal(SyncRunStatuses.Succeeded, (await s.ResetAsync()).Status);
+            Assert.Empty(s.Google.Events);
+            Assert.Empty(await s.RowsAsync());
+        });
+    }
+
+    [Fact]
+    public async Task AResetRequestMustNameTheConfiguredCalendar()
+    {
+        await RunAsync(async s =>
+        {
+            var bob = await OrganizationApi.UserIdAsync(s.Factory, "bob");
+            await AttendanceApi.GrantAsync(s.Factory, bob, "test-calendar-sync", FeatureCatalog.CalendarSync, FeatureCatalog.CalendarSyncManage);
+            var manager = await s.Factory.SignedInAsync("bob");
+
+            await ProblemAssertions.AssertCodeAsync(await manager.PostAsJsonAsync("/api/v1/calendar-sync/reset", new { calendarId = "other@example.test" }),
+                HttpStatusCode.Conflict, "calendar_sync_reset_mismatch");
+            Assert.Equal(HttpStatusCode.NoContent, (await manager.PostAsJsonAsync("/api/v1/calendar-sync/reset", new { calendarId = CalendarId })).StatusCode);
+            Assert.Equal(2, (await AttendanceApi.AuditAsync(s.Factory, CalendarSyncAudit.ResetRequested.Name)).Count);
+        }, enabled: true);
+    }
+
+    [Fact]
     public async Task PagesAndActionsRequireTheirFeatures()
     {
         await RunAsync(async s =>
@@ -291,6 +408,7 @@ public sealed class CalendarSyncRunnerTests
             Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/events")).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/v1/calendar-sync/runs")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/v1/calendar-sync/runs", new { confirmRemovals = false })).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/v1/calendar-sync/reset", new { calendarId = CalendarId })).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/v1/calendar-sync/connection-test", null)).StatusCode);
         });
     }
@@ -376,6 +494,7 @@ public sealed class CalendarSyncRunnerTests
         private readonly Lock gate = new();
         public Dictionary<string, GoogleCalendarEvent> Events { get; } = [];
         public GoogleStatus? Failure { get; set; }
+        public int RateLimitedDeletes { get; set; }
         public string? RejectDescriptionContaining { get; set; }
 
         public Task<GoogleResponse<GoogleCalendarInfo>> GetCalendarAsync(string calendarId, CancellationToken ct)
@@ -406,6 +525,11 @@ public sealed class CalendarSyncRunnerTests
             lock (gate)
             {
                 if (Failure is { } failure) return Task.FromResult(new GoogleResponse<bool>(failure));
+                if (RateLimitedDeletes > 0)
+                {
+                    RateLimitedDeletes--;
+                    return Task.FromResult(new GoogleResponse<bool>(GoogleStatus.RateLimited));
+                }
                 return Task.FromResult(Events.Remove(eventId) ? GoogleResponse<bool>.Ok(true) : new GoogleResponse<bool>(GoogleStatus.NotFound));
             }
         }

@@ -5157,6 +5157,32 @@
         }
       }
     },
+    "/api/v1/calendar-sync/reset": {
+      "post": {
+        "tags": [
+          "CalendarSync"
+        ],
+        "operationId": "ResetCalendarSync",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarSyncResetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/calendar-sync/connection-test": {
       "post": {
         "tags": [
@@ -13518,6 +13544,17 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "CalendarSyncResetRequest": {
+        "required": [
+          "calendarId"
+        ],
+        "type": "object",
+        "properties": {
+          "calendarId": {
+            "type": "string"
           }
         }
       },

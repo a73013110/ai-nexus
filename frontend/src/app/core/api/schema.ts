@@ -2203,6 +2203,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calendar-sync/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ResetCalendarSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar-sync/connection-test": {
         parameters: {
             query?: never;
@@ -5480,6 +5496,9 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        CalendarSyncResetRequest: {
+            calendarId: string;
+        };
         CalendarSyncRunDto: {
             /** Format: uuid */
             id: string;
@@ -8562,6 +8581,7 @@ export type CalendarSyncCalendarDto = components['schemas']['CalendarSyncCalenda
 export type CalendarSyncCheck = components['schemas']['CalendarSyncCheck'];
 export type CalendarSyncConnectionDto = components['schemas']['CalendarSyncConnectionDto'];
 export type CalendarSyncEventDto = components['schemas']['CalendarSyncEventDto'];
+export type CalendarSyncResetRequest = components['schemas']['CalendarSyncResetRequest'];
 export type CalendarSyncRunDto = components['schemas']['CalendarSyncRunDto'];
 export type CalendarSyncRunRequest = components['schemas']['CalendarSyncRunRequest'];
 export type CalendarSyncStatusDto = components['schemas']['CalendarSyncStatusDto'];
@@ -11632,6 +11652,29 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CalendarSyncRunRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ResetCalendarSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarSyncResetRequest"];
             };
         };
         responses: {

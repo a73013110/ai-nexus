@@ -43,5 +43,6 @@
 
 - 有未儲存變更的頁面實作 `canLeave()`，路由加 `pendingChanges` guard。
 - 關閉、切頁籤或離開會捨棄變更時，用 `ConfirmDialog.discard(說明)`：全站同一個標題「放棄未儲存的變更？」與「放棄變更」鈕，說明只寫捨棄什麼、之後會是什麼內容。
+- 不能復原又波及整批資料的動作（例：重設整本日曆），`ask` 帶 `typed`：照打對象的識別（名稱、ID 前幾碼）才能按確認，一般刪除不用。
 - 開啟時建立草稿的編輯對話框用 [`DraftEditor`](../../frontend/src/app/shared/ui/draft-editor.ts)：`open(對象, 草稿)` 記下基準，提供 `dirty`、`revert`、`confirmDiscard`；比較規則（去空白、忽略順序）由功能傳入。儲存成功或版本過期後先 `markSaved()` 再關閉，退場動畫期間儲存列才不會閃出「有未儲存的變更」。欄位驗證、送出與對話框開關留在功能。
 - 基準跟著伺服器重讀的（使用者檢視器的各頁籤）用 `linkedSignal` 保存基準，不用 `DraftEditor`。

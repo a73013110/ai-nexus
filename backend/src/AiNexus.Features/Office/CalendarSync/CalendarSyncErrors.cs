@@ -9,6 +9,9 @@ public static class CalendarSyncErrors
     /// <summary>設定沒有打開同步（或沒有日曆 ID）時不能手動同步；只在正式站打開，避免開發機改到正式日曆。</summary>
     public static readonly Error Disabled = Error.Conflict("calendar_sync_disabled");
 
+    /// <summary>要重設的日曆不是本站設定的日曆（設定在確認期間被換掉）；重新整理頁面再確認一次。</summary>
+    public static readonly Error ResetCalendarMismatch = Error.Conflict("calendar_sync_reset_mismatch");
+
     /// <summary>還沒設定日曆 ID，連線測試沒有對象。</summary>
     public static readonly Error CalendarNotConfigured = Error.Unprocessable("calendar_sync_calendar_not_configured");
 

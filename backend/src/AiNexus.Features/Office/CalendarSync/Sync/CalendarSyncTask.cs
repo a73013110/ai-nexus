@@ -4,8 +4,8 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Office.CalendarSync.Sync;
 
-/// <summary>手動同步帶給任務的參數（<see cref="Management.StartCalendarSyncRun"/>）。</summary>
-public sealed record CalendarSyncParameters(bool ConfirmRemovals);
+/// <summary>手動同步帶給任務的參數（<see cref="Management.StartCalendarSyncRun"/>）；<see cref="Reset"/> 是重設日曆（<see cref="Management.ResetCalendarSync"/>），不同步。</summary>
+public sealed record CalendarSyncParameters(bool ConfirmRemovals, bool Reset = false);
 
 /// <summary>
 /// 定期跑一輪 <see cref="CalendarSyncRunner"/>；管理頁的「立即同步」經排程任務的手動要求提前執行，並帶上是否確認移除。
@@ -22,9 +22,17 @@ public sealed class CalendarSyncTask(CalendarSyncRunner runner) : IScheduledTask
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {
+        var parameters = context.Trigger == ScheduledTaskTrigger.Manual ? context.Parameters<CalendarSyncParameters>() : null;
         var request = context.Trigger == ScheduledTaskTrigger.Manual
-            ? new CalendarSyncRequest(context.RequestedBy ?? Guid.Empty, context.Parameters<CalendarSyncParameters>()?.ConfirmRemovals == true)
+            ? new CalendarSyncRequest(context.RequestedBy ?? Guid.Empty, parameters?.ConfirmRemovals == true)
             : null;
+        if (request is not null && parameters?.Reset == true)
+        {
+            var reset = await runner.ResetAsync(request, ct);
+            return reset.Status == SyncRunStatuses.Succeeded
+                ? TaskOutcome.Done($"重設日曆：移除 {reset.Deleted:N0} 個事件，清除事件與同步紀錄")
+                : TaskOutcome.Failed(CalendarSyncErrors.Failure(reset.ErrorCode), $"重設未完成：已移除 {reset.Deleted:N0}、失敗 {reset.Failed:N0}");
+        }
         var outcome = await runner.RunAsync(request, ct);
         var summary = $"新增 {outcome.Created:N0}、更新 {outcome.Updated:N0}、移除 {outcome.Deleted:N0}、失敗 {outcome.Failed:N0}";
         return outcome.Status switch

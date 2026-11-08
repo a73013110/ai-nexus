@@ -67,7 +67,7 @@
 .selection-box input:is(:checked, :indeterminate) + .selection-indicator {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
 }
 .selection-box input:focus-visible + .selection-indicator {
   outline: 2px solid var(--focus);

@@ -31,6 +31,12 @@
       >
         <nx-icon name="refresh" />{{ status()?.running ? '同步中…' : '立即同步' }}
       </button>
+      <nx-action-menu
+        label="日曆同步的其他操作"
+        [items]="moreActions()"
+        [busy]="resetting.pending()"
+        (action)="reset()"
+      />
     </div>
   }
 
@@ -74,6 +80,14 @@
       [message]="starting.error()"
       [dismissible]="true"
       (dismissed)="starting.error.set('')"
+    />
+  }
+  @if (resetting.error()) {
+    <nx-notice
+      tone="danger"
+      [message]="resetting.error()"
+      [dismissible]="true"
+      (dismissed)="resetting.error.set('')"
     />
   }
   @if (testing.error()) {
@@ -229,21 +243,23 @@
               }
               <th scope="row" nxTableColumn="applicantName">
                 @if (item.row.htmlLink && !item.row.removed) {
+                  <!-- 名字照常是粗體墨色，外連圖示小而淡、與名字隔開：一眼是人名，滑過才看出能開到 Google。 -->
                   <a
-                    class="ui-table-link ui-truncate"
+                    class="ui-table-link calendar-sync-applicant"
                     target="_blank"
                     rel="noopener noreferrer"
                     [href]="item.row.htmlLink"
                     [attr.aria-label]="
                       '在 Google 日曆開啟：' + item.row.applicantName + '，' + item.period
                     "
-                    >{{ item.row.applicantName }}<nx-icon name="external"
+                    ><span class="ui-truncate">{{ item.row.applicantName }}</span
+                    ><nx-icon name="external"
                   /></a>
                 } @else {
                   <span class="ui-truncate">{{ item.row.applicantName }}</span>
                 }
                 @if (item.row.agentName) {
-                  <small class="ui-truncate">代理人 {{ item.row.agentName }}</small>
+                  <small class="ui-truncate">代理 {{ item.row.agentName }}</small>
                 }
               </th>
               <td nxTableColumn="kind" data-label="類別">{{ item.kind }}</td>

@@ -151,7 +151,7 @@ button.island-pill:hover {
   padding-inline: var(--p-space-3);
   border-radius: var(--radius-action);
   background: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
   font-weight: 600;
 }
 .island-action:hover:not(:disabled) {

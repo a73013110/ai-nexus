@@ -6,10 +6,10 @@
   margin: 0;
 }
 .scheduling-count.is-running {
-  color: var(--accent-text);
+  color: var(--accent);
 }
 .scheduling-count.is-failing {
-  color: var(--danger-text);
+  color: var(--error);
 }
 .scheduling-groups {
   display: grid;
@@ -24,7 +24,7 @@
   margin-top: 0;
 }
 .scheduling-group.is-attention .ui-section-heading {
-  color: var(--danger-text);
+  color: var(--error);
 }
 // 一列一個任務、共用一個表面：紀錄條與按鈕對齊成欄，上下比對比卡片牆容易。
 .scheduling-list {
@@ -144,7 +144,7 @@
     color: var(--success);
   }
   &[data-tone='danger'] {
-    color: var(--danger-text);
+    color: var(--error);
   }
   &[data-tone='warning'] {
     color: var(--warning);

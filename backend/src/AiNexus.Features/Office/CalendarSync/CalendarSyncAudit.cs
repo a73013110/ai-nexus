@@ -9,8 +9,12 @@ public static class CalendarSyncAudit
     public static readonly AuditAction EventRead = AuditAction.Access("calendar-sync.event.read", "查詢日曆同步事件");
     public static readonly AuditAction RunRead = AuditAction.Access("calendar-sync.run.read", "查詢日曆同步紀錄");
     public static readonly AuditAction RunRequested = AuditAction.Administration("calendar-sync.run.requested", "手動同步 Google 日曆");
+    public static readonly AuditAction ResetRequested = AuditAction.Administration("calendar-sync.reset.requested", "要求重設 Google 日曆");
     public static readonly AuditAction ConnectionTested = AuditAction.Administration("calendar-sync.connection.verified", "測試 Google 日曆連線");
 
     /// <summary>一輪同步改了 Google 日曆（建立、更新或刪除事件；系統動作，擁有者為空）；沒有異動的一輪不記。</summary>
     public static readonly AuditAction Synced = AuditAction.Administration("calendar-sync.run.synced", "同步 Google 日曆");
+
+    /// <summary>重設完成：日曆上本系統記錄的事件已刪除，事件列與同步紀錄已清除（系統動作，擁有者為空）。</summary>
+    public static readonly AuditAction Cleared = AuditAction.Administration("calendar-sync.calendar.cleared", "重設 Google 日曆");
 }

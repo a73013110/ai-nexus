@@ -108,13 +108,17 @@ function sampleRuns(now: number): RunStripItem[] {
           [to]="nextAt()"
           [progress]="progress()"
         >
-          <nx-run-state [state]="shownState()" />
+          @if (phase() === 'running') {
+            <nx-ticking-time compact [from]="startedAt()" />
+          } @else {
+            <nx-run-state [state]="shownState()" />
+          }
         </nx-timer-ring>
         <strong>暫存檔清理</strong>
         <p>
           @switch (phase()) {
             @case ('running') {
-              執行中・已經過 <nx-ticking-time [from]="startedAt()" />
+              執行中<span class="sr-only">，<nx-ticking-time [from]="startedAt()" /></span>
             }
             @case ('paused') {
               已暫停
@@ -163,6 +167,7 @@ function sampleRuns(now: number): RunStripItem[] {
       <span class="design-run-row">
         <span class="design-run-clock"><nx-ticking-time [to]="later" /></span>
         <span class="design-run-clock"><nx-ticking-time [from]="since" /></span>
+        <nx-ticking-time compact [from]="since" />
         <nx-ticking-time unknown="未排定" />
       </span>
     </nx-design-example>

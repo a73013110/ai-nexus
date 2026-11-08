@@ -15,7 +15,7 @@ export function remainingRatio(from: string | null, to: string | null, now: numb
 
 /**
  * 圓環計時器：倒數時圓弧隨共用的 `ServerClock` 逐秒線性消退，像沙漏；執行中有進度時圓弧以彈簧填滿，沒有進度時一段圓弧繞行；
- * 時間到了還沒開始（`due`）時整圈呼吸；暫停是虛線、`off` 只剩底圈。中間可放圖示或文字（`ng-content`）。
+ * 時間到了還沒開始（`due`）時整圈呼吸；暫停是虛線、`off` 只剩底圈。中間可放圖示或文字（`ng-content`），文字沿用圓環的顏色與小字，呼叫端不必另外設定。
  * 這是裝飾：旁邊的文字（例如 `TickingTime`）才承載時間，所以整個元件對輔助技術隱藏。大小用 `--timer-ring-size`。
  */
 @Component({
@@ -105,6 +105,8 @@ export function remainingRatio(from: string | null, to: string | null, now: numb
       position: relative;
       display: inline-grid;
       place-items: center;
+      font-size: var(--p-font-xs);
+      font-weight: 600;
       line-height: 1;
     }
     @media (forced-colors: active) {

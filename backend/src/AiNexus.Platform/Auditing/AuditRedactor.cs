@@ -39,6 +39,8 @@ public static class AuditRedactor
         "expired", "contents", "records",
         // 日曆同步（calendar_sync.*）：一輪的建立、更新數用既有的 created、updated，刪除與失敗數 deleted、failed；手動同步是否確認被安全閥擋下的移除。
         "deleted", "failed", "confirmRemovals",
+        // 重設日曆（calendar-sync.reset.requested、calendar-sync.calendar.cleared）：對象日曆 ID（共用日曆的設定值，不是個人資料）與清掉的事件列、同步紀錄數。
+        "calendarId", "events", "runs",
         // 排程任務（scheduling.task.*）：暫停狀態的前後快照。
         "paused",
         // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。

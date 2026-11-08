@@ -50,7 +50,8 @@
   // 淺色 46%：對 --surface 3.4、--canvas 3.3、--sidebar 3.0。改 --line 或 --ink 時兩個主題都要重算。
   --control-line: color-mix(in srgb, var(--ink) 46%, var(--line));
   --accent: var(--p-navy-700);
-  --accent-text: var(--p-white);
+  // 鋪在 --accent 底上的字與圖示（主要按鈕、選取狀態）；要 accent 色的文字直接用 --accent。
+  --on-accent: var(--p-white);
   --accent-soft: var(--p-blue-100);
   --focus: var(--p-blue-600);
   --signal: var(--p-teal-700);
@@ -202,7 +203,8 @@
 
   @include light-theme;
   --danger-surface: var(--p-red-700);
-  --danger-text: var(--p-white);
+  // 鋪在 --danger-surface 底上的字；錯誤色的文字用 --error。
+  --on-danger: var(--p-white);
   --font-ui: 'Segoe UI', 'Microsoft JhengHei UI', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-code: 'Cascadia Code', ui-monospace, monospace;
   // 個人設定的文字大小倍率（ThemeService、boot.js 寫在根元素），只乘在上面的字級階梯；根字級維持瀏覽器預設。
@@ -358,7 +360,7 @@
   // 暗底上一點亮度差就拉開對比，混 32% 即過 3:1：對 --surface 3.2、--canvas 3.6。
   --control-line: color-mix(in srgb, var(--ink) 32%, var(--line));
   --accent: var(--p-sky-200);
-  --accent-text: var(--p-dark-accent);
+  --on-accent: var(--p-dark-accent);
   --accent-soft: var(--p-dark-accent-soft);
   --focus: var(--p-sky-100);
   --signal: var(--p-teal-300);

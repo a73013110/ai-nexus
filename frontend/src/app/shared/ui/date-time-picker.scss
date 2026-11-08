@@ -125,7 +125,7 @@
 }
 .ui-calendar td button.is-selected {
   background: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
 }
 .ui-calendar td button:disabled {
   opacity: 0.35;

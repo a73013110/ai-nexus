@@ -104,6 +104,37 @@ describe('apiResource', () => {
     expect(read.value()).toBe(2);
   });
 
+  it('keeps polling when the interval reads a signal that changes faster than the interval', async () => {
+    // 看板的輪詢讀逐秒跳動的時鐘：時鐘變了不能重設計時器，否則比一秒長的間隔永遠到不了。
+    const clock = signal(0);
+    const loader = vi.fn(async () => 'board');
+    const { settle } = setup({ loader, poll: () => (clock() >= 0 ? 30 : null) });
+    await settle();
+    expect(loader).toHaveBeenCalledTimes(1);
+    const ticking = setInterval(() => clock.update((value) => value + 1), 5);
+    try {
+      await vi.waitFor(() => {
+        TestBed.tick();
+        expect(loader.mock.calls.length).toBeGreaterThan(1);
+      });
+    } finally {
+      clearInterval(ticking);
+    }
+  });
+
+  it('starts polling as soon as the interval turns on', async () => {
+    const active = signal(false);
+    const loader = vi.fn(async () => 'board');
+    const { settle } = setup({ loader, poll: () => (active() ? 5 : null) });
+    await settle();
+    expect(loader).toHaveBeenCalledTimes(1);
+    active.set(true);
+    await vi.waitFor(() => {
+      TestBed.tick();
+      expect(loader.mock.calls.length).toBeGreaterThan(1);
+    });
+  });
+
   it('keeps polled reads quiet but shows a reload pressed while a poll is in flight', async () => {
     let calls = 0;
     let release: () => void = () => undefined;

@@ -4,7 +4,7 @@ import type { TableRequestQuery } from '@shared/ui/table-model';
 
 /**
  * 日曆同步的端點（`calendar-sync`）：狀態、日曆清單、事件與執行紀錄；立即同步與連線測試另需 `calendar-sync.manage`。
- * 事件與紀錄的 `calendarId` 空字串表示全部日曆。立即同步只排進背景工作就回應，結果靠輪詢狀態看。
+ * 事件與紀錄的 `calendarId` 空字串表示全部日曆。立即同步與重設只排進背景工作就回應，結果靠輪詢狀態看。
  */
 @Injectable({ providedIn: 'root' })
 export class CalendarSyncApi {
@@ -25,4 +25,7 @@ export class CalendarSyncApi {
   start = (confirmRemovals: boolean) =>
     this.api.post('/api/v1/calendar-sync/runs', { body: { confirmRemovals } });
   testConnection = () => this.api.post('/api/v1/calendar-sync/connection-test');
+  /** 重設本站設定的日曆；`calendarId` 是畫面上確認過的日曆，與伺服器設定不同時拒絕。 */
+  reset = (calendarId: string) =>
+    this.api.post('/api/v1/calendar-sync/reset', { body: { calendarId } });
 }

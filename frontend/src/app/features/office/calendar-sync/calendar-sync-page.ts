@@ -15,9 +15,11 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { action } from '@shared/browser/action';
 import { formatDate, formatNumber, relativeTime } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
+import { ActionMenu } from '@shared/ui/action-menu';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
+import type { MenuAction } from '@shared/ui/menu-panel';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
@@ -58,6 +60,7 @@ type View = (typeof VIEWS)[number]['value'];
 @Component({
   selector: 'nx-calendar-sync-page',
   imports: [
+    ActionMenu,
     ConfirmDialog,
     DataTable,
     DataTableColumn,
@@ -106,6 +109,20 @@ type View = (typeof VIEWS)[number]['value'];
     }
     .calendar-sync-code {
       font-family: var(--font-code);
+    }
+    .calendar-sync-applicant {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--p-space-1);
+      width: auto;
+      max-width: 100%;
+      nx-icon {
+        --icon-size: var(--icon-xs);
+        color: var(--muted);
+      }
+      &:hover nx-icon {
+        color: currentColor;
+      }
     }
   `,
   templateUrl: './calendar-sync-page.html',
@@ -297,6 +314,42 @@ export class CalendarSyncPage {
     this.notice.set('已排入同步，完成後下方會自動更新。');
     this.statusRead.reload();
     this.calendarsRead.reload();
+  }
+
+  readonly resetting = action();
+  /** 不常用又會清掉整本日曆的動作收在選單裡，不和「立即同步」並排。 */
+  readonly moreActions = computed<MenuAction[]>(() => [
+    {
+      id: 'reset',
+      label: '重設日曆…',
+      icon: 'trash',
+      danger: true,
+      disabled: !this.status()?.enabled || !!this.status()?.running,
+    },
+  ]);
+
+  /**
+   * 重設本站設定的日曆：刪除 Google 上本系統記錄的事件，再清掉這個日曆的事件與同步紀錄；下一輪同步會依公文系統重新建立。
+   * 要照打日曆 ID 的前 8 碼：清空的是全公司看的共用日曆，確認自己動的是哪一本（測試日曆與正式日曆的 ID 開頭不同）。
+   */
+  async reset() {
+    const calendarId = this.status()?.calendarId;
+    if (!calendarId) return;
+    const confirmed = await this.confirmation().ask({
+      title: '重設 Google 日曆？',
+      message: `將從 Google 日曆刪除本系統建立的全部事件，並清除這本日曆的事件與同步紀錄，無法復原。
+手動在 Google 建立的事件不受影響。
+下一輪同步會依公文系統重新建立事件；要讓日曆保持空的，請先關閉同步。`,
+      confirm: '重設日曆',
+      danger: true,
+      typed: calendarId.slice(0, 8),
+    });
+    if (!confirmed) return;
+    const outcome = await this.resetting.run(() => this.api.reset(calendarId));
+    if (!outcome.ok) return;
+    this.awaitingUntil.set(Date.now() + AWAIT_LIMIT);
+    this.notice.set('已排入重設，完成後下方會自動更新。');
+    this.statusRead.reload();
   }
 
   async testConnection() {

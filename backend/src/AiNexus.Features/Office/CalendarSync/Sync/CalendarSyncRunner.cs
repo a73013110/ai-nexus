@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.CalendarSync;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +20,7 @@ public sealed record CalendarSyncOutcome(string Status, string? ErrorCode, int C
 /// <item><b>推送平行、寫回分批</b>：每批同時送出 <see cref="CalendarSyncOptions.MaxParallelism"/> 個請求，結果一批寫回一次；
 /// 中途程序結束，已推送卻沒寫回的事件下一輪再推一次，推送是冪等的所以不會重複。</item>
 /// <item><b>整輪停止</b>：憑證、權限或日曆本身有問題時停下，不讓每一列都記一次失敗與退避，修好後手動同步立即補上。</item>
+/// <item><b>重設</b>（<see cref="ResetAsync"/>）走同一條推送路徑刪除事件，所以冪等、平行與限速的處理都相同。</item>
 /// </list>
 /// </summary>
 [AiNexus.Platform.Modules.Scoped]
@@ -44,6 +46,75 @@ public sealed partial class CalendarSyncRunner(
         {
             // 資料庫中斷、程式錯誤：已寫回的推送結果保留，這一輪記為失敗，下一輪從待同步的列接著做。
             // 沒寫進去的變更要丟掉，否則寫執行紀錄時會連同它們再存一次、以同樣的原因失敗，這一輪就沒有紀錄。
+            db.ChangeTracker.Clear();
+            run.Fail(CalendarSyncFailures.Unexpected, ex.GetType().Name);
+        }
+        return await FinishAsync(settings, request, run, ct);
+    }
+
+    /// <summary>重設時連續這麼多次沒有任何進展就放棄，留給下一次重設。</summary>
+    private const int MaxStalledPasses = 5;
+
+    /// <summary>
+    /// 重設本站設定的日曆：把這個日曆的事件列全部排成移除、照一般推送刪除 Google 上的事件（不存在的當成已刪），
+    /// 全部刪完才清掉事件列與同步紀錄；只刪資料庫有紀錄的事件，手動在 Google 建立的不動。
+    /// 被限速時暫停（<see cref="CalendarSyncOptions.RateLimitPauseSeconds"/>，Google 要求更久時聽它的）後繼續，直到任務逾時；刪不掉（憑證、權限、連續無進展）時保留列並記為失敗，畫面顯示原因，再按一次重設會接著刪。
+    /// 中途停下時，還在公文系統的事件下一輪同步會救回，不會留下列與日曆不一致的狀態。
+    /// </summary>
+    public async Task<CalendarSyncOutcome> ResetAsync(CalendarSyncRequest request, CancellationToken ct)
+    {
+        var settings = options.Value;
+        var calendarId = settings.CalendarId;
+        var run = new Tally(clock.GetUtcNow());
+        try
+        {
+            var now = clock.GetUtcNow();
+            await db.CalendarEvents.Where(x => x.CalendarId == calendarId && x.State != CalendarEventStates.Removed)
+                .ExecuteUpdateAsync(p => p
+                    .SetProperty(x => x.RemovedAt, x => x.RemovedAt ?? now)
+                    .SetProperty(x => x.State, CalendarEventStates.Pending)
+                    .SetProperty(x => x.Attempts, 0)
+                    .SetProperty(x => x.NextAttemptAt, (DateTimeOffset?)null)
+                    .SetProperty(x => x.LastErrorCode, (string?)null)
+                    .SetProperty(x => x.LastError, (string?)null)
+                    .SetProperty(x => x.UpdatedAt, now), ct);
+
+            var stalled = 0;
+            while (true)
+            {
+                var deleted = run.Deleted;
+                var limit = await PushAsync(settings, manual: true, run, ct);
+                // 每輪都寫回過了；清掉追蹤，大量事件時 SaveChanges 才不會一輪比一輪慢。
+                db.ChangeTracker.Clear();
+                if (run.ErrorCode is not null) break;
+                if (!await db.CalendarEvents.AnyAsync(x => x.CalendarId == calendarId && x.State != CalendarEventStates.Removed, ct))
+                {
+                    var events = await Batches.RepeatAsync(() => db.CalendarEvents.Where(x => x.CalendarId == calendarId).Take(Batches.Size).ExecuteDeleteAsync(ct));
+                    var runs = await Batches.RepeatAsync(() => db.SyncRuns.Where(x => x.CalendarId == calendarId).Take(Batches.Size).ExecuteDeleteAsync(ct));
+                    audit.Record(CalendarSyncAudit.Cleared, request.RequestedBy, details: new { calendarId, deleted = run.Deleted, events, runs });
+                    await db.SaveChangesAsync(CancellationToken.None);
+                    LogReset(logger, run.Deleted, events, runs);
+                    return new(SyncRunStatuses.Succeeded, null, 0, 0, run.Deleted, 0, 0, null);
+                }
+                stalled = run.Deleted > deleted ? 0 : stalled + 1;
+                if (limit is { } wait && stalled < MaxStalledPasses)
+                {
+                    var pause = TimeSpan.FromSeconds(settings.RateLimitPauseSeconds);
+                    await Task.Delay(wait > pause ? wait : pause, clock, ct);
+                }
+                else if (stalled > 0)
+                {
+                    // 沒被限速卻一筆都刪不掉（Google 拒絕或暫時不可用），或限速一直不解除：以最近一筆的原因結束。
+                    var reason = await db.CalendarEvents.AsNoTracking()
+                        .Where(x => x.CalendarId == calendarId && x.State == CalendarEventStates.Failed && x.LastErrorCode != null)
+                        .OrderByDescending(x => x.LastAttemptAt).Select(x => x.LastErrorCode).FirstOrDefaultAsync(ct);
+                    run.Fail(reason ?? CalendarSyncFailures.Unexpected, "Reset stopped before every event was removed.");
+                    break;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
+        {
             db.ChangeTracker.Clear();
             run.Fail(CalendarSyncFailures.Unexpected, ex.GetType().Name);
         }
@@ -144,7 +215,8 @@ public sealed partial class CalendarSyncRunner(
         row.UpdatedAt = now;
     }
 
-    private async Task PushAsync(CalendarSyncOptions settings, bool manual, Tally run, CancellationToken ct)
+    /// <summary>推送到期的列。被 Google 限速而提前停下時，回傳對方要求的等待（沒說就是 0），剩下的留到下一輪；其餘回傳 null。</summary>
+    private async Task<TimeSpan?> PushAsync(CalendarSyncOptions settings, bool manual, Tally run, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var calendarId = settings.CalendarId;
@@ -173,11 +245,13 @@ public sealed partial class CalendarSyncRunner(
             if (stop is not null)
             {
                 run.Fail(CalendarSyncFailures.Of(stop.Status), stop.Message);
-                return;
+                return null;
             }
             // 被限速時這一輪先停：剩下的請求多半也會被拒，留到下一輪。
-            if (outcomes.Any(x => x.Status == Platform.Google.GoogleStatus.RateLimited)) return;
+            var limited = outcomes.Where(x => x.Status == Platform.Google.GoogleStatus.RateLimited).ToArray();
+            if (limited.Length > 0) return limited.Max(x => x.RetryAfter) ?? TimeSpan.Zero;
         }
+        return null;
     }
 
     private static PushItem ItemOf(CalendarEvent row) => new(row.Id, row.CalendarId, row.GoogleEventId, row.SyncedHash is not null, row.RemovedAt is not null, row.LegacyUuid,
@@ -306,4 +380,7 @@ public sealed partial class CalendarSyncRunner(
 
     [LoggerMessage(EventId = 3704, EventName = "calendar_sync.removals_held", Level = LogLevel.Warning, Message = "Calendar sync held {Count} removals that exceed the safety threshold; an administrator must confirm them.")]
     private static partial void LogRemovalsHeld(ILogger logger, int count);
+
+    [LoggerMessage(EventId = 3705, EventName = "calendar_sync.reset", Level = LogLevel.Information, Message = "Calendar sync reset the calendar: {Deleted} Google events deleted, {Events} event rows and {Runs} sync runs cleared.")]
+    private static partial void LogReset(ILogger logger, int deleted, int events, int runs);
 }

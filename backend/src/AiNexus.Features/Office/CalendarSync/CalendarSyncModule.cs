@@ -33,6 +33,7 @@ public sealed class CalendarSyncModule : IFeatureModule
         .MapSlice<ListCalendarSyncCalendars>()
         .MapSlice<ListCalendarSyncEvents>()
         .MapSlice<ListCalendarSyncRuns>()
+        .MapSlice<ResetCalendarSync>()
         .MapSlice<StartCalendarSyncRun>()
         .MapSlice<TestCalendarSyncConnection>();
 

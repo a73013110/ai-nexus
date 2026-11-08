@@ -276,8 +276,8 @@ test("theme previews have readable contrast, full navigation and usable narrow l
         ink: ratio(resolved("--ink"), resolved("--canvas")),
         secondary: ratio(resolved("--secondary"), resolved("--surface")),
         muted: ratio(resolved("--muted"), resolved("--canvas")),
-        primary: ratio(resolved("--accent-text"), resolved("--accent")),
-        danger: ratio(resolved("--danger-text"), resolved("--danger-surface")),
+        primary: ratio(resolved("--on-accent"), resolved("--accent")),
+        danger: ratio(resolved("--on-danger"), resolved("--danger-surface")),
         // 控制項外框是非文字對比（WCAG 1.4.11），對內側 --surface 與外側 --canvas 都要 3:1。
         "control-line": Math.min(
           ratio(resolved("--control-line"), resolved("--surface")),

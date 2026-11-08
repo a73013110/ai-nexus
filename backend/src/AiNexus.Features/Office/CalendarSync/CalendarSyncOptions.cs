@@ -41,6 +41,9 @@ public sealed class CalendarSyncOptions : IValidatableObject
     /// <summary>推送失敗後的重試間隔上限；從 1 分鐘起每次加倍，到這個上限為止。</summary>
     [Range(5, 1440)] public int MaxRetryDelayMinutes { get; set; } = 360;
 
+    /// <summary>重設日曆時被 Google 限速，至少暫停多久再繼續刪；Google 用 <c>Retry-After</c> 要求更久時聽它的。</summary>
+    [Range(1, 300)] public int RateLimitPauseSeconds { get; set; } = 20;
+
     /// <summary>執行紀錄（<c>calendarsync.SyncRuns</c>）的保存天數。</summary>
     [Range(7, 3650)] public int RunRetentionDays { get; set; } = 180;
 

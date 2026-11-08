@@ -77,7 +77,7 @@
   height: var(--button-target);
   border-radius: var(--radius-action);
   background: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
   transition:
     transform var(--motion-fast) var(--ease),
     background-color var(--motion),

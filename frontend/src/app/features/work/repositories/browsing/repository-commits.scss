@@ -92,7 +92,7 @@
   .picked & {
     border-color: var(--accent);
     background: var(--accent);
-    color: var(--accent-text);
+    color: var(--on-accent);
     scale: 1.08;
   }
 }

@@ -37,7 +37,7 @@
 | 3411 | `database.external_query_rejected` | 同上 |
 | 3500 / 3501 | `releases.schema_changes_read` / `releases.schema_changes_found` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatchTask.cs` |
 | 3700 | `google.token_rejected` | `Platform/Google/GoogleAccessTokens.cs` |
-| 3701 / 3702 / 3703 / 3704 | `calendar_sync.synced` / `calendar_sync.run_failed` / `calendar_sync.restored` / `calendar_sync.removals_held` | `CalendarSync/Sync/CalendarSyncRunner.cs` |
+| 3701 / 3702 / 3703 / 3704 / 3705 | `calendar_sync.synced` / `calendar_sync.run_failed` / `calendar_sync.restored` / `calendar_sync.removals_held` / `calendar_sync.reset` | `CalendarSync/Sync/CalendarSyncRunner.cs` |
 | 3800 / 3801 | `scheduling.run_started` / `scheduling.run_finished` | `Scheduling/Engine/ScheduledTaskRunner.cs` |
 | 3802 / 3803 / 3804 | `scheduling.heartbeat_failed` / `scheduling.finish_failed` / `scheduling.alert_failed` | 同上 |
 | 3805 | `scheduling.loop_failed` | `Scheduling/Engine/ScheduledTaskHost.cs` |

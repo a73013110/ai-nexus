@@ -31,7 +31,7 @@ export interface ApiResourceOptions<T, P> {
   loader: (params: P, signal: AbortSignal) => Promise<T>;
   /** 失敗轉成畫面文字，預設 `safeMessage`；功能有固定原因要說明時傳入（例：出勤的 `attendanceProblem`）。 */
   message?: (error: unknown) => string;
-  /** 距離下次重新讀取的毫秒數；`null` 代表停止。分頁隱藏時會等到可見才讀。 */
+  /** 距離下次重新讀取的毫秒數；`null` 代表停止，裡面讀的 signal 改變時會重算。分頁隱藏時會等到可見才讀。 */
   poll?: (value: T | undefined) => number | null;
 }
 
@@ -119,10 +119,13 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
   });
   if (options.poll) {
     const poll = options.poll;
+    // 隔一層 computed：poll 常讀逐秒跳動的時鐘，算出的間隔沒變就不重排計時器，否則比一秒長的間隔永遠到不了；
+    // 間隔真的變了（例：開始等結果、由 null 變成有值）則立刻換上新的。
+    const interval = computed(() => poll(value()));
     effect((onCleanup) => {
       const status = ref.status();
       if (status !== 'resolved' && status !== 'error' && status !== 'local') return;
-      const delay = poll(untracked(value));
+      const delay = interval();
       if (delay === null) return;
       let timer = setTimeout(function tick() {
         if (document.hidden) timer = setTimeout(tick, delay);

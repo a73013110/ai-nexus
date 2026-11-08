@@ -85,7 +85,12 @@
                     [to]="task.nextRunAt"
                     [progress]="item.progress"
                   >
-                    <nx-run-state [state]="taskRunState(task, phase)" />
+                    <!-- 執行中：外圈繞行（或填滿進度），中心是經過時間；只留一個在動的東西。 -->
+                    @if (phase === 'running' && task.currentRun; as run) {
+                      <nx-ticking-time compact [from]="run.startedAt" />
+                    } @else {
+                      <nx-run-state [state]="taskRunState(task, phase)" />
+                    }
                   </nx-timer-ring>
                   <div class="scheduling-main">
                     <button
@@ -111,7 +116,10 @@
                                 ・{{ run.completedUnits }} / {{ total }}
                               }
                             }
-                            ・<nx-ticking-time [from]="run.startedAt" />
+                            <!-- 經過時間畫在圓環中心；圓環對報讀器隱藏，這裡補給報讀器。 -->
+                            <span class="sr-only"
+                              >，<nx-ticking-time [from]="run.startedAt"
+                            /></span>
                           }
                         }
                         @case ('requested') {

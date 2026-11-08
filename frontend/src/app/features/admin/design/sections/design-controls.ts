@@ -135,10 +135,11 @@ import { DesignSamples } from './design-samples';
       id="design-dialogs"
       title="對話框"
       api=".platform-dialog · ConfirmDialog · NameDialog"
-      description="同一套外框：細線、分層陰影、12px 圓角；開啟時由下方彈入，關閉時沿原路退場。初始焦點在取消，Esc 視為取消並還原焦點。"
+      description="同一套外框：細線、分層陰影、12px 圓角；開啟時由下方彈入，關閉時沿原路退場。初始焦點在取消，Esc 視為取消並還原焦點。不能復原、波及整批資料的動作給 typed，照打對象的識別才能確認。"
     >
       <div class="design-buttons">
         <button type="button" class="secondary-button" (click)="confirmPlain()">一般確認</button
+        ><button type="button" class="secondary-button" (click)="confirmTyped()">輸入後確認</button
         ><button type="button" class="secondary-button" (click)="rename()">
           <nx-icon name="edit" />命名對話框
         </button>
@@ -510,6 +511,17 @@ export class DesignControls {
       confirm: '套用',
     });
     if (yes && guard()) this.toast.success('已套用示範版面');
+  }
+  async confirmTyped() {
+    const guard = this.scope.guard();
+    const yes = await this.confirmation().ask({
+      title: '清空示範資料？',
+      message: '這只會在本頁顯示通知，不會修改任何資料。',
+      confirm: '清空',
+      danger: true,
+      typed: 'demo-01',
+    });
+    if (yes && guard()) this.toast.success('已清空示範資料');
   }
   rename() {
     this.naming().open({

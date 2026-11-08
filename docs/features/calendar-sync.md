@@ -34,17 +34,19 @@
 
 1. `.local/config/appsettings.Local.json`：`CalendarSync` 設 `Enabled=true`、`CalendarId`＝測試日曆、`LookbackDays` 調小；`Scheduling` 設 `Execute=true`、`ExecuteOnly=["calendar-sync.sync"]`，要看得快再加 `Tasks:calendar-sync.sync:Schedule="00:01:00"`。重新啟動。
 2. 依序確認：測試連線顯示測試日曆名稱；第一輪後事件數與 Google 一致，抽查文號、時間、代理人、狀態；再同步一次三個數字都是 0；推送中途停站、重啟後接著推完且不重複；暫時取消日曆共用時這一輪記為失敗、事件留在待同步，加回後立即同步就補上。
-3. 收尾：`CalendarSync:Enabled` 與 `Scheduling:Execute` 改回 `false`，刪掉測試日曆，再手動刪除 `calendarsync.CalendarEvents`、`calendarsync.SyncRuns` 裡該日曆 ID 的列（否則日曆清單一直列出它）。
+3. 要從頭再測一次：管理頁「⋯ → 重設日曆」（見下方管理頁），刪掉測試日曆上的事件與這個日曆的紀錄，下一輪重新建立。
+4. 收尾：先「重設日曆」（日曆清單才不會一直列出它），再把 `CalendarSync:Enabled` 與 `Scheduling:Execute` 改回 `false`、刪掉測試日曆。
 
 正式站上線本功能後，開發機測試會和正式站搶同一把租約：輪到開發機時正式日曆那一輪延後。只在短時間內測試。
 
 ## 管理頁
 
-- 授權：頁面 `calendar-sync`（看），動作 `calendar-sync.manage`（立即同步、確認移除、測試連線）；種子授予 administrators。
+- 授權：頁面 `calendar-sync`（看），動作 `calendar-sync.manage`（立即同步、確認移除、測試連線、重設日曆）；種子授予 administrators。
 - 日曆：工具列可切換資料庫裡出現過的日曆（共用資料庫裡其他站台的、舊系統轉入的），預設看本站的 `CalendarId`，「全部日曆」時表格多一欄日曆。立即同步、確認移除與測試連線只作用在本站的日曆。
 - 數字：待同步與推送失敗的數量在表格標題旁（跟著所選日曆），「最近檢查」在工具列。沒有異動的排程輪只更新「最近檢查」，不寫執行紀錄；有異動、失敗、手動或剛出問題的一輪才寫，保存 `RunRetentionDays` 天。
 - 立即同步只排進背景就回應，不等 Google；它不等失敗事件的退避時間，修好設定後按一次就全部補上。
-- 查詢事件與紀錄寫稽核（請假是個人資料）；一輪有改到日曆時另寫系統稽核 `calendar-sync.run.synced`。
+- 重設日曆（「⋯」選單，要照打日曆 ID 前 8 碼）：刪除 Google 上本系統記錄的事件，全部刪完才清掉這個日曆的 `CalendarEvents` 與 `SyncRuns`；手動在 Google 建立的事件不動。交給同步任務執行，與排程中的同步不會同時跑；被 Google 限速時暫停 `RateLimitPauseSeconds` 秒（`Retry-After` 更久時聽它的）後繼續，刪不掉時保留列並顯示原因，再按一次接著刪。下一輪同步會依 GD 重新建立全部事件，要讓日曆保持空的先關掉 `Enabled`。
+- 查詢事件與紀錄寫稽核（請假是個人資料）；一輪有改到日曆時另寫系統稽核 `calendar-sync.run.synced`，重設寫 `calendar-sync.reset.requested`（誰要求）與 `calendar-sync.calendar.cleared`（刪了多少）。
 
 ## 監控與日誌
 

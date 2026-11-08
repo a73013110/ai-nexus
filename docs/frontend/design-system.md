@@ -29,7 +29,7 @@
 ## 主題
 
 - `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/admin/design` 的局部預覽靠它。
-- 危險按鈕用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開。
+- 危險按鈕用 `--danger-surface`／`--on-danger`，與錯誤文字 `--error` 分開。
 - 個人設定只改 tokens，不能縮小最小字級與觸控目標。
 - 一般文字對比 WCAG AA 4.5:1，focus 有 2px 可見輪廓；新的文字／背景組合要實測。
 

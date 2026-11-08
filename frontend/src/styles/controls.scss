@@ -63,7 +63,7 @@ kbd {
 }
 .primary-button {
   background: var(--accent);
-  color: var(--accent-text);
+  color: var(--on-accent);
 }
 // Hover deepens the fill toward the ink (lighter in dark mode) instead of fading it.
 .primary-button:not(:disabled, [aria-disabled='true']):hover {
@@ -75,7 +75,7 @@ kbd {
 }
 .danger-button {
   background: var(--danger-surface);
-  color: var(--danger-text);
+  color: var(--on-danger);
 }
 .danger-button:not(:disabled):hover {
   background: color-mix(in srgb, var(--danger-surface) 86%, var(--ink));
