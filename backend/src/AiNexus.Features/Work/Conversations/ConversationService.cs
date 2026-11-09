@@ -5,6 +5,7 @@ using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Conversations;
 
@@ -114,7 +115,7 @@ public sealed class ConversationService(AppDbContext db, TimeProvider clock, Aud
 
             if (conversation.ActiveLeafId is null && conversation.Title == CreateConversation.DefaultTitle)
             {
-                conversation.Title = string.Concat(user.Content.Replace('\n', ' ').Take(36));
+                conversation.Title = user.Content.Replace('\n', ' ').Clip(36);
             }
         }
 

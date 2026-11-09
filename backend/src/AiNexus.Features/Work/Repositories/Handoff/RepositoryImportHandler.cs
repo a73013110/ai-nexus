@@ -12,6 +12,7 @@ using AiNexus.Features.Work.Knowledge.Documents;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Repositories.Handoff;
 
@@ -64,7 +65,7 @@ internal sealed class RepositoryImportHandler(AppDbContext db, RepositoryService
         using var stream = new MemoryStream(bytes);
         var markdown = Path.GetExtension(path).ToLowerInvariant() is ".md" or ".markdown";
         var stem = row.Repository.Split('/')[1] + "_" + path.Replace('/', '_');
-        var name = string.Concat(stem.Take(170)) + (markdown ? ".md" : ".txt");
+        var name = stem.Clip(170) + (markdown ? ".md" : ".txt");
         var upload = new FormFile(stream, 0, bytes.Length, "file", name) { Headers = new HeaderDictionary(), ContentType = markdown ? "text/markdown" : "text/plain" };
         var attachment = await attachments.UploadAsync(row.OwnerId, upload, ct);
         // 配額用完會中止整個匯入；抽取器拒絕的檔案（太長、沒有文字）與二進位檔一樣略過。

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Repositories;
 
@@ -8,7 +9,7 @@ internal static class GiteaJson
 {
     public static string Text(JsonElement element, string key, int max) =>
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.String
-            ? string.Concat((value.GetString() ?? "").Take(max)) : "";
+            ? (value.GetString() ?? "").Clip(max) : "";
 
     public static long Number(JsonElement element, string key) =>
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number) ? number : 0;

@@ -7,6 +7,7 @@ using AiNexus.Platform.Modules;
 using AiNexus.Platform.Scheduling;
 using AiNexus.Platform.Threading;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Admin.Scheduling.Engine;
 
@@ -225,13 +226,13 @@ public sealed partial class ScheduledTaskRunner(
             .ExecuteUpdateAsync(p => p
                 .SetProperty(x => x.Status, status)
                 .SetProperty(x => x.FinishedAt, finished < started ? started : finished)
-                .SetProperty(x => x.Stage, Clip(progress?.Stage, ScheduledTaskRun.StageMaxLength))
+                .SetProperty(x => x.Stage, TextClip.Clip(progress?.Stage, ScheduledTaskRun.StageMaxLength))
                 .SetProperty(x => x.CompletedUnits, progress?.Completed)
                 .SetProperty(x => x.TotalUnits, progress?.Total)
-                .SetProperty(x => x.Summary, Clip(outcome.Summary, ScheduledTaskRun.SummaryMaxLength))
-                .SetProperty(x => x.ErrorCode, failed ? Clip(outcome.Error?.Code, ScheduledTaskRun.ErrorCodeMaxLength) : null)
+                .SetProperty(x => x.Summary, TextClip.Clip(outcome.Summary, ScheduledTaskRun.SummaryMaxLength))
+                .SetProperty(x => x.ErrorCode, failed ? TextClip.Clip(outcome.Error?.Code, ScheduledTaskRun.ErrorCodeMaxLength) : null)
                 .SetProperty(x => x.IssueCode, failed ? issue : null)
-                .SetProperty(x => x.ErrorMessage, failed ? Clip(message, ScheduledTaskRun.ErrorMessageMaxLength) : null), CancellationToken.None);
+                .SetProperty(x => x.ErrorMessage, failed ? TextClip.Clip(message, ScheduledTaskRun.ErrorMessageMaxLength) : null), CancellationToken.None);
 
         var before = await db.ScheduledTasks.AsNoTracking().Where(x => x.Key == plan.Key && x.LeaseToken == claim.Lease)
             .Select(x => new { x.ConsecutiveFailures, x.NextRunAt }).SingleOrDefaultAsync(CancellationToken.None);
@@ -295,7 +296,7 @@ public sealed partial class ScheduledTaskRunner(
                 {
                     await db.ScheduledTaskRuns.Where(x => x.Id == runId && x.Status == ScheduledTaskRunStatuses.Running)
                         .ExecuteUpdateAsync(p => p
-                            .SetProperty(x => x.Stage, Clip(progress.Stage, ScheduledTaskRun.StageMaxLength))
+                            .SetProperty(x => x.Stage, TextClip.Clip(progress.Stage, ScheduledTaskRun.StageMaxLength))
                             .SetProperty(x => x.CompletedUnits, progress.Completed)
                             .SetProperty(x => x.TotalUnits, progress.Total), token);
                     written = progress;
@@ -313,8 +314,6 @@ public sealed partial class ScheduledTaskRunner(
         ScheduledTaskTrigger.Startup => ScheduledTaskTriggers.Startup,
         _ => ScheduledTaskTriggers.Scheduled,
     };
-
-    private static string? Clip(string? value, int max) => value is { Length: > 0 } text && text.Length > max ? text[..max] : value;
 
     [LoggerMessage(EventId = 3800, EventName = "scheduling.run_started", Level = LogLevel.Information, Message = "Scheduled task run started ({Reason}).")]
     private static partial void LogStarted(ILogger logger, string reason);

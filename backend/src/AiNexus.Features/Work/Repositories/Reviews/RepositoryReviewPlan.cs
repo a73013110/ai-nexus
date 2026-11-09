@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Repositories.Reviews;
 
@@ -63,7 +64,7 @@ public static partial class RepositoryReviewPlan
         var slices = new List<ReviewSlice>();
         foreach (var file in files)
         {
-            var label = string.Concat(file.Split('\n')[0].Take(500));
+            var label = file.Split('\n')[0].Clip(500);
             var binary = file.Contains("GIT binary patch", StringComparison.Ordinal) || file.Contains("Binary files ", StringComparison.Ordinal);
             var parts = Chunks(file, budget).ToArray();
             for (var i = 0; i < parts.Length; i++)
@@ -83,7 +84,7 @@ public static partial class RepositoryReviewPlan
         void Flush()
         {
             if (bytes == 0) return;
-            packed.Add(new(string.Concat(string.Join("、", labels.Distinct()).Take(500)), text.ToString(), false));
+            packed.Add(new(string.Join("、", labels.Distinct()).Clip(500), text.ToString(), false));
             text.Clear(); labels.Clear(); bytes = 0;
         }
         foreach (var slice in slices)

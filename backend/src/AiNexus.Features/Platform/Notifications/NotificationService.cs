@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Notifications;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Platform.Notifications;
 
@@ -47,8 +48,8 @@ public sealed class NotificationService(AppDbContext db, TimeProvider clock)
         db.Add(new Notification
         {
             OwnerId = owner, EventKey = key, Type = message.Type, Severity = severity,
-            Title = NotificationDisplay.Title(severity, string.Concat(message.Title.Take(180))),
-            Body = NotificationDisplay.Body(severity, string.Concat(message.Body.Take(600)), message.IssueCode),
+            Title = NotificationDisplay.Title(severity, message.Title.Clip(180)),
+            Body = NotificationDisplay.Body(severity, message.Body.Clip(600), message.IssueCode),
             IssueCode = message.IssueCode, TargetKind = message.TargetKind, TargetId = message.TargetId,
             ReadAt = message.NeedsAttention ? null : now,
         });

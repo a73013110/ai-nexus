@@ -9,6 +9,7 @@ using AiNexus.Features.Work.Knowledge.Indexing;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Knowledge.Retrieval;
 
@@ -110,6 +111,6 @@ public sealed class KnowledgeRetrieval(AppDbContext db, ConversationService conv
     public void Bind(Guid assistant, IReadOnlyList<KnowledgeHitDto> hits)
     {
         var number = 0;
-        db.AddRange(hits.Select(x => new MessageCitation { MessageId = assistant, Number = ++number, DocumentId = x.DocumentId, PageNumber = x.PageNumber, EndPage = x.EndPage, Title = x.Title, Excerpt = string.Concat(x.Text.Take(800)) }));
+        db.AddRange(hits.Select(x => new MessageCitation { MessageId = assistant, Number = ++number, DocumentId = x.DocumentId, PageNumber = x.PageNumber, EndPage = x.EndPage, Title = x.Title, Excerpt = x.Text.Clip(800) }));
     }
 }

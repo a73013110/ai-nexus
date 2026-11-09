@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Platform.WebSearches;
 
@@ -65,6 +66,6 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
         }
         return url.AbsoluteUri;
     }
-    private static string Clean(string? value, int max) => string.Concat(WebUtility.HtmlDecode(Tags().Replace(value ?? "", " ")).Where(c => !char.IsControl(c) || c == ' ').Take(max)).Trim();
+    private static string Clean(string? value, int max) => string.Concat(WebUtility.HtmlDecode(Tags().Replace(value ?? "", " ")).Where(c => !char.IsControl(c) || c == ' ')).Clip(max).Trim();
     [GeneratedRegex("<[^>]*>", RegexOptions.CultureInvariant)] private static partial Regex Tags();
 }

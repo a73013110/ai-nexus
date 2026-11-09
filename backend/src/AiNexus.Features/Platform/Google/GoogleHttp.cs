@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Platform.Google;
 
@@ -98,5 +99,5 @@ internal static class GoogleHttp
         _ => null
     };
 
-    internal static string Truncate(string text) => text.Length <= 400 ? text : text[..400];
+    internal static string Truncate(string text) => text.Clip(400);
 }

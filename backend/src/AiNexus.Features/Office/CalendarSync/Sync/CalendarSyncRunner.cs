@@ -3,6 +3,7 @@ using AiNexus.Data.App.CalendarSync;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Office.CalendarSync.Sync;
 
@@ -276,14 +277,14 @@ public sealed partial class CalendarSyncRunner(
             var backoff = TimeSpan.FromMinutes(Math.Min(Math.Pow(2, Math.Min(row.Attempts - 1, 20)), settings.MaxRetryDelayMinutes));
             row.NextAttemptAt = now + (outcome.RetryAfter > backoff ? outcome.RetryAfter.Value : backoff);
             row.LastErrorCode = CalendarSyncFailures.Of(outcome.Status);
-            row.LastError = Clip(outcome.Message ?? outcome.Status.ToString(), CalendarEvent.ErrorMaxLength);
+            row.LastError = TextClip.Clip(outcome.Message ?? outcome.Status.ToString(), CalendarEvent.ErrorMaxLength);
             // 待推送的原因留著：下次重試成功時，那一輪的明細才寫得出來。
             run.Track(row, SyncRunItemOutcomes.Failed);
             return;
         }
 
         row.GoogleEventId = outcome.GoogleEventId;
-        row.HtmlLink = outcome.HtmlLink is { } link ? Clip(link, CalendarEvent.HtmlLinkMaxLength) : row.HtmlLink;
+        row.HtmlLink = outcome.HtmlLink is { } link ? TextClip.Clip(link, CalendarEvent.HtmlLinkMaxLength) : row.HtmlLink;
         row.State = outcome.Result == PushResult.Deleted ? CalendarEventStates.Removed : CalendarEventStates.Synced;
         row.SyncedHash = outcome.Result == PushResult.Deleted ? row.SyncedHash : row.ContentHash;
         row.SyncedAt = now;
@@ -333,7 +334,7 @@ public sealed partial class CalendarSyncRunner(
                 FailedCount = run.Failed,
                 HeldCount = run.Held,
                 ErrorCode = status is SyncRunStatuses.Failed or SyncRunStatuses.Held ? run.ErrorCode : null,
-                ErrorMessage = run.ErrorMessage is { } message ? Clip(message, SyncRun.ErrorMessageMaxLength) : null,
+                ErrorMessage = run.ErrorMessage is { } message ? TextClip.Clip(message, SyncRun.ErrorMessageMaxLength) : null,
                 LookbackDays = settings.LookbackDays,
             };
             db.SyncRuns.Add(record);
@@ -372,8 +373,6 @@ public sealed partial class CalendarSyncRunner(
             run.Items[row.Id] = SyncRunItem.Snapshot(row, SyncRunItemOutcomes.Held);
         }
     }
-
-    private static string Clip(string text, int max) => text.Length <= max ? text : text[..max];
 
     /// <summary>一輪的累計與逐筆明細。失敗與擋下分開記：擋下時其餘照常做完，失敗（GD、憑證）則是整輪的原因。</summary>
     private sealed class Tally(DateTimeOffset startedAt)

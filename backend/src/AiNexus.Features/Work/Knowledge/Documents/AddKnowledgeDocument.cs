@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Work.Jobs;
 using AiNexus.Features.Work.Knowledge.Indexing;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Knowledge.Documents;
 
@@ -58,7 +59,7 @@ internal sealed class AddKnowledgeDocument(AppDbContext db, ResourceAccess acces
                 return KnowledgeErrors.DocumentLimit;
         }
         var now = clock.GetUtcNow();
-        var resource = new Resource { OwnerId = actor, ParentId = project, Kind = Document.Kind, Name = string.Concat(file.FileName.Take(120)), CreatedAt = now, UpdatedAt = now };
+        var resource = new Resource { OwnerId = actor, ParentId = project, Kind = Document.Kind, Name = file.FileName.Clip(120), CreatedAt = now, UpdatedAt = now };
         var document = new Document { Id = resource.Id, AttachmentId = file.Id, CollectionId = collection, FileName = file.FileName, ContentType = file.ContentType };
         if (text is not null) { document.TextContent = text.Text; document.TextVersion = 1; }
         db.Add(resource); db.Add(document); db.Add(new ResourceAttachment { ResourceId = resource.Id, AttachmentId = file.Id });

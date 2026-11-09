@@ -5,6 +5,7 @@ using AiNexus.Platform.Data.External;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Time;
 using AiNexus.Platform.Validation;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Office.CalendarSync.Sync;
 
@@ -98,7 +99,7 @@ public sealed class GdAbsenceReader(ExternalDatabase<GdDatabase> gd)
     }
 
     [return: NotNullIfNotNull(nameof(text))]
-    private static string? Clip(string? text) => text is null || text.Length <= CalendarEvent.NameMaxLength ? text : text[..CalendarEvent.NameMaxLength];
+    private static string? Clip(string? text) => text.Clip(CalendarEvent.NameMaxLength);
 
     private sealed class FlowRow
     {

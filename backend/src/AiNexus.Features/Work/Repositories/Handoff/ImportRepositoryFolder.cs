@@ -10,6 +10,7 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
+using AiNexus.Platform.Strings;
 
 namespace AiNexus.Features.Work.Repositories.Handoff;
 
@@ -54,7 +55,7 @@ internal sealed class ImportRepositoryFolder(AppDbContext db, RepositoryService 
         var row = new RepositoryFolderImport { OwnerId = owner, BaseUrl = gitea.BaseUrl, Repository = repo, Commit = commit, Path = folder,
             CollectionId = request.CollectionId, PathsJson = JsonSerializer.Serialize(paths) };
         var label = repo.Split('/')[1] + (folder.Length > 0 ? "/" + folder : "") + " · " + commit[..7];
-        var job = jobs.Enqueue(owner, request.CollectionId, row.Id, RepositoryImportHandler.JobKind, string.Concat(label.Take(180)));
+        var job = jobs.Enqueue(owner, request.CollectionId, row.Id, RepositoryImportHandler.JobKind, label.Clip(180));
         job.TotalUnits = paths.Length;
         row.JobId = job.Id;
         db.Add(row);
