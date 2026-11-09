@@ -30,7 +30,12 @@ async function setup(url: string, rows: ProjectDto[]) {
   // 伺服器的列表；下方的寫入會像後端一樣改變它。
   let server = [...rows];
   const api = {
-    list: vi.fn(async () => [...server]),
+    list: vi.fn(async () => ({
+      items: [...server],
+      total: server.length,
+      offset: 0,
+      complete: true,
+    })),
     get: vi.fn(async (id: string) => server.find((item) => item.resource.id === id) ?? project(id)),
     save: vi.fn(async (id: string | null, name: string) => {
       const saved = project(id ?? name);
@@ -78,7 +83,7 @@ async function setup(url: string, rows: ProjectDto[]) {
   Object.assign(page, { confirm: () => ({ ask: async () => true }) });
   const settle = () => TestBed.inject(ApplicationRef).whenStable();
   await settle();
-  const ids = () => page.projects().map((item) => item.resource.id);
+  const ids = () => page.table.rows().map((item) => item.resource.id);
   return { api, harness, page, settle, ids };
 }
 

@@ -54,7 +54,11 @@ test("project settings, shared templates and private conversations work directly
         projects.push(p);
         return json(p);
       }
-      return json(projects);
+      const archived = url.searchParams.get("archived");
+      const items = projects.filter(
+        (item) => archived === null || String(item.isArchived) === archived,
+      );
+      return json({ items, total: items.length, offset: 0, complete: true });
     }
     if (path.endsWith("/files") || path.endsWith("/conversations"))
       return json([]);
@@ -262,7 +266,7 @@ for (const width of [1440, 375]) {
       const path = new URL(route.request().url()).pathname;
       const body =
         path === "/api/v1/projects"
-          ? [project]
+          ? { items: [project], total: 1, offset: 0, complete: true }
           : path.endsWith(`/projects/${project.resource.id}`)
             ? project
             : path.endsWith("/templates")

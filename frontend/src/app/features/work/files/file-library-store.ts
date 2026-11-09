@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { ViewScope } from '@shared/browser/view-scope';
-import { endpointTable } from '@shared/ui/table-model';
+import { endpointTable, isPaged } from '@shared/ui/table-model';
 import { FilesApi } from './files-api';
 
 /**
@@ -41,9 +41,7 @@ export class FileLibraryStore {
   readonly error = this.table.error;
   readonly items = this.table.rows;
   /** 超過一頁才顯示分頁；已翻到後面的頁時即使總數變少也保留，才能回到前面。 */
-  readonly paged = computed(
-    () => this.table.total() > this.table.pageSize() || this.table.pageIndex() > 0,
-  );
+  readonly paged = computed(() => isPaged(this.table));
   /** 開始讀取，或在其他地方變更後重新讀取。 */
   load() {
     if (this.active()) this.table.reload();

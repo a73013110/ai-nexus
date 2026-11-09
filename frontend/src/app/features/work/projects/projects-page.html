@@ -55,7 +55,7 @@
       [loading]="projectsLoading()"
       [busy]="projectsRefreshing()"
       [empty]="!visible().length"
-      (searchChange)="filter.set($event)"
+      (searchChange)="search($event)"
       (filterChange)="archived.set($event === 'archived')"
     >
       @for (item of visible(); track item.resource.id) {
@@ -81,6 +81,9 @@
         }
       </nx-empty-state>
     </nx-resource-gallery>
+    @if (paged()) {
+      <nx-table-pagination [table]="table" [busy]="projectsRefreshing()" />
+    }
   } @else if (current(); as project) {
     @if (project.isArchived) {
       <nx-notice tone="warning" message="專案已封存：可閱讀，但不能開始對話或修改內容。">

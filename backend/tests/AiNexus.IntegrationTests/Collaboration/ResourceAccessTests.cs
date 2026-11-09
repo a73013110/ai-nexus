@@ -1,3 +1,4 @@
+using AiNexus.Platform.Data.Tables;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
 using AiNexus.Features.Work.Projects;
@@ -29,7 +30,7 @@ public sealed class ResourceAccessTests
         // 不論清單涵蓋多少個分享專案，查詢成本都應相同（避免 N+1）。
         queries.Clear(); (await alice.GetAsync("/api/v1/projects")).EnsureSuccessStatusCode();
         Assert.Equal(fewer, queries.Count("/api/v1/projects"));
-        var projects = (await alice.GetFromJsonAsync<ProjectDto[]>("/api/v1/projects"))!;
+        var projects = (await alice.GetFromJsonAsync<TablePage<ProjectDto>>("/api/v1/projects"))!.Items;
         Assert.Equal(new[] { edited.Resource.Id, viewed.Resource.Id, own.Resource.Id }.Order(), projects.Select(x => x.Resource.Id).Order());
         Assert.Equal([true, false, true], new[] { own, viewed, edited }.Select(p => projects.Single(x => x.Resource.Id == p.Resource.Id).Resource.CanEdit));
         foreach (var item in projects) Assert.Equal(await alice.GetFromJsonAsync<ProjectDto>($"/api/v1/projects/{item.Resource.Id}"), item);

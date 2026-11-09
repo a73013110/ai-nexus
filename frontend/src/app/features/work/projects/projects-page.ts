@@ -1,3 +1,5 @@
+import { endpointTable, isPaged, textFilter } from '@shared/ui/table-model';
+import { TablePagination } from '@shared/ui/data-table';
 import { map } from 'rxjs';
 import { apiResource } from '@core/api/api-resource';
 import { Notice } from '@shared/ui/notice';
@@ -56,6 +58,7 @@ import { routeOf } from '@core/api/catalog';
   selector: 'nx-projects-page',
   styleUrl: './projects-page.scss',
   imports: [
+    TablePagination,
     DialogHeader,
     Notice,
     EmptyState,
@@ -94,10 +97,26 @@ export class ProjectsPage {
   readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
-  private readonly projectsRead = apiResource({
+  /** 卡片格線一頁 40 張；資料在門檻內時搜尋與換頁都在本機。 */
+  readonly table = endpointTable({
     feature: 'projects',
-    loader: () => this.api.list(),
+    params: computed(() => ({ archived: this.archived() })),
+    load: ({ archived }, table, signal) => this.api.list({ archived, ...table }, signal),
+    columns: [
+      { id: 'name', label: '名稱', filter: 'text', value: (row) => row.resource.name },
+      {
+        id: 'updatedAt',
+        label: '更新時間',
+        sort: 'desc',
+        time: true,
+        value: (row) => row.resource.updatedAt,
+      },
+    ],
+    sort: { column: 'updatedAt', direction: 'desc' },
+    pageSize: 40,
+    pageSizes: [40],
   });
+  readonly paged = computed(() => isPaged(this.table));
   private readonly policyRead = apiResource({
     feature: 'projects',
     loader: () => this.attachments.policy(),
@@ -128,7 +147,6 @@ export class ProjectsPage {
     },
     poll: (detail) => (detail?.files.some((item) => documentBusy(item.status)) ? 2000 : null),
   });
-  readonly projects = computed<ProjectDto[]>(() => this.projectsRead.value() ?? []);
   /** 所要求的專案載入或失敗時，絕不顯示另一個專案的資料。 */
   readonly current = computed<ProjectDto | null>(() => {
     const value = this.currentRead.value();
@@ -142,8 +160,8 @@ export class ProjectsPage {
   readonly templates = computed<ProjectTemplateDto[]>(() => this.detail()?.templates ?? []);
   readonly conversations = computed<ConversationDto[]>(() => this.detail()?.conversations ?? []);
   readonly outputs = computed<ArtifactSummaryDto[]>(() => this.detail()?.outputs ?? []);
-  readonly loading = computed(() => this.projectsRead.loading() || this.currentRead.loading());
-  readonly projectsLoading = this.projectsRead.loading;
+  readonly loading = computed(() => this.table.loading() || this.currentRead.loading());
+  readonly projectsLoading = this.table.loading;
   /** 具有編輯權限的成員可以變更進行中的專案；已封存的則唯讀。 */
   readonly editable = computed(() => {
     const project = this.current();
@@ -152,7 +170,7 @@ export class ProjectsPage {
   readonly error = computed(
     () =>
       this.working.error() ||
-      this.projectsRead.error() ||
+      this.table.error() ||
       this.policyRead.error() ||
       this.currentRead.error() ||
       this.detailRead.error(),
@@ -165,12 +183,9 @@ export class ProjectsPage {
   readonly busy = this.working.pending;
   /** 使用者看得到的重讀（重試、寫入後重讀）；處理中文件的輪詢不算。 */
   readonly refreshing = computed(
-    () =>
-      this.projectsRead.refreshing() ||
-      this.currentRead.refreshing() ||
-      this.detailRead.refreshing(),
+    () => this.table.refreshing() || this.currentRead.refreshing() || this.detailRead.refreshing(),
   );
-  readonly projectsRefreshing = this.projectsRead.refreshing;
+  readonly projectsRefreshing = this.table.refreshing;
   /** 詳情（範本、對話、文件、成果）還沒讀到：各面板畫骨架、不顯示 0 與空狀態。 */
   readonly detailLoading = computed(() => !this.detail() && this.detailRead.refreshing());
   /** 已有詳情時重讀（新增、移除、上傳後）：面板內容保留並淡化。 */
@@ -218,13 +233,11 @@ export class ProjectsPage {
         })
       : PROJECTS_TOUR,
   );
-  readonly visible = computed(() =>
-    this.projects().filter(
-      (item) =>
-        item.isArchived === this.archived() &&
-        item.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
-    ),
-  );
+  readonly visible = this.table.rows;
+  search(text: string) {
+    this.filter.set(text);
+    this.table.setFilter('name', textFilter(text));
+  }
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   private readonly sharing = viewChild(ResourceSharing);
@@ -246,7 +259,7 @@ export class ProjectsPage {
   }
   reload() {
     this.working.error.set('');
-    this.projectsRead.reload();
+    this.table.reload();
     this.currentRead.reload();
     this.detailRead.reload();
   }
@@ -305,7 +318,7 @@ export class ProjectsPage {
     this.dialog().nativeElement.close();
     this.toast.success('專案設定已儲存');
     // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
-    this.projectsRead.reload();
+    this.table.reload();
     if (editingId) this.currentRead.value.set(value);
     else await this.router.navigate([routeOf('projects'), value.resource.id]);
   }
@@ -348,9 +361,7 @@ export class ProjectsPage {
     if (!outcome.ok) return;
     const value = outcome.value;
     this.currentRead.value.set(value);
-    this.projectsRead.value.update((all) =>
-      all?.map((item) => (item.resource.id === value.resource.id ? value : item)),
-    );
+    this.table.reload();
     this.toast.success(
       value.isArchived ? '專案已封存' : '專案已還原',
       value.isArchived ? '文件仍可閱讀。' : undefined,
@@ -375,10 +386,8 @@ export class ProjectsPage {
       key: 'delete',
     });
     if (!outcome.ok) return;
-    this.projectsRead.value.update((all) =>
-      all?.filter((item) => item.resource.id !== current.resource.id),
-    );
-    this.projectsRead.reload();
+    this.table.dropRows((item) => item.resource.id === current.resource.id);
+    this.table.reload();
     await this.router.navigate([routeOf('projects')]);
   }
   chooseFiles(event: Event) {

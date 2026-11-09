@@ -1,3 +1,5 @@
+import { endpointTable, isPaged, textFilter } from '@shared/ui/table-model';
+import { TablePagination } from '@shared/ui/data-table';
 import { map } from 'rxjs';
 import { apiResource } from '@core/api/api-resource';
 import { Notice } from '@shared/ui/notice';
@@ -41,6 +43,7 @@ import { routeOf } from '@core/api/catalog';
   selector: 'nx-shared-page',
   styleUrl: './shared-page.scss',
   imports: [
+    TablePagination,
     Notice,
     EmptyState,
     FeaturePage,
@@ -98,25 +101,35 @@ export class SharedPage {
     computation: (source, previous) =>
       source.param !== null ? source.param === 'true' : (source.owner ?? previous?.value ?? false),
   });
-  private readonly listRead = apiResource({
+  /** 卡片格線一頁 40 張；資料在門檻內時搜尋與換頁都在本機。 */
+  readonly table = endpointTable({
     feature: 'sharing',
-    params: () => this.sent(),
-    loader: (sent) => this.api.list(sent),
+    params: computed(() => ({ sent: this.sent() })),
+    load: ({ sent }, table, signal) => this.api.list(sent, table, signal),
+    columns: [
+      { id: 'title', label: '標題', filter: 'text' },
+      { id: 'createdAt', label: '時間', sort: 'desc', time: true },
+    ],
+    sort: { column: 'createdAt', direction: 'desc' },
+    pageSize: 40,
+    pageSizes: [40],
   });
-  private readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
-  readonly listLoading = this.listRead.loading;
-  readonly listRefreshing = this.listRead.refreshing;
+  readonly paged = computed(() => isPaged(this.table));
+  readonly listLoading = this.table.loading;
+  readonly listRefreshing = this.table.refreshing;
   /** 使用者看得到的重讀（重試）；分享到期前的輪詢不算。 */
-  readonly refreshing = computed(() => this.contentRead.refreshing() || this.listRead.refreshing());
+  readonly refreshing = computed(() => this.contentRead.refreshing() || this.table.refreshing());
   readonly contentLoading = this.contentRead.loading;
   readonly term = signal('');
   readonly scopes = [
     { value: 'received', label: '分享給我' },
     { value: 'sent', label: '我分享的' },
   ];
-  readonly visible = computed(() =>
-    this.list().filter((item) => item.title.toLowerCase().includes(this.term().toLowerCase())),
-  );
+  readonly visible = this.table.rows;
+  search(text: string) {
+    this.term.set(text);
+    this.table.setFilter('title', textFilter(text));
+  }
   readonly shareActions = computed<MenuAction[]>(() =>
     this.content()?.share.isOwner
       ? [
@@ -150,7 +163,7 @@ export class SharedPage {
   /** 撤銷進行中：分享選單鈕轉圈。 */
   readonly revoking = action();
   readonly error = computed(
-    () => this.revoking.error() || this.contentRead.error() || this.listRead.error(),
+    () => this.revoking.error() || this.contentRead.error() || this.table.error(),
   );
   constructor() {
     // 閱讀器的覆蓋層絕不會繼續顯示本頁已不再顯示的分享。
@@ -165,7 +178,7 @@ export class SharedPage {
   load() {
     this.revoking.error.set('');
     this.contentRead.reload();
-    this.listRead.reload();
+    this.table.reload();
   }
   readonly date = formatDate;
   readonly when = relativeTime;
@@ -197,7 +210,7 @@ export class SharedPage {
     const outcome = await this.revoking.run(() => this.api.revoke(share.id));
     if (!outcome.ok) return;
     this.contentRead.value.set(undefined);
-    this.listRead.reload();
+    this.table.reload();
     await this.router.navigate([routeOf('sharing')], { queryParams: { sent: this.sent() } });
   }
 }

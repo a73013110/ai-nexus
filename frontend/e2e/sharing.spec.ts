@@ -66,7 +66,10 @@ test("named read-only sharing is created beside a conversation and can be revoke
       share!.isRevoked = true;
       return route.fulfill({ status: 204 });
     }
-    if (path.endsWith("/shares")) return json(share ? [share] : []);
+    if (path.endsWith("/shares")) {
+      const items = share ? [share] : [];
+      return json({ items, total: items.length, offset: 0, complete: true });
+    }
     if (share?.isRevoked) return json({ title: "分享已撤銷。" }, 404);
     return json({
       share,
@@ -156,7 +159,12 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
     const url = new URL(route.request().url());
     if (url.pathname.endsWith("/shares"))
       return route.fulfill({
-        json: url.searchParams.get("sent") === "true" ? [share] : [],
+        json: {
+          items: url.searchParams.get("sent") === "true" ? [share] : [],
+          total: url.searchParams.get("sent") === "true" ? 1 : 0,
+          offset: 0,
+          complete: true,
+        },
       });
     if (url.pathname.endsWith("/preview"))
       return route.fulfill({
@@ -340,7 +348,10 @@ for (const width of [1440, 375]) {
     await page.route("**/api/v1/shares**", (route) => {
       const path = new URL(route.request().url()).pathname;
       return route.fulfill({
-        json: path === "/api/v1/shares" ? [content.share] : content,
+        json:
+          path === "/api/v1/shares"
+            ? { items: [content.share], total: 1, offset: 0, complete: true }
+            : content,
       });
     });
     const height = width === 375 ? 812 : 1000;

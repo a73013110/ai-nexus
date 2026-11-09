@@ -230,8 +230,10 @@ test("retained project originals are discoverable through the library and explic
   });
   core.retainedFiles.add(id);
   await core.attach(page);
-  await page.route("**/api/v1/projects", (route) =>
-    route.fulfill({ contentType: "application/json", body: "[]" }),
+  await page.route("**/api/v1/projects*", (route) =>
+    route.fulfill({
+      json: { items: [], total: 0, offset: 0, complete: true },
+    }),
   );
   await page.goto("/work/projects");
   await page.getByRole("link", { name: "檔案庫", exact: true }).last().click();

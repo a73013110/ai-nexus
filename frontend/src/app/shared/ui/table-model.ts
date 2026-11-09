@@ -153,6 +153,20 @@ export type ReadTableModel<Row, Page> = TableModel<Row> & {
   readonly data: Signal<Page | undefined>;
 };
 
+/** 後端分頁的表格模型，多了刪除成功後先在畫面拿掉列的能力。 */
+export type EndpointTableModel<Row, Page> = ReadTableModel<Row, Page> & {
+  /** 重讀回來前先移除符合的列，已刪的項目才不會在列表閃現還能點；之後仍要 `reload()` 對齊伺服器。 */
+  dropRows(match: (row: Row) => boolean): void;
+};
+
+/** 卡片格線與選擇器：超過一頁才顯示分頁列；已翻到後面的頁時即使總數變少也保留，才能回到前面。 */
+export const isPaged = (table: Pick<TableModel, 'total' | 'pageSize' | 'pageIndex'>) =>
+  table.total() > table.pageSize() || table.pageIndex() > 0;
+
+/** 搜尋框對應的欄位文字篩選；空字串清除。 */
+export const textFilter = (text: string): ColumnFilter | null =>
+  text ? { kind: 'text', text } : null;
+
 /** `TablePagination` 預設可選的每頁筆數；頁面收到 `pageSizeChange` 時以它擋下其他值。 */
 export const PAGE_SIZES: readonly number[] = [25, 50, 100];
 
@@ -231,7 +245,7 @@ export function localTable<Row>(options: LocalTableOptions<Row>): TableModel<Row
  */
 export function endpointTable<P, Page extends TablePageLike<unknown>>(
   options: EndpointTableOptions<RowOf<Page>, P, Page>,
-): ReadTableModel<RowOf<Page>, Page> {
+): EndpointTableModel<RowOf<Page>, Page> {
   type Row = RowOf<Page>;
   const state = tableState<Row>(options, options.params);
   /** 已一次讀到全部資料的查詢條件；條件相同時排序、篩選與換頁不重讀。 */
@@ -269,7 +283,7 @@ export function endpointTable<P, Page extends TablePageLike<unknown>>(
   const total = computed(() => (complete() ? shown().length : (read.value()?.page.total ?? 0)));
   const lastPage = computed(() => Math.max(0, Math.ceil(total() / state.pageSize()) - 1));
   const index = computed(() => Math.min(state.pageIndex(), lastPage()));
-  return withData(
+  const model = withData<Row, Page>(
     read,
     state.build({
       rows: computed(() => (complete() ? slicePage(shown(), index(), state.pageSize()) : shown())),
@@ -284,6 +298,16 @@ export function endpointTable<P, Page extends TablePageLike<unknown>>(
       lastPage,
     }),
   );
+  return {
+    ...model,
+    dropRows: (match) =>
+      read.value.update((value) => {
+        if (!value) return value;
+        const items = (value.page.items as readonly Row[]).filter((row) => !match(row));
+        const removed = value.page.items.length - items.length;
+        return { ...value, page: { ...value.page, items, total: value.page.total - removed } };
+      }),
+  };
 }
 
 /** 大表（日誌、稽核）：游標分頁、不計總數；上一頁用看過的游標重讀。 */

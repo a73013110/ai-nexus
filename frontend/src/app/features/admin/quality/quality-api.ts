@@ -6,6 +6,8 @@ import type {
   RetrievalEvaluationRequest,
 } from '@core/api/schema';
 
+import type { TableRequestQuery } from '@shared/ui/table-model';
+
 @Injectable({ providedIn: 'root' })
 export class QualityApi {
   private readonly api = inject(ApiClient);
@@ -17,7 +19,8 @@ export class QualityApi {
     });
   removeFeedback = (id: string) =>
     this.api.delete('/api/v1/messages/{id}/feedback', { path: { id } });
-  feedbackList = () => this.api.get('/api/v1/quality/feedback');
+  feedbackList = (table: TableRequestQuery, signal?: AbortSignal) =>
+    this.api.get('/api/v1/quality/feedback', { query: table, signal });
   /** 尚未評分時伺服器回 204，結果為 `undefined`。 */
   feedbackFor = (id: string) => this.api.get('/api/v1/messages/{id}/feedback', { path: { id } });
   sets = () => this.api.get('/api/v1/quality/sets');

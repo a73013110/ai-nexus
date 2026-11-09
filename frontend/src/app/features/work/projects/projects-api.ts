@@ -1,10 +1,13 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 
+import type { TableRequestQuery } from '@shared/ui/table-model';
+
 @Injectable({ providedIn: 'root' })
 export class ProjectsApi {
   private readonly api = inject(ApiClient);
-  list = () => this.api.get('/api/v1/projects');
+  list = (query: { archived?: boolean } & Partial<TableRequestQuery> = {}, signal?: AbortSignal) =>
+    this.api.get('/api/v1/projects', { query, signal });
   get = (id: string) => this.api.get('/api/v1/projects/{id}', { path: { id } });
   remove = (id: string) => this.api.delete('/api/v1/projects/{id}', { path: { id } });
   save = (

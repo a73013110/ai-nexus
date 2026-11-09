@@ -193,6 +193,23 @@ describe('endpointTable', () => {
     });
   });
 
+  it('drops rows right away and keeps the total in step', async () => {
+    const load = vi.fn(async () => ({
+      items: rows,
+      total: rows.length,
+      offset: 0,
+      complete: true,
+    }));
+    const { value: table, settle } = inContext(() =>
+      endpointTable({ params: () => true, load, columns, pageSize: 10, pageSizes: [10] }),
+    );
+    await settle();
+    table.dropRows((row) => row.id === 1);
+    expect(table.rows().map((row) => row.id)).toEqual([2, 3, 4]);
+    expect(table.total()).toBe(3);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
   it('asks the endpoint for each page while the data is too large to send at once', async () => {
     const load = vi.fn(async (_params: true, table: TableRequestQuery) => ({
       items: rows.slice(table.offset, table.offset + table.limit),

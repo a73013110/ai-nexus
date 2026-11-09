@@ -32,18 +32,10 @@ internal sealed class ShareAccess(AppDbContext db, AccessService features, TimeP
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
         : await db.Resources.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == Artifact.Kind, ct);
 
-    /// <summary><paramref name="rows"/> 中來源仍存在的列（見 <see cref="SourceExistsAsync"/>），維持原順序，最多兩次查詢。</summary>
-    public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
-    {
-        var conversations = rows.Where(x => x.Kind == ConversationKind).Select(x => x.SourceId).Distinct().ToArray();
-        var artifacts = rows.Where(x => x.Kind != ConversationKind).Select(x => x.SourceId).Distinct().ToArray();
-        var owners = new HashSet<(Guid Source, Guid Owner)>();
-        if (conversations.Length > 0)
-            owners.UnionWith((await db.Conversations.Where(x => conversations.Contains(x.Id)).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
-        if (artifacts.Length > 0)
-            owners.UnionWith((await db.Resources.Where(x => artifacts.Contains(x.Id) && x.Kind == Artifact.Kind).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct)).Select(x => (x.Id, x.OwnerId)));
-        return rows.Where(x => owners.Contains((x.SourceId, x.OwnerId))).ToArray();
-    }
+    /// <summary>只留來源仍存在的分享（規則同 <see cref="SourceExistsAsync"/>）；放在查詢裡，分頁的總數才正確。</summary>
+    public IQueryable<ShareLink> WithSources(IQueryable<ShareLink> links) => links.Where(x =>
+        (x.Kind == ConversationKind && db.Conversations.Any(c => c.Id == x.SourceId && c.OwnerId == x.OwnerId))
+        || (x.Kind != ConversationKind && db.Resources.Any(r => r.Id == x.SourceId && r.OwnerId == x.OwnerId && r.Kind == Artifact.Kind)));
 
     public Task<bool> HasSourceFeatureAsync(Guid user, string kind, CancellationToken ct)
         => features.HoldsAsync(user, kind == ConversationKind ? FeatureCatalog.Chat : FeatureCatalog.Artifacts, ct);

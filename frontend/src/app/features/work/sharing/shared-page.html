@@ -38,7 +38,7 @@
       [loading]="listLoading()"
       [busy]="listRefreshing()"
       [empty]="!visible().length"
-      (searchChange)="term.set($event)"
+      (searchChange)="search($event)"
       (filterChange)="switchTab($event === 'sent')"
     >
       @for (item of visible(); track item.id) {
@@ -74,6 +74,9 @@
         }
       </nx-empty-state>
     </nx-resource-gallery>
+    @if (paged()) {
+      <nx-table-pagination [table]="table" [busy]="listRefreshing()" />
+    }
   } @else if (content(); as view) {
     <div class="share-layout">
       <nx-panel

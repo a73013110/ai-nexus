@@ -128,7 +128,7 @@ export class ConversationSettingsDialog {
   });
   readonly projectOptions = computed(() => [
     { value: '', label: '個人對話' },
-    ...(this.projectsRead.value() ?? [])
+    ...(this.projectsRead.value()?.items ?? [])
       .filter((item) => !item.isArchived || item.resource.id === this.target()?.projectId)
       .map((item) => ({ value: item.resource.id, label: item.resource.name })),
   ]);

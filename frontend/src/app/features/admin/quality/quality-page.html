@@ -55,7 +55,7 @@
       [filter]="tab()"
       [loading]="tab() === 'feedback' ? feedbackLoading() : setsLoading()"
       [empty]="tab() === 'feedback' ? !visibleFeedback().length : !visible().length"
-      (searchChange)="filter.set($event)"
+      (searchChange)="search($event)"
       (filterChange)="tab.set($event)"
     >
       @if (tab() === 'feedback') {
@@ -102,6 +102,9 @@
         }
       </nx-empty-state>
     </nx-resource-gallery>
+    @if (tab() === 'feedback' && feedbackPaged()) {
+      <nx-table-pagination [table]="feedback" [busy]="feedback.refreshing()" />
+    }
   } @else if (current(); as set) {
     <div class="quality-layout">
       <nx-panel class="quality-runs" heading="比較紀錄" icon="history" [count]="runs().length">

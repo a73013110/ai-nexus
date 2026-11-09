@@ -1,3 +1,4 @@
+using AiNexus.Platform.Data.Tables;
 using AiNexus.Data.App;
 using System.Net.Http.Json;
 using AiNexus.Features.Platform.Account;
@@ -37,22 +38,22 @@ public sealed class ListSharesTests
         var document = await CreateShare(new("artifact", artifact.Resource.Id, [bobId]));
         (await carol.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", (await CreateConversation(carol)).Id, [bobId]))).EnsureSuccessStatusCode();
 
-        var sent = (await alice.GetFromJsonAsync<ShareDto[]>("/api/v1/shares?sent=true"))!;
+        var sent = (await alice.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares?sent=true"))!.Items;
         Assert.Equal([document.Id, chat.Id], sent.Select(x => x.Id));
         Assert.All(sent, x => { Assert.True(x.IsOwner); Assert.Equal("alice", x.Owner); });
         Assert.Equal(["bob", "carol"], sent.Single(x => x.Id == chat.Id).Recipients.Order());
         Assert.Equal(["bob"], sent.Single(x => x.Id == document.Id).Recipients);
-        var received = (await bob.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!;
-        Assert.Equal(3, received.Length);
+        var received = (await bob.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares"))!.Items;
+        Assert.Equal(3, received.Count);
         Assert.All(received, x => { Assert.False(x.IsOwner); Assert.Empty(x.Recipients); });
         Assert.Equal("carol", received[0].Owner); Assert.Equal(["alice", "alice"], received.Skip(1).Select(x => x.Owner));
-        Assert.Empty((await alice.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!);
+        Assert.Empty((await alice.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares"))!.Items);
 
         // 來源已消失但未撤銷分享時，對接收者隱藏，但仍會列在分享者的清單中。
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<AppDbContext>().Resources.Where(x => x.Id == artifact.Resource.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true));
-        Assert.DoesNotContain((await bob.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!, x => x.Id == document.Id);
-        Assert.Contains((await alice.GetFromJsonAsync<ShareDto[]>("/api/v1/shares?sent=true"))!, x => x.Id == document.Id);
-        Assert.Single((await carol.GetFromJsonAsync<ShareDto[]>("/api/v1/shares"))!);
+        Assert.DoesNotContain((await bob.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares"))!.Items, x => x.Id == document.Id);
+        Assert.Contains((await alice.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares?sent=true"))!.Items, x => x.Id == document.Id);
+        Assert.Single((await carol.GetFromJsonAsync<TablePage<ShareDto>>("/api/v1/shares"))!.Items);
     }
 }

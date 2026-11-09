@@ -30,7 +30,6 @@ import type {
   EvaluationResultDto,
   EvaluationRunDto,
   EvaluationSetDto,
-  FeedbackDto,
   ModelDto,
   ModelPolicyDto,
 } from '@core/api/schema';
@@ -59,6 +58,8 @@ import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { accessLabel } from '@features/work/collaboration/access-label';
 import { evaluationSetTour, qualityTour } from './quality-tour';
 import { routeOf } from '@core/api/catalog';
+import { endpointTable, isPaged, textFilter } from '@shared/ui/table-model';
+import { TablePagination } from '@shared/ui/data-table';
 import { isActive } from '@core/api/generation-status';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
@@ -98,6 +99,7 @@ function isEvaluationExport(data: unknown): data is EvaluationExport {
   selector: 'nx-quality-page',
   styleUrl: './quality-page.scss',
   imports: [
+    TablePagination,
     DialogHeader,
     Notice,
     EmptyState,
@@ -137,9 +139,18 @@ export class QualityPage {
     initialValue: null,
   });
   private readonly setsRead = apiResource({ feature: 'quality', loader: () => this.api.sets() });
-  private readonly feedbackRead = apiResource({
+  /** 卡片格線一頁 40 張；資料在門檻內時搜尋與換頁都在本機。 */
+  readonly feedback = endpointTable({
     feature: 'quality',
-    loader: () => this.api.feedbackList(),
+    params: () => true,
+    load: (_, table, signal) => this.api.feedbackList(table, signal),
+    columns: [
+      { id: 'conversationTitle', label: '對話', filter: 'text' },
+      { id: 'updatedAt', label: '時間', sort: 'desc', time: true },
+    ],
+    sort: { column: 'updatedAt', direction: 'desc' },
+    pageSize: 40,
+    pageSizes: [40],
   });
   private readonly currentRead = apiResource({
     feature: 'quality',
@@ -181,14 +192,14 @@ export class QualityPage {
     const value = this.detailRead.value();
     return value && value.run.id === this.runId() ? value : null;
   });
-  readonly feedback = computed<FeedbackDto[]>(() => this.feedbackRead.value() ?? []);
   readonly tab = signal('sets');
   readonly tabs = [
     { value: 'sets', label: '評測集' },
     { value: 'feedback', label: '我的回饋' },
   ];
   readonly setsLoading = this.setsRead.loading;
-  readonly feedbackLoading = this.feedbackRead.loading;
+  readonly feedbackLoading = this.feedback.loading;
+  readonly feedbackPaged = computed(() => isPaged(this.feedback));
   readonly currentLoading = this.currentRead.loading;
   /** 比較紀錄清單第一次讀取（或換評測集）：面板顯示骨架，不先給空狀態。 */
   readonly runsLoading = this.runsRead.loading;
@@ -196,7 +207,7 @@ export class QualityPage {
   readonly refreshing = computed(
     () =>
       this.setsRead.refreshing() ||
-      this.feedbackRead.refreshing() ||
+      this.feedback.refreshing() ||
       this.currentRead.refreshing() ||
       this.runsRead.refreshing(),
   );
@@ -207,7 +218,7 @@ export class QualityPage {
     () =>
       this.working.error() ||
       this.setsRead.error() ||
-      this.feedbackRead.error() ||
+      this.feedback.error() ||
       this.currentRead.error() ||
       this.runsRead.error() ||
       this.detailRead.error(),
@@ -218,9 +229,11 @@ export class QualityPage {
   readonly visible = computed(() =>
     this.sets().filter((item) => item.resource.name.toLowerCase().includes(this.needle())),
   );
-  readonly visibleFeedback = computed(() =>
-    this.feedback().filter((item) => item.conversationTitle.toLowerCase().includes(this.needle())),
-  );
+  readonly visibleFeedback = this.feedback.rows;
+  search(text: string) {
+    this.filter.set(text);
+    this.feedback.setFilter('conversationTitle', textFilter(text));
+  }
   /** 頁面標題下方，已開啟集合的描述與其大小、版本。 */
   readonly summary = computed(() => {
     const set = this.current();
@@ -304,7 +317,7 @@ export class QualityPage {
   reload() {
     this.working.error.set('');
     this.setsRead.reload();
-    this.feedbackRead.reload();
+    this.feedback.reload();
     this.currentRead.reload();
     this.runsRead.reload();
   }

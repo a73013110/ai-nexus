@@ -3540,16 +3540,48 @@
         "tags": [
           "Quality"
         ],
+        "parameters": [
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/FeedbackDto"
-                  }
+                  "$ref": "#/components/schemas/TablePageOfFeedbackDto"
                 }
               }
             }
@@ -9255,16 +9287,55 @@
         "tags": [
           "Projects"
         ],
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ProjectDto"
-                  }
+                  "$ref": "#/components/schemas/TablePageOfProjectDto"
                 }
               }
             }
@@ -10974,6 +11045,39 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           }
         ],
         "responses": {
@@ -10982,10 +11086,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ShareDto"
-                  }
+                  "$ref": "#/components/schemas/TablePageOfShareDto"
                 }
               }
             }
@@ -12457,7 +12558,7 @@
               "string"
             ]
           },
-          "view": { }
+          "view": {}
         }
       },
       "AssistantTurn": {
@@ -22133,11 +22234,11 @@
           },
           "refusalDefinition": {
             "type": "string",
-            "default": "無答案題未提供任何來源的比例；不評斷生成回答內容。"
+            "default": "\u7121\u7B54\u6848\u984C\u672A\u63D0\u4F9B\u4EFB\u4F55\u4F86\u6E90\u7684\u6BD4\u4F8B\uFF1B\u4E0D\u8A55\u65B7\u751F\u6210\u56DE\u7B54\u5167\u5BB9\u3002"
           },
           "latencyDefinition": {
             "type": "string",
-            "default": "依 vector、keyword、hybrid、hybrid+rerank 順序執行；共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。"
+            "default": "\u4F9D vector\u3001keyword\u3001hybrid\u3001hybrid\u002Brerank \u9806\u5E8F\u57F7\u884C\uFF1B\u5171\u7528\u6B63\u5E38\u67E5\u8A62\u5FEB\u53D6\uFF0C\u5EF6\u9072\u5305\u542B\u5FEB\u53D6\u547D\u4E2D\u3002\u76F8\u9130\u7247\u6BB5\u5408\u4F75\u5F8C\u4F9D\u76F8\u95DC\u6587\u4EF6\u53CA\u9801\u78BC\u8A55\u5206\u3002"
           }
         }
       },
@@ -23736,6 +23837,62 @@
           }
         }
       },
+      "TablePageOfFeedbackDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TablePageOfProjectDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
       "TablePageOfPunchDto": {
         "required": [
           "items",
@@ -23833,6 +23990,34 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ScheduledTaskRunDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TablePageOfShareDto": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "complete"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShareDto"
             }
           },
           "total": {
@@ -24233,7 +24418,7 @@
           },
           "language": {
             "type": "string",
-            "default": "繁體中文"
+            "default": "\u7E41\u9AD4\u4E2D\u6587"
           }
         }
       },
@@ -25254,7 +25439,7 @@
       "Problem": {
         "description": "Problem details",
         "content": {
-          "application/problem+json": {
+          "application/problem\u002Bjson": {
             "schema": {
               "$ref": "#/components/schemas/SafeProblemDetails"
             }
@@ -25368,137 +25553,137 @@
     "areas": [
       {
         "id": "work",
-        "name": "AI 工作台"
+        "name": "AI \u5DE5\u4F5C\u53F0"
       },
       {
         "id": "office",
-        "name": "公司事務"
+        "name": "\u516C\u53F8\u4E8B\u52D9"
       },
       {
         "id": "admin",
-        "name": "系統管理"
+        "name": "\u7CFB\u7D71\u7BA1\u7406"
       }
     ],
     "modules": [
       {
         "id": "dashboard",
         "area": "work",
-        "name": "總覽"
+        "name": "\u7E3D\u89BD"
       },
       {
         "id": "chat",
         "area": "work",
-        "name": "對話"
+        "name": "\u5C0D\u8A71"
       },
       {
         "id": "projects",
         "area": "work",
-        "name": "專案"
+        "name": "\u5C08\u6848"
       },
       {
         "id": "files",
         "area": "work",
-        "name": "檔案庫"
+        "name": "\u6A94\u6848\u5EAB"
       },
       {
         "id": "knowledge",
         "area": "work",
-        "name": "知識庫"
+        "name": "\u77E5\u8B58\u5EAB"
       },
       {
         "id": "artifacts",
         "area": "work",
-        "name": "成果文件"
+        "name": "\u6210\u679C\u6587\u4EF6"
       },
       {
         "id": "sharing",
         "area": "work",
-        "name": "分享"
+        "name": "\u5206\u4EAB"
       },
       {
         "id": "jobs",
         "area": "work",
-        "name": "背景任務"
+        "name": "\u80CC\u666F\u4EFB\u52D9"
       },
       {
         "id": "repositories",
         "area": "work",
-        "name": "程式庫"
+        "name": "\u7A0B\u5F0F\u5EAB"
       },
       {
         "id": "attendance",
         "area": "office",
-        "name": "出勤"
+        "name": "\u51FA\u52E4"
       },
       {
         "id": "calendar-sync",
         "area": "office",
-        "name": "日曆同步"
+        "name": "\u65E5\u66C6\u540C\u6B65"
       },
       {
         "id": "identity",
         "area": "admin",
-        "name": "身分"
+        "name": "\u8EAB\u5206"
       },
       {
         "id": "access-control",
         "area": "admin",
-        "name": "存取控制"
+        "name": "\u5B58\u53D6\u63A7\u5236"
       },
       {
         "id": "organization",
         "area": "admin",
-        "name": "組織"
+        "name": "\u7D44\u7E54"
       },
       {
         "id": "operations",
         "area": "admin",
-        "name": "平台營運"
+        "name": "\u5E73\u53F0\u71DF\u904B"
       },
       {
         "id": "billing",
         "area": "admin",
-        "name": "計費"
+        "name": "\u8A08\u8CBB"
       },
       {
         "id": "monitoring",
         "area": "admin",
-        "name": "即時監控"
+        "name": "\u5373\u6642\u76E3\u63A7"
       },
       {
         "id": "audit",
         "area": "admin",
-        "name": "活動稽核"
+        "name": "\u6D3B\u52D5\u7A3D\u6838"
       },
       {
         "id": "diagnostics",
         "area": "admin",
-        "name": "診斷"
+        "name": "\u8A3A\u65B7"
       },
       {
         "id": "mail",
         "area": "admin",
-        "name": "郵件"
+        "name": "\u90F5\u4EF6"
       },
       {
         "id": "releases",
         "area": "admin",
-        "name": "版本"
+        "name": "\u7248\u672C"
       },
       {
         "id": "scheduling",
         "area": "admin",
-        "name": "背景作業"
+        "name": "\u80CC\u666F\u4F5C\u696D"
       },
       {
         "id": "quality",
         "area": "admin",
-        "name": "品質評測"
+        "name": "\u54C1\u8CEA\u8A55\u6E2C"
       },
       {
         "id": "design",
         "area": "admin",
-        "name": "介面元件"
+        "name": "\u4ECB\u9762\u5143\u4EF6"
       }
     ],
     "features": [
@@ -25506,137 +25691,137 @@
         "id": "dashboard",
         "kind": "page",
         "module": "dashboard",
-        "name": "總覽",
+        "name": "\u7E3D\u89BD",
         "icon": "dashboard",
         "route": "/work/dashboard",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "chat",
         "kind": "page",
         "module": "chat",
-        "name": "對話",
+        "name": "\u5C0D\u8A71",
         "icon": "chat",
         "route": "/work/chat",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "projects",
         "kind": "page",
         "module": "projects",
-        "name": "專案",
+        "name": "\u5C08\u6848",
         "icon": "projects",
         "route": "/work/projects",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "files",
         "kind": "page",
         "module": "files",
-        "name": "檔案庫",
+        "name": "\u6A94\u6848\u5EAB",
         "icon": "files",
         "route": "/work/files",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "files.reader",
         "kind": "reader",
         "module": "files",
-        "name": "檔案閱讀器",
+        "name": "\u6A94\u6848\u95B1\u8B80\u5668",
         "icon": "files",
         "route": "/work/files/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge",
         "kind": "page",
         "module": "knowledge",
-        "name": "知識庫",
+        "name": "\u77E5\u8B58\u5EAB",
         "icon": "library",
         "route": "/work/knowledge",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge.reader",
         "kind": "reader",
         "module": "knowledge",
-        "name": "文件閱讀器",
+        "name": "\u6587\u4EF6\u95B1\u8B80\u5668",
         "icon": "document",
         "route": "/work/knowledge/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge.retrieval",
         "kind": "page",
         "module": "knowledge",
-        "name": "檢索管理",
+        "name": "\u6AA2\u7D22\u7BA1\u7406",
         "icon": "database",
         "route": "/work/knowledge/retrieval",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "artifacts",
         "kind": "page",
         "module": "artifacts",
-        "name": "成果文件",
+        "name": "\u6210\u679C\u6587\u4EF6",
         "icon": "document",
         "route": "/work/artifacts",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "sharing",
         "kind": "page",
         "module": "sharing",
-        "name": "分享",
+        "name": "\u5206\u4EAB",
         "icon": "share",
         "route": "/work/sharing",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "sharing.reader",
         "kind": "reader",
         "module": "sharing",
-        "name": "分享閱讀器",
+        "name": "\u5206\u4EAB\u95B1\u8B80\u5668",
         "icon": "share",
         "route": "/work/sharing/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "jobs",
         "kind": "page",
         "module": "jobs",
-        "name": "背景任務",
+        "name": "\u80CC\u666F\u4EFB\u52D9",
         "icon": "tasks",
         "route": "/work/jobs",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "repositories",
         "kind": "page",
         "module": "repositories",
-        "name": "程式庫",
+        "name": "\u7A0B\u5F0F\u5EAB",
         "icon": "git",
         "route": "/work/repositories",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.records",
         "kind": "page",
         "module": "attendance",
-        "name": "出勤紀錄",
+        "name": "\u51FA\u52E4\u7D00\u9304",
         "icon": "clock",
         "route": "/office/attendance/records",
         "scopes": [
@@ -25654,217 +25839,217 @@
         "id": "attendance.cards",
         "kind": "page",
         "module": "attendance",
-        "name": "卡號對應",
+        "name": "\u5361\u865F\u5C0D\u61C9",
         "icon": "tag",
         "route": "/office/attendance/cards",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.cards.maintain",
         "kind": "action",
         "module": "attendance",
-        "name": "維護卡片與持有期間",
+        "name": "\u7DAD\u8B77\u5361\u7247\u8207\u6301\u6709\u671F\u9593",
         "icon": "edit",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.imports",
         "kind": "page",
         "module": "attendance",
-        "name": "打卡匯入紀錄",
+        "name": "\u6253\u5361\u532F\u5165\u7D00\u9304",
         "icon": "import",
         "route": "/office/attendance/imports",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.imports.reimport",
         "kind": "action",
         "module": "attendance",
-        "name": "手動重匯打卡檔",
+        "name": "\u624B\u52D5\u91CD\u532F\u6253\u5361\u6A94",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.calendar",
         "kind": "page",
         "module": "attendance",
-        "name": "假日設定",
+        "name": "\u5047\u65E5\u8A2D\u5B9A",
         "icon": "calendar",
         "route": "/office/attendance/calendar",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.calendar.maintain",
         "kind": "action",
         "module": "attendance",
-        "name": "修改假日與彈性放假",
+        "name": "\u4FEE\u6539\u5047\u65E5\u8207\u5F48\u6027\u653E\u5047",
         "icon": "edit",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "calendar-sync",
         "kind": "page",
         "module": "calendar-sync",
-        "name": "Google 日曆同步",
+        "name": "Google \u65E5\u66C6\u540C\u6B65",
         "icon": "calendar",
         "route": "/office/calendar-sync",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "calendar-sync.manage",
         "kind": "action",
         "module": "calendar-sync",
-        "name": "立即同步與測試連線",
+        "name": "\u7ACB\u5373\u540C\u6B65\u8207\u6E2C\u8A66\u9023\u7DDA",
         "icon": "refresh",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users",
         "kind": "page",
         "module": "identity",
-        "name": "使用者",
+        "name": "\u4F7F\u7528\u8005",
         "icon": "user",
         "route": "/admin/identity/users",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users.import",
         "kind": "action",
         "module": "identity",
-        "name": "從 AD 匯入使用者",
+        "name": "\u5F9E AD \u532F\u5165\u4F7F\u7528\u8005",
         "icon": "import",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users.sync",
         "kind": "action",
         "module": "identity",
-        "name": "以 AD 資料更新使用者",
+        "name": "\u4EE5 AD \u8CC7\u6599\u66F4\u65B0\u4F7F\u7528\u8005",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.api-clients",
         "kind": "page",
         "module": "identity",
-        "name": "外部系統",
+        "name": "\u5916\u90E8\u7CFB\u7D71",
         "icon": "integrations",
         "route": "/admin/identity/api-clients",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.roles",
         "kind": "page",
         "module": "access-control",
-        "name": "角色",
+        "name": "\u89D2\u8272",
         "icon": "lock",
         "route": "/admin/access-control/roles",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.groups",
         "kind": "page",
         "module": "access-control",
-        "name": "功能群組與模型",
+        "name": "\u529F\u80FD\u7FA4\u7D44\u8207\u6A21\u578B",
         "icon": "apps",
         "route": "/admin/access-control/groups",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.features",
         "kind": "page",
         "module": "access-control",
-        "name": "功能",
+        "name": "\u529F\u80FD",
         "icon": "list",
         "route": "/admin/access-control/features",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.navigation",
         "kind": "page",
         "module": "access-control",
-        "name": "選單",
+        "name": "\u9078\u55AE",
         "icon": "sidebar",
         "route": "/admin/access-control/navigation",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "organization",
         "kind": "page",
         "module": "organization",
-        "name": "組織單位",
+        "name": "\u7D44\u7E54\u55AE\u4F4D",
         "icon": "organization",
         "route": "/admin/organization",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "organization.import",
         "kind": "action",
         "module": "organization",
-        "name": "從公文系統匯入部門",
+        "name": "\u5F9E\u516C\u6587\u7CFB\u7D71\u532F\u5165\u90E8\u9580",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "operations.usage",
         "kind": "page",
         "module": "operations",
-        "name": "平台用量",
+        "name": "\u5E73\u53F0\u7528\u91CF",
         "icon": "chart",
         "route": "/admin/operations/usage",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "billing.prices",
         "kind": "page",
         "module": "billing",
-        "name": "模型與工具價格",
+        "name": "\u6A21\u578B\u8207\u5DE5\u5177\u50F9\u683C",
         "icon": "money",
         "route": "/admin/billing/prices",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "monitoring",
         "kind": "page",
         "module": "monitoring",
-        "name": "即時監控",
+        "name": "\u5373\u6642\u76E3\u63A7",
         "icon": "activity",
         "route": "/admin/monitoring",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "audit",
         "kind": "page",
         "module": "audit",
-        "name": "活動稽核",
+        "name": "\u6D3B\u52D5\u7A3D\u6838",
         "icon": "audit",
         "route": "/admin/audit",
         "scopes": [
@@ -25873,13 +26058,13 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": [ ]
+        "managerScopes": []
       },
       {
         "id": "audit.usage",
         "kind": "page",
         "module": "audit",
-        "name": "功能使用量",
+        "name": "\u529F\u80FD\u4F7F\u7528\u91CF",
         "icon": "chart",
         "route": "/admin/audit/usage",
         "scopes": [
@@ -25888,147 +26073,147 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": [ ]
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs",
         "kind": "page",
         "module": "diagnostics",
-        "name": "系統日誌",
+        "name": "\u7CFB\u7D71\u65E5\u8A8C",
         "icon": "logs",
         "route": "/admin/diagnostics/logs",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs.detail",
         "kind": "action",
         "module": "diagnostics",
-        "name": "日誌診斷詳情",
+        "name": "\u65E5\u8A8C\u8A3A\u65B7\u8A73\u60C5",
         "icon": "search",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs.export",
         "kind": "action",
         "module": "diagnostics",
-        "name": "日誌匯出",
+        "name": "\u65E5\u8A8C\u532F\u51FA",
         "icon": "download",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "mail.messages",
         "kind": "page",
         "module": "mail",
-        "name": "郵件寄送紀錄",
+        "name": "\u90F5\u4EF6\u5BC4\u9001\u7D00\u9304",
         "icon": "mail",
         "route": "/admin/mail/messages",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "mail.messages.resend",
         "kind": "action",
         "module": "mail",
-        "name": "重寄與重試郵件",
+        "name": "\u91CD\u5BC4\u8207\u91CD\u8A66\u90F5\u4EF6",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "releases",
         "kind": "page",
         "module": "releases",
-        "name": "版本與結構異動",
+        "name": "\u7248\u672C\u8207\u7D50\u69CB\u7570\u52D5",
         "icon": "history",
         "route": "/admin/releases",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "scheduling",
         "kind": "page",
         "module": "scheduling",
-        "name": "背景作業",
+        "name": "\u80CC\u666F\u4F5C\u696D",
         "icon": "clock",
         "route": "/admin/scheduling",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "scheduling.manage",
         "kind": "action",
         "module": "scheduling",
-        "name": "執行、停止與暫停排程任務",
+        "name": "\u57F7\u884C\u3001\u505C\u6B62\u8207\u66AB\u505C\u6392\u7A0B\u4EFB\u52D9",
         "icon": "play",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "quality",
         "kind": "page",
         "module": "quality",
-        "name": "品質評測",
+        "name": "\u54C1\u8CEA\u8A55\u6E2C",
         "icon": "shield",
         "route": "/admin/quality",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "quality.retrieval",
         "kind": "page",
         "module": "quality",
-        "name": "檢索評測",
+        "name": "\u6AA2\u7D22\u8A55\u6E2C",
         "icon": "search",
         "route": "/admin/quality/retrieval",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "design",
         "kind": "page",
         "module": "design",
-        "name": "介面元件",
+        "name": "\u4ECB\u9762\u5143\u4EF6",
         "icon": "sliders",
         "route": "/admin/design",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       }
     ],
     "scopes": [
       {
         "id": "own",
-        "name": "本人"
+        "name": "\u672C\u4EBA"
       },
       {
         "id": "assigned",
-        "name": "被指派"
+        "name": "\u88AB\u6307\u6D3E"
       },
       {
         "id": "unit",
-        "name": "所屬單位"
+        "name": "\u6240\u5C6C\u55AE\u4F4D"
       },
       {
         "id": "unit-tree",
-        "name": "所屬單位及下層"
+        "name": "\u6240\u5C6C\u55AE\u4F4D\u53CA\u4E0B\u5C64"
       },
       {
         "id": "all",
-        "name": "全部"
+        "name": "\u5168\u90E8"
       },
       {
         "id": "managed",
-        "name": "所管單位"
+        "name": "\u6240\u7BA1\u55AE\u4F4D"
       },
       {
         "id": "managed-tree",
-        "name": "所管單位及下層"
+        "name": "\u6240\u7BA1\u55AE\u4F4D\u53CA\u4E0B\u5C64"
       }
     ]
   }

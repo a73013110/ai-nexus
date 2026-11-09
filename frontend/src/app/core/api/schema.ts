@@ -1474,7 +1474,12 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    offset?: number;
+                    limit?: number;
+                    sort?: string;
+                    filter?: string[];
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -1487,7 +1492,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["FeedbackDto"][];
+                        "application/json": components["schemas"]["TablePageOfFeedbackDto"];
                     };
                 };
                 default: components["responses"]["Problem"];
@@ -3902,7 +3907,13 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    archived?: boolean;
+                    offset?: number;
+                    limit?: number;
+                    sort?: string;
+                    filter?: string[];
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -3915,7 +3926,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ProjectDto"][];
+                        "application/json": components["schemas"]["TablePageOfProjectDto"];
                     };
                 };
                 default: components["responses"]["Problem"];
@@ -4744,6 +4755,10 @@ export interface paths {
             parameters: {
                 query?: {
                     sent?: boolean;
+                    offset?: number;
+                    limit?: number;
+                    sort?: string;
+                    filter?: string[];
                 };
                 header?: never;
                 path?: never;
@@ -4757,7 +4772,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ShareDto"][];
+                        "application/json": components["schemas"]["TablePageOfShareDto"];
                     };
                 };
                 default: components["responses"]["Problem"];
@@ -8169,6 +8184,22 @@ export interface components {
             offset: number;
             complete: boolean;
         };
+        TablePageOfFeedbackDto: {
+            items: components["schemas"]["FeedbackDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
+        TablePageOfProjectDto: {
+            items: components["schemas"]["ProjectDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
         TablePageOfPunchDto: {
             items: components["schemas"]["PunchDto"][];
             /** Format: int32 */
@@ -8195,6 +8226,14 @@ export interface components {
         };
         TablePageOfScheduledTaskRunDto: {
             items: components["schemas"]["ScheduledTaskRunDto"][];
+            /** Format: int32 */
+            total: number;
+            /** Format: int32 */
+            offset: number;
+            complete: boolean;
+        };
+        TablePageOfShareDto: {
+            items: components["schemas"]["ShareDto"][];
             /** Format: int32 */
             total: number;
             /** Format: int32 */
@@ -8965,10 +9004,13 @@ export type SubsystemFact = components['schemas']['SubsystemFact'];
 export type TablePageOfCalendarSyncEventDto = components['schemas']['TablePageOfCalendarSyncEventDto'];
 export type TablePageOfCalendarSyncRunDto = components['schemas']['TablePageOfCalendarSyncRunDto'];
 export type TablePageOfCalendarSyncRunItemDto = components['schemas']['TablePageOfCalendarSyncRunItemDto'];
+export type TablePageOfFeedbackDto = components['schemas']['TablePageOfFeedbackDto'];
+export type TablePageOfProjectDto = components['schemas']['TablePageOfProjectDto'];
 export type TablePageOfPunchDto = components['schemas']['TablePageOfPunchDto'];
 export type TablePageOfPunchImportDto = components['schemas']['TablePageOfPunchImportDto'];
 export type TablePageOfQueuedJobDto = components['schemas']['TablePageOfQueuedJobDto'];
 export type TablePageOfScheduledTaskRunDto = components['schemas']['TablePageOfScheduledTaskRunDto'];
+export type TablePageOfShareDto = components['schemas']['TablePageOfShareDto'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
 export type TestIdentityRequest = components['schemas']['TestIdentityRequest'];
 export type TextDocumentDto = components['schemas']['TextDocumentDto'];
