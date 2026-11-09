@@ -124,7 +124,8 @@ export class ConversationSettingsDialog {
   private readonly opened = signal(0);
   protected readonly projectsRead = apiResource({
     params: () => (this.opened() && this.session.has('projects') ? this.opened() : undefined),
-    loader: () => this.projects.list(),
+    // 專案超過一次回傳全部的門檻時，取單頁上限；不帶 limit 只會拿到預設的 50 筆。
+    loader: () => this.projects.list({ limit: 200 }),
   });
   readonly projectOptions = computed(() => [
     { value: '', label: '個人對話' },
