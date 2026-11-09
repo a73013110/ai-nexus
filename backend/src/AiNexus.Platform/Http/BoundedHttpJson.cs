@@ -20,8 +20,12 @@ public static class BoundedHttpJson
     /// 超過上限（標頭宣告或實際傳輸）時拋出 <see cref="ExternalServiceException"/>。
     /// </summary>
     public static async Task<byte[]> ReadBytesAsync(HttpResponseMessage response, int maxBytes, CancellationToken ct)
+        => await TryReadBytesAsync(response, maxBytes, ct) ?? throw TooLarge();
+
+    /// <summary>同 <see cref="ReadBytesAsync"/>，但超過上限回傳 null：太大是預期結果（例：略過過大的檔案）時用。</summary>
+    public static async Task<byte[]?> TryReadBytesAsync(HttpResponseMessage response, int maxBytes, CancellationToken ct)
     {
-        if (response.Content.Headers.ContentLength > maxBytes) throw TooLarge();
+        if (response.Content.Headers.ContentLength > maxBytes) return null;
 
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var buffer = new MemoryStream();
@@ -32,7 +36,7 @@ public static class BoundedHttpJson
             var count = await stream.ReadAsync(bytes, ct);
             if (count == 0) break;
 
-            if (buffer.Length + count > maxBytes) throw TooLarge();
+            if (buffer.Length + count > maxBytes) return null;
             buffer.Write(bytes, 0, count);
         }
 

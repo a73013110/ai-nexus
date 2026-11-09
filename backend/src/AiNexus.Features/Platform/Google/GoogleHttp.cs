@@ -22,34 +22,32 @@ internal static class GoogleHttp
     /// <summary>送出請求並讀取回應；<paramref name="type"/> 為 null 表示不讀內容（例如刪除）。逾時由 <paramref name="timeout"/> 控制，呼叫端取消照常拋出。</summary>
     public static async Task<GoogleResponse<T>> SendAsync<T>(HttpClient http, HttpRequestMessage request, JsonTypeInfo<T>? type, T emptyValue, TimeSpan timeout, CancellationToken ct)
     {
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(timeout);
         try
         {
-            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token);
-            if (response.IsSuccessStatusCode)
-            {
-                if (type is null || response.StatusCode == HttpStatusCode.NoContent) return GoogleResponse<T>.Ok(emptyValue);
-                var body = await ReadBoundedAsync(response, deadline.Token);
-                return JsonSerializer.Deserialize(body, type) is { } value
-                    ? GoogleResponse<T>.Ok(value)
-                    : new(GoogleStatus.Unavailable, Message: "Google returned an empty response.");
-            }
-            return await FailureAsync<T>(response, deadline.Token);
+            return await ExternalHttp.CallAsync(timeout, deadline => ExchangeAsync(http, request, type, emptyValue, deadline), Unavailable<T>, ct);
         }
         catch (GoogleAuthenticationException ex)
         {
             return new(ex.Status, Message: ex.Message);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        catch (ExternalServiceException ex)
         {
-            return new(GoogleStatus.Unavailable, Message: "Google did not respond in time.", RetryAfter: DefaultRetryAfter);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or ExternalServiceException)
-        {
-            return new(GoogleStatus.Unavailable, Message: ex.GetType().Name, RetryAfter: DefaultRetryAfter);
+            return Unavailable<T>(ExternalFailure.Unreachable, ex);
         }
     }
+
+    private static async Task<GoogleResponse<T>> ExchangeAsync<T>(HttpClient http, HttpRequestMessage request, JsonTypeInfo<T>? type, T emptyValue, CancellationToken ct)
+    {
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (!response.IsSuccessStatusCode) return await FailureAsync<T>(response, ct);
+        if (type is null || response.StatusCode == HttpStatusCode.NoContent) return GoogleResponse<T>.Ok(emptyValue);
+        return JsonSerializer.Deserialize(await ReadBoundedAsync(response, ct), type) is { } value
+            ? GoogleResponse<T>.Ok(value)
+            : new(GoogleStatus.Unavailable, Message: "Google returned an empty response.");
+    }
+
+    private static GoogleResponse<T> Unavailable<T>(ExternalFailure failure, Exception ex)
+        => new(GoogleStatus.Unavailable, Message: failure == ExternalFailure.TimedOut ? "Google did not respond in time." : ex.GetType().Name, RetryAfter: DefaultRetryAfter);
 
     private static async Task<GoogleResponse<T>> FailureAsync<T>(HttpResponseMessage response, CancellationToken ct)
     {

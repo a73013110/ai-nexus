@@ -20,46 +20,30 @@ public sealed partial class GdFileSource(IHttpClientFactory clients, IOptions<Gd
 {
     public const string SourceName = "gd";
 
-    public async Task<RemoteFileRead> ReadAsync(string reference, CancellationToken ct)
+    public Task<RemoteFileRead> ReadAsync(string reference, CancellationToken ct)
     {
-        if (!GdAttachments.IsPath(reference)) return RemoteFileRead.NotFound;
-        var settings = options.Value;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(settings.FileTimeoutSeconds));
-        try
+        if (!GdAttachments.IsPath(reference)) return Task.FromResult(RemoteFileRead.NotFound);
+        return ExternalHttp.CallAsync(TimeSpan.FromSeconds(options.Value.FileTimeoutSeconds), timeout => DownloadAsync(reference, timeout), (failure, ex) =>
         {
-            var url = new Uri(new Uri(settings.WebBaseUrl), "servlets/fileservlet?openFile=" + Uri.EscapeDataString(reference));
-            using var response = await clients.CreateClient(ControlledHttpClients.Tools).GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            if (response.StatusCode == HttpStatusCode.NotFound) return RemoteFileRead.NotFound;
-            if (!response.IsSuccessStatusCode)
-            {
-                LogUnavailable(logger, "status", (int)response.StatusCode);
-                return RemoteFileRead.Unavailable;
-            }
-            if (response.Content.Headers.ContentType?.MediaType == "text/html") return RemoteFileRead.NotFound;
-            if (response.Content.Headers.ContentLength > settings.MaxFileBytes) return RemoteFileRead.TooLarge;
+            LogUnavailable(logger, failure == ExternalFailure.TimedOut ? "timeout" : ex.GetType().Name, 0);
+            return RemoteFileRead.Unavailable;
+        }, ct);
+    }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
-            using var buffer = new MemoryStream();
-            var block = new byte[81920];
-            int count;
-            while ((count = await stream.ReadAsync(block, timeout.Token)) > 0)
-            {
-                if (buffer.Length + count > settings.MaxFileBytes) return RemoteFileRead.TooLarge;
-                buffer.Write(block, 0, count);
-            }
-            return buffer.Length == 0 ? RemoteFileRead.NotFound : new(RemoteFileStatus.Found, buffer.ToArray());
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+    private async Task<RemoteFileRead> DownloadAsync(string reference, CancellationToken timeout)
+    {
+        var settings = options.Value;
+        var url = new Uri(new Uri(settings.WebBaseUrl), "servlets/fileservlet?openFile=" + Uri.EscapeDataString(reference));
+        using var response = await clients.CreateClient(ControlledHttpClients.Tools).GetAsync(url, HttpCompletionOption.ResponseHeadersRead, timeout);
+        if (response.StatusCode == HttpStatusCode.NotFound) return RemoteFileRead.NotFound;
+        if (!response.IsSuccessStatusCode)
         {
-            LogUnavailable(logger, "timeout", 0);
+            LogUnavailable(logger, "status", (int)response.StatusCode);
             return RemoteFileRead.Unavailable;
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException)
-        {
-            LogUnavailable(logger, ex.GetType().Name, 0);
-            return RemoteFileRead.Unavailable;
-        }
+        if (response.Content.Headers.ContentType?.MediaType == "text/html") return RemoteFileRead.NotFound;
+        if (await BoundedHttpJson.TryReadBytesAsync(response, settings.MaxFileBytes, timeout) is not { } bytes) return RemoteFileRead.TooLarge;
+        return bytes.Length == 0 ? RemoteFileRead.NotFound : new(RemoteFileStatus.Found, bytes);
     }
 
     // 網址、路徑與回應內容都不記：路徑就是公文系統裡的檔名，記下來等於把下載位置寫進日誌。

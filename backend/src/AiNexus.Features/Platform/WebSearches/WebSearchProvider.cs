@@ -16,38 +16,40 @@ public interface IWebSearchProvider
 [Scoped<IWebSearchProvider>]
 public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchesOptions> options, TimeProvider clock) : IWebSearchProvider
 {
-    public async Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct)
+    public Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct) => ExternalHttp.CallAsync(
+        TimeSpan.FromSeconds(options.Value.TimeoutSeconds),
+        timeout => QueryAsync(query, timeout),
+        (failure, ex) => throw (failure == ExternalFailure.TimedOut
+            ? new ExternalServiceException(WebSearchesErrors.Timeout, "網路搜尋逾時，請稍後再試。")
+            : new ExternalServiceException(WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。", ex)),
+        ct);
+
+    private async Task<IReadOnlyList<WebSourceDto>> QueryAsync(string query, CancellationToken timeout)
     {
         var o = options.Value; var brave = o.UsesBrave;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(o.TimeoutSeconds));
         var path = brave ? "https://api.search.brave.com/res/v1/web/search?q=" + Uri.EscapeDataString(query) + "&count=" + o.MaxResults
             : new Uri(new Uri(o.Endpoint.TrimEnd('/') + "/"), "search").AbsoluteUri + "?format=json&categories=general&safesearch=1&language=zh-TW&q=" + Uri.EscapeDataString(query);
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Accept.ParseAdd("application/json");
         if (brave) request.Headers.Add("X-Subscription-Token", o.ApiKey);
-        try
+        using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout);
+        if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchesErrors.RateLimited : WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
+        using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout);
+        JsonElement rows;
+        if (brave) { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
+        else if (!json.RootElement.TryGetProperty("results", out rows)) return [];
+        if (rows.ValueKind != JsonValueKind.Array) throw new JsonException();
+        var hits = new List<WebSourceDto>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var time = clock.GetUtcNow();
+        foreach (var row in rows.EnumerateArray().Take(50))
         {
-            using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchesErrors.RateLimited : WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
-            using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout.Token);
-            JsonElement rows;
-            if (brave) { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
-            else if (!json.RootElement.TryGetProperty("results", out rows)) return [];
-            if (rows.ValueKind != JsonValueKind.Array) throw new JsonException();
-            var hits = new List<WebSourceDto>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var time = clock.GetUtcNow();
-            foreach (var row in rows.EnumerateArray().Take(50))
-            {
-                if (!row.TryGetProperty("url", out var url) || SafeUrl(url.GetString()) is not { } link || !seen.Add(link)) continue;
-                var title = Clean(row.TryGetProperty("title", out var t) ? t.GetString() : null, 180);
-                var snippet = Clean(row.TryGetProperty(brave ? "description" : "content", out var d) ? d.GetString() : null, 600);
-                if (snippet.Length == 0) continue;
-                hits.Add(new(hits.Count + 1, title.Length == 0 ? new Uri(link).Host : title, link, snippet, time));
-                if (hits.Count >= o.MaxResults) break;
-            }
-            return hits;
+            if (!row.TryGetProperty("url", out var url) || SafeUrl(url.GetString()) is not { } link || !seen.Add(link)) continue;
+            var title = Clean(row.TryGetProperty("title", out var t) ? t.GetString() : null, 180);
+            var snippet = Clean(row.TryGetProperty(brave ? "description" : "content", out var d) ? d.GetString() : null, 600);
+            if (snippet.Length == 0) continue;
+            hits.Add(new(hits.Count + 1, title.Length == 0 ? new Uri(link).Host : title, link, snippet, time));
+            if (hits.Count >= o.MaxResults) break;
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(WebSearchesErrors.Timeout, "網路搜尋逾時，請稍後再試。"); }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(WebSearchesErrors.Unavailable, "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。", ex); }
+        return hits;
     }
     public static string? SafeUrl(string? value)
     {

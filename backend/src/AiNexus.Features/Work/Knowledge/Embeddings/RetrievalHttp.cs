@@ -6,6 +6,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Billing;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -16,31 +17,27 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 [Singleton]
 public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalHttp> logger)
 {
+    /// <summary>單一回應的上限；一批最多 128 段、每段向量最多數千維，文字化的浮點數遠小於此。</summary>
+    private const int MaxResponseBytes = 32 * 1024 * 1024;
+
+    /// <summary>期限由呼叫端（嵌入、重排各自的逾時）決定；嵌入與重排重送沒有副作用，所以暫時性失敗都重試。</summary>
     public async Task<JsonDocument> PostAsync(string client, string url, object payload, CancellationToken ct, string? apiKey = null)
     {
-        for (var attempt = 0; ; attempt++)
+        using var response = await ExternalHttp.SendAsync(clients.CreateClient(client), () =>
         {
-            try
-            {
-                using var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(payload) };
-                if (apiKey is not null) request.Headers.Add("x-goog-api-key", apiKey);
-                using var response = await clients.CreateClient(client).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var transient = response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
-                    if (transient && attempt < 2) { await Delay(attempt, client, (int)response.StatusCode, null, ct); continue; }
-                    throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? KnowledgeErrors.RetrievalProviderRateLimited : KnowledgeErrors.RetrievalProviderUnavailable, "檢索模型服務目前無法使用，請確認端點、模型與配額。");
-                }
-                return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
-            }
-            catch (HttpRequestException ex) when (attempt < 2) { await Delay(attempt, client, null, ex, ct); }
-        }
+            var request = new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(payload) };
+            if (apiKey is not null) request.Headers.Add("x-goog-api-key", apiKey);
+            return request;
+        }, retries: 2, ct, retry => LogRetrying(client, retry));
+        if (!response.IsSuccessStatusCode)
+            throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? KnowledgeErrors.RetrievalProviderRateLimited : KnowledgeErrors.RetrievalProviderUnavailable, "檢索模型服務目前無法使用，請確認端點、模型與配額。");
+        return await BoundedHttpJson.ReadAsync(response, MaxResponseBytes, ct);
     }
-    private async Task Delay(int attempt, string service, int? status, Exception? exception, CancellationToken ct)
+
+    private void LogRetrying(string service, ExternalRetry retry)
     {
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = service, ["StatusCode"] = status, ["ErrorCode"] = "retrieval_retry" });
-        LogRetry(logger, exception, attempt + 1);
-        await Task.Delay(TimeSpan.FromMilliseconds(250 * (1 << attempt) + Random.Shared.Next(100)), ct);
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = service, ["StatusCode"] = retry.Status, ["ErrorCode"] = "retrieval_retry" });
+        LogRetry(logger, retry.Exception, retry.Attempt);
     }
 
     [LoggerMessage(EventId = 2002, EventName = "retrieval.retry", Level = LogLevel.Warning, Message = "Retrieval provider retry {Attempt} after transient failure.")]

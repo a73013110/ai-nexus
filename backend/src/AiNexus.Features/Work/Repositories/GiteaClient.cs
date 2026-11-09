@@ -35,17 +35,8 @@ public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<Git
     public Task<string?> GetTextAsync(string token, string path, int maxBytes, CancellationToken ct) => CallAsync(async timeout =>
     {
         using var response = await SendAsync(token, HttpMethod.Get, path, "text/plain", null, timeout);
-        if (response.Content.Headers.ContentLength > maxBytes) return null;
-        await using var stream = await response.Content.ReadAsStreamAsync(timeout);
-        using var buffer = new MemoryStream();
-        var block = new byte[8192];
-        int count;
-        while ((count = await stream.ReadAsync(block, timeout)) > 0)
-        {
-            if (buffer.Length + count > maxBytes) return null;
-            buffer.Write(block, 0, count);
-        }
-        try { return new UTF8Encoding(false, true).GetString(buffer.ToArray()); }
+        if (await BoundedHttpJson.TryReadBytesAsync(response, maxBytes, timeout) is not { } bytes) return null;
+        try { return new UTF8Encoding(false, true).GetString(bytes); }
         catch (DecoderFallbackException) { throw new ExternalServiceException(RepositoriesErrors.DiffNotText); }
     }, ct);
 
@@ -59,26 +50,22 @@ public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<Git
         }, ct);
     }
 
-    /// <summary>
-    /// 每次呼叫共用的逾時與例外對應：設定的逾時（不是呼叫端取消）轉成 <c>gitea_timeout</c>，傳輸或格式錯誤轉成 <c>gitea_unavailable</c>；
-    /// 原始例外訊息可能含遠端內容，因此不往外帶。
-    /// </summary>
-    private async Task<T> CallAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken ct)
-    {
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
-        try { return await call(timeout.Token); }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(RepositoriesErrors.Timeout); }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(RepositoriesErrors.Unreachable); }
-    }
+    private Task<T> CallAsync<T>(Func<CancellationToken, Task<T>> call, CancellationToken ct) => ExternalHttp.CallAsync(
+        TimeSpan.FromSeconds(options.Value.TimeoutSeconds),
+        call,
+        (failure, _) => throw new ExternalServiceException(failure == ExternalFailure.TimedOut ? RepositoriesErrors.Timeout : RepositoriesErrors.Unreachable),
+        ct);
 
     private async Task<HttpResponseMessage> SendAsync(string token, HttpMethod method, string path, string accept, HttpContent? content, CancellationToken ct)
     {
         if (!path.StartsWith("api/v1/", StringComparison.Ordinal)) throw new InvalidOperationException("Controlled Gitea path required.");
-        using var request = new HttpRequestMessage(method, new Uri(new Uri(options.Value.BaseUrl.TrimEnd('/') + "/"), path)) { Content = content };
-        request.Headers.Authorization = new AuthenticationHeaderValue("token", token);
-        request.Headers.Accept.ParseAdd(accept);
-        var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        var response = await ExternalHttp.SendAsync(clients.CreateClient(ControlledHttpClients.Tools), () =>
+        {
+            var request = new HttpRequestMessage(method, new Uri(new Uri(options.Value.BaseUrl.TrimEnd('/') + "/"), path)) { Content = content };
+            request.Headers.Authorization = new AuthenticationHeaderValue("token", token);
+            request.Headers.Accept.ParseAdd(accept);
+            return request;
+        }, retries: method == HttpMethod.Get ? 2 : 0, ct); // 只有讀取能重送：留言重送會貼兩次。
         if (response.IsSuccessStatusCode) return response;
         var status = response.StatusCode;
         response.Dispose();
