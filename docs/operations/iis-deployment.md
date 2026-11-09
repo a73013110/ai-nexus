@@ -34,6 +34,8 @@ D:\CoreProject\AiNexus\
 
 網站需公司信任的 HTTPS 憑證、正確 DNS 與 IIS HTTPS binding。這是**網站**憑證，與 SQL 自簽憑證放行分開。Production 的登入與 CSRF cookie 固定 Secure；只用 HTTP 即使看得到頁面，也無法正確維持登入。不要以切 Development 解決。
 
+前端靜態檔的快取與壓縮由應用程式處理（`backend/src/AiNexus.Platform/Http/WebAssets.cs`），IIS 不必安裝動態壓縮，也不要另外設定 `clientCache`：檔名帶雜湊的檔案長期快取，其餘每次重新驗證。
+
 ## 在開發機產生完整套件
 
 ```powershell

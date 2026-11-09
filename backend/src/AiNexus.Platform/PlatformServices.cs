@@ -65,6 +65,7 @@ public static class PlatformServices
         });
 
         services.AddControlledHttpClient(ControlledHttpClients.Tools);
+        services.AddWebAssetCompression();
         services.AddSingleton<PdfRenderer>();
         services.AddSettings<PdfOptions, PdfOptionsValidator>(PdfOptions.Section);
         return builder;

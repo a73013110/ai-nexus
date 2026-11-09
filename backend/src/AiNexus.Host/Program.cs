@@ -46,8 +46,7 @@ app.UseRuntimeTraffic();
 app.UseMiddleware<DiagnosticRequestMiddleware>();
 app.UseStatusCodePages();
 app.UseTransportSecurity();
-app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseWebAssets();
 app.UseRequestBodyLimits();
 app.UseAuthentication();
 app.UseIdentityConsistency();
@@ -70,8 +69,8 @@ app.Map("/api/{**path}", () => Results.NotFound());
 
 // 預設的 FallbackToFile 會把最後一段含點號（.）的路徑當成遺失的靜態檔而略過。
 // Gitea 程式庫路由常以 `team/my.repo` 或 `base...head` 這類路徑結尾，沒有實體檔案，所以要明確指定。網址取目錄，模組換區時跟著變。
-app.MapFallbackToFile(FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "/{**path}", "index.html").AllowAnonymous();
-app.MapFallbackToFile("index.html").AllowAnonymous();
+app.MapFallbackToFile(FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "/{**path}", "index.html", WebAssets.Files).AllowAnonymous();
+app.MapFallbackToFile("index.html", WebAssets.Files).AllowAnonymous();
 
 if (!await app.EnsureDatabaseReadyAsync())
 {
