@@ -13,12 +13,12 @@ namespace AiNexus.Features.Admin.AccessControl;
 [Scoped]
 public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHttpContextAccessor http, IServiceProvider scope)
 {
-    private readonly Dictionary<Guid, AccessDto> grants = [];
+    private readonly Dictionary<Guid, EffectiveAccess> grants = [];
 
     /// <summary>清除本請求已讀取的授權。授權可能被寫入改變之後，或必須讀到最新 SQL 結果的重新檢查之前呼叫。</summary>
     public void Invalidate() => grants.Clear();
 
-    public async Task<AccessDto> ForUserAsync(Guid user, CancellationToken ct)
+    public async Task<EffectiveAccess> ForUserAsync(Guid user, CancellationToken ct)
     {
         var memoize = ReferenceEquals(http.HttpContext?.RequestServices, scope);
         if (memoize && grants.TryGetValue(user, out var cached)) return cached;
@@ -56,15 +56,23 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
     public async Task<IReadOnlyList<NavigationSectionDto>> NavigationSectionsAsync(CancellationToken ct)
         => NavigationTree.Sections(await NavigationItemsAsync(ct));
 
-    private async Task<AccessDto> ReadAsync(Guid user, CancellationToken ct)
+    /// <summary>使用者持有的啟用角色，只有顯示授權的畫面需要；授權判斷看群組與功能，每個請求都少一次查詢。</summary>
+    public async Task<IReadOnlyList<AccessItemDto>> RolesAsync(Guid user, CancellationToken ct)
+        => await (from userId in activeUsers.Ids
+                  where userId == user
+                  join assignment in db.UserRoles on userId equals assignment.UserId
+                  join role in db.Roles on assignment.RoleId equals role.Id
+                  where role.Enabled
+                  orderby role.Id
+                  select new AccessItemDto(role.Id, role.Name)).ToListAsync(ct);
+
+    private async Task<EffectiveAccess> ReadAsync(Guid user, CancellationToken ct)
     {
-        if (!await activeUsers.Ids.AnyAsync(x => x == user, ct)) return new([], [], [], []);
-        var roleIds = db.UserRoles.Where(x => x.UserId == user).Select(x => x.RoleId);
-        var roles = await db.Roles.AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
-            .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
+        // GroupIds 已限定啟用的使用者：停用者在這裡就是空集合，不必另外查一次。
         var groupIds = GroupIds(user);
         var groups = await db.RoleGroups.AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
+        if (groups.Count == 0) return EffectiveAccess.None;
         var enabledGroups = groups.Select(x => x.Id).ToArray();
         // 一次讀出授權與範圍：同一功能可能由多個群組授予，各帶一個成員範圍與一個主管範圍。
         var granted = await (from grant in db.RoleGroupFeatures
@@ -76,7 +84,7 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         var scopes = granted.SelectMany(x => SupportedScopes(x.Feature.Id, x.Scope, x.ManagerScope).Select(scope => (x.Feature.Id, Scope: scope)))
             .GroupBy(x => x.Id, StringComparer.Ordinal)
             .ToDictionary(x => x.Key, x => (IReadOnlySet<string>)x.Select(y => y.Scope).ToHashSet(StringComparer.Ordinal), StringComparer.Ordinal);
-        return new(roles, groups, [.. rows.InCatalogOrder().Select(FeatureDto.From)], []) { GrantedScopes = scopes };
+        return new(groups, [.. rows.InCatalogOrder().Select(FeatureDto.From)], scopes);
     }
 
     private static IEnumerable<string> SupportedScopes(string featureId, string? scope, string? managerScope)
@@ -97,6 +105,15 @@ public sealed class AccessService(AppDbContext db, IActiveUsers activeUsers, IHt
         join roleGroup in db.RoleGroups on link.GroupId equals roleGroup.Id
         where role.Enabled && roleGroup.Enabled
         select roleGroup.Id;
+}
+
+/// <summary>使用者當下的有效授權：授權判斷、資源 ACL、資料範圍與模型政策都讀這份。<c>GrantedScopes</c> 是已授權且目錄宣告了範圍的功能 → 各群組授權的成員範圍與主管範圍的聯集（只留目錄支援的代碼；主管範圍還沒確認此人任主管）。</summary>
+public sealed record EffectiveAccess(
+    IReadOnlyList<AccessItemDto> Groups,
+    IReadOnlyList<FeatureDto> Features,
+    IReadOnlyDictionary<string, IReadOnlySet<string>> GrantedScopes)
+{
+    public static readonly EffectiveAccess None = new([], [], new Dictionary<string, IReadOnlySet<string>>());
 }
 
 /// <summary>已啟用且未刪除的使用者 id。由 Identity 實作，讓 AccessControl 不必直接讀取使用者表就能過濾授權。</summary>

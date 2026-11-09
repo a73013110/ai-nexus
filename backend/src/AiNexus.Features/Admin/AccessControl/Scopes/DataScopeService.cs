@@ -38,7 +38,7 @@ internal sealed class DataScopeService(AccessService access, IUnitMembership uni
     }
 
     /// <summary>授權的範圍，依 <see cref="DataScopes.Definitions"/> 由窄到寬（同時含成員範圍與主管範圍）。</summary>
-    private static List<DataScopeDefinition> Granted(AccessDto grants, string featureId)
+    private static List<DataScopeDefinition> Granted(EffectiveAccess grants, string featureId)
         => [.. DataScopes.InOrder(grants.GrantedScopes.GetValueOrDefault(featureId) ?? new HashSet<string>())];
 
     private static bool Unbounded(IEnumerable<DataScopeDefinition> granted) => granted.Any(x => x.Id == DataScopes.All);

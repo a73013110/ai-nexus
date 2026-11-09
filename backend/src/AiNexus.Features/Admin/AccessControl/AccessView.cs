@@ -17,6 +17,6 @@ public sealed class AccessView(AccessService access, IDataScope scopes, IOptions
     {
         var grants = await access.ForUserAsync(user, ct);
         var tree = NavigationTree.Build(await access.NavigationItemsAsync(ct), grants.Features, grants.Groups.Select(x => x.Id), settings.Value.NavigationLinkHosts);
-        return grants with { Navigation = tree, DataScopes = await scopes.ScopesAsync(user, ct) };
+        return new(await access.RolesAsync(user, ct), grants.Groups, grants.Features, tree) { DataScopes = await scopes.ScopesAsync(user, ct) };
     }
 }
