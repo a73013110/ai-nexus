@@ -34,12 +34,7 @@ internal sealed class ListConversations(AppDbContext db) : IEndpointSlice
         if (view != "all") query = query.Where(x => x.IsArchived == (view == "archived"));
         if (view == "favorites") query = query.Where(x => x.IsFavorite);
         if (!string.IsNullOrWhiteSpace(label)) query = query.Where(x => x.Labels.Any(l => l.Name == label));
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            // 標題與任一訊息內文都會被搜尋，只要其中一處命中即列出。
-            var term = search.Trim();
-            query = query.Where(x => x.Title.Contains(term) || db.Messages.Any(m => m.ConversationId == x.Id && m.Content.Contains(term)));
-        }
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Matching(db, search);
         var rows = await query
             .OrderByDescending(x => x.IsFavorite)
             .ThenByDescending(x => x.UpdatedAt)
