@@ -44,7 +44,7 @@
 
 ## 外框與密度
 
-- 參考 [Vercel Geist](https://vercel.com/geist/introduction) 與 Linear 的緊湊介面：1px 細線＋分層陰影（`--shadow` 貼合、`--shadow-floating` 浮層），圓角與外框色都依元件類型取角色（見[形狀](shapes.md)、[線條](lines.md)），遮罩不模糊。
+- 參考 [Vercel Geist](https://vercel.com/geist/introduction) 與 Linear 的緊湊介面：1px 細線＋分層陰影（`--shadow` 貼合、`--shadow-floating` 浮層），圓角與外框色都依元件類型取角色（見[形狀](shapes.md)、[線條](lines.md)），遮罩不模糊（鎖定例外）。
 - 主要／危險按鈕 hover 往 `--ink` 混色加深（深色主題變亮），不降透明度；次要按鈕有 `--surface` 底。
 
 ## 動效

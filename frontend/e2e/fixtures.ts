@@ -530,6 +530,7 @@ export class ApiFixture {
   loginMethod = "ad";
   /** 有值時 session 帶期限，前端到時間就來問；`locked` 模擬伺服器已鎖定。 */
   lockAfterSeconds: number | null = null;
+  lockedBy = "idle";
   locked = false;
   chatAccess = true;
   adminAccess = false;
@@ -592,8 +593,13 @@ export class ApiFixture {
       path === "/auth/login" ||
       path === "/auth/logout" ||
       path === "/auth/identity" ||
-      path === "/auth/unlock"
+      path === "/auth/unlock" ||
+      path === "/auth/lock"
     ) {
+      if (path === "/auth/lock") {
+        this.locked = true;
+        this.lockedBy = "manual";
+      }
       if (path === "/auth/unlock") {
         if (route.request().postDataJSON().password !== "fixture-password")
           return json(
@@ -650,10 +656,11 @@ export class ApiFixture {
           this.lockAfterSeconds === null
             ? null
             : {
-                lockedBy: this.locked ? "idle" : null,
+                lockedBy: this.locked ? this.lockedBy : null,
                 secondsUntilLock: this.locked ? 0 : this.lockAfterSeconds,
                 idleLockMinutes: 30,
                 reauthenticationHours: 8,
+                secondsUntilReauthentication: this.locked ? 0 : 28800,
               },
       });
     }

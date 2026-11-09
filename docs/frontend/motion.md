@@ -1,6 +1,6 @@
 # 動效
 
-結論：動效交代「東西從哪來、變成什麼」與真的在進行的工作，用彈簧收尾的 morph（動態島語彙），但不擋操作與閱讀；減少動態時一律直接到位。Token 在 [`tokens.scss`](../../frontend/src/styles/tokens.scss)，keyframes 集中在 [`motion.scss`](../../frontend/src/styles/motion.scss)（元件內宣告的會被改名，e2e 也以名稱檢查）。
+結論：動效交代「東西從哪來、變成什麼」與真的在進行的工作，用彈簧收尾的 morph（動態島語彙），但不擋操作與閱讀；減少動態時一律直接到位。Token 在 [`tokens.scss`](../../frontend/src/styles/tokens.scss)，keyframes 集中在 [`motion.scss`](../../frontend/src/styles/motion.scss)（元件內的會被改名，e2e 以名稱檢查；延後載入元件獨用例外）。
 
 ## 原則
 

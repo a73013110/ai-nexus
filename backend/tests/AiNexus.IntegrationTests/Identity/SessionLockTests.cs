@@ -54,6 +54,43 @@ public sealed class SessionLockTests
     }
 
     [Fact]
+    public async Task ManualLockHoldsUntilThePasswordAndKeepsTheDeadlines()
+    {
+        var (factory, clock, client) = await SignedInAsync();
+        await using var _ = factory; using var __ = client;
+        clock.Advance(TimeSpan.FromMinutes(10));
+        var response = await client.PostAsync("/api/v1/auth/lock", null);
+        response.EnsureSuccessStatusCode();
+        var locked = (await response.Content.ReadFromJsonAsync<AuthSessionDto>())!.Lifetime!;
+        Assert.Equal(SessionTicket.Manual, locked.LockedBy);
+        Assert.Equal(TimeSpan.FromHours(8).Subtract(TimeSpan.FromMinutes(10)).TotalSeconds, locked.SecondsUntilReauthentication);
+        await AssertLockedAsync(client);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync("/api/v1/auth/activity", null)).StatusCode);
+
+        // 重複按下不會失敗；離開再久，回來看到的仍是自己鎖的。
+        (await client.PostAsync("/api/v1/auth/lock", null)).EnsureSuccessStatusCode();
+        clock.Advance(TimeSpan.FromHours(9));
+        Assert.Equal(SessionTicket.Manual, (await SessionAsync(client)).Lifetime!.LockedBy);
+
+        (await client.PostAsJsonAsync("/api/v1/auth/unlock", new UnlockSessionRequest("fixture-password"))).EnsureSuccessStatusCode();
+        Assert.Null((await SessionAsync(client)).Lifetime!.LockedBy);
+        (await client.GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
+    public async Task ATestIdentityCannotLockManually()
+    {
+        await using var factory = new AppFactory(ldap: true, administrators: ["alice"]);
+        using var admin = factory.CreateClient();
+        await Login(admin, "alice");
+        var target = await CreateUser(admin, LocalAccount());
+        (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(target, "確認手動鎖定"))).EnsureSuccessStatusCode();
+        await Csrf(admin);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/v1/auth/lock", null)).StatusCode);
+        (await admin.GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
+    }
+
+    [Fact]
     public async Task OnlyReportedActivityPostponesTheIdleLock()
     {
         var (factory, clock, client) = await SignedInAsync();

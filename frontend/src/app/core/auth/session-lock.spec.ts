@@ -6,13 +6,24 @@ import type { AuthSessionDto } from '../api/schema';
 import { AuthService } from './auth-service';
 import { SessionLock } from './session-lock';
 
-const session = (lockedBy: string | null, secondsUntilLock = 1800, idleLockMinutes = 30) =>
+const session = (
+  lockedBy: string | null,
+  secondsUntilLock = 1800,
+  idleLockMinutes = 30,
+  secondsUntilReauthentication = 28_800,
+) =>
   ({
     authenticated: true,
     account: 'fixture',
     csrfToken: 'token',
     userId: 'u1',
-    lifetime: { lockedBy, secondsUntilLock, idleLockMinutes, reauthenticationHours: 8 },
+    lifetime: {
+      lockedBy,
+      secondsUntilLock,
+      idleLockMinutes,
+      reauthenticationHours: 8,
+      secondsUntilReauthentication,
+    },
   }) as unknown as AuthSessionDto;
 const json = (value: unknown) =>
   new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
@@ -101,5 +112,76 @@ describe('session lock', () => {
     await vi.advanceTimersByTimeAsync(1800_000);
     await settle();
     expect(lock.reason()).toBe('idle');
+  });
+
+  it('counts down from the server deadline and warns near the end', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt(session(null, 125));
+    await settle();
+    expect(lock.countdownText()).toBe('2:05 後鎖定');
+    expect(lock.warning()).toBe(false);
+    await vi.advanceTimersByTimeAsync(6000);
+    expect(lock.countdownText()).toBe('1:59 後鎖定');
+    expect(lock.warning()).toBe(true);
+  });
+
+  it('resets the idle countdown on interaction before the throttled report arrives', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt(session(null, 100));
+    await settle();
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(lock.countdown()?.seconds).toBe(1800);
+    expect(lock.warning()).toBe(false);
+  });
+
+  it('does not let interaction extend the reauthentication deadline', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt(session(null, 90, 30, 90));
+    await settle();
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(lock.countdown()).toMatchObject({ seconds: 90, by: 'reauthentication' });
+    expect(lock.countdownText()).toBe('1:30 後需要驗證');
+  });
+
+  it('warns only in the second half of a very short idle limit', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt(session(null, 60, 1));
+    await settle();
+    expect(lock.warning()).toBe(false);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(lock.warning()).toBe(true);
+  });
+
+  it('locks through the server after an in-flight report settles', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt(session(null));
+    await settle();
+    let finishReport = (_: Response) => {};
+    fetch.mockImplementationOnce(
+      () => new Promise<Response>((resolve) => (finishReport = resolve)),
+    );
+    document.dispatchEvent(new Event('keydown'));
+    await settle();
+    current = session('manual', 0);
+    const locking = lock.lockNow();
+    await settle();
+    expect(calls('/auth/lock')).toBe(0);
+    finishReport(json(session(null)));
+    await locking;
+    await settle();
+    expect(calls('/auth/lock')).toBe(1);
+    expect(lock.reason()).toBe('manual');
+    expect(lock.countdown()).toBeNull();
+  });
+
+  it('hides the countdown and manual lock for a test identity', async () => {
+    const lock = TestBed.inject(SessionLock);
+    TestBed.inject(AuthService).adopt({
+      ...session(null),
+      testing: { userId: 'u2' },
+    } as unknown as AuthSessionDto);
+    await settle();
+    expect(lock.canLock()).toBe(false);
+    expect(lock.countdown()).toBeNull();
   });
 });

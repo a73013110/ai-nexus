@@ -17,8 +17,19 @@
     >
       <div class="lock-surface"></div>
       <div class="lock-pill" aria-hidden="true">
-        <span class="lock-pill-state" data-for="locking"><nx-icon name="lock" />正在鎖定</span>
-        <span class="lock-pill-state" data-for="unlocking"><nx-icon name="check" />已解鎖</span>
+        <span class="lock-pill-state" data-for="locking">
+          <svg class="lock-glyph" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" />
+            <path class="lock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          正在鎖定
+        </span>
+        <span class="lock-pill-state" data-for="unlocking">
+          <svg class="lock-glyph" viewBox="0 0 24 24">
+            <path class="lock-check" pathLength="1" d="M20 6 9 17l-5-5" />
+          </svg>
+          已解鎖
+        </span>
       </div>
       <div class="lock-card">
         <div class="lock-head">
@@ -28,14 +39,11 @@
             <p class="lock-reason">{{ reasonText() }}</p>
           </div>
         </div>
-        <form (submit)="submit($event)">
+        <form novalidate (submit)="submit($event)">
           <p class="lock-who">
             <b>{{ name() }}</b
             ><span>{{ auth.session()?.account }}</span>
           </p>
-          @if (error(); as message) {
-            <nx-notice tone="danger" [message]="message" />
-          }
           <label for="lock-password">{{ passwordLabel() }}</label>
           <nx-password-field [disabled]="submitting()">
             <input
@@ -50,12 +58,14 @@
               (input)="password.set($any($event.target).value)"
             />
           </nx-password-field>
+          <!-- 固定留一行：錯誤出現時卡片不跳動。 -->
+          <p class="lock-error" role="alert">{{ error() }}</p>
           <button
             nxLoginSubmit
             type="submit"
             busy="正在解鎖…"
             [phase]="submitPhase()"
-            [disabled]="submitting() || !password()"
+            [disabled]="submitting()"
           >
             解鎖
           </button>
@@ -65,3 +75,47 @@
     </div>
   </div>
 </dialog>
+<!--
+  倒數島就是鎖定卡的起點：到期時卡片從它當下的尺寸撐開。
+  島上的操作不算「使用者回來了」，否則按下「立即鎖定」的瞬間倒數重設、島就先收走了。
+-->
+<div
+  #island
+  class="lock-island"
+  role="group"
+  aria-label="工作區即將鎖定"
+  [attr.data-on]="islandOn() ? '' : null"
+  [attr.data-open]="islandOpen() ? '' : null"
+  (pointerdown)="$event.stopPropagation()"
+  (keydown)="$event.stopPropagation()"
+  (pointerenter)="islandEngaged.set(true)"
+  (pointerleave)="islandEngaged.set(false)"
+  (focusin)="islandEngaged.set(true)"
+  (focusout)="islandEngaged.set(false)"
+>
+  <svg class="lock-island-ring" viewBox="0 0 36 36" aria-hidden="true">
+    <circle cx="18" cy="18" r="16" pathLength="1" />
+    <circle
+      class="lock-island-value"
+      cx="18"
+      cy="18"
+      r="16"
+      pathLength="1"
+      [style.stroke-dashoffset]="islandElapsed()"
+    />
+  </svg>
+  <span class="lock-island-text">{{ lock.countdownText() }}</span>
+  <span class="lock-island-actions">
+    <span class="lock-island-buttons">
+      @if (lock.countdown()?.by === 'reauthentication') {
+        <button type="button" class="is-primary" (click)="lock.lockNow()">現在驗證</button>
+      } @else {
+        <button type="button" class="is-primary" (click)="keepUsing()">繼續使用</button>
+        <button type="button" (click)="lock.lockNow()">立即鎖定</button>
+      }
+    </span>
+  </span>
+</div>
+<p class="sr-only" role="status">
+  {{ islandOn() ? '工作區即將鎖定，可以繼續使用或立即鎖定。' : '' }}
+</p>

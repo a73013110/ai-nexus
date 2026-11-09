@@ -4,6 +4,19 @@
   border-top: 1px solid var(--line);
   padding-top: var(--p-space-1);
 }
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.profile-row nx-action-menu {
+  flex: 1;
+  min-width: 0;
+}
+.profile-lock {
+  flex: none;
+  color: var(--secondary);
+}
 // The trigger content is projected into ActionMenu's profile button.
 .profile-name {
   flex: 1;
@@ -28,10 +41,18 @@
   color: var(--secondary);
   margin-top: 0;
 }
+// 倒數每秒變動，數字等寬才不會讓整行抖動。
+.profile-detail {
+  font-variant-numeric: tabular-nums;
+}
+.profile-name small.is-warning {
+  color: var(--warning);
+}
 nx-action-menu nx-icon {
   --icon-size: var(--icon-md);
 }
 :host-context(.is-compact) .profile-name,
-:host-context(.is-compact) nx-action-menu nx-icon {
+:host-context(.is-compact) nx-action-menu nx-icon,
+:host-context(.is-compact) .profile-lock {
   display: none;
 }

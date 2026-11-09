@@ -1,8 +1,15 @@
-// 不透明的底蓋住整個工作區；外框是獨立一層，陰影才會跟著形變。
-.lock-dialog {
+@use '../credential-field' as credential;
+
+@include credential.credential-field;
+
+// 膠囊的位置與尺寸：鎖定卡的起點與倒數島共用，兩者才接得起來。
+:host {
   --lock-pill-top: 44px;
   --lock-pill-width: 148px;
   --lock-pill-height: 40px;
+}
+// 背景是模糊的工作區，外框是獨立一層，陰影才會跟著形變。
+.lock-dialog {
   // --lock-card-* 由元件量測；卡片中心到膠囊位置的距離，與卡片收成膠囊的內縮量。
   --lock-drop: calc(var(--lock-pill-top) - var(--lock-card-center));
   --lock-inset-x: max(0px, calc((var(--lock-card-width) - var(--lock-pill-width)) / 2));
@@ -26,10 +33,18 @@
 .lock-dialog::backdrop {
   background: transparent;
 }
+// 暗幕加重模糊：看得到原本的版面與顏色，看不出文字。比一般對話框的遮罩更深，才蓋得住模糊後的亮面。
 .lock-ground {
   position: absolute;
   inset: 0;
-  background: var(--canvas);
+  background: rgb(from var(--scrim) r g b / 54%);
+  backdrop-filter: blur(22px);
+}
+// 不支援模糊時內容會直接透出來，改成完全遮住。
+@supports not (backdrop-filter: blur(1px)) {
+  .lock-ground {
+    background: var(--canvas);
+  }
 }
 .lock-stage {
   position: absolute;
@@ -65,6 +80,17 @@
   align-items: center;
   gap: var(--p-space-2);
 }
+// 用自己的 SVG 而不是 `nx-icon`：鎖扣與勾號的筆畫要各自動。
+.lock-glyph {
+  width: var(--icon-md);
+  height: var(--icon-md);
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .lock-card {
   position: relative;
   display: grid;
@@ -79,11 +105,14 @@
 .lock-head .avatar {
   width: 2.75rem;
   height: 2.75rem;
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
   font-size: var(--p-font-lg);
 }
 h2 {
   margin: 0;
-  font-size: var(--p-font-xl);
+  font-size: var(--p-font-lg);
   font-weight: 600;
 }
 .lock-reason {
@@ -95,7 +124,7 @@ h2 {
 form {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-2);
+  gap: 0.375rem;
 }
 .lock-who {
   display: flex;
@@ -106,6 +135,12 @@ form {
 .lock-who b {
   color: var(--ink);
   font-weight: 600;
+}
+.lock-error {
+  min-height: 1.3125rem;
+  margin: 0;
+  color: var(--error);
+  font-size: var(--text-label);
 }
 .lock-other {
   justify-self: center;
@@ -123,6 +158,88 @@ form {
 }
 .lock-wrap.shake-b {
   animation: login-shake-b 420ms var(--ease) both;
+}
+
+// 快到期時從頂端落下的倒數島。頂端位置對齊鎖定卡的膠囊，到期時卡片從這裡撐開。
+.lock-island {
+  position: fixed;
+  z-index: 90;
+  top: calc(var(--lock-pill-top) - var(--lock-pill-height) / 2);
+  left: 50%;
+  translate: -50% -76px;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--lock-pill-height);
+  padding-inline: var(--p-space-3);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  font-size: var(--p-font-data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    translate var(--motion-morph) var(--ease-spring),
+    opacity var(--motion) var(--ease),
+    visibility 0s linear var(--motion-morph);
+}
+.lock-island[data-on] {
+  translate: -50% 0;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+// 卡片已經接手：立刻讓位，不能再播一次升走。
+.lock-dialog[open] ~ .lock-island {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+.lock-island-ring {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  rotate: -90deg;
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+}
+.lock-island-value {
+  stroke: var(--warning);
+  stroke-dasharray: 1 1;
+  transition: stroke-dashoffset 1s linear;
+}
+.lock-island-actions {
+  width: 0;
+  overflow: clip;
+  transition: width var(--motion-morph) var(--ease-spring);
+}
+.lock-island[data-open] .lock-island-actions {
+  width: auto;
+}
+.lock-island-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: max-content;
+  padding-inline-start: var(--p-space-1);
+}
+.lock-island-buttons button {
+  min-height: 1.875rem;
+  padding-inline: var(--p-space-3);
+  border-radius: var(--radius-action);
+  font-size: inherit;
+}
+.lock-island-buttons button:hover {
+  background: var(--hover);
+}
+.lock-island-buttons .is-primary,
+.lock-island-buttons .is-primary:hover {
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 // 膠囊從頂端落下撐成卡片，解鎖時收回膠囊升走。keyframes 只有這個元件用，跟著延後載入的 chunk，不進初始樣式。
@@ -152,13 +269,18 @@ form {
     translate: 0 0;
   }
 }
+@keyframes lock-grow {
+  from {
+    translate: 0 var(--lock-drop);
+  }
+}
 @keyframes lock-rise {
   from {
     opacity: 1;
     translate: 0 0;
     animation-timing-function: var(--ease-spring);
   }
-  54% {
+  50% {
     opacity: 1;
     translate: 0 var(--lock-drop);
     animation-timing-function: linear;
@@ -185,13 +307,19 @@ form {
     border-radius: var(--radius-surface);
   }
 }
+@keyframes lock-shell-grow {
+  from {
+    inset: var(--lock-inset-y) var(--lock-inset-x);
+    border-radius: var(--radius-full);
+  }
+}
 @keyframes lock-shell-close {
   from {
     inset: 0;
     border-radius: var(--radius-surface);
     animation-timing-function: var(--ease-spring);
   }
-  54%,
+  50%,
   to {
     inset: var(--lock-inset-y) var(--lock-inset-x);
     border-radius: var(--radius-full);
@@ -209,12 +337,25 @@ form {
 }
 @keyframes lock-pill-return {
   from,
-  26% {
+  24% {
     opacity: 0;
   }
-  42%,
+  38%,
   to {
     opacity: 1;
+  }
+}
+@keyframes lock-shackle-close {
+  from {
+    translate: 0 -3px;
+  }
+}
+@keyframes lock-check-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -236,14 +377,33 @@ form {
   .lock-pill {
     animation: lock-pill-leave var(--lock-motion) linear both;
   }
+  .lock-shackle {
+    animation: lock-shackle-close 320ms var(--ease-spring) 180ms both;
+  }
   .lock-card {
     animation: panel-arrive 280ms var(--ease-spring) 600ms both;
   }
 }
+// 從倒數島撐開：膠囊已經在頂端，略過落下，直接長成卡片。
+[data-phase='locking'][data-from='island'] {
+  --lock-motion: 520ms;
+  .lock-wrap {
+    animation: lock-grow var(--lock-motion) var(--ease-spring) both;
+  }
+  .lock-surface {
+    animation: lock-shell-grow var(--lock-motion) var(--ease-spring) both;
+  }
+  .lock-pill {
+    animation: lock-pill-leave 380ms linear both;
+  }
+  .lock-card {
+    animation: panel-arrive 280ms var(--ease-spring) 170ms both;
+  }
+}
 [data-phase='unlocking'] {
-  --lock-motion: 1s;
+  --lock-motion: 1050ms;
   .lock-ground {
-    animation: lock-fade-out 320ms linear 300ms both;
+    animation: lock-fade-out 420ms linear 280ms both;
   }
   .lock-wrap {
     animation: lock-rise var(--lock-motion) linear both;
@@ -253,6 +413,10 @@ form {
   }
   .lock-pill {
     animation: lock-pill-return var(--lock-motion) linear both;
+  }
+  .lock-check {
+    stroke-dasharray: 1 1;
+    animation: lock-check-draw 300ms var(--ease) 300ms both;
   }
   .lock-card {
     animation: lock-fade-out 120ms var(--ease-exit) both;

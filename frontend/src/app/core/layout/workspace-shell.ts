@@ -7,6 +7,7 @@ import { CommandPalette, type Command } from '@shared/ui/command-palette';
 import { ProductTour } from '@shared/ui/product-tour';
 import { Toaster } from '@shared/ui/toaster';
 import { AssistantHost } from '@features/platform/assistant/assistant-host';
+import { SessionLock } from '../auth/session-lock';
 import { NavigationPreferences } from './navigation-preferences';
 import { navigationIcon, navigationNodes, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
@@ -15,6 +16,8 @@ import { AppUpdateNotice } from './app-update-notice';
 import { WorkspaceCommands } from './workspace-commands';
 import { WorkspaceLayout } from './workspace-layout';
 import { WorkspaceSidebar } from './workspace-sidebar';
+
+const LOCK_COMMAND = 'session:lock';
 
 /**
  * 已登入的外框。側邊欄只在這裡存在一次，因此在頁面之間導覽時會保留其狀態，且動效可以跨路由延續；
@@ -54,6 +57,7 @@ export class WorkspaceShell {
   private readonly pins = inject(NavigationPreferences);
   private readonly router = inject(Router);
   private readonly tours = inject(ProductTour);
+  private readonly lock = inject(SessionLock);
   private readonly palette = viewChild.required(CommandPalette);
   /**
    * 選單的每個頁面與外部連結都是一個指令，依選單順序，說明帶分群路徑。ID 用節點 ID 而不是功能 ID：
@@ -72,20 +76,38 @@ export class WorkspaceShell {
         };
       }),
     );
-    return [...(source?.actions() ?? []), ...entries, ...(source?.entries?.() ?? [])];
+    const lock: Command[] = this.lock.canLock()
+      ? [
+          {
+            id: LOCK_COMMAND,
+            label: SHORTCUTS.lockWorkspace.label,
+            detail: '離開座位時保護工作內容',
+            icon: 'lock',
+            shortcut: SHORTCUTS.lockWorkspace.keys,
+          },
+        ]
+      : [];
+    return [...(source?.actions() ?? []), ...lock, ...entries, ...(source?.entries?.() ?? [])];
   });
   constructor() {
     // 伺服器版本只出現在登入後的回應，新版提示跟著已登入的外框建立。
     inject(AppUpdateNotice);
     this.workspaceCommands.attach(() => this.palette().open());
     bindHotkeys(
-      { [SHORTCUTS.commandPalette.keys]: () => this.palette().open() },
+      {
+        [SHORTCUTS.commandPalette.keys]: () => this.palette().open(),
+        [SHORTCUTS.lockWorkspace.keys]: () => void this.lock.lockNow(),
+      },
       () =>
         !this.tours.active() && !this.tours.loading() && !document.querySelector('dialog[open]'),
     );
   }
   run(id: string) {
     this.layout.closeMobile();
+    if (id === LOCK_COMMAND) {
+      void this.lock.lockNow();
+      return;
+    }
     const node = id.startsWith('navigation:')
       ? navigationNodes(this.pins.tree()).find((item) => 'navigation:' + item.id === id)
       : null;

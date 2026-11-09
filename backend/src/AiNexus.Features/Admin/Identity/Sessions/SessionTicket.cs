@@ -6,8 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Identity.Sessions;
 
-/// <summary>session 的期限與鎖定狀態。<c>LockedBy</c> 為 <c>idle</c> 或 <c>reauthentication</c>，未鎖定時為 null。</summary>
-public sealed record SessionLifetimeDto(string? LockedBy, int SecondsUntilLock, int IdleLockMinutes, int ReauthenticationHours);
+/// <summary>
+/// session 的期限與鎖定狀態。<c>LockedBy</c> 為 <c>idle</c>、<c>reauthentication</c> 或 <c>manual</c>，未鎖定時為 null。
+/// <c>SecondsUntilLock</c> 是兩個期限中較近的一個；另外給 <c>SecondsUntilReauthentication</c>，前端才分得出操作能不能延長。
+/// </summary>
+public sealed record SessionLifetimeDto(string? LockedBy, int SecondsUntilLock, int IdleLockMinutes, int ReauthenticationHours, int SecondsUntilReauthentication);
 
 /// <summary>
 /// session cookie 的唯一簽發入口，也是期限的唯一判定處。兩個時間點放在票證的 Items 而不是 claims：
@@ -19,8 +22,10 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
 {
     public const string Idle = "idle";
     public const string Reauthentication = "reauthentication";
+    public const string Manual = "manual";
     private const string LastActive = "last_active";
     private const string AuthenticatedAt = "authenticated_at";
+    private const string ManualLock = "manual_lock";
     private const string Current = "Identity.SessionTicket";
 
     /// <summary>剛驗過密碼（登入、解鎖）：兩個計時與硬上限都重新起算。</summary>
@@ -35,7 +40,7 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
     {
         if (Of(http) is not { } previous) return IssueAsync(http, principal);
         var (active, authenticated) = Times(previous);
-        return SignInAsync(http, principal, active, authenticated, previous.ExpiresUtc);
+        return SignInAsync(http, principal, active, authenticated, previous.ExpiresUtc, IsManuallyLocked(previous));
     }
 
     /// <summary>使用者有操作：只把閒置計時往後推。沒有 cookie 的 Windows 請求不需要。</summary>
@@ -43,12 +48,21 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
         ? SignInAsync(http, http.User, clock.GetUtcNow(), Times(previous).Authenticated, previous.ExpiresUtc)
         : Task.CompletedTask;
 
+    /// <summary>使用者手動鎖定：期限都不變，只有輸入密碼（<see cref="IssueAsync"/>）會換掉這張票。</summary>
+    public Task LockAsync(HttpContext http)
+    {
+        if (Of(http) is not { } previous) return Task.CompletedTask;
+        var (active, authenticated) = Times(previous);
+        return SignInAsync(http, http.User, active, authenticated, previous.ExpiresUtc, manuallyLocked: true);
+    }
+
     /// <summary>cookie 驗證時記下這張票，同一請求後續的換發與描述都讀它，不必再驗一次 cookie。</summary>
     public static void Remember(HttpContext http, AuthenticationProperties ticket) => http.Items[Current] = ticket;
 
-    /// <summary>票證鎖定的原因；未鎖定時為 null。兩個都到期時說重新驗證：那才是這次必須輸入密碼的原因。</summary>
+    /// <summary>票證鎖定的原因；未鎖定時為 null。手動鎖定優先（離開時間再長，回來看到的都是自己鎖的）；期限都到時說重新驗證：那才是這次必須輸入密碼的原因。</summary>
     public string? LockedBy(AuthenticationProperties ticket)
     {
+        if (IsManuallyLocked(ticket)) return Manual;
         var now = clock.GetUtcNow();
         var (idle, reauthentication) = Deadlines(ticket);
         return now >= reauthentication ? Reauthentication : now >= idle ? Idle : null;
@@ -59,11 +73,15 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
     {
         if (Of(http) is not { } ticket) return null;
         var (idle, reauthentication) = Deadlines(ticket);
-        var until = (idle < reauthentication ? idle : reauthentication) - clock.GetUtcNow();
-        return new(LockedBy(ticket), Math.Max(0, (int)Math.Ceiling(until.TotalSeconds)), options.Value.IdleLockMinutes, options.Value.ReauthenticationHours);
+        var now = clock.GetUtcNow();
+        return new(LockedBy(ticket), SecondsUntil(now, idle < reauthentication ? idle : reauthentication), options.Value.IdleLockMinutes, options.Value.ReauthenticationHours, SecondsUntil(now, reauthentication));
     }
 
+    private static int SecondsUntil(DateTimeOffset now, DateTimeOffset deadline) => Math.Max(0, (int)Math.Ceiling((deadline - now).TotalSeconds));
+
     private static AuthenticationProperties? Of(HttpContext http) => http.Items[Current] as AuthenticationProperties;
+
+    private static bool IsManuallyLocked(AuthenticationProperties ticket) => ticket.GetString(ManualLock) is not null;
 
     private (DateTimeOffset Idle, DateTimeOffset Reauthentication) Deadlines(AuthenticationProperties ticket)
     {
@@ -83,11 +101,12 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
 
     private static string Stamp(DateTimeOffset value) => value.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
 
-    private static async Task SignInAsync(HttpContext http, ClaimsPrincipal principal, DateTimeOffset active, DateTimeOffset authenticated, DateTimeOffset? expires)
+    private static async Task SignInAsync(HttpContext http, ClaimsPrincipal principal, DateTimeOffset active, DateTimeOffset authenticated, DateTimeOffset? expires, bool manuallyLocked = false)
     {
         var ticket = new AuthenticationProperties { IsPersistent = false, ExpiresUtc = expires };
         ticket.SetString(LastActive, Stamp(active));
         ticket.SetString(AuthenticatedAt, Stamp(authenticated));
+        if (manuallyLocked) ticket.SetString(ManualLock, "1");
         await http.SignInAsync(AuthEndpoints.CookieScheme, principal, ticket);
         http.User = principal;
         Remember(http, ticket);

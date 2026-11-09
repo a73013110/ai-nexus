@@ -2196,6 +2196,29 @@
         }
       }
     },
+    "/api/v1/auth/lock": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "LockSession",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/auth/identity": {
       "post": {
         "tags": [
@@ -22980,7 +23003,8 @@
           "lockedBy",
           "secondsUntilLock",
           "idleLockMinutes",
-          "reauthenticationHours"
+          "reauthenticationHours",
+          "secondsUntilReauthentication"
         ],
         "type": "object",
         "properties": {
@@ -22999,6 +23023,10 @@
             "format": "int32"
           },
           "reauthenticationHours": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "secondsUntilReauthentication": {
             "type": "integer",
             "format": "int32"
           }

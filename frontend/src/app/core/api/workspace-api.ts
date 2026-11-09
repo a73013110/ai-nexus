@@ -22,6 +22,7 @@ export class WorkspaceApi {
   windowsLogin = () => this.remember(this.api.get('/api/v1/auth/windows'));
   logout = () => this.remember(this.api.post('/api/v1/auth/logout'));
   reportActivity = () => this.remember(this.api.post('/api/v1/auth/activity'));
+  lockSession = () => this.remember(this.api.post('/api/v1/auth/lock'));
   unlock = (password: string) =>
     this.remember(this.api.post('/api/v1/auth/unlock', { body: { password } }));
   selectIdentity = (identity: string) =>

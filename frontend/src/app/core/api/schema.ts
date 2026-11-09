@@ -758,6 +758,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/lock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LockSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/identity": {
         parameters: {
             query?: never;
@@ -7964,6 +7980,8 @@ export interface components {
             idleLockMinutes: number;
             /** Format: int32 */
             reauthenticationHours: number;
+            /** Format: int32 */
+            secondsUntilReauthentication: number;
         };
         SharedContentDto: {
             share: components["schemas"]["ShareDto"];
@@ -10287,6 +10305,27 @@ export interface operations {
                 "application/json": components["schemas"]["UnlockSessionRequest"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    LockSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {

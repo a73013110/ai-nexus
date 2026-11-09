@@ -5,6 +5,7 @@ import {
   afterRenderEffect,
   computed,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -14,37 +15,38 @@ import { ApiError, safeMessage } from '@core/errors/safe-errors';
 import { ThemeService } from '@core/preferences/theme-service';
 import { nameInitial } from '@shared/browser/format';
 import { Field } from '@shared/ui/field';
-import { Icon } from '@shared/ui/icon';
-import { Notice } from '@shared/ui/notice';
 import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { LoginSubmit, type SubmitPhase } from '../login-submit';
 
-/** 勾號停靠的時間，之後才開始收回膠囊。 */
-const SUCCESS_HOLD_MS = 300;
+/** 勾號停靠的時間，要等按鈕收成圓形才開始收回膠囊。 */
+const SUCCESS_HOLD_MS = 420;
+/** 最後這幾秒倒數島自動展開按鈕：來不及去找滑鼠的人也按得到。 */
+const EXPAND_AT_SECONDS = 20;
 
 /**
- * 鎖定畫面。用模態 dialog 而不是換路由：原本的頁面、草稿與進行中的串流都留在原處，解鎖後直接回到剛才的畫面。
+ * 鎖定畫面與快到期的倒數島。用模態 dialog 而不是換路由：原本的頁面、草稿與進行中的串流都留在原處，解鎖後直接回到剛才的畫面。
  * 動效的階段只在播放時寫在元素上（`data-phase`），寫入當下就能讀到新的 CSS 動畫並等它結束，長度與膠囊尺寸只寫在樣式表。
  */
 @Component({
   selector: 'nx-session-lock-screen',
   styleUrl: './session-lock-screen.scss',
   templateUrl: './session-lock-screen.html',
-  imports: [Field, Icon, LoginSubmit, Notice, PasswordField, PasswordInput],
+  imports: [Field, LoginSubmit, PasswordField, PasswordInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionLockScreen {
   protected readonly auth = inject(AuthService);
-  private readonly lock = inject(SessionLock);
+  protected readonly lock = inject(SessionLock);
   private readonly theme = inject(ThemeService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly wrap = viewChild.required<ElementRef<HTMLElement>>('wrap');
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
+  private readonly island = viewChild.required<ElementRef<HTMLElement>>('island');
   private syncing = false;
 
   protected readonly initial = nameInitial;
   protected readonly password = signal('');
-  protected readonly error = signal<string | null>(null);
+  protected readonly error = signal('');
   /** 每次拒絕換一個動畫名稱，第二次輸錯才會再抖一次。 */
   protected readonly rejections = signal(0);
   protected readonly submitPhase = signal<SubmitPhase>('idle');
@@ -58,11 +60,30 @@ export class SessionLockScreen {
   protected readonly reasonText = computed(() => {
     const lifetime = this.auth.session()?.lifetime;
     if (!lifetime) return '';
+    const reason = this.lock.reason();
     const why =
-      this.lock.reason() === 'reauthentication'
-        ? `距上次驗證已滿 ${lifetime.reauthenticationHours} 小時。`
-        : `閒置超過 ${lifetime.idleLockMinutes} 分鐘。`;
+      reason === 'manual'
+        ? '你鎖定了工作區。'
+        : reason === 'reauthentication'
+          ? `距上次驗證已滿 ${lifetime.reauthenticationHours} 小時。`
+          : `閒置超過 ${lifetime.idleLockMinutes} 分鐘。`;
     return `${why}\n輸入密碼，回到剛才的畫面。`;
+  });
+
+  /** 鎖定時維持原值：倒數島要留在畫面上，`show` 量到寬度、把位置交給卡片之後才收掉。 */
+  protected readonly islandOn = linkedSignal<{ warning: boolean; reason: string | null }, boolean>({
+    source: () => ({ warning: this.lock.warning(), reason: this.lock.reason() }),
+    computation: (source, previous) =>
+      source.reason ? (previous?.value ?? false) : source.warning,
+  });
+  protected readonly islandEngaged = signal(false);
+  protected readonly islandOpen = computed(
+    () => this.islandEngaged() || (this.lock.countdown()?.seconds ?? Infinity) <= EXPAND_AT_SECONDS,
+  );
+  /** 已經過的比例，直接當環的 `stroke-dashoffset`（圓周以 `pathLength` 正規化為 1）。 */
+  protected readonly islandElapsed = computed(() => {
+    const countdown = this.lock.countdown();
+    return countdown ? Math.min(1, 1 - countdown.seconds / countdown.warnFrom) : 1;
   });
 
   constructor() {
@@ -70,6 +91,11 @@ export class SessionLockScreen {
       this.lock.reason();
       void this.sync();
     });
+  }
+
+  protected keepUsing() {
+    this.islandEngaged.set(false);
+    this.lock.keepActive();
   }
 
   /** 開關要等動效播完，期間狀態可能又變（別的分頁解鎖後馬上又鎖定），所以追到畫面與狀態一致為止。 */
@@ -88,8 +114,17 @@ export class SessionLockScreen {
   }
 
   private async show(dialog: HTMLDialogElement) {
+    const islandWidth = this.islandOn() ? this.island().nativeElement.offsetWidth : 0;
     dialog.showModal();
+    this.islandOn.set(false);
+    this.islandEngaged.set(false);
+    if (islandWidth) {
+      dialog.style.setProperty('--lock-pill-width', `${islandWidth}px`);
+      dialog.dataset['from'] = 'island';
+    }
     await this.play(dialog, 'locking');
+    dialog.style.removeProperty('--lock-pill-width');
+    delete dialog.dataset['from'];
     // 觸控裝置不主動聚焦：鍵盤會擋住卡片，使用者準備好才點欄位。
     if (matchMedia('(pointer: fine)').matches)
       this.input().nativeElement.focus({ preventScroll: true });
@@ -100,7 +135,7 @@ export class SessionLockScreen {
     dialog.close();
     this.submitPhase.set('idle');
     this.rejections.set(0);
-    this.error.set(null);
+    this.error.set('');
     this.password.set('');
   }
 
@@ -112,9 +147,12 @@ export class SessionLockScreen {
     dialog.style.setProperty('--lock-card-width', `${box.width}px`);
     dialog.style.setProperty('--lock-card-height', `${box.height}px`);
     dialog.dataset['phase'] = phase;
+    // 工作區在元件之外，靠根元素上的階段接到全域的回位動效（motion.scss，`session-return`）。
+    document.documentElement.dataset['sessionPhase'] = phase;
     await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((item) => item.finished));
     // 留著的話，階段的 animation 會一直蓋過輸錯密碼的抖動。
     delete dialog.dataset['phase'];
+    delete document.documentElement.dataset['sessionPhase'];
   }
 
   /** 全站快捷鍵掛在 document：鎖定時不能讓它們在畫面後方開面板。Esc 也不能關掉這個對話框。 */
@@ -125,8 +163,13 @@ export class SessionLockScreen {
 
   protected async submit(event: Event) {
     event.preventDefault();
-    if (this.submitting() || !this.password()) return;
-    this.error.set(null);
+    if (this.submitting()) return;
+    if (!this.password()) {
+      this.error.set('請輸入密碼。');
+      this.input().nativeElement.focus({ preventScroll: true });
+      return;
+    }
+    this.error.set('');
     this.submitPhase.set('loading');
     try {
       const session = await this.lock.verify(this.password());
