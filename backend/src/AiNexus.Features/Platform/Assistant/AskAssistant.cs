@@ -10,7 +10,6 @@ using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.Extensions.Options;
 
@@ -28,7 +27,7 @@ namespace AiNexus.Features.Platform.Assistant;
 /// 事實的處理頁（<see cref="AssistantLink"/>）只在提問者持有那一頁時才給網址。
 /// </remarks>
 internal sealed class AskAssistant(IEnumerable<IAssistantTool> tools, AccessService access, IDataScope dataScopes, ModelCatalog catalog, ModelTaskService models,
-    AuditTrail audit, AppDbContext db, IOptions<JsonOptions> json) : IEndpointSlice
+    AuditTrail audit, AppDbContext db, IOptions<JsonOptions> json, TimeProvider clock) : IEndpointSlice
 {
     public const string Kind = "assistant";
 
@@ -73,7 +72,7 @@ internal sealed class AskAssistant(IEnumerable<IAssistantTool> tools, AccessServ
             - definitions.Sum(x => AssistantPrompt.Bytes(x.Name + x.Description + x.Parameters.ToJsonString()));
         var plan = AssistantPrompt.Plan(question, view, pageName, available, definitions.Count > 0);
 
-        var stream = new EventStream(http, json.Value.SerializerOptions);
+        var stream = new EventStream(new SseStream(http, clock), json.Value.SerializerOptions);
         var cited = plan.Facts.Count;
         if (view is not null) stream.Add("grounding", new(Scope: view.Scope, Facts: await SourcesAsync(viewer, plan.Facts, context, ct), Partial: plan.Partial));
 
@@ -160,32 +159,17 @@ internal sealed class AskAssistant(IEnumerable<IAssistantTool> tools, AccessServ
             .ToDictionary(x => x.Name, x => x.Value.ToString(), StringComparer.Ordinal);
 
     /// <summary>SSE 輸出：<see cref="Add"/> 的事件攢到第一次 <see cref="SendAsync"/> 才連同表頭一起送；序列化與一般回應相同（列舉是名稱），與契約一致。</summary>
-    private sealed class EventStream(HttpContext http, JsonSerializerOptions options)
+    private sealed class EventStream(SseStream sse, JsonSerializerOptions options)
     {
         private readonly List<(string Name, AssistantEventDto Data)> pending = [];
-        private bool started;
 
         public void Add(string name, AssistantEventDto data) => pending.Add((name, data));
 
         public async Task SendAsync(string name, AssistantEventDto data, CancellationToken ct)
         {
-            if (!started)
-            {
-                started = true;
-                http.Response.ContentType = "text/event-stream";
-                // 關閉代理與 ASP.NET 的回應緩衝，否則文字會被攢住，畫面看不到逐字出現。
-                http.Response.Headers["X-Accel-Buffering"] = "no";
-                http.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
-                foreach (var (pendingName, pendingData) in pending) await WriteAsync(pendingName, pendingData, ct);
-                pending.Clear();
-            }
-            await WriteAsync(name, data, ct);
-        }
-
-        private async Task WriteAsync(string name, AssistantEventDto value, CancellationToken ct)
-        {
-            await http.Response.WriteAsync($"event: {name}\ndata: {JsonSerializer.Serialize(value, options)}\n\n", ct);
-            await http.Response.Body.FlushAsync(ct);
+            foreach (var (pendingName, pendingData) in pending) await sse.SendAsync(pendingName, pendingData, options, ct);
+            pending.Clear();
+            await sse.SendAsync(name, data, options, ct);
         }
     }
 }

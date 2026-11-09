@@ -8,6 +8,7 @@ using AiNexus.Features.Admin.Identity;
 using AiNexus.Features.Admin.Identity.Sessions;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -81,10 +82,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             ct = stream.Token;
             // 串流的回應不會回到請求稽核手上，開始推送前先定案這筆讀取稽核；寫不進去就不推送（失敗即拒絕）。
             await audit.CompleteAsync(AuditEvent.Completed);
-            http.Response.ContentType = "text/event-stream";
-            // 關閉代理（如 nginx）與 ASP.NET 的回應緩衝，否則事件會被攢住，頁面收不到即時快照。
-            http.Response.Headers["X-Accel-Buffering"] = "no";
-            http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
+            var sse = new SseStream(http, clock);
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(options.Value.RefreshSeconds), clock);
             var expires = clock.GetUtcNow().AddMinutes(10); var nextCheck = DateTimeOffset.MinValue;
             do
@@ -95,8 +93,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
                     if (!allowed.IsSuccess) return allowed;
                     nextCheck = clock.GetUtcNow().AddSeconds(15);
                 }
-                await http.Response.WriteAsync("event: snapshot\ndata: " + JsonSerializer.Serialize(snapshots.Read(window), JsonSerializerOptions.Web) + "\n\n", ct);
-                await http.Response.Body.FlushAsync(ct);
+                await sse.SendAsync("snapshot", snapshots.Read(window), JsonSerializerOptions.Web, ct);
             } while (clock.GetUtcNow() < expires && await timer.WaitForNextTickAsync(ct));
             return Result.Success;
         }

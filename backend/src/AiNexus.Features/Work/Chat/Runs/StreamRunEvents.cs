@@ -9,7 +9,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Auditing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
-using Microsoft.AspNetCore.Http.Features;
+using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -67,12 +67,8 @@ internal sealed class StreamRunEvents(
 
         using var subscription = signals.Subscribe(id);
 
-        http.Response.ContentType = "text/event-stream; charset=utf-8";
-        http.Response.Headers["X-Accel-Buffering"] = "no";
-        http.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
-
-        var heartbeat = clock.GetUtcNow();
-        await WriteAsync(http, ": connected\n\n", ct);
+        var sse = new SseStream(http, clock);
+        await sse.CommentAsync("connected", ct);
 
         while (!ct.IsCancellationRequested)
         {
@@ -105,7 +101,7 @@ internal sealed class StreamRunEvents(
                     .Select(x => new RunEventDto(1, x.LastSequence, x.Id, "snapshot", x.Status, x.Content, x.ErrorCode, x.IssueCode))
                     .SingleAsync(ct);
 
-                await SendAsync(http, snapshot, ct);
+                await sse.SendAsync("run", snapshot, Json, ct, snapshot.Sequence);
                 cursor = lastSequence = snapshot.Sequence;
                 status = snapshot.Status;
                 events.Clear();
@@ -113,7 +109,7 @@ internal sealed class StreamRunEvents(
 
             foreach (var item in events)
             {
-                await SendAsync(http, item.ToDto(), ct);
+                await sse.SendAsync("run", item.ToDto(), Json, ct, item.Sequence);
                 cursor = item.Sequence;
             }
 
@@ -123,11 +119,7 @@ internal sealed class StreamRunEvents(
                 break;
             }
 
-            if (clock.GetUtcNow() - heartbeat > TimeSpan.FromSeconds(10))
-            {
-                await WriteAsync(http, ": heartbeat\n\n", ct);
-                heartbeat = clock.GetUtcNow();
-            }
+            await sse.HeartbeatIfIdleAsync(ct);
 
             // 整批取滿代表後面還有資料，直接再查，不等待信號
             if (events.Count == Batch) continue;
@@ -140,16 +132,5 @@ internal sealed class StreamRunEvents(
         }
 
         return Result.Success;
-    }
-
-    private static Task SendAsync(HttpContext http, RunEventDto value, CancellationToken ct) =>
-        WriteAsync(http, $"id: {value.Sequence}\nevent: run\ndata: {JsonSerializer.Serialize(value, Json)}\n\n", ct);
-
-    private static async Task WriteAsync(HttpContext http, string value, CancellationToken ct)
-    {
-        using var slowClient = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        slowClient.CancelAfter(TimeSpan.FromSeconds(5));
-        await http.Response.WriteAsync(value, slowClient.Token);
-        await http.Response.Body.FlushAsync(slowClient.Token);
     }
 }
