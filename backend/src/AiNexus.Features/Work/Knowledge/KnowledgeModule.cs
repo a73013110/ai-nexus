@@ -29,8 +29,8 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddSettings<KnowledgeOptions, KnowledgeOptionsValidator>(KnowledgeOptions.Section);
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
-        services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind);
-        services.AddBackgroundJobHandler<EmbeddingClearHandler>(EmbeddingClearHandler.JobKind);
+        services.AddBackgroundJobHandler<EmbeddingReindexHandler>(EmbeddingReindexHandler.JobKind, JobLane.Bulk);
+        services.AddBackgroundJobHandler<EmbeddingClearHandler>(EmbeddingClearHandler.JobKind, JobLane.Bulk);
         // 鍵＝KnowledgeOptions 的 Provider 允許值；設定的供應商沒有實作時啟動失敗（VerifyStartup）。
         services.AddKeyedService<IRerankClient, NoneRerankClient>("none", ServiceLifetime.Singleton);
         services.AddKeyedService<IRerankClient, TeiRerankClient>("tei", ServiceLifetime.Singleton);

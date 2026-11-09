@@ -21,6 +21,8 @@
 ## Durable jobs
 
 - `BackgroundJobWorker` claim 工作後取得 60 秒租約並持續 heartbeat；`LeaseToken` 做 fencing，過期的 worker 不能提交，已完成的項目在重試時重用。
+- 工作分通道消費（`JobLane`）：`Standard` 兩個 consumer、`Bulk` 一個，批次重建與評測註冊為 `Bulk`，不擋住使用者正在等的工作。同程序排入的工作在範圍結束時叫醒 worker，輪詢（5 秒）只負責其他程序與到期租約。
+- 續租失敗不取消工作（`LeaseHeartbeat`）：租約還有效，下一次再試；被接手時由 fencing 擋下舊 worker 的寫入。
 - 停止先記取消要求；離開頁面不會取消。
 - 外部 RPC 不保證跨程序 exactly-once：結果尚未保存的呼叫可能在重試時重做。
 - 新工作實作 `IBackgroundJobHandler`，以 `AddBackgroundJobHandler<T>(種類)` 註冊，在遠端呼叫前後都驗證授權，以 checkpoint 保存結果；Job／Attempt 的日誌關聯自動帶入。

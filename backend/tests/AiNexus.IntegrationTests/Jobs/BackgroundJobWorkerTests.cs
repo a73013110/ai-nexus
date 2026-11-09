@@ -88,6 +88,54 @@ public sealed class BackgroundJobWorkerTests
         return job.Id;
     }
 
+    /// <summary>批次工作排在前面也不能擋住使用者在等的工作；沒有處理器的舊種類仍要被認領並收尾。</summary>
+    [Fact]
+    public async Task LanesClaimOnlyTheirOwnKinds()
+    {
+        await using var factory = new AppFactory(services: services => services
+            .AddBackgroundJobHandler<CountingHandler>("lane-standard")
+            .AddBackgroundJobHandler<CountingHandler>("lane-bulk", JobLane.Bulk));
+        using var client = await factory.SignedInAsync();
+        var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var bulk = await EnqueueAsync(factory, "lane-bulk", owner);
+        var standard = await EnqueueAsync(factory, "lane-standard", owner);
+        var orphan = await EnqueueAsync(factory, "lane-orphan", owner);
+        using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
+
+        Assert.True(await worker.ProcessNextAsync(JobLane.Standard, CancellationToken.None));
+        Assert.True(await worker.ProcessNextAsync(JobLane.Standard, CancellationToken.None));
+        Assert.False(await worker.ProcessNextAsync(JobLane.Standard, CancellationToken.None));
+
+        Assert.Equal("queued", await StatusAsync(factory, bulk));
+        Assert.Equal("completed", await StatusAsync(factory, standard));
+        Assert.Equal("failed", await StatusAsync(factory, orphan));
+        Assert.True(await worker.ProcessNextAsync(JobLane.Bulk, CancellationToken.None));
+        Assert.Equal("completed", await StatusAsync(factory, bulk));
+    }
+
+    /// <summary>排入的工作要到交易提交後才看得到，所以範圍結束才叫醒 worker。</summary>
+    [Fact]
+    public async Task EnqueueWakesWorkersWhenScopeEnds()
+    {
+        await using var factory = new AppFactory();
+        using var client = await factory.SignedInAsync();
+        var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var wake = factory.Services.GetRequiredService<JobQueueSignal>().Next;
+        using (var scope = factory.Services.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<JobService>().Enqueue(owner, null, Guid.NewGuid(), "lane-orphan", "叫醒測試");
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().SaveChangesAsync();
+            Assert.False(wake.IsCompleted);
+        }
+        Assert.True(wake.IsCompleted);
+    }
+
+    private static async Task<string> StatusAsync(AppFactory factory, Guid id)
+    {
+        using var scope = factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().BackgroundJobs.AsNoTracking().Where(x => x.Id == id).Select(x => x.Status).SingleAsync();
+    }
+
     private static async Task UpdateAsync(AppFactory factory, Guid id, Action<Microsoft.EntityFrameworkCore.Query.UpdateSettersBuilder<BackgroundJob>> set)
     {
         using var scope = factory.Services.CreateScope();

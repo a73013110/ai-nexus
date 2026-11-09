@@ -7,24 +7,48 @@ using AiNexus.Features.Platform.Notifications;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Threading;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Jobs;
 
+/// <summary>
+/// 依 <see cref="JobLane"/> 消費持久佇列：同通道依建立時間先後，不同通道互不等待。
+/// 同一份資料由不同通道的工作同時處理時，靠資料庫鎖與 fencing 檢查點保證正確（本機與 IIS 共用資料庫時本來就會同時執行）。
+/// </summary>
 public sealed partial class BackgroundJobWorker(
     IServiceScopeFactory scopes,
     StorageReadiness readiness,
+    JobQueueSignal signal,
+    IEnumerable<BulkJobKind> bulkKinds,
     ILogger<BackgroundJobWorker> logger,
     Issues issues,
     TimeProvider clock) : BackgroundService
 {
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    // 同程序排入的工作靠 JobQueueSignal 立即開始；輪詢只負責其他程序排入的工作與到期的租約。
+    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan UnavailableDelay = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan MonitorInterval = TimeSpan.FromSeconds(2);
+
+    private static readonly (JobLane Lane, int Consumers)[] Lanes = [(JobLane.Standard, 2), (JobLane.Bulk, 1)];
+
+    private readonly string[] bulk = [.. bulkKinds.Select(x => x.Kind)];
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.WhenAll(
+        Lanes.SelectMany(x => Enumerable.Range(0, x.Consumers).Select(_ => ConsumeAsync(x.Lane, stoppingToken))));
+
+    private async Task ConsumeAsync(JobLane lane, CancellationToken stoppingToken)
     {
+        await Task.Yield();
         while (!stoppingToken.IsCancellationRequested)
         {
+            var wake = signal.Next;
             try
             {
-                if (!readiness.Configured || !await ProcessNextAsync(stoppingToken)) await Task.Delay(1000, stoppingToken);
+                if (readiness.Configured && await ProcessAsync(lane, stoppingToken)) continue;
+                using var wait = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+                await Task.WhenAny(wake, Task.Delay(PollInterval, clock, wait.Token));
+                await wait.CancelAsync();
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -33,17 +57,30 @@ public sealed partial class BackgroundJobWorker(
             catch (Exception ex)
             {
                 LogQueueUnavailable(logger, ex.GetType().Name);
-                await Task.Delay(3000, stoppingToken);
+                await Task.Delay(UnavailableDelay, clock, stoppingToken);
             }
         }
     }
 
-    public async Task<bool> ProcessNextAsync(CancellationToken stop)
+    /// <summary>認領並執行下一件工作，不分通道。回傳 false 表示沒有可認領的工作。測試直接呼叫。</summary>
+    public Task<bool> ProcessNextAsync(CancellationToken stop) => ProcessAsync(null, stop);
+
+    /// <summary>只認領 <paramref name="lane"/> 的工作。測試直接呼叫。</summary>
+    public Task<bool> ProcessNextAsync(JobLane lane, CancellationToken stop) => ProcessAsync(lane, stop);
+
+    private IQueryable<BackgroundJob> InLane(IQueryable<BackgroundJob> jobs, JobLane? lane) => lane switch
+    {
+        JobLane.Bulk => jobs.Where(x => bulk.Contains(x.Kind)),
+        JobLane.Standard => jobs.Where(x => !bulk.Contains(x.Kind)),
+        _ => jobs,
+    };
+
+    private async Task<bool> ProcessAsync(JobLane? lane, CancellationToken stop)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var now = clock.GetUtcNow();
-        var candidate = await db.BackgroundJobs.AsNoTracking()
+        var candidate = await InLane(db.BackgroundJobs.AsNoTracking(), lane)
             .Where(Claimable(now))
             .OrderBy(x => x.CreatedAt)
             .Select(x => new { x.Id, x.Status })
@@ -192,34 +229,20 @@ public sealed partial class BackgroundJobWorker(
         return true;
     }
 
-    private async Task MonitorAsync(Guid id, Guid lease, CancellationTokenSource execution, CancellationToken ct)
-    {
-        try
+    private Task MonitorAsync(Guid id, Guid lease, CancellationTokenSource execution, CancellationToken ct) => LeaseHeartbeat.RunAsync(
+        MonitorInterval,
+        clock,
+        async token =>
         {
-            while (!ct.IsCancellationRequested)
-            {
-                await Task.Delay(2000, ct);
-                using var scope = scopes.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var count = await db.BackgroundJobs
-                    .Where(x => x.Id == id && x.LeaseToken == lease && x.Status == RunStates.Running && !x.CancelRequested)
-                    .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddSeconds(JobService.LeaseSeconds)), ct);
-                if (count == 0)
-                {
-                    execution.Cancel();
-                    return;
-                }
-            }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
-        catch (Exception ex)
-        {
-            LogLeaseRenewalFailed(logger, id, ex.GetType().Name);
-            execution.Cancel();
-        }
-    }
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            return await db.BackgroundJobs
+                .Where(x => x.Id == id && x.LeaseToken == lease && x.Status == RunStates.Running && !x.CancelRequested)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddSeconds(JobService.LeaseSeconds)), token) == 1;
+        },
+        ex => LogLeaseRenewalFailed(logger, id, ex.GetType().Name),
+        execution,
+        ct);
 
     // 可認領：排隊中，或執行中但租約已過期（原 worker 停止續租）。挑選與條件式 UPDATE 必須用同一條件。
     private static Expression<Func<BackgroundJob, bool>> Claimable(DateTimeOffset now) =>
@@ -234,6 +257,6 @@ public sealed partial class BackgroundJobWorker(
     [LoggerMessage(EventId = 3002, EventName = "job.queue_unavailable", Level = LogLevel.Warning, Message = "Background queue unavailable ({ErrorType}).")]
     private static partial void LogQueueUnavailable(ILogger logger, string errorType);
 
-    [LoggerMessage(EventId = 3003, EventName = "job.lease_renewal_failed", Level = LogLevel.Warning, Message = "Job {JobId} lease renewal failed ({ErrorType}).")]
+    [LoggerMessage(EventId = 3003, EventName = "job.lease_renewal_failed", Level = LogLevel.Warning, Message = "Job {JobId} lease renewal failed ({ErrorType}); retrying.")]
     private static partial void LogLeaseRenewalFailed(ILogger logger, Guid jobId, string errorType);
 }

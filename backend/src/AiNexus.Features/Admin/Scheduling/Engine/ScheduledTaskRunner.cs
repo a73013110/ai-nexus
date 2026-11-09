@@ -5,6 +5,7 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Scheduling;
+using AiNexus.Platform.Threading;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Admin.Scheduling.Engine;
@@ -273,49 +274,37 @@ public sealed partial class ScheduledTaskRunner(
 
     /// <summary>
     /// 每 <see cref="Heartbeat"/> 續租一次並寫入進度；租約被接手或收到停止要求（續租的條件不成立）時取消這一輪。
-    /// 續租本身失敗（資料庫暫時不可用）不取消：租約還有效，下一次續租再試，真的過期了下一次就會發現。
     /// </summary>
-    private async Task HeartbeatAsync(string key, Guid lease, Guid runId, ScheduledTaskContext context, CancellationTokenSource cancel, CancellationToken ct)
+    private Task HeartbeatAsync(string key, Guid lease, Guid runId, ScheduledTaskContext context, CancellationTokenSource cancel, CancellationToken ct)
     {
         ScheduledTaskProgress? written = null;
-        try
-        {
-            while (!ct.IsCancellationRequested)
+        return LeaseHeartbeat.RunAsync(
+            Heartbeat,
+            clock,
+            async token =>
             {
-                await Task.Delay(Heartbeat, clock, ct);
-                try
+                using var scope = scopes.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var now = clock.GetUtcNow();
+                var renewed = await db.ScheduledTasks
+                    .Where(x => x.Key == key && x.LeaseToken == lease && !x.CancelRequested)
+                    .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, now + LeaseDuration), token);
+                if (renewed == 0) return false;
+                var progress = context.Progress;
+                if (progress is not null && progress != written)
                 {
-                    using var scope = scopes.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                    var now = clock.GetUtcNow();
-                    var renewed = await db.ScheduledTasks
-                        .Where(x => x.Key == key && x.LeaseToken == lease && !x.CancelRequested)
-                        .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, now + LeaseDuration), ct);
-                    if (renewed == 0)
-                    {
-                        await cancel.CancelAsync();
-                        return;
-                    }
-                    var progress = context.Progress;
-                    if (progress is not null && progress != written)
-                    {
-                        await db.ScheduledTaskRuns.Where(x => x.Id == runId && x.Status == ScheduledTaskRunStatuses.Running)
-                            .ExecuteUpdateAsync(p => p
-                                .SetProperty(x => x.Stage, Clip(progress.Stage, ScheduledTaskRun.StageMaxLength))
-                                .SetProperty(x => x.CompletedUnits, progress.Completed)
-                                .SetProperty(x => x.TotalUnits, progress.Total), ct);
-                        written = progress;
-                    }
+                    await db.ScheduledTaskRuns.Where(x => x.Id == runId && x.Status == ScheduledTaskRunStatuses.Running)
+                        .ExecuteUpdateAsync(p => p
+                            .SetProperty(x => x.Stage, Clip(progress.Stage, ScheduledTaskRun.StageMaxLength))
+                            .SetProperty(x => x.CompletedUnits, progress.Completed)
+                            .SetProperty(x => x.TotalUnits, progress.Total), token);
+                    written = progress;
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    LogHeartbeatFailed(logger, key, ex.GetType().Name);
-                }
-            }
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-        }
+                return true;
+            },
+            ex => LogHeartbeatFailed(logger, key, ex.GetType().Name),
+            cancel,
+            ct);
     }
 
     private static string Trigger(ScheduledTaskTrigger trigger) => trigger switch

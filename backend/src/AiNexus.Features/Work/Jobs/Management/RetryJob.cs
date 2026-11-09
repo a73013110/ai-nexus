@@ -12,7 +12,7 @@ namespace AiNexus.Features.Work.Jobs.Management;
 /// 把使用者的失敗或已取消工作重新排入佇列：工作種類仍有處理器、處理器接受重試，且同一業務對象沒有其他進行中的工作。
 /// 不限次數：失敗多半來自外部服務暫時異常，恢復後使用者要能就地重試，而不是重建業務對象。更新以讀到的狀態作為條件（fencing），避免覆寫併發的狀態變更。
 /// </summary>
-internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHandler> handlers, TimeProvider clock) : IEndpointSlice
+internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHandler> handlers, JobQueueSignal signal, TimeProvider clock) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>
@@ -45,6 +45,7 @@ internal sealed class RetryJob(AppDbContext db, KeyedServices<IBackgroundJobHand
                 .SetProperty(x => x.ErrorMessage, (string?)null)
                 .SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), ct);
         if (changed != 1) return JobsErrors.JobChanged;
+        signal.Wake();
         return await db.ReloadJobAsync(owner, id, ct);
     }
 }

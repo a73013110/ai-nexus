@@ -20,8 +20,8 @@ public sealed class QualityModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddBackgroundJobHandler<RetrievalEvaluationHandler>(RetrievalEvaluationHandler.JobKind);
-        services.AddBackgroundJobHandler<EvaluationHandler>(EvaluationHandler.JobKind);
+        services.AddBackgroundJobHandler<RetrievalEvaluationHandler>(RetrievalEvaluationHandler.JobKind, JobLane.Bulk);
+        services.AddBackgroundJobHandler<EvaluationHandler>(EvaluationHandler.JobKind, JobLane.Bulk);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

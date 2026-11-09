@@ -11,8 +11,19 @@ namespace AiNexus.Features.Work.Jobs;
 
 /// <summary>其他模組使用背景工作的入口：以業務對象排入工作、取得描述、取消與重試。</summary>
 [Scoped]
-public sealed class JobService(AppDbContext db, IServiceProvider services)
+public sealed class JobService(AppDbContext db, IServiceProvider services, JobQueueSignal signal) : IDisposable
 {
+    private bool enqueued;
+
+    /// <summary>
+    /// 工作要等呼叫端提交才看得到，所以等範圍結束（請求或背景工作收尾、交易已提交）才叫醒 worker。
+    /// 呼叫端回滾時多叫醒一次，worker 查不到工作就繼續睡，沒有副作用。
+    /// </summary>
+    public void Dispose()
+    {
+        if (enqueued) signal.Wake();
+    }
+
     /// <summary>
     /// 自動接手的嘗試上限：租約到期（前一個 worker 中止）時，總嘗試次數已超過它就不再執行而直接失敗，
     /// 避免讓程序中止的工作無限循環。使用者的重試是明確決定，不受此限。
@@ -61,6 +72,7 @@ public sealed class JobService(AppDbContext db, IServiceProvider services)
         job.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString();
         job.OperationId = job.Id;
         db.Add(job);
+        enqueued = true;
         return job;
     }
 
