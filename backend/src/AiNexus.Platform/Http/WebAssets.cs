@@ -26,7 +26,7 @@ public static partial class WebAssets
             options.Providers.Add<GzipCompressionProvider>();
             options.MimeTypes = ["text/html", "text/css", "text/javascript", "application/javascript", "image/svg+xml"];
         });
-        // 帶雜湊的檔案瀏覽器只抓一次；Optimal 的 CPU 成本只付在第一次，傳輸量卻省在每位使用者身上。
+        // 壓縮結果不留存，每次實際傳輸都重壓；帶雜湊的檔案每位使用者只抓一次、外殼多半回 304，用 Optimal 的 CPU 成本換傳輸量划算。
         services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Optimal);
         services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Optimal);
         return services;
