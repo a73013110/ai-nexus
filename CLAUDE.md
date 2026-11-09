@@ -83,7 +83,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）。
-- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`feature-catalog.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Scripts/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
+- 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、`feature-catalog.ts`、`public-error-catalog.ts`、`database/App/` 的匯出檔（手寫的只有 `Seed/`、`Scripts/`、`export-exclusions.txt` 與 `FullText/` 的 `Catalogs/`、`Indexes/` 以外）。
 - PowerShell 入口腳本要有 `[CmdletBinding()]`、`Set-StrictMode -Version Latest` 與 comment-based help（`scripts/tests` 檢查）。
 - 不提交 `.local/`、`artifacts/`、秘密；不跳過或停用測試。
 

@@ -386,6 +386,9 @@ public static class PublicErrorCatalog
         ["windows_account_required"] = "Windows 帳號資料不完整。",
         ["windows_sid_required"] = "無法取得 AD SID，請確認登入設定。",
     };
+    /// <summary>完整的提示表，輸出到 OpenAPI 的 <c>x-public-errors</c>，前端的提示表由它產生。</summary>
+    public static IReadOnlyDictionary<string, string> All => Hints;
+
     /// <summary>代碼是否有核准的提示；沒有的代碼只會顯示通用提示。</summary>
     public static bool Contains(string code) => Hints.ContainsKey(code);
 

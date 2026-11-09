@@ -34,6 +34,8 @@ internal static class OpenApiContract
             };
             document.Extensions ??= new Dictionary<string, IOpenApiExtension>();
             document.Extensions["x-feature-catalog"] = new JsonNodeExtension(FeatureCatalogJson());
+            document.Extensions["x-public-errors"] = new JsonNodeExtension(new JsonObject(
+                PublicErrorCatalog.All.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => KeyValuePair.Create(x.Key, (JsonNode?)x.Value))));
             return Task.CompletedTask;
         });
 

@@ -62,7 +62,7 @@ try {
         }
         @{ Name = '合約一致性'; Run = {
                 npm --prefix frontend run contracts:check
-                if ($LASTEXITCODE -ne 0) { throw '前端 schema.ts 或 feature-catalog.ts 與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。' }
+                if ($LASTEXITCODE -ne 0) { throw '前端合約產生物與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。' }
             }
         }
         @{ Name = '前端格式'; Run = {

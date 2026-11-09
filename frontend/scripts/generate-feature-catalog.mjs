@@ -1,14 +1,11 @@
 // 從 contracts/openapi.json 的 `x-feature-catalog`（後端 FeatureCatalog 的輸出）產生
-// src/app/core/api/feature-catalog.ts。`--check` 只比對、不寫檔，不一致時以非零結束，給 contracts:check 用。
-// 輸出先經 prettier（讀專案的 .prettierrc）排版，所以產生物本身就通過 format:check，不必列入 .prettierignore。
-import { readFile, writeFile } from 'node:fs/promises';
+// src/app/core/api/feature-catalog.ts。
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import prettier from 'prettier';
+import { emit, fail } from './emit-generated.mjs';
 
-const root = fileURLToPath(new URL('..', import.meta.url));
 const contract = new URL('../../contracts/openapi.json', import.meta.url);
 const target = fileURLToPath(new URL('../src/app/core/api/feature-catalog.ts', import.meta.url));
-const check = process.argv.includes('--check');
 
 const document = JSON.parse(await readFile(contract, 'utf8'));
 const catalog = document['x-feature-catalog'];
@@ -64,25 +61,4 @@ export type CatalogScope = (typeof CATALOG_SCOPES)[number];
 export type DataScopeId = CatalogScope['id'];
 `;
 
-const options = { ...(await prettier.resolveConfig(target)), filepath: target };
-const formatted = await prettier.format(source, options);
-
-if (check) {
-  let current = '';
-  try {
-    current = await readFile(target, 'utf8');
-  } catch {
-    /* 沒有檔案就是不一致。 */
-  }
-  if (current.replace(/\r\n/g, '\n') !== formatted)
-    fail('feature-catalog.ts 與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。');
-  console.log('feature-catalog.ts 與 contracts/openapi.json 一致。');
-} else {
-  await writeFile(target, formatted);
-  console.log(`已產生 ${target.slice(root.length)}`);
-}
-
-function fail(message) {
-  console.error(message);
-  process.exit(1);
-}
+await emit(target, source);
