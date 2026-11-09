@@ -21,7 +21,8 @@ export class WorkspaceApi {
     this.remember(this.api.post('/api/v1/auth/login', { body: { account, password, method } }));
   windowsLogin = () => this.remember(this.api.get('/api/v1/auth/windows'));
   logout = () => this.remember(this.api.post('/api/v1/auth/logout'));
-  reportActivity = () => this.remember(this.api.post('/api/v1/auth/activity'));
+  reportActivity = (idleSeconds: number) =>
+    this.remember(this.api.post('/api/v1/auth/activity', { query: { idleSeconds } }));
   lockSession = () => this.remember(this.api.post('/api/v1/auth/lock'));
   unlock = (password: string) =>
     this.remember(this.api.post('/api/v1/auth/unlock', { body: { password } }));

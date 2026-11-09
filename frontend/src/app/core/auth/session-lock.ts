@@ -44,12 +44,14 @@ export class SessionLock {
   /** 鎖定原因（`idle`、`reauthentication`、`manual`）；未鎖定為 `null`。 */
   readonly reason = computed(() => this.lifetime()?.lockedBy ?? null);
   /** 測試身分不能解鎖（輸入的是被測者的密碼），到期是回到管理者，所以不顯示倒數也不能手動鎖定。 */
-  readonly canLock = computed(
-    () => !!this.lifetime() && !this.reason() && !this.auth.session()?.testing,
-  );
+  private readonly canLock = computed(() => this.lockable() && !this.reason());
   private readonly remaining = signal<SessionCountdown | null>(null, { equal: sameCountdown });
   readonly countdown = this.remaining.asReadonly();
-  readonly countdownText = computed(() => {
+  /** 可不可能鎖定（鎖定中也算）：帳號列的鎖頭憑這個留著，鎖定、解鎖的過程中版面才不會跳。 */
+  readonly lockable = computed(() => !!this.lifetime() && !this.auth.session()?.testing);
+  /** 帳號列與倒數島的文字；不能鎖定時為 `null`。 */
+  readonly statusText = computed(() => {
+    if (this.reason()) return '已鎖定';
     const value = this.remaining();
     if (!value) return null;
     return `${clockText(value.seconds)} ${value.by === 'idle' ? '後鎖定' : '後需要驗證'}`;
@@ -168,7 +170,10 @@ export class SessionLock {
   private async report() {
     this.lastReport = Date.now();
     try {
-      const reported = this.api.reportActivity();
+      // 補送的回報晚於操作，附上經過的時間：伺服器若以收到當下起算，倒數會在沒有操作時自己跳回去。
+      const reported = this.api.reportActivity(
+        Math.ceil((this.lastReport - this.lastInteraction) / 1000),
+      );
       this.reporting = reported;
       const session = await reported;
       this.auth.adopt(session);

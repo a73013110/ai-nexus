@@ -14,12 +14,12 @@ namespace AiNexus.Features.Admin.Identity.Sessions;
 internal sealed class ReportSessionActivity(SessionTicket ticket, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder auth) => auth
-        .MapPost("/activity", (HttpContext http, ReportSessionActivity handler) => handler.HandleAsync(http))
+        .MapPost("/activity", (HttpContext http, ReportSessionActivity handler, int? idleSeconds) => handler.HandleAsync(http, idleSeconds ?? 0))
         .NotAudited("節流的存活回報，不是使用者的動作").WithName("ReportSessionActivity");
 
-    public async Task<Ok<AuthSessionDto>> HandleAsync(HttpContext http)
+    public async Task<Ok<AuthSessionDto>> HandleAsync(HttpContext http, int idleSeconds)
     {
-        await ticket.TouchAsync(http);
+        await ticket.TouchAsync(http, idleSeconds);
         return TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
     }
 }

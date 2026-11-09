@@ -17,49 +17,47 @@
     >
       <div class="lock-surface"></div>
       <div class="lock-pill" aria-hidden="true">
-        <span class="lock-pill-state" data-for="locking">
-          <svg class="lock-glyph" viewBox="0 0 24 24">
-            <rect x="3" y="11" width="18" height="11" rx="2" />
-            <path class="lock-shackle" d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          正在鎖定
-        </span>
-        <span class="lock-pill-state" data-for="unlocking">
-          <svg class="lock-glyph" viewBox="0 0 24 24">
-            <path class="lock-check" pathLength="1" d="M20 6 9 17l-5-5" />
-          </svg>
-          已解鎖
-        </span>
+        <svg class="lock-glyph" viewBox="0 0 24 24">
+          <circle cx="12" cy="16" r="1" />
+          <rect x="3" y="10" width="18" height="12" rx="2" />
+          <path class="lock-shackle" d="M7 10V7a5 5 0 0 1 9.33-2.5" />
+        </svg>
+        已解鎖
       </div>
       <div class="lock-card">
-        <div class="lock-head">
-          <span class="avatar" aria-hidden="true">{{ initial(name()) }}</span>
-          <div>
-            <h2 id="lock-title">工作區已鎖定</h2>
-            <p class="lock-reason">{{ reasonText() }}</p>
-          </div>
-        </div>
-        <form novalidate (submit)="submit($event)">
+        <header class="lock-head">
+          <span class="lock-avatar" aria-hidden="true">
+            {{ initial(name()) }}
+            <span class="lock-badge"><nx-icon name="lock" /></span>
+          </span>
+          <h2 id="lock-title">工作區已鎖定</h2>
           <p class="lock-who">
             <b>{{ name() }}</b
             ><span>{{ auth.session()?.account }}</span>
           </p>
-          <label for="lock-password">{{ passwordLabel() }}</label>
-          <nx-password-field [disabled]="submitting()">
-            <input
-              #input
-              id="lock-password"
-              nxField
-              nxPasswordInput
-              required
-              maxlength="1024"
-              [value]="password()"
-              [readOnly]="submitting()"
-              (input)="password.set($any($event.target).value)"
-            />
-          </nx-password-field>
-          <!-- 固定留一行：錯誤出現時卡片不跳動。 -->
-          <p class="lock-error" role="alert">{{ error() }}</p>
+        </header>
+        <form novalidate (submit)="submit($event)">
+          <div class="lock-field">
+            <label for="lock-password">{{ passwordLabel() }}</label>
+            <nx-password-field [disabled]="submitting()">
+              <input
+                #input
+                id="lock-password"
+                nxField
+                nxPasswordInput
+                required
+                maxlength="1024"
+                placeholder="輸入密碼，回到剛才的畫面"
+                [value]="password()"
+                [readOnly]="submitting()"
+                (input)="password.set($any($event.target).value)"
+              />
+            </nx-password-field>
+            <!-- 鎖定原因與錯誤共用一行：錯誤出現時卡片不跳動，平時也不留空白。 -->
+            <p class="lock-note" role="alert" [class.is-error]="error()">
+              {{ error() || reasonText() }}
+            </p>
+          </div>
           <button
             nxLoginSubmit
             type="submit"
@@ -82,6 +80,7 @@
 <div
   #island
   class="lock-island"
+  popover="manual"
   role="group"
   aria-label="工作區即將鎖定"
   [attr.data-on]="islandOn() ? '' : null"
@@ -104,7 +103,7 @@
       [style.stroke-dashoffset]="islandElapsed()"
     />
   </svg>
-  <span class="lock-island-text">{{ lock.countdownText() }}</span>
+  <span class="lock-island-text">{{ lock.statusText() }}</span>
   <span class="lock-island-actions">
     <span class="lock-island-buttons">
       @if (lock.countdown()?.by === 'reauthentication') {

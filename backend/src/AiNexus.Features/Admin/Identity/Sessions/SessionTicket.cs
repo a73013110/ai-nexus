@@ -43,10 +43,18 @@ public sealed class SessionTicket(IOptions<SessionLifetimeOptions> options, Time
         return SignInAsync(http, principal, active, authenticated, previous.ExpiresUtc, IsManuallyLocked(previous));
     }
 
-    /// <summary>使用者有操作：只把閒置計時往後推。沒有 cookie 的 Windows 請求不需要。</summary>
-    public Task TouchAsync(HttpContext http) => Of(http) is { } previous
-        ? SignInAsync(http, http.User, clock.GetUtcNow(), Times(previous).Authenticated, previous.ExpiresUtc)
-        : Task.CompletedTask;
+    /// <summary>
+    /// 使用者有操作：只把閒置計時往後推。沒有 cookie 的 Windows 請求不需要。
+    /// 回報有節流，<paramref name="idleSeconds"/> 是最後一次操作距今多久，閒置從那一刻起算。
+    /// 只能往回扣、也不早於上次活動，竄改也只會讓自己更早鎖定。
+    /// </summary>
+    public Task TouchAsync(HttpContext http, int idleSeconds = 0)
+    {
+        if (Of(http) is not { } previous) return Task.CompletedTask;
+        var (active, authenticated) = Times(previous);
+        var interacted = clock.GetUtcNow().AddSeconds(-Math.Max(0, idleSeconds));
+        return SignInAsync(http, http.User, interacted > active ? interacted : active, authenticated, previous.ExpiresUtc);
+    }
 
     /// <summary>使用者手動鎖定：期限都不變，只有輸入密碼（<see cref="IssueAsync"/>）會換掉這張票。</summary>
     public Task LockAsync(HttpContext http)

@@ -1,0 +1,118 @@
+// 外框形狀的動畫值。註冊成長度才內插得動，位移與形狀才能寫在同一組 keyframes，兩者不會錯開。
+@property --shell-x {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+@property --shell-y {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+@property --shell-r {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
+}
+
+// 鎖定是頂端的膠囊撐成卡片，解鎖是原路收回再升走；兩邊同一段時間與曲線，手動、到期都一樣。
+// keyframes 只有這個元件用，跟著延後載入的 chunk，不進初始樣式。
+// 形狀用不過衝的曲線：高度只有 40px 的膠囊吃不下彈簧的過衝，會先被壓扁再彈回來。
+// 內容只在外框接近靜止時才淡入，變形途中不露出被切一半的文字。
+:host {
+  --lock-motion: 520ms;
+}
+@mixin shell-pill {
+  --shell-x: var(--lock-inset-x);
+  --shell-y: var(--lock-inset-y);
+  --shell-r: var(--lock-pill-radius);
+}
+@mixin shell-card {
+  --shell-x: 0px;
+  --shell-y: 0px;
+  --shell-r: var(--radius-surface);
+}
+@keyframes lock-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes lock-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes lock-open {
+  from {
+    @include shell-pill;
+    translate: 0 var(--lock-drop);
+  }
+  to {
+    @include shell-card;
+    translate: 0 0;
+  }
+}
+@keyframes lock-close {
+  from {
+    @include shell-card;
+    translate: 0 0;
+  }
+  to {
+    @include shell-pill;
+    translate: 0 var(--lock-drop);
+  }
+}
+@keyframes lock-leave {
+  to {
+    opacity: 0;
+    translate: 0 calc(var(--lock-drop) - 56px);
+  }
+}
+@keyframes lock-shackle-lift {
+  from {
+    translate: 0 3px;
+  }
+}
+
+[data-phase='locking'] {
+  .lock-ground {
+    animation: lock-fade-in var(--motion-panel) linear both;
+  }
+  .lock-wrap {
+    animation:
+      lock-open var(--lock-motion) var(--ease-morph) both,
+      lock-fade-in 100ms linear both;
+  }
+  .lock-card {
+    animation: lock-fade-in 220ms linear 300ms both;
+  }
+}
+// 倒數島已經在那個位置：外框要直接接手，淡入會閃一下。
+[data-phase='locking'][data-from='island'] .lock-wrap {
+  animation: lock-open var(--lock-motion) var(--ease-morph) both;
+}
+[data-phase='unlocking'] {
+  .lock-ground {
+    animation: lock-fade-out 320ms linear 120ms both;
+  }
+  .lock-wrap {
+    animation:
+      lock-close var(--lock-motion) var(--ease-morph) both,
+      lock-leave 180ms var(--ease-exit) 620ms forwards;
+  }
+  .lock-card {
+    animation: lock-fade-out 90ms linear both;
+  }
+  .lock-pill {
+    animation: lock-fade-in 140ms linear 240ms both;
+  }
+  .lock-shackle {
+    animation: lock-shackle-lift 300ms var(--ease-spring) 280ms both;
+  }
+}

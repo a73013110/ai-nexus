@@ -11,11 +11,9 @@ import { SessionLock } from '../auth/session-lock';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { SettingsOverlay } from '../preferences/settings-overlay';
 import { nameInitial } from '@shared/browser/format';
-import { keyText } from '@shared/browser/hotkeys';
 import { ActionMenu } from '@shared/ui/action-menu';
 import { Icon } from '@shared/ui/icon';
 import { AboutDialog } from './about-dialog';
-import { SHORTCUTS } from './keyboard-shortcuts';
 import { WorkspaceLayout } from './workspace-layout';
 
 @Component({
@@ -37,12 +35,12 @@ import { WorkspaceLayout } from './workspace-layout';
         <span class="profile-name"
           ><strong>{{ session.me()?.displayName || '帳號' }}</strong
           ><small class="profile-detail" [class.is-warning]="lock.warning()">{{
-            lock.countdownText() ?? session.me()?.account
+            lock.statusText() ?? session.me()?.account
           }}</small></span
         >
         <nx-icon name="more" />
       </nx-action-menu>
-      @if (lock.canLock()) {
+      @if (lock.lockable()) {
         <button
           type="button"
           class="icon-button profile-lock"
@@ -74,16 +72,6 @@ export class AccountMenu {
   readonly error = signal('');
   readonly items = computed(() => [
     { id: 'settings', label: '設定', icon: 'settings' },
-    ...(this.lock.canLock()
-      ? [
-          {
-            id: 'lock',
-            label: SHORTCUTS.lockWorkspace.label,
-            icon: 'lock',
-            note: keyText(SHORTCUTS.lockWorkspace.keys),
-          },
-        ]
-      : []),
     ...(this.session.testing() ? [{ id: 'restore', label: '返回管理者', icon: 'shield' }] : []),
     ...(!this.session.testing() && (this.session.auth.session()?.methods?.length ?? 0) > 1
       ? [{ id: 'login', label: '切換登入方式', icon: 'lock' }]
@@ -98,7 +86,6 @@ export class AccountMenu {
   ]);
   async act(id: string) {
     if (id === 'settings') this.settings.open();
-    if (id === 'lock') void this.lock.lockNow();
     if (id === 'about') this.about().open();
     if (id === 'login') window.location.assign('/login?method=local');
     if (id === 'restore') {

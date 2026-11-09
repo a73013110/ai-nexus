@@ -5,6 +5,10 @@
  * 放在水平中間的（吸附到中線）記成 `center`，視窗變寬時仍在中間。
  */
 
+/** 頂端跑道的深度與島之間的間距；比這更下面的島不會碰到跑道。 */
+const LANE_DEPTH = 72;
+const LANE_GAP = 8;
+
 export interface Size {
   width: number;
   height: number;
@@ -90,6 +94,17 @@ export function place(anchor: Anchor, size: Size, viewport: Size): Rect {
     y: clamp(y, margin, viewport.height - size.height - margin),
     ...size,
   };
+}
+
+/** 島若落在頂端中央被佔用的範圍內，就讓到右邊（放不下改左邊）；拖到別處的島不受影響。 */
+export function clearOfLane(rect: Rect, laneWidth: number, viewport: Size): Rect {
+  const { margin } = FLOATING_LIMITS;
+  const start = (viewport.width - laneWidth) / 2 - LANE_GAP;
+  const end = start + laneWidth + LANE_GAP * 2;
+  if (!laneWidth || rect.y > LANE_DEPTH || rect.x + rect.width <= start || rect.x >= end)
+    return rect;
+  const x = end + rect.width + margin <= viewport.width ? end : start - rect.width;
+  return { ...rect, x: Math.max(margin, x) };
 }
 
 /** 面板放到目前的視窗：太大就縮到放得下。 */

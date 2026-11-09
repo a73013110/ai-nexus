@@ -21,6 +21,7 @@ import { uniqueId } from '../browser/unique-id';
 import {
   anchorOf,
   centered,
+  clearOfLane,
   collapseTo,
   defaultPlacement,
   expandFrom,
@@ -40,6 +41,7 @@ import {
 } from './floating-geometry';
 import { Icon } from './icon';
 import { morphSize } from './morph-size';
+import { TopIslandLane } from './top-island-lane';
 
 /** `hidden` 還沒開過；開過之後只在面板、全螢幕與動態島之間切換，沒有關閉。 */
 export type FloatingMode = 'hidden' | 'panel' | 'full' | 'island';
@@ -221,6 +223,7 @@ export class FloatingPanel {
   private readonly islandSize = morphSize(() => this.island()?.nativeElement);
   private readonly island = viewChild<ElementRef<HTMLElement>>('island');
   private readonly injector = inject(Injector);
+  private readonly lane = inject(TopIslandLane);
   /** 縮小前是面板還是全螢幕；點島時回到那裡。 */
   private restoreTo: 'panel' | 'full' = 'panel';
   private pointer: Gesture | null = null;
@@ -240,7 +243,8 @@ export class FloatingPanel {
     // 手機的島固定在底部置中（拇指區），不套用桌面記住的位置。
     if (this.phone()) return place(centered('bottom'), size, viewport);
     const fallback = this.docked() ? centered('top') : collapseTo(this.panel(), viewport);
-    return place(this.anchor() ?? fallback, size, viewport);
+    const rect = place(this.anchor() ?? fallback, size, viewport);
+    return this.docked() ? clearOfLane(rect, this.lane.width(), viewport) : rect;
   });
   /** 島錨定的側與緣：外框內的面板與島對齊這裡，展開、縮小時看起來是從島長出、收回島。 */
   private readonly islandAnchor = computed(() => anchorOf(this.islandRect(), this.viewport()));

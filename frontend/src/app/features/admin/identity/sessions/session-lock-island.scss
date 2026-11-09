@@ -1,0 +1,83 @@
+// 快到期時從頂端落下的倒數島。頂端位置對齊鎖定卡的膠囊，到期時卡片從這裡撐開。
+.lock-island {
+  position: fixed;
+  z-index: 90;
+  inset: calc(var(--lock-pill-top) - var(--lock-pill-height) / 2) auto auto 50%;
+  translate: -50% -76px;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--lock-pill-height);
+  margin: 0;
+  padding: 0 var(--p-space-3);
+  overflow: visible;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  font-size: var(--p-font-data);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    translate var(--motion-morph) var(--ease-spring),
+    opacity var(--motion) var(--ease),
+    visibility 0s linear var(--motion-morph);
+}
+.lock-island[data-on] {
+  translate: -50% 0;
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+// 卡片已經接手：立刻讓位，不能再播一次升走。
+.lock-dialog[open] ~ .lock-island {
+  opacity: 0;
+  visibility: hidden;
+  transition: none;
+}
+.lock-island-ring {
+  flex: none;
+  width: var(--icon-md);
+  height: var(--icon-md);
+  rotate: -90deg;
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 3;
+}
+.lock-island-value {
+  stroke: var(--warning);
+  stroke-dasharray: 1 1;
+  transition: stroke-dashoffset 1s linear;
+}
+.lock-island-actions {
+  width: 0;
+  overflow: clip;
+  transition: width var(--motion-morph) var(--ease-spring);
+}
+.lock-island[data-open] .lock-island-actions {
+  width: auto;
+}
+.lock-island-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: max-content;
+  padding-inline-start: var(--p-space-1);
+}
+.lock-island-buttons button {
+  min-height: 1.875rem;
+  padding-inline: var(--p-space-3);
+  border-radius: var(--radius-action);
+  font-size: inherit;
+}
+.lock-island-buttons button:hover {
+  background: var(--hover);
+}
+.lock-island-buttons .is-primary,
+.lock-island-buttons .is-primary:hover {
+  background: var(--accent);
+  color: var(--on-accent);
+}

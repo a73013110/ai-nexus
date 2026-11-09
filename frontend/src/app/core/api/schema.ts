@@ -10274,7 +10274,9 @@ export interface operations {
     };
     ReportSessionActivity: {
         parameters: {
-            query?: never;
+            query?: {
+                idleSeconds?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;

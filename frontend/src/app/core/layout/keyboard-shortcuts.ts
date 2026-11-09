@@ -18,7 +18,6 @@ export interface ShortcutGroup {
  */
 export const SHORTCUTS = {
   commandPalette: { keys: 'mod+k', label: '快捷指令：搜尋功能、動作與對話' },
-  lockWorkspace: { keys: 'mod+alt+l', label: '鎖定工作區' },
   newChat: { keys: 'mod+alt+n', label: '開始新對話' },
   promptLibrary: { keys: 'mod+shift+l', label: '開啟提示詞範本' },
   renameConversation: { keys: 'f2', label: '修改目前對話名稱（焦點在標題時）' },
@@ -33,7 +32,7 @@ export const SHORTCUT_GROUPS: readonly ShortcutGroup[] = [
     id: 'global',
     name: '全站',
     description: '選單與清單都可用方向鍵、Home／End 移動，Enter 選取。',
-    items: [SHORTCUTS.commandPalette, SHORTCUTS.lockWorkspace, SHORTCUTS.dismiss],
+    items: [SHORTCUTS.commandPalette, SHORTCUTS.dismiss],
   },
   {
     id: 'chat',

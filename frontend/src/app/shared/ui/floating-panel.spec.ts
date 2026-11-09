@@ -2,6 +2,7 @@ import { Component, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FloatingPanel } from './floating-panel';
+import { TopIslandLane } from './top-island-lane';
 
 @Component({
   imports: [FloatingPanel],
@@ -94,6 +95,20 @@ describe('FloatingPanel', () => {
       island: host.querySelector<HTMLButtonElement>('.ui-floating-island-open')!,
     };
   }
+
+  it('steps aside while a temporary island holds the top center', async () => {
+    const { fixture, layer } = await docked();
+    const home = layer.style.getPropertyValue('--floating-x');
+    const lane = TestBed.inject(TopIslandLane);
+
+    lane.width.set(280);
+    fixture.detectChanges();
+    expect(layer.style.getPropertyValue('--floating-x')).not.toBe(home);
+
+    lane.width.set(0);
+    fixture.detectChanges();
+    expect(layer.style.getPropertyValue('--floating-x')).toBe(home);
+  });
 
   it('docks the island at the top center and grows the panel down from it', async () => {
     const { fixture, panel, layer, island } = await docked();

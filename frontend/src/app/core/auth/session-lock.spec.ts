@@ -32,7 +32,7 @@ describe('session lock', () => {
   let fetch: ReturnType<typeof vi.fn>;
   let current: AuthSessionDto;
   const calls = (path: string) =>
-    fetch.mock.calls.filter(([url]) => String(url).endsWith(path)).length;
+    fetch.mock.calls.filter(([url]) => String(url).split('?')[0].endsWith(path)).length;
   const settle = async () => {
     await vi.advanceTimersByTimeAsync(0);
     TestBed.tick();
@@ -96,6 +96,8 @@ describe('session lock', () => {
     document.dispatchEvent(new Event('keydown'));
     await vi.advanceTimersByTimeAsync(30_000);
     expect(calls('/auth/activity')).toBe(2);
+    // 補送的回報要帶上操作後經過的時間，伺服器才從操作當下起算。
+    expect(String(fetch.mock.calls.at(-1)?.[0])).toContain('idleSeconds=30');
   });
 
   it('asks the server at the deadline instead of locking on its own', async () => {
@@ -118,10 +120,10 @@ describe('session lock', () => {
     const lock = TestBed.inject(SessionLock);
     TestBed.inject(AuthService).adopt(session(null, 125));
     await settle();
-    expect(lock.countdownText()).toBe('2:05 後鎖定');
+    expect(lock.statusText()).toBe('2:05 後鎖定');
     expect(lock.warning()).toBe(false);
     await vi.advanceTimersByTimeAsync(6000);
-    expect(lock.countdownText()).toBe('1:59 後鎖定');
+    expect(lock.statusText()).toBe('1:59 後鎖定');
     expect(lock.warning()).toBe(true);
   });
 
@@ -140,7 +142,7 @@ describe('session lock', () => {
     await settle();
     document.dispatchEvent(new Event('pointerdown'));
     expect(lock.countdown()).toMatchObject({ seconds: 90, by: 'reauthentication' });
-    expect(lock.countdownText()).toBe('1:30 後需要驗證');
+    expect(lock.statusText()).toBe('1:30 後需要驗證');
   });
 
   it('warns only in the second half of a very short idle limit', async () => {
@@ -181,7 +183,7 @@ describe('session lock', () => {
       testing: { userId: 'u2' },
     } as unknown as AuthSessionDto);
     await settle();
-    expect(lock.canLock()).toBe(false);
+    expect(lock.lockable()).toBe(false);
     expect(lock.countdown()).toBeNull();
   });
 });

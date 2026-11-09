@@ -109,6 +109,24 @@ public sealed class SessionLockTests
     }
 
     [Fact]
+    public async Task ReportedActivityCountsFromTheLastInteractionAndNeverMovesBack()
+    {
+        var (factory, clock, client) = await SignedInAsync();
+        await using var _ = factory; using var __ = client;
+        clock.Advance(TimeSpan.FromMinutes(20));
+        var seconds = async (string query) =>
+        {
+            var reported = await client.PostAsync($"/api/v1/auth/activity{query}", null);
+            reported.EnsureSuccessStatusCode();
+            return (await reported.Content.ReadFromJsonAsync<AuthSessionDto>())!.Lifetime!.SecondsUntilLock;
+        };
+        // 節流補送的回報晚於實際操作，閒置要從操作當下算，倒數才不會自己跳回去。
+        Assert.Equal(1790, await seconds("?idleSeconds=10"));
+        // 宣稱閒置更久也不能把活動時間往回推。
+        Assert.Equal(1790, await seconds("?idleSeconds=100000"));
+    }
+
+    [Fact]
     public async Task ReauthenticationLimitLocksEvenWhileActive()
     {
         var (factory, clock, client) = await SignedInAsync();

@@ -1,9 +1,11 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   afterRenderEffect,
   computed,
+  effect,
   inject,
   linkedSignal,
   signal,
@@ -12,14 +14,14 @@ import {
 import { AuthService } from '@core/auth/auth-service';
 import { SessionLock } from '@core/auth/session-lock';
 import { ApiError, safeMessage } from '@core/errors/safe-errors';
-import { ThemeService } from '@core/preferences/theme-service';
 import { nameInitial } from '@shared/browser/format';
 import { Field } from '@shared/ui/field';
+import { Icon } from '@shared/ui/icon';
+import { morphSize } from '@shared/ui/morph-size';
 import { PasswordField, PasswordInput } from '@shared/ui/password-field';
+import { TopIslandLane } from '@shared/ui/top-island-lane';
 import { LoginSubmit, type SubmitPhase } from '../login-submit';
 
-/** 勾號停靠的時間，要等按鈕收成圓形才開始收回膠囊。 */
-const SUCCESS_HOLD_MS = 420;
 /** 最後這幾秒倒數島自動展開按鈕：來不及去找滑鼠的人也按得到。 */
 const EXPAND_AT_SECONDS = 20;
 
@@ -29,19 +31,24 @@ const EXPAND_AT_SECONDS = 20;
  */
 @Component({
   selector: 'nx-session-lock-screen',
-  styleUrl: './session-lock-screen.scss',
+  styleUrls: [
+    './session-lock-screen.scss',
+    './session-lock-island.scss',
+    './session-lock-motion.scss',
+  ],
   templateUrl: './session-lock-screen.html',
-  imports: [Field, LoginSubmit, PasswordField, PasswordInput],
+  imports: [Field, Icon, LoginSubmit, PasswordField, PasswordInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionLockScreen {
   protected readonly auth = inject(AuthService);
   protected readonly lock = inject(SessionLock);
-  private readonly theme = inject(ThemeService);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly wrap = viewChild.required<ElementRef<HTMLElement>>('wrap');
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
-  private readonly island = viewChild.required<ElementRef<HTMLElement>>('island');
+  private readonly island = viewChild<ElementRef<HTMLElement>>('island');
+  private readonly islandSize = morphSize(() => this.island()?.nativeElement);
+  private readonly lane = inject(TopIslandLane);
   private syncing = false;
 
   protected readonly initial = nameInitial;
@@ -61,13 +68,11 @@ export class SessionLockScreen {
     const lifetime = this.auth.session()?.lifetime;
     if (!lifetime) return '';
     const reason = this.lock.reason();
-    const why =
-      reason === 'manual'
-        ? '你鎖定了工作區。'
-        : reason === 'reauthentication'
-          ? `距上次驗證已滿 ${lifetime.reauthenticationHours} 小時。`
-          : `閒置超過 ${lifetime.idleLockMinutes} 分鐘。`;
-    return `${why}\n輸入密碼，回到剛才的畫面。`;
+    return reason === 'manual'
+      ? '你鎖定了工作區。'
+      : reason === 'reauthentication'
+        ? `距上次驗證已滿 ${lifetime.reauthenticationHours} 小時。`
+        : `閒置超過 ${lifetime.idleLockMinutes} 分鐘。`;
   });
 
   /** 鎖定時維持原值：倒數島要留在畫面上，`show` 量到寬度、把位置交給卡片之後才收掉。 */
@@ -91,6 +96,14 @@ export class SessionLockScreen {
       this.lock.reason();
       void this.sync();
     });
+    // 進 top layer 才蓋得過展開的助理面板；登記寬度讓助理的圓鈕讓到旁邊。離開時留在原圖層播完升走。
+    afterRenderEffect(() => {
+      const island = this.island()!.nativeElement;
+      if (this.islandOn() !== island.matches(':popover-open'))
+        island.togglePopover(this.islandOn());
+    });
+    effect(() => this.lane.width.set(this.islandOn() ? (this.islandSize()?.width ?? 0) : 0));
+    inject(DestroyRef).onDestroy(() => this.lane.width.set(0));
   }
 
   protected keepUsing() {
@@ -114,7 +127,7 @@ export class SessionLockScreen {
   }
 
   private async show(dialog: HTMLDialogElement) {
-    const islandWidth = this.islandOn() ? this.island().nativeElement.offsetWidth : 0;
+    const islandWidth = this.islandOn() ? this.island()!.nativeElement.offsetWidth : 0;
     dialog.showModal();
     this.islandOn.set(false);
     this.islandEngaged.set(false);
@@ -147,12 +160,9 @@ export class SessionLockScreen {
     dialog.style.setProperty('--lock-card-width', `${box.width}px`);
     dialog.style.setProperty('--lock-card-height', `${box.height}px`);
     dialog.dataset['phase'] = phase;
-    // 工作區在元件之外，靠根元素上的階段接到全域的回位動效（motion.scss，`session-return`）。
-    document.documentElement.dataset['sessionPhase'] = phase;
     await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((item) => item.finished));
     // 留著的話，階段的 animation 會一直蓋過輸錯密碼的抖動。
     delete dialog.dataset['phase'];
-    delete document.documentElement.dataset['sessionPhase'];
   }
 
   /** 全站快捷鍵掛在 document：鎖定時不能讓它們在畫面後方開面板。Esc 也不能關掉這個對話框。 */
@@ -176,8 +186,6 @@ export class SessionLockScreen {
       this.password.set('');
       this.rejections.set(0);
       this.submitPhase.set('success');
-      if (!this.theme.reducedMotion())
-        await new Promise((resolve) => setTimeout(resolve, SUCCESS_HOLD_MS));
       this.lock.finish(session);
     } catch (error) {
       // 超過硬上限：cookie 已失效，只能重新登入。

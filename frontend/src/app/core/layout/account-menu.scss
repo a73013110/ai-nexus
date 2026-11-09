@@ -52,7 +52,13 @@ nx-action-menu nx-icon {
   --icon-size: var(--icon-md);
 }
 :host-context(.is-compact) .profile-name,
-:host-context(.is-compact) nx-action-menu nx-icon,
-:host-context(.is-compact) .profile-lock {
+:host-context(.is-compact) nx-action-menu nx-icon {
   display: none;
+}
+// 圖示欄放不下並排，鎖頭疊在頭像下方：這是手動鎖定唯一的入口，不能跟著隱藏。
+:host-context(.is-compact) .profile-row {
+  flex-direction: column;
+}
+:host-context(.is-compact) .profile-row nx-action-menu {
+  flex: none;
 }

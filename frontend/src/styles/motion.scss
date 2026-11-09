@@ -485,16 +485,6 @@
 }
 @include reduced-motion(":root[data-reduced-motion='true']");
 
-// 解鎖時工作區從模糊後方輕輕回到原位（鎖定畫面在最上層，不受影響）。
-@keyframes session-return {
-  from {
-    scale: 0.985;
-  }
-}
-:root[data-session-phase='unlocking'] .workbench {
-  animation: session-return 560ms var(--ease-spring) 220ms both;
-}
-
 // Overview: data marks draw in, tiles settle and live indicators breathe in opacity. Loops stop
 // with the reduced-motion rule above, leaving their resting frame.
 // A clip, not a dash: under `non-scaling-stroke` dashes are measured in screen pixels while

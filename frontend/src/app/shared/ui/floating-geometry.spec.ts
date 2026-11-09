@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   anchorOf,
   centered,
+  clearOfLane,
   collapseTo,
   expandFrom,
   FLOATING_LIMITS,
@@ -14,6 +15,28 @@ import {
 } from './floating-geometry';
 
 const viewport = { width: 1200, height: 800 };
+
+describe('clearOfLane', () => {
+  const orb = place(centered('top'), { width: 44, height: 44 }, viewport);
+
+  it('steps aside only while the top centre is taken', () => {
+    expect(clearOfLane(orb, 0, viewport)).toEqual(orb);
+    expect(clearOfLane(orb, 280, viewport).x).toBe(748);
+  });
+
+  it('leaves an island that was dragged elsewhere alone', () => {
+    const far = { ...orb, x: 20 };
+    const low = { ...orb, y: 200 };
+    expect(clearOfLane(far, 280, viewport)).toEqual(far);
+    expect(clearOfLane(low, 280, viewport)).toEqual(low);
+  });
+
+  it('goes to the left when the right has no room', () => {
+    const narrow = { width: 500, height: 800 };
+    const small = place(centered('top'), { width: 44, height: 44 }, narrow);
+    expect(clearOfLane(small, 400, narrow).x).toBe(FLOATING_LIMITS.margin);
+  });
+});
 
 describe('floating geometry', () => {
   it('keeps a centered anchor on the middle line when the window resizes', () => {

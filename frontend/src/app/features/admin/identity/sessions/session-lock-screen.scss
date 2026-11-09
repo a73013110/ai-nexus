@@ -7,6 +7,8 @@
   --lock-pill-top: 44px;
   --lock-pill-width: 148px;
   --lock-pill-height: 40px;
+  // 用實際半徑而不是 9999px：從極大值內插，形狀會一路維持橢圓、最後一刻才變回圓角矩形。
+  --lock-pill-radius: calc(var(--lock-pill-height) / 2);
 }
 // 背景是模糊的工作區，外框是獨立一層，陰影才會跟著形變。
 .lock-dialog {
@@ -56,13 +58,14 @@
   overflow-y: auto;
 }
 .lock-wrap {
+  --shell-r: var(--radius-surface);
   position: relative;
   width: min(100%, 24rem);
 }
 .lock-surface {
   position: absolute;
-  inset: 0;
-  border-radius: var(--radius-surface);
+  inset: var(--shell-y) var(--shell-x);
+  border-radius: var(--shell-r);
   background: var(--surface);
   box-shadow: var(--shadow-floating);
 }
@@ -71,16 +74,14 @@
   top: 50%;
   left: 50%;
   translate: -50% -50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
   opacity: 0;
   font-size: var(--p-font-data);
   white-space: nowrap;
 }
-.lock-pill-state {
-  display: none;
-  align-items: center;
-  gap: var(--p-space-2);
-}
-// 用自己的 SVG 而不是 `nx-icon`：鎖扣與勾號的筆畫要各自動。
+// 用自己的 SVG 而不是 `nx-icon`：鎖扣要自己彈開。
 .lock-glyph {
   width: var(--icon-md);
   height: var(--icon-md);
@@ -94,53 +95,83 @@
 .lock-card {
   position: relative;
   display: grid;
-  gap: var(--p-space-4);
-  padding: var(--p-space-6);
+  gap: var(--p-space-5);
+  padding: var(--p-space-8) var(--p-space-6) var(--p-space-3);
 }
 .lock-head {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
+  display: grid;
+  justify-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+  text-align: center;
 }
-.lock-head .avatar {
-  width: 2.75rem;
-  height: 2.75rem;
+.lock-avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-block-end: var(--p-space-2);
+  border-radius: var(--radius-full);
   background: var(--accent);
-  border-color: transparent;
   color: var(--on-accent);
-  font-size: var(--p-font-lg);
+  font-size: var(--p-font-2xl);
+  font-weight: 600;
+}
+.lock-badge {
+  --icon-size: var(--icon-sm);
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink);
 }
 h2 {
   margin: 0;
-  font-size: var(--p-font-lg);
+  font-size: var(--p-font-xl);
   font-weight: 600;
-}
-.lock-reason {
-  margin: 0;
-  color: var(--secondary);
-  font-size: var(--text-label);
-  white-space: pre-line;
-}
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
 }
 .lock-who {
   display: flex;
+  justify-content: center;
   gap: var(--p-space-2);
+  max-width: 100%;
   margin: 0;
+  overflow: hidden;
   color: var(--secondary);
+  font-size: var(--text-label);
+  white-space: nowrap;
 }
 .lock-who b {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 550;
 }
-.lock-error {
+.lock-who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+form {
+  display: grid;
+  gap: var(--p-space-3);
+}
+.lock-field {
+  display: grid;
+  gap: 0.375rem;
+}
+.lock-note {
   min-height: 1.3125rem;
   margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.lock-note.is-error {
   color: var(--error);
-  font-size: var(--text-label);
 }
 .lock-other {
   justify-self: center;
@@ -158,267 +189,4 @@ form {
 }
 .lock-wrap.shake-b {
   animation: login-shake-b 420ms var(--ease) both;
-}
-
-// 快到期時從頂端落下的倒數島。頂端位置對齊鎖定卡的膠囊，到期時卡片從這裡撐開。
-.lock-island {
-  position: fixed;
-  z-index: 90;
-  top: calc(var(--lock-pill-top) - var(--lock-pill-height) / 2);
-  left: 50%;
-  translate: -50% -76px;
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  min-height: var(--lock-pill-height);
-  padding-inline: var(--p-space-3);
-  border-radius: var(--radius-full);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-floating);
-  font-size: var(--p-font-data);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    translate var(--motion-morph) var(--ease-spring),
-    opacity var(--motion) var(--ease),
-    visibility 0s linear var(--motion-morph);
-}
-.lock-island[data-on] {
-  translate: -50% 0;
-  opacity: 1;
-  visibility: visible;
-  transition-delay: 0s;
-}
-// 卡片已經接手：立刻讓位，不能再播一次升走。
-.lock-dialog[open] ~ .lock-island {
-  opacity: 0;
-  visibility: hidden;
-  transition: none;
-}
-.lock-island-ring {
-  flex: none;
-  width: var(--icon-md);
-  height: var(--icon-md);
-  rotate: -90deg;
-  fill: none;
-  stroke: var(--line);
-  stroke-width: 3;
-}
-.lock-island-value {
-  stroke: var(--warning);
-  stroke-dasharray: 1 1;
-  transition: stroke-dashoffset 1s linear;
-}
-.lock-island-actions {
-  width: 0;
-  overflow: clip;
-  transition: width var(--motion-morph) var(--ease-spring);
-}
-.lock-island[data-open] .lock-island-actions {
-  width: auto;
-}
-.lock-island-buttons {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-1);
-  width: max-content;
-  padding-inline-start: var(--p-space-1);
-}
-.lock-island-buttons button {
-  min-height: 1.875rem;
-  padding-inline: var(--p-space-3);
-  border-radius: var(--radius-action);
-  font-size: inherit;
-}
-.lock-island-buttons button:hover {
-  background: var(--hover);
-}
-.lock-island-buttons .is-primary,
-.lock-island-buttons .is-primary:hover {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-// 膠囊從頂端落下撐成卡片，解鎖時收回膠囊升走。keyframes 只有這個元件用，跟著延後載入的 chunk，不進初始樣式。
-@keyframes lock-ground-arrive {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes lock-fade-out {
-  to {
-    opacity: 0;
-  }
-}
-@keyframes lock-drop {
-  from {
-    opacity: 0;
-    translate: 0 calc(var(--lock-drop) - 72px);
-    animation-timing-function: var(--ease-spring);
-  }
-  41% {
-    opacity: 1;
-    translate: 0 var(--lock-drop);
-    animation-timing-function: var(--ease-spring);
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-@keyframes lock-grow {
-  from {
-    translate: 0 var(--lock-drop);
-  }
-}
-@keyframes lock-rise {
-  from {
-    opacity: 1;
-    translate: 0 0;
-    animation-timing-function: var(--ease-spring);
-  }
-  50% {
-    opacity: 1;
-    translate: 0 var(--lock-drop);
-    animation-timing-function: linear;
-  }
-  80% {
-    opacity: 1;
-    translate: 0 var(--lock-drop);
-    animation-timing-function: var(--ease-exit);
-  }
-  to {
-    opacity: 0;
-    translate: 0 calc(var(--lock-drop) - 72px);
-  }
-}
-@keyframes lock-shell-open {
-  from,
-  41% {
-    inset: var(--lock-inset-y) var(--lock-inset-x);
-    border-radius: var(--radius-full);
-    animation-timing-function: var(--ease-spring);
-  }
-  to {
-    inset: 0;
-    border-radius: var(--radius-surface);
-  }
-}
-@keyframes lock-shell-grow {
-  from {
-    inset: var(--lock-inset-y) var(--lock-inset-x);
-    border-radius: var(--radius-full);
-  }
-}
-@keyframes lock-shell-close {
-  from {
-    inset: 0;
-    border-radius: var(--radius-surface);
-    animation-timing-function: var(--ease-spring);
-  }
-  50%,
-  to {
-    inset: var(--lock-inset-y) var(--lock-inset-x);
-    border-radius: var(--radius-full);
-  }
-}
-@keyframes lock-pill-leave {
-  from,
-  41% {
-    opacity: 1;
-  }
-  56%,
-  to {
-    opacity: 0;
-  }
-}
-@keyframes lock-pill-return {
-  from,
-  24% {
-    opacity: 0;
-  }
-  38%,
-  to {
-    opacity: 1;
-  }
-}
-@keyframes lock-shackle-close {
-  from {
-    translate: 0 -3px;
-  }
-}
-@keyframes lock-check-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
-[data-phase='locking'] .lock-pill-state[data-for='locking'],
-[data-phase='unlocking'] .lock-pill-state[data-for='unlocking'] {
-  display: inline-flex;
-}
-[data-phase='locking'] {
-  --lock-motion: 780ms;
-  .lock-ground {
-    animation: lock-ground-arrive var(--motion-panel) linear both;
-  }
-  .lock-wrap {
-    animation: lock-drop var(--lock-motion) linear both;
-  }
-  .lock-surface {
-    animation: lock-shell-open var(--lock-motion) linear both;
-  }
-  .lock-pill {
-    animation: lock-pill-leave var(--lock-motion) linear both;
-  }
-  .lock-shackle {
-    animation: lock-shackle-close 320ms var(--ease-spring) 180ms both;
-  }
-  .lock-card {
-    animation: panel-arrive 280ms var(--ease-spring) 600ms both;
-  }
-}
-// 從倒數島撐開：膠囊已經在頂端，略過落下，直接長成卡片。
-[data-phase='locking'][data-from='island'] {
-  --lock-motion: 520ms;
-  .lock-wrap {
-    animation: lock-grow var(--lock-motion) var(--ease-spring) both;
-  }
-  .lock-surface {
-    animation: lock-shell-grow var(--lock-motion) var(--ease-spring) both;
-  }
-  .lock-pill {
-    animation: lock-pill-leave 380ms linear both;
-  }
-  .lock-card {
-    animation: panel-arrive 280ms var(--ease-spring) 170ms both;
-  }
-}
-[data-phase='unlocking'] {
-  --lock-motion: 1050ms;
-  .lock-ground {
-    animation: lock-fade-out 420ms linear 280ms both;
-  }
-  .lock-wrap {
-    animation: lock-rise var(--lock-motion) linear both;
-  }
-  .lock-surface {
-    animation: lock-shell-close var(--lock-motion) linear both;
-  }
-  .lock-pill {
-    animation: lock-pill-return var(--lock-motion) linear both;
-  }
-  .lock-check {
-    stroke-dasharray: 1 1;
-    animation: lock-check-draw 300ms var(--ease) 300ms both;
-  }
-  .lock-card {
-    animation: lock-fade-out 120ms var(--ease-exit) both;
-  }
 }
