@@ -187,11 +187,12 @@ for (const kind of ["project", "evaluation"] as const) {
         deleted = true;
         return route.fulfill({ status: 204 });
       }
+      const rows = deleted ? [] : [value];
       const body =
         path === `/api/v1/${endpoint}`
-          ? deleted
-            ? []
-            : [value]
+          ? isProject
+            ? { items: rows, total: rows.length, offset: 0, complete: true }
+            : rows
           : path === `/api/v1/${endpoint}/${resource.id}`
             ? value
             : [];
