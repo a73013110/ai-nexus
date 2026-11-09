@@ -3,9 +3,12 @@ using Microsoft.AspNetCore.Http.Features;
 
 namespace AiNexus.Platform.Http;
 
+/// <summary>客戶端太久收不下資料，連線已切斷。等同客戶端離開：不是伺服器錯誤，也不是上游逾時。</summary>
+public sealed class SseClientStalledException : OperationCanceledException;
+
 /// <summary>
 /// 一條 SSE 回應：第一次寫入才送表頭，之前都還能回一般的錯誤回應。
-/// 每次寫入限時，慢客戶端不會一直佔住連線與串流上限；逾時以取消例外結束這條串流。
+/// 每次寫入限時，慢客戶端不會一直佔住連線與串流上限；逾時就切斷連線並拋出 <see cref="SseClientStalledException"/>。
 /// </summary>
 public sealed class SseStream(HttpContext http, TimeProvider clock)
 {
@@ -27,10 +30,19 @@ public sealed class SseStream(HttpContext http, TimeProvider clock)
     private async Task WriteAsync(string frame, CancellationToken ct)
     {
         if (!started) Start();
-        using var slowClient = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        slowClient.CancelAfter(WriteLimit);
-        await http.Response.WriteAsync(frame, slowClient.Token);
-        await http.Response.Body.FlushAsync(slowClient.Token);
+        using var limit = new CancellationTokenSource(WriteLimit, clock);
+        using var write = CancellationTokenSource.CreateLinkedTokenSource(ct, limit.Token);
+        try
+        {
+            await http.Response.WriteAsync(frame, write.Token);
+            await http.Response.Body.FlushAsync(write.Token);
+        }
+        catch (OperationCanceledException) when (limit.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            // 普通的取消例外在 ct 沒被取消時，上層分不出是誰逾時（模型呼叫會當成模型逾時）；連線也要切斷，否則收尾的錯誤事件又卡在同一個客戶端。
+            http.Abort();
+            throw new SseClientStalledException();
+        }
         lastWrite = clock.GetUtcNow();
     }
 

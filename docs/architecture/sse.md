@@ -15,7 +15,7 @@ data: {"version":1,"sequence":3,"runId":"...","type":"delta","status":"running",
 
 失敗的RunDto／MessageDto及run status／snapshot新增nullable `issueCode`，格式為伺服器產生的 `NX-`＋32個hex字元；保留errorCode供重試分類。前端以固定安全提示與複製按鈕顯示，禁止使用provider原始error message。若SSE已開始而訂閱處理中途失敗，邊界送 `event: error`，data只有安全的`code`、`message`與`issueCode`；前端將它解析為安全ApiError。沒有有效伺服器碼的網路錯誤顯示明確LOCAL代碼。詳見 [錯誤回應與查證代碼](error-contract.md)。
 
-回應型別 `text/event-stream`，UTF-8、LF framing、每 10 秒 heartbeat comment、禁用 buffering／快取。每個 SSE write 最多等待 5 秒。每個使用者最多 2 條訂閱，全域最多 64 條。斷線只停止訂閱，背景生成繼續；停止生成須呼叫 `POST /runs/{id}/cancel`。
+回應型別 `text/event-stream`，UTF-8、LF framing、每 10 秒 heartbeat comment、禁用 buffering／快取。每個 SSE write 最多等待 5 秒，逾時切斷連線、視同客戶端離開。每個使用者最多 2 條訂閱，全域最多 64 條。斷線只停止訂閱，背景生成繼續；停止生成須呼叫 `POST /runs/{id}/cancel`。
 
 事件短期保留 24 小時。cursor 過期或保留範圍有缺口時提供 snapshot；cursor 負值或超前回傳 409。終止狀態送完事件後關閉連線。
 

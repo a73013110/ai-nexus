@@ -4,6 +4,7 @@ using System.Text.Json;
 using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using AiNexus.UnitTests.Support;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -31,6 +32,23 @@ public sealed class DiagnosticRequestMiddlewareTests
         var response = Encoding.UTF8.GetString(body.ToArray()); Assert.Contains("event: error", response); Assert.DoesNotContain(Secret, response); Assert.DoesNotContain("private.test", response);
         var issue = services.GetRequiredService<Issues>().Report(failure, HttpErrors.ServiceUnavailable);
         Assert.Contains(issue, response); Assert.Single(buffer.Drain(), x => x.IssueCode == issue);
+    }
+
+    /// <summary>客戶端收不下資料已被切斷：不是伺服器錯誤，也不再對這條連線寫錯誤事件。</summary>
+    [Fact]
+    public async Task StalledSseClientIsCancelledWithoutAnIssueOrAnotherWrite()
+    {
+        using var health = new DiagnosticHealth(); var options = Options.Create(new DiagnosticOptions()); var buffer = new DiagnosticBuffer(options, health);
+        using var loggerProvider = new DiagnosticLoggerProvider(buffer, options, new EnvironmentFixture());
+        using var services = new ServiceCollection().AddLogging(x => x.AddProvider(loggerProvider)).AddSingleton<Issues>().BuildServiceProvider();
+        using var body = new MemoryStream(); var http = new DefaultHttpContext { RequestServices = services };
+        http.Features.Set<IHttpResponseFeature>(new StartedSseResponse()); http.Response.Body = body; http.Response.ContentType = "text/event-stream";
+
+        await new DiagnosticRequestMiddleware(_ => throw new SseClientStalledException())
+            .InvokeAsync(http, services.GetRequiredService<Issues>(), services.GetRequiredService<ILogger<DiagnosticRequestMiddleware>>());
+
+        Assert.Equal(0, body.Length);
+        Assert.All(buffer.Drain(), x => Assert.Null(x.IssueCode));
     }
 
     private sealed class StartedSseResponse : HttpResponseFeature { public override bool HasStarted => true; }

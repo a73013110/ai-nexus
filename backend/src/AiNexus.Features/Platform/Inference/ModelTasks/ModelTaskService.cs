@@ -7,6 +7,7 @@ using AiNexus.Features.Platform.Inference.Models;
 using AiNexus.Features.Platform.Inference.Providers;
 using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -252,7 +253,7 @@ public sealed class ModelTaskService(
             call.Status = "completed";
             return (new ModelTaskResult(text.ToString(), finish == "MAX_TOKENS", call.InputTokens, call.OutputTokens), calls);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException error) when (ct.IsCancellationRequested || error is SseClientStalledException)
         {
             call.Status = "cancelled";
             throw;

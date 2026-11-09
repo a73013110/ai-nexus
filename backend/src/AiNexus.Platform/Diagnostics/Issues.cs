@@ -227,7 +227,7 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
             // 框架的空狀態錯誤（驗證挑戰、禁止存取、無匹配路由）交給 UseStatusCodePages 產生本體。
             await next(http);
         }
-        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
+        catch (OperationCanceledException exception) when (http.RequestAborted.IsCancellationRequested || exception is SseClientStalledException)
         {
             outcome = "cancelled";
         }

@@ -14,6 +14,7 @@ using AiNexus.Features.Platform.Inference.Runs;
 using AiNexus.Features.Platform.Inference.ModelTasks;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using AiNexus.Features.Admin.Operations;
+using AiNexus.Platform.Http;
 
 namespace AiNexus.IntegrationTests.Inference;
 
@@ -63,6 +64,21 @@ public sealed class ModelPolicyTests
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "禁止", "not-approved"))).StatusCode);
         var quota = await factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "ocr", "短文", "辨識", CancellationToken.None);
         Assert.Equal("model_token_quota", quota.Error?.Code);
+    }
+
+    /// <summary>瀏覽器收不下串流不是模型逾時：這次呼叫照取消結算，例外照原樣交給請求邊界。</summary>
+    [Fact]
+    public async Task StalledStreamClientCancelsTheCallInsteadOfReportingAModelTimeout()
+    {
+        await using var factory = new AppFactory();
+        using var client = await factory.SignedInAsync();
+        var owner = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+
+        await Assert.ThrowsAsync<SseClientStalledException>(() => factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(
+            owner, "transform", "短文", "改寫", CancellationToken.None, onText: (_, _) => throw new SseClientStalledException()));
+
+        using var scope = factory.Services.CreateScope();
+        Assert.Equal("cancelled", await scope.ServiceProvider.GetRequiredService<AppDbContext>().ModelInvocations.Where(x => x.OwnerId == owner).Select(x => x.Status).SingleAsync());
     }
 
     [Fact]
