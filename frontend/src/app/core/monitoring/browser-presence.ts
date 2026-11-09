@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, effect, inject, untracked } from '@angular/core';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -45,7 +46,7 @@ export class BrowserPresence {
     const visibility = () => this.schedule(0);
     for (const event of INTERACTIONS)
       document.addEventListener(event, interacted, { passive: true });
-    document.addEventListener('visibilitychange', visibility);
+    onVisibilityChange(visibility, destroy);
     this.router.events
       .pipe(
         filter((event) => event instanceof NavigationEnd),
@@ -67,7 +68,6 @@ export class BrowserPresence {
     destroy.onDestroy(() => {
       this.stop();
       for (const event of INTERACTIONS) document.removeEventListener(event, interacted);
-      document.removeEventListener('visibilitychange', visibility);
     });
   }
   /** 作廢進行中與排定的心跳；晚到的回應因 `revision` 不同而不再排下一次。 */

@@ -1,4 +1,5 @@
 import { DestroyRef, inject, signal } from '@angular/core';
+import { onVisibilityChange } from './page-visibility';
 
 const DAY = 86_400_000;
 
@@ -35,10 +36,9 @@ export function currentDay() {
     if (document.visibilityState === 'visible') refresh();
   };
   refresh();
-  document.addEventListener('visibilitychange', visible);
+  onVisibilityChange(visible);
   inject(DestroyRef).onDestroy(() => {
     clearTimeout(timer);
-    document.removeEventListener('visibilitychange', visible);
   });
   return day.asReadonly();
 }

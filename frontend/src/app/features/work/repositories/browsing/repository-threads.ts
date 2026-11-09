@@ -2,12 +2,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
   input,
   linkedSignal,
-  signal,
-  untracked,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -160,7 +157,7 @@ export class RepositoryThreads {
     { value: 'closed', label: this.kind() === 'pulls' ? '已關閉／合併' : '已關閉' },
     { value: 'all', label: '全部' },
   ]);
-  private readonly page = signal(1);
+  private readonly page = linkedSignal({ source: () => this.id(), computation: () => 1 });
   private readonly read = apiResource({
     feature: 'repositories',
     params: () => {
@@ -207,13 +204,6 @@ export class RepositoryThreads {
     return this.state() === 'open' ? `目前沒有開啟中的${thing}。` : `沒有${thing}。`;
   });
   readonly when = relativeTime;
-
-  constructor() {
-    effect(() => {
-      this.id();
-      untracked(() => this.page.set(1));
-    });
-  }
 
   filter(queryParams: Record<string, string | null>) {
     void this.router.navigate([], { queryParams, queryParamsHandling: 'merge', replaceUrl: true });

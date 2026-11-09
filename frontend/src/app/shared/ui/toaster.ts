@@ -13,6 +13,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { bringToFront } from '../browser/top-layer';
 import { SwipeTracker } from '../browser/swipe';
 import { Icon } from './icon';
@@ -190,8 +191,7 @@ export class Toaster {
     });
 
     const visibility = () => (document.hidden ? this.service.pause() : this.syncTimers());
-    document.addEventListener('visibilitychange', visibility);
-    destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', visibility));
+    onVisibilityChange(visibility, destroyRef);
   }
 
   /** 收合時，後面的卡片採用前卡的高度，只露出邊緣。 */

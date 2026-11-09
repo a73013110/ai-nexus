@@ -1,4 +1,5 @@
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { ToastService } from '@shared/ui/toast-service';
 import { ApiClient } from '../api/api-client';
 import type { AuthSessionDto, SessionLifetimeDto } from '../api/schema';
@@ -96,13 +97,12 @@ export class SessionLock {
       this.channel.onmessage = (event: MessageEvent<LockMessage>) => this.received(event.data);
     for (const name of INTERACTIONS)
       document.addEventListener(name, this.interacted, { passive: true });
-    document.addEventListener('visibilitychange', this.visibility);
+    onVisibilityChange(this.visibility);
     inject(DestroyRef).onDestroy(() => {
       clearTimeout(this.timer);
       clearTimeout(this.reportTimer);
       this.channel?.close();
       for (const name of INTERACTIONS) document.removeEventListener(name, this.interacted);
-      document.removeEventListener('visibilitychange', this.visibility);
     });
   }
 

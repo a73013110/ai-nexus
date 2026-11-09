@@ -1,13 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  effect,
-  inject,
-  linkedSignal,
-  signal,
-  untracked,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import type { RepositoryCommitDto, RepositoryCommitPageDto } from '@core/api/schema';
@@ -134,7 +125,9 @@ export class RepositoryCommits {
   readonly store = inject(RepositoryStore);
   private readonly api = inject(RepositoriesApi);
   private readonly router = inject(Router);
-  private readonly page = signal(1);
+  /** 換儲存庫或提交就回到第一頁、清空挑選。 */
+  private readonly history = computed(() => `${this.store.fullName()}@${this.store.commit()}`);
+  private readonly page = linkedSignal({ source: this.history, computation: () => 1 });
   private readonly read = apiResource({
     feature: 'repositories',
     params: () => {
@@ -180,7 +173,7 @@ export class RepositoryCommits {
   readonly refreshing = this.read.refreshing;
   readonly error = this.read.error;
   /** 最多兩個提交；選第三個會取代較舊的那個選擇。 */
-  readonly picked = signal<string[]>([]);
+  readonly picked = linkedSignal<string, string[]>({ source: this.history, computation: () => [] });
   readonly range = computed(() => {
     const [first, second] = this.picked();
     if (!first || !second) return null;
@@ -207,17 +200,6 @@ export class RepositoryCommits {
   });
   readonly short = shortSha;
   readonly when = relativeTime;
-
-  constructor() {
-    effect(() => {
-      this.store.fullName();
-      this.store.commit();
-      untracked(() => {
-        this.page.set(1);
-        this.picked.set([]);
-      });
-    });
-  }
 
   initial = (name: string) => nameInitial(name, '?').toUpperCase();
   reload() {

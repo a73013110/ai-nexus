@@ -12,6 +12,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { ThemeService } from '@core/preferences/theme-service';
 import { uniqueId } from '@shared/browser/unique-id';
 import {
@@ -141,7 +142,7 @@ export class SignalMark {
         if (!document.hidden && !this.complete())
           this.frame = requestAnimationFrame((time) => this.tick(time));
       };
-      document.addEventListener('visibilitychange', visibility);
+      onVisibilityChange(visibility, destroy);
       // 標記等待或飛行時發生的版面變化，會讓它留在自己的盒子上。
       const resize = new ResizeObserver(() => this.complete() || this.paint(this.elapsed));
       resize.observe(this.host.nativeElement);
@@ -150,7 +151,6 @@ export class SignalMark {
       destroy.onDestroy(() => {
         cancelAnimationFrame(this.frame);
         resize.disconnect();
-        document.removeEventListener('visibilitychange', visibility);
       });
     });
   }

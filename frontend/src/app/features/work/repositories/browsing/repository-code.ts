@@ -2,10 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
-  signal,
-  untracked,
+  linkedSignal,
   viewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -260,7 +258,11 @@ export class RepositoryCode {
       ? file
       : null;
   });
-  readonly picked = signal<ReadonlySet<string>>(this.empty);
+  /** 挑選只屬於同一個儲存庫的同一個提交。 */
+  readonly picked = linkedSignal<string, ReadonlySet<string>>({
+    source: () => `${this.store.fullName()}@${this.store.commit()}`,
+    computation: () => this.empty,
+  });
   readonly pickedNames = computed(
     () =>
       [...this.picked()].map(baseName).slice(0, 3).join('、') + (this.picked().size > 3 ? '…' : ''),
@@ -272,15 +274,6 @@ export class RepositoryCode {
       (this.filePath() ? this.fileRead.error() : this.treeRead.error()) ||
       '',
   );
-
-  constructor() {
-    // 挑選只屬於同一個儲存庫的同一個提交。
-    effect(() => {
-      this.store.fullName();
-      this.store.commit();
-      untracked(() => this.picked.set(this.empty));
-    });
-  }
 
   at = (path: string) => ({ path: path || null, file: null });
   open = (path: string) => ({ file: path, path: null });

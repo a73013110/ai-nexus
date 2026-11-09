@@ -1,4 +1,5 @@
 import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { ApiError, safeMessage } from '@core/errors/safe-errors';
 import type {
   DependencyTraffic,
@@ -152,12 +153,11 @@ export class MonitoringStore {
       this.tick();
       if (this.started) this.restart();
     };
-    document.addEventListener('visibilitychange', visibility);
+    onVisibilityChange(visibility);
     this.tick();
     inject(DestroyRef).onDestroy(() => {
       this.stop();
       clearInterval(this.clock);
-      document.removeEventListener('visibilitychange', visibility);
     });
   }
   /** 過期判斷與運行時間所依賴的一秒時鐘；分頁隱藏時停止。 */

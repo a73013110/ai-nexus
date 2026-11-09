@@ -1,4 +1,5 @@
 import { isCancellation, safeMessage } from '@core/errors/safe-errors';
+import { onVisibilityChange } from '@shared/browser/page-visibility';
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import type { NotificationDto, NotificationTargetDto } from '@core/api/schema';
@@ -67,7 +68,7 @@ export class NotificationStore {
     const navigated = this.router.events.subscribe((event) => {
       if (event instanceof NavigationEnd) view();
     });
-    document.addEventListener('visibilitychange', view);
+    onVisibilityChange(view);
     view();
     // 看過就算讀過：通知指向的畫面正在眼前（剛打開，或在畫面上時才送達），不必再回通知中心點掉。
     effect(() => {
@@ -108,7 +109,6 @@ export class NotificationStore {
       clearTimeout(this.timer);
       this.controller?.abort();
       navigated.unsubscribe();
-      document.removeEventListener('visibilitychange', view);
     });
   }
   /** 帳號與登入世代都沒變；換人時 effect 已重設狀態，晚到的結果一律丟棄。 */
