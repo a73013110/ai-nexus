@@ -10,7 +10,7 @@ namespace AiNexus.Platform.Scheduling;
 /// </summary>
 public abstract partial record Schedule
 {
-    /// <summary><c>interval</c>、<c>cron</c> 或 <c>startup</c>，前端依此決定倒數的呈現。</summary>
+    /// <summary><c>interval</c>、<c>cron</c> 或 <c>startup</c>，前端依此分組。</summary>
     public abstract string Kind { get; }
 
     /// <summary>給人看的排程，例如「每 1 小時」「每天 08:00」。</summary>
@@ -19,8 +19,14 @@ public abstract partial record Schedule
     /// <summary>每次程序啟動時執行一次的任務；引擎只讓啟動它的程序認領這一輪。</summary>
     public bool RunsAtStartup => this is StartupSchedule;
 
-    /// <summary>每輪的固定間隔；只有 interval 有值，前端用來畫倒數環。</summary>
+    /// <summary>每輪的固定間隔；只有 interval 有值，前端由下次執行時間往後推算預定時間。</summary>
     public virtual TimeSpan? Interval => null;
+
+    /// <summary>
+    /// <paramref name="after"/>（不含）到 <paramref name="until"/>（含）之間排程固定的時刻，舊到新。
+    /// 只有 cron 有固定時刻：固定間隔取決於上一輪何時結束，啟動時執行沒有排程，都回傳空。
+    /// </summary>
+    public virtual IEnumerable<DateTimeOffset> Occurrences(DateTimeOffset after, DateTimeOffset until) => [];
 
     /// <summary>任務第一次出現（資料庫還沒有這一列）時的執行時間。</summary>
     public abstract DateTimeOffset? First(DateTimeOffset now);
@@ -103,6 +109,8 @@ internal sealed record CronSchedule : Schedule
     public override string Description => description;
     public override DateTimeOffset? First(DateTimeOffset now) => expression.GetNextOccurrence(now, Taipei);
     public override DateTimeOffset? Next(DateTimeOffset finishedAt, bool failed) => expression.GetNextOccurrence(finishedAt, Taipei);
+    public override IEnumerable<DateTimeOffset> Occurrences(DateTimeOffset after, DateTimeOffset until)
+        => expression.GetOccurrences(after, until, Taipei, fromInclusive: false, toInclusive: true);
 }
 
 internal sealed record StartupSchedule(TimeSpan RetryAfter) : Schedule

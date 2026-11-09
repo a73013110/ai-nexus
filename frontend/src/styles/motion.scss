@@ -573,7 +573,7 @@
     border-bottom-color: transparent;
   }
 }
-// 背景作業的計時與執行狀態（shared/ui/ticking-time、run-state、run-strip）。
+// 背景作業的計時與執行狀態（shared/ui/ticking-time、run-state）。
 // 倒數跳動的那一位數從上方落下（經過時間由 --digit-from 改成從下方升起），像翻牌計時器。
 @keyframes digit-roll {
   from {
@@ -585,12 +585,5 @@
 @keyframes run-draw {
   from {
     stroke-dashoffset: 1;
-  }
-}
-// 新的一輪從紀錄條底部以彈簧長出。
-@keyframes bar-arrive {
-  from {
-    opacity: 0;
-    scale: 1 0;
   }
 }

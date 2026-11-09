@@ -47,6 +47,6 @@
 
 ## 觀察
 
-- 管理頁：倒數、執行中進度、最近 24 輪、完整執行紀錄；功能 ID 見 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs) 的 `scheduling`、`scheduling.manage`。
+- 管理頁：24 小時時間軸（實際輪次與預定）、執行中進度、完整執行紀錄；功能 ID 見 [`FeatureCatalog`](../../backend/src/AiNexus.Features/Admin/AccessControl/FeatureCatalog.cs) 的 `scheduling`、`scheduling.manage`。
 - 監控來源 `scheduled-tasks`（[監控子系統](monitoring-sources.md)）；連續失敗達門檻通知能看「背景作業」頁的人，恢復時撤下。
 - 日誌 3800–3805（[日誌事件](log-events.md)）。

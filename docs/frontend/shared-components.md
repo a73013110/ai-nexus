@@ -31,8 +31,9 @@
 ## 計時與執行狀態
 
 - 排程任務、背景工作這類「下次何時跑、正在跑、跑得如何」的畫面用這一組，範例在 `/admin/design` 的「執行與計時」；用法見 [背景作業頁](../../frontend/src/app/features/admin/scheduling/scheduling-page.html)。
-- 倒數與經過時間用 `TickingTime`（放在圓環中心時加 `compact`，執行中只讓外圈動、中心顯示經過時間，不再疊一個會轉的圖示），裝飾性的圓環用 `TimerRing`；兩者都讀 [`ServerClock`](../../frontend/src/app/shared/browser/server-clock.ts)，頁面讀到伺服器時間就 `sync()`，同一頁的數字同時跳、不受使用者電腦時鐘誤差影響。不自己寫 `setInterval`。
-- 一次執行的狀態圖示用 `RunState`，最近幾輪用 `RunStrip`（顏色是結果、高度是耗時）。
+- 倒數與經過時間用 `TickingTime`，讀 [`ServerClock`](../../frontend/src/app/shared/browser/server-clock.ts)；頁面讀到伺服器時間就 `sync()`，同一頁的數字同時跳、不受使用者電腦時鐘誤差影響。不自己寫 `setInterval`。
+- 一次執行的狀態圖示用 `RunState`。
+- 多列共用一條時間的資料用 `TimeLanes`＋`TimeLane`（過去的結果與未來的預定在同一條軸上）：列數多時刻度、現在線與提示仍只畫一份，每列的記號合成幾條路徑。少數幾個點才給 `label`。
 - 只有「後來才出現」的項目播進場動效：用 [`arrivals()`](../../frontend/src/app/shared/browser/arrivals.ts) 判斷，不要在第一次顯示後才加動效 class（已存在的元素一樣會播）。
 
 ## 程式碼與範例

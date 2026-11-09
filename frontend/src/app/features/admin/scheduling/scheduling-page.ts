@@ -18,7 +18,7 @@ import {
   jobStatus,
 } from '@features/work/jobs/job-kind';
 import { action } from '@shared/browser/action';
-import { formatDate, relativeTime } from '@shared/browser/format';
+import { formatDate, formatTimeOfDay, relativeTime } from '@shared/browser/format';
 import { ServerClock } from '@shared/browser/server-clock';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
@@ -28,12 +28,13 @@ import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
 import { RunState } from '@shared/ui/run-state';
-import { RunStrip } from '@shared/ui/run-strip';
+import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { endpointTable } from '@shared/ui/table-model';
 import { TickingTime } from '@shared/ui/ticking-time';
-import { TimerRing } from '@shared/ui/timer-ring';
+import { TimeLane } from '@shared/ui/time-lane';
+import { TimeLanes } from '@shared/ui/time-lanes';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { SchedulingApi } from './scheduling-api';
 import {
@@ -42,19 +43,25 @@ import {
   IDLE_POLL,
   RUN_STATUS_OPTIONS,
   RUN_TRIGGERS,
-  boardCounts,
-  countdownFrom,
-  groupByCategory,
+  type TaskPhase,
+  boardSummary,
+  laneGroups,
+  laneMarks,
+  laneNote,
+  laneSummary,
   nextPoll,
-  ringMode,
+  nightShades,
+  plannedTimes,
   runDuration,
   runFailure,
-  runProgress,
   runStatus,
-  stripItems,
+  stateLabel,
   taskPhase,
   taskRunState,
 } from './scheduling-presentation';
+
+/** 一條軌道千分比的解析度；比這更密的預定畫出來也分不開。 */
+const PLANNED_RESOLUTION = 500;
 
 const VIEWS = [
   { value: 'tasks', label: '排程任務' },
@@ -63,8 +70,8 @@ const VIEWS = [
 type View = (typeof VIEWS)[number]['value'];
 
 /**
- * 背景作業（`scheduling`）：所有排程任務一張卡一個，倒數、執行中、上一輪結果與最近幾輪一眼看完；另一個檢視是使用者送出的佇列工作。
- * 看板依處境調整輪詢（{@link nextPoll}），並以回應裡的伺服器時間校正共用時鐘，倒數不受使用者電腦時鐘誤差影響。
+ * 背景作業（`scheduling`）：所有排程任務放在同一條 24 小時時間軸上，過去的結果與接下來的預定一眼看完；另一個檢視是使用者送出的佇列工作。
+ * 看板依處境調整輪詢（{@link nextPoll}），並以回應裡的伺服器時間校正共用時鐘，現在線與計時不受使用者電腦時鐘誤差影響。
  * 有 `scheduling.manage` 時可立即執行、停止、暫停與恢復任務，以及停止佇列工作；都是記下要求就回應，結果靠輪詢更新。
  */
 @Component({
@@ -79,12 +86,14 @@ type View = (typeof VIEWS)[number]['value'];
     Notice,
     PendingButton,
     RunState,
-    RunStrip,
+    StatGrid,
+    StatTile,
     StatusBadge,
     TableHeader,
     TableState,
     TickingTime,
-    TimerRing,
+    TimeLane,
+    TimeLanes,
     ViewSwitch,
   ],
   providers: [ViewScope],
@@ -101,10 +110,13 @@ export class SchedulingPage {
   readonly manage = computed(() => this.session.has('scheduling.manage'));
   readonly attentionGroup = ATTENTION_GROUP;
   readonly formatDate = formatDate;
-  readonly runStatus = runStatus;
-  readonly runDuration = runDuration;
+  readonly formatTimeOfDay = formatTimeOfDay;
   readonly runFailure = runFailure;
-  readonly triggers = RUN_TRIGGERS;
+  readonly stateLabel = stateLabel;
+  readonly taskRunState = taskRunState;
+  readonly iso = (at: number) => new Date(at).toISOString();
+  /** 磚塊的數字；還沒有資料時是未知，不當成 0。 */
+  readonly count = (value: number | undefined) => (value === undefined ? null : String(value));
 
   private readonly boardRead = apiResource({
     feature: 'scheduling',
@@ -118,31 +130,50 @@ export class SchedulingPage {
   readonly board = this.boardRead.value;
   readonly boardError = this.boardRead.error;
   readonly boardLoading = this.boardRead.loading;
-  readonly counts = computed(() => boardCounts(this.board()?.tasks ?? []));
-
-  /** 每張卡不隨時間變的顯示資料；只在看板重讀時重算。 */
-  readonly groups = computed(() =>
-    groupByCategory(this.board()?.tasks ?? []).map((group) => ({
-      category: group.category,
-      tasks: group.tasks.map((task) => ({
-        task,
-        from: countdownFrom(task),
-        progress: runProgress(task.currentRun),
-        strip: stripItems(task.recentRuns),
-        last: task.lastRun ? runStatus(task.lastRun.status) : null,
-      })),
-    })),
-  );
-  /**
-   * 每個任務此刻的處境；跟著時鐘每秒重算，但只有跨過下次執行時間時結果才會變，
-   * 字串相同的繫結不會動到畫面，所以卡片的其他部分（紀錄條、說明）不必跟著每秒重算。
-   */
-  readonly phases = computed(() => {
-    const now = this.clock.now();
-    return new Map((this.board()?.tasks ?? []).map((task) => [task.key, taskPhase(task, now)]));
+  readonly summary = computed(() => {
+    const board = this.board();
+    return board ? boardSummary(board) : null;
   });
-  readonly ringMode = ringMode;
-  readonly taskRunState = taskRunState;
+
+  /** 時間軸的資料；區間由伺服器決定，一律以看板回應的時間計算，只在重讀時變動。 */
+  readonly timeline = computed(() => {
+    const board = this.board();
+    if (!board) return null;
+    const from = Date.parse(board.timelineFrom);
+    const to = Date.parse(board.timelineTo);
+    const now = Date.parse(board.serverTime);
+    const minStep = (to - from) / PLANNED_RESOLUTION;
+    return {
+      from,
+      to,
+      shades: nightShades(from, to),
+      groups: laneGroups(board.tasks).map((group) => ({
+        label: group.label,
+        lanes: group.tasks.map((task) => {
+          const planned = plannedTimes(task, now, to, minStep);
+          return {
+            task,
+            marks: laneMarks(task, planned),
+            summary: laneSummary(task, planned),
+            note: laneNote(task),
+          };
+        }),
+      })),
+    };
+  });
+  /**
+   * 每個任務此刻的處境，跟著時鐘每秒計算；內容相同時不發出變化，
+   * 只有跨過下次執行時間時，引用它的那幾列才會重新檢查。
+   */
+  readonly phases = computed(
+    () => {
+      const now = this.clock.now();
+      return new Map<string, TaskPhase>(
+        (this.board()?.tasks ?? []).map((task) => [task.key, taskPhase(task, now)]),
+      );
+    },
+    { equal: (a, b) => a.size === b.size && [...a].every(([key, phase]) => b.get(key) === phase) },
+  );
 
   readonly running = action({ concurrent: true });
 

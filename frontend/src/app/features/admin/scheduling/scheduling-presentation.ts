@@ -1,10 +1,24 @@
-import type { ScheduledTaskDto, ScheduledTaskRunDto } from '@core/api/schema';
+import type {
+  ScheduledTaskBoardDto,
+  ScheduledTaskDto,
+  ScheduledTaskRunDto,
+  ScheduledTaskTimelineRunDto,
+} from '@core/api/schema';
 import { recordedProblem, systemProblem, validIssueCode } from '@core/errors/safe-errors';
-import { formatDate, formatDuration } from '@shared/browser/format';
+import {
+  formatDate,
+  formatDateTimeInput,
+  formatDuration,
+  formatTimeOfDay,
+  parseDateTimeInput,
+} from '@shared/browser/format';
 import type { BadgeTone } from '@shared/ui/count-badge';
-import type { RunStateKind } from '@shared/ui/run-state';
-import type { RunStripItem } from '@shared/ui/run-strip';
-import type { TimerRingMode } from '@shared/ui/timer-ring';
+import { runStateTone, type RunStateKind } from '@shared/ui/run-state';
+import type { TimeMark, TimeMarkKind } from '@shared/ui/time-lane';
+import type { TimeShade } from '@shared/ui/time-lanes';
+
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 
 export const RUN_STATUSES: Record<string, { label: string; tone: BadgeTone }> = {
   running: { label: '執行中', tone: 'info' },
@@ -29,7 +43,7 @@ export function runStatus(status: string) {
 }
 
 /**
- * 任務此刻的處境，決定圓環、圖示、說明與能按的按鈕。依序判斷：不能執行 → 執行中 → 已要求執行 → 暫停 → 到期 → 等待排程；
+ * 任務此刻的處境，決定圖示、說明與能按的按鈕。依序判斷：不能執行 → 執行中 → 已要求執行 → 暫停 → 到期 → 等待排程；
  * 啟動時執行的任務跑過後沒有下次時間（`done`）。
  */
 export type TaskPhase =
@@ -44,22 +58,7 @@ export function taskPhase(task: ScheduledTaskDto, now: number): TaskPhase {
   return Date.parse(task.nextRunAt) <= now ? 'due' : 'waiting';
 }
 
-const RING_MODES: Record<TaskPhase, TimerRingMode> = {
-  unavailable: 'off',
-  running: 'running',
-  requested: 'due',
-  paused: 'paused',
-  due: 'due',
-  waiting: 'countdown',
-  done: 'off',
-};
-
-/** 圓環的模式。 */
-export function ringMode(phase: TaskPhase) {
-  return RING_MODES[phase];
-}
-
-/** 卡片圖示的狀態：處境優先，否則是上一輪的結果；還沒跑過時是「沒有事做」的一橫。 */
+/** 列首圖示的狀態：處境優先，否則是上一輪的結果；還沒跑過時是「沒有事做」的一橫。 */
 export function taskRunState(task: ScheduledTaskDto, phase: TaskPhase): RunStateKind {
   switch (phase) {
     case 'running':
@@ -74,24 +73,19 @@ export function taskRunState(task: ScheduledTaskDto, phase: TaskPhase): RunState
   }
 }
 
-/**
- * 倒數的時間窗起點：上一輪結束；固定間隔的任務最多往前推一個間隔（暫停很久後恢復時圓環不會只剩一小段）。
- * 每日、每週這種沒有固定間隔的排程，沒跑過時回傳 null，圓環畫成滿的。
- */
-export function countdownFrom(task: ScheduledTaskDto) {
-  if (!task.nextRunAt) return null;
-  const next = Date.parse(task.nextRunAt);
-  const finished = task.lastRun?.finishedAt ? Date.parse(task.lastRun.finishedAt) : null;
-  const floor = task.intervalSeconds ? next - task.intervalSeconds * 1000 : null;
-  const from =
-    finished !== null && floor !== null ? Math.max(finished, floor) : (finished ?? floor);
-  return from === null || from >= next ? null : new Date(from).toISOString();
-}
-
-/** 執行中的進度（0–1）；不知道總量時為 null，圓環繞行。 */
-export function runProgress(run: ScheduledTaskRunDto | null) {
-  if (!run?.totalUnits || run.completedUnits === null) return null;
-  return Math.min(1, run.completedUnits / run.totalUnits);
+/** 列首圖示的文字（提示與螢幕閱讀器）。 */
+export function stateLabel(task: ScheduledTaskDto, phase: TaskPhase) {
+  switch (phase) {
+    case 'running':
+      return '執行中';
+    case 'requested':
+    case 'due':
+      return '等待開始';
+    case 'paused':
+      return '已暫停';
+    default:
+      return task.lastRun ? `上一輪${runStatus(task.lastRun.status).label}` : '還沒有執行過';
+  }
 }
 
 /** 一輪的耗時；還在跑的回傳空字串（畫面改顯示逐秒跳動的經過時間）。 */
@@ -110,45 +104,146 @@ export function runFailure(
     : systemProblem(run.issueCode);
 }
 
-/** 紀錄條：舊到新，滑過時看時間、結果、耗時與摘要。 */
-export function stripItems(runs: readonly ScheduledTaskRunDto[]): RunStripItem[] {
-  return [...runs].reverse().map((run) => ({
-    id: run.id,
-    status: run.status,
-    startedAt: run.startedAt,
-    finishedAt: run.finishedAt,
+/**
+ * 區間內還會執行的時間（舊到新）。固定間隔由下次時間往後推，cron 用伺服器解析好的結果（前端不解析 cron）；
+ * 暫停與不能執行的任務不會跑，回傳空的。`minStep` 限制最小間距：每分鐘一輪的任務一天上千點，畫出來只是一條線。
+ */
+export function plannedTimes(task: ScheduledTaskDto, now: number, until: number, minStep = 0) {
+  if (task.isPaused || task.unavailableReason) return [];
+  const next = task.nextRunAt ? Date.parse(task.nextRunAt) : null;
+  if (task.intervalSeconds) {
+    const step = Math.max(task.intervalSeconds * 1000, minStep);
+    const times: number[] = [];
+    // 到期還沒開始的任務，下一輪最早也要從現在算起，不畫在現在線左邊。
+    for (let at = next !== null && next > now ? next : now + step; at <= until; at += step)
+      times.push(at);
+    return times;
+  }
+  if (task.plannedRuns.length) return task.plannedRuns.map((at) => Date.parse(at));
+  return next !== null && next > now && next <= until ? [next] : [];
+}
+
+function runMark(task: ScheduledTaskDto, run: ScheduledTaskTimelineRunDto): TimeMark {
+  const kinds: Record<BadgeTone, TimeMarkKind> = {
+    info: 'active',
+    success: 'success',
+    neutral: 'neutral',
+    warning: 'warning',
+    danger: 'danger',
+  };
+  // 紀錄還停在執行中、看板卻沒有進行中的一輪：程序中途結束留下的，不畫成正在跑。
+  const orphaned = run.status === 'running' && !task.currentRun;
+  return {
+    at: Date.parse(run.startedAt),
+    kind: orphaned ? 'warning' : kinds[runStateTone(run.status)],
     title: [formatDate(run.startedAt), runStatus(run.status).label, runDuration(run), run.summary]
       .filter(Boolean)
       .join('・'),
-  }));
+  };
+}
+
+/** 一條泳道的記號（舊到新）。少數幾個固定時刻直接寫出時間，比間隔排程的短線好讀。 */
+export function laneMarks(task: ScheduledTaskDto, planned: readonly number[]): TimeMark[] {
+  const labelled = !task.intervalSeconds && planned.length <= 3;
+  return [
+    ...task.timelineRuns.map((run) => runMark(task, run)),
+    ...planned.map((at): TimeMark => ({
+      at,
+      kind: 'planned',
+      label: labelled ? formatTimeOfDay(at) : undefined,
+    })),
+  ];
+}
+
+/** 軌道給螢幕閱讀器的摘要。 */
+export function laneSummary(task: ScheduledTaskDto, planned: readonly number[]) {
+  const counts = new Map<string, number>();
+  for (const run of task.timelineRuns) {
+    const label = runStatus(run.status).label;
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+  const past = task.timelineRuns.length
+    ? `區間內 ${task.timelineRuns.length} 輪：${[...counts].map(([label, count]) => `${label} ${count}`).join('、')}`
+    : '區間內沒有執行紀錄';
+  return `${past}；${planned.length ? `下次 ${formatTimeOfDay(planned[0])}` : '區間內沒有預定'}`;
+}
+
+/** 沒有預定的原因，寫在現在線右邊。 */
+export function laneNote(task: ScheduledTaskDto) {
+  if (task.unavailableReason) return '不會執行';
+  if (task.isPaused) return '暫停中，不依排程執行';
+  return task.scheduleKind === 'startup' ? '只在站台啟動時執行' : '';
 }
 
 export const ATTENTION_GROUP = '需要注意';
+const GROUPS = [ATTENTION_GROUP, '每幾分鐘', '每幾小時', '固定時刻', '啟動時'];
 
-/**
- * 依分類分組，保留伺服器的順序（分類、名稱）。連續失敗中的任務抽到最前面的「需要注意」：
- * 失敗通知只開到這一頁（不指向單一任務），一打開就要看得到；暫停與不能執行是有意的狀態，留在原分類。
- */
-export function groupByCategory(tasks: readonly ScheduledTaskDto[]) {
-  const groups = new Map<string, ScheduledTaskDto[]>();
-  const failing = tasks.filter((task) => task.consecutiveFailures > 0);
-  if (failing.length) groups.set(ATTENTION_GROUP, failing);
-  for (const task of tasks) {
-    if (task.consecutiveFailures > 0) continue;
-    const group = groups.get(task.category);
-    if (group) group.push(task);
-    else groups.set(task.category, [task]);
-  }
-  return [...groups].map(([category, items]) => ({ category, tasks: items }));
+function groupOf(task: ScheduledTaskDto) {
+  if (task.consecutiveFailures > 0) return ATTENTION_GROUP;
+  if (task.scheduleKind === 'startup') return '啟動時';
+  if (!task.intervalSeconds) return '固定時刻';
+  return task.intervalSeconds < 3600 ? '每幾分鐘' : '每幾小時';
 }
 
-/** 看板上方的計數。 */
-export function boardCounts(tasks: readonly ScheduledTaskDto[]) {
+/** 固定時刻的排序鍵；暫停也照用伺服器算的時間，暫停或恢復時列不跳位。 */
+function clockKey(task: ScheduledTaskDto) {
+  if (task.intervalSeconds) return '';
+  const first = task.plannedRuns[0] ?? task.nextRunAt;
+  return first ? formatDateTimeInput(new Date(first)).slice(11) : '';
+}
+
+/**
+ * 依節奏分組：相近的節奏排在一起，時間軸上才看得出規律與衝突。連續失敗的抽到最前面的「需要注意」：
+ * 失敗通知只開到這一頁（不指向單一任務），一打開就要看得到；暫停與不能執行是有意的狀態，留在原組。
+ * 排序只用不隨時間變的值，輪詢時列不會跳來跳去。
+ */
+export function laneGroups(tasks: readonly ScheduledTaskDto[]) {
+  const sorted = tasks
+    .map((task) => ({ task, clock: clockKey(task) }))
+    .sort(
+      (a, b) =>
+        (a.task.intervalSeconds ?? 0) - (b.task.intervalSeconds ?? 0) ||
+        a.clock.localeCompare(b.clock) ||
+        a.task.name.localeCompare(b.task.name, 'zh-TW'),
+    )
+    .map(({ task }) => task);
+  return GROUPS.map((label) => ({
+    label,
+    tasks: sorted.filter((task) => groupOf(task) === label),
+  })).filter((group) => group.tasks.length);
+}
+
+/** 夜間（工作區時區 00:00–06:00）的底色，裁切到區間內：排程多半集中在這段，一眼對得上。 */
+export function nightShades(from: number, to: number): TimeShade[] {
+  const shades: TimeShade[] = [];
+  const midnight = parseDateTimeInput(
+    `${formatDateTimeInput(new Date(from)).slice(0, 10)}T00:00:00`,
+  ).getTime();
+  for (let day = midnight; day < to; day += DAY) {
+    const start = Math.max(day, from);
+    const end = Math.min(day + 6 * HOUR, to);
+    if (start < end) shades.push({ from: start, to: end });
+  }
+  return shades;
+}
+
+/** 頁首的摘要；一律以看板回應的時間計算，只在重讀時變動，不跟著時鐘每秒重算。 */
+export function boardSummary(board: ScheduledTaskBoardDto) {
+  const now = Date.parse(board.serverTime);
+  let upcoming = 0;
+  let next: { name: string; at: number } | null = null;
+  for (const task of board.tasks) {
+    upcoming += plannedTimes(task, now, now + HOUR).length;
+    if (task.isPaused || task.unavailableReason || !task.nextRunAt) continue;
+    const at = Date.parse(task.nextRunAt);
+    if (at > now && (!next || at < next.at)) next = { name: task.name, at };
+  }
   return {
-    total: tasks.length,
-    running: tasks.filter((task) => task.currentRun).length,
-    failing: tasks.filter((task) => task.consecutiveFailures > 0).length,
-    paused: tasks.filter((task) => task.isPaused).length,
+    upcoming,
+    next,
+    running: board.tasks.filter((task) => task.currentRun).length,
+    failing: board.tasks.filter((task) => task.consecutiveFailures > 0).length,
+    paused: board.tasks.filter((task) => task.isPaused).length,
   };
 }
 

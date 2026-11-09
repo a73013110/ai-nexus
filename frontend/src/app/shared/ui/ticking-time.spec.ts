@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ServerClock } from '../browser/server-clock';
-import { TickingTime, clockText, compactClockText, spokenDuration } from './ticking-time';
+import { TickingTime, clockText, spokenDuration } from './ticking-time';
 
 const at = (milliseconds: number) => new Date(milliseconds).toISOString();
 
@@ -13,15 +13,6 @@ describe('clockText', () => {
     expect(clockText(2 * 86_400_000 + 3 * 3_600_000)).toBe('2 天 3 小時');
     expect(clockText(86_400_000)).toBe('1 天');
     expect(clockText(-5_000)).toBe('0:00');
-  });
-});
-
-describe('compactClockText', () => {
-  it('stays within five characters for a ring centre', () => {
-    expect(compactClockText(65_400)).toBe('1:05');
-    expect(compactClockText(59 * 60_000 + 59_000)).toBe('59:59');
-    expect(compactClockText(2 * 3_600_000 + 4 * 60_000 + 5_000)).toBe('2h04');
-    expect(compactClockText(3 * 86_400_000 + 5 * 3_600_000)).toBe('3d');
   });
 });
 

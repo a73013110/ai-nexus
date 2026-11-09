@@ -1,21 +1,31 @@
-import type { ScheduledTaskDto, ScheduledTaskRunDto } from '@core/api/schema';
+import type {
+  ScheduledTaskBoardDto,
+  ScheduledTaskDto,
+  ScheduledTaskRunDto,
+} from '@core/api/schema';
 import { describe, expect, it } from 'vitest';
 import {
   ACTIVE_POLL,
   ATTENTION_GROUP,
   IDLE_POLL,
-  countdownFrom,
-  groupByCategory,
+  boardSummary,
+  laneGroups,
+  laneMarks,
+  laneNote,
+  laneSummary,
   nextPoll,
+  nightShades,
+  plannedTimes,
   runDuration,
   runFailure,
-  runProgress,
-  stripItems,
+  stateLabel,
   taskPhase,
   taskRunState,
 } from './scheduling-presentation';
 
 const NOW = Date.parse('2026-11-08T06:00:00Z');
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
 const at = (offset: number) => new Date(NOW + offset).toISOString();
 
 function run(overrides: Partial<ScheduledTaskRunDto> = {}): ScheduledTaskRunDto {
@@ -53,17 +63,21 @@ function task(overrides: Partial<ScheduledTaskDto> = {}): ScheduledTaskDto {
     isPaused: false,
     pausedByName: null,
     pausedAt: null,
-    nextRunAt: at(10 * 60_000),
+    nextRunAt: at(10 * MINUTE),
     runRequestedAt: null,
     cancelRequested: false,
     host: null,
     consecutiveFailures: 0,
     currentRun: null,
     lastRun: null,
-    recentRuns: [],
+    timelineRuns: [],
+    plannedRuns: [],
     ...overrides,
   };
 }
+
+const cron = (overrides: Partial<ScheduledTaskDto> = {}) =>
+  task({ scheduleKind: 'cron', intervalSeconds: null, ...overrides });
 
 describe('taskPhase', () => {
   it('puts what blocks a run first, then activity, then the schedule', () => {
@@ -81,33 +95,16 @@ describe('taskPhase', () => {
   });
 
   it('shows the last outcome when nothing is happening', () => {
-    expect(taskRunState(task({ lastRun: run({ status: 'failed' }) }), 'waiting')).toBe('failed');
+    const failed = task({ lastRun: run({ status: 'failed' }) });
+    expect(taskRunState(failed, 'waiting')).toBe('failed');
+    expect(stateLabel(failed, 'waiting')).toBe('上一輪失敗');
     expect(taskRunState(task(), 'waiting')).toBe('idle');
+    expect(stateLabel(task(), 'waiting')).toBe('還沒有執行過');
     expect(taskRunState(task(), 'due')).toBe('queued');
   });
 });
 
-describe('countdownFrom', () => {
-  it('starts at the last finish, but never more than one interval back', () => {
-    expect(countdownFrom(task({ lastRun: run({ finishedAt: at(-5 * 60_000) }) }))).toBe(
-      at(-5 * 60_000),
-    );
-    // 暫停兩小時後恢復：只往前推一個間隔。
-    expect(countdownFrom(task({ lastRun: run({ finishedAt: at(-2 * 3_600_000) }) }))).toBe(
-      at(10 * 60_000 - 3_600_000),
-    );
-    expect(countdownFrom(task({ intervalSeconds: null, scheduleKind: 'cron' }))).toBeNull();
-    expect(countdownFrom(task({ nextRunAt: null }))).toBeNull();
-  });
-});
-
 describe('runs', () => {
-  it('reports progress only when the total is known', () => {
-    expect(runProgress(run({ completedUnits: 3, totalUnits: 12 }))).toBe(0.25);
-    expect(runProgress(run({ completedUnits: 3 }))).toBeNull();
-    expect(runProgress(null)).toBeNull();
-  });
-
   it('formats a finished duration and leaves a running one to the ticking clock', () => {
     expect(runDuration(run())).toBe('5.0 秒');
     expect(runDuration(run({ finishedAt: null }))).toBe('');
@@ -119,28 +116,151 @@ describe('runs', () => {
     );
     expect(runFailure(run({ errorMessage: null, issueCode: null }))).toContain('本機問題代碼');
   });
+});
 
-  it('turns newest-first runs into an oldest-first strip with a readable title', () => {
-    const items = stripItems([
-      run({ id: 'new', status: 'failed' }),
-      run({ id: 'old', summary: '清除 120 筆' }),
+describe('plannedTimes', () => {
+  it('walks an interval forward from the next run', () => {
+    expect(plannedTimes(task(), NOW, NOW + 3 * HOUR)).toEqual([
+      NOW + 10 * MINUTE,
+      NOW + 70 * MINUTE,
+      NOW + 130 * MINUTE,
     ]);
-    expect(items.map((item) => item.id)).toEqual(['old', 'new']);
-    expect(items[0].title).toContain('成功');
-    expect(items[0].title).toContain('清除 120 筆');
+  });
+
+  it('never plans behind the now line for a task that came due', () => {
+    expect(plannedTimes(task({ nextRunAt: at(-MINUTE) }), NOW, NOW + 90 * MINUTE)).toEqual([
+      NOW + HOUR,
+    ]);
+  });
+
+  it('thins very frequent intervals with a minimum step', () => {
+    const everyMinute = task({ intervalSeconds: 60, nextRunAt: at(MINUTE) });
+    expect(plannedTimes(everyMinute, NOW, NOW + HOUR, 10 * MINUTE)).toHaveLength(6);
+  });
+
+  it('uses the server-resolved times for cron and falls back to the next run', () => {
+    expect(
+      plannedTimes(cron({ plannedRuns: [at(HOUR), at(2 * HOUR)] }), NOW, NOW + 3 * HOUR),
+    ).toEqual([NOW + HOUR, NOW + 2 * HOUR]);
+    expect(plannedTimes(cron({ nextRunAt: at(HOUR) }), NOW, NOW + 2 * HOUR)).toEqual([NOW + HOUR]);
+    expect(plannedTimes(cron({ nextRunAt: at(3 * HOUR) }), NOW, NOW + 2 * HOUR)).toEqual([]);
+  });
+
+  it('plans nothing for tasks that will not run', () => {
+    expect(plannedTimes(task({ isPaused: true }), NOW, NOW + HOUR)).toEqual([]);
+    expect(plannedTimes(task({ unavailableReason: '未啟用' }), NOW, NOW + HOUR)).toEqual([]);
   });
 });
 
-describe('groupByCategory', () => {
-  it('pulls failing tasks to the front and keeps the server order otherwise', () => {
-    const groups = groupByCategory([
-      task({ key: 'a', category: '郵件' }),
-      task({ key: 'b', category: '檔案' }),
-      task({ key: 'c', category: '郵件', consecutiveFailures: 2 }),
+describe('lanes', () => {
+  const timeline = (status: string, offset = -HOUR, finished: number | null = offset + 5000) => ({
+    startedAt: at(offset),
+    finishedAt: finished === null ? null : at(finished),
+    status,
+    summary: status === 'succeeded' ? '清除 120 筆' : null,
+  });
+
+  it('puts results before plans and describes each run', () => {
+    const marks = laneMarks(task({ timelineRuns: [timeline('succeeded')] }), [NOW + HOUR]);
+    expect(marks.map((mark) => mark.kind)).toEqual(['success', 'planned']);
+    expect(marks[0].title).toContain('成功');
+    expect(marks[0].title).toContain('清除 120 筆');
+    expect(marks[1].label).toBeUndefined();
+  });
+
+  it('only shows a run as active while the board has it running', () => {
+    const running = timeline('running', -MINUTE, null);
+    expect(laneMarks(task({ timelineRuns: [running] }), [])[0].kind).toBe('warning');
+    expect(
+      laneMarks(task({ timelineRuns: [running], currentRun: run({ status: 'running' }) }), [])[0]
+        .kind,
+    ).toBe('active');
+  });
+
+  it('writes out the time of a few fixed runs', () => {
+    expect(laneMarks(cron(), [NOW + HOUR])[0].label).toBe('15:00');
+    const many = [1, 2, 3, 4].map((hours) => NOW + hours * HOUR);
+    expect(laneMarks(cron(), many)[0].label).toBeUndefined();
+  });
+
+  it('summarises a lane for screen readers', () => {
+    const lane = task({ timelineRuns: [timeline('succeeded'), timeline('failed', -30 * MINUTE)] });
+    expect(laneSummary(lane, [NOW + HOUR])).toBe('區間內 2 輪：成功 1、失敗 1；下次 15:00');
+    expect(laneSummary(task(), [])).toBe('區間內沒有執行紀錄；區間內沒有預定');
+  });
+
+  it('explains why a lane has no plan', () => {
+    expect(laneNote(task({ isPaused: true }))).toContain('暫停');
+    expect(laneNote(task({ unavailableReason: '未啟用' }))).toBe('不會執行');
+    expect(laneNote(task({ scheduleKind: 'startup', intervalSeconds: null }))).toContain('啟動');
+    expect(laneNote(task())).toBe('');
+  });
+
+  it('groups by rhythm, failing tasks first, in an order that does not change over time', () => {
+    const groups = laneGroups([
+      task({ key: 'hourly', intervalSeconds: 3600 }),
+      cron({ key: 'fixed', plannedRuns: [at(20 * HOUR)] }),
+      task({ key: 'minutes', intervalSeconds: 300 }),
+      task({ key: 'failing', intervalSeconds: 300, consecutiveFailures: 2 }),
+      task({ key: 'startup', scheduleKind: 'startup', intervalSeconds: null }),
     ]);
-    expect(groups.map((group) => group.category)).toEqual([ATTENTION_GROUP, '郵件', '檔案']);
-    expect(groups[0].tasks.map((item) => item.key)).toEqual(['c']);
-    expect(groups[1].tasks.map((item) => item.key)).toEqual(['a']);
+    expect(groups.map((group) => group.label)).toEqual([
+      ATTENTION_GROUP,
+      '每幾分鐘',
+      '每幾小時',
+      '固定時刻',
+      '啟動時',
+    ]);
+    expect(groups[0].tasks.map((item) => item.key)).toEqual(['failing']);
+  });
+
+  it('orders fixed times by clock time and keeps a paused task in place', () => {
+    const groups = laneGroups([
+      cron({ key: 'late', name: 'A', plannedRuns: [at(9 * HOUR)] }),
+      cron({ key: 'early', name: 'B', plannedRuns: [at(2 * HOUR)], isPaused: true }),
+    ]);
+    expect(groups[0].tasks.map((item) => item.key)).toEqual(['early', 'late']);
+  });
+});
+
+describe('nightShades', () => {
+  it('shades midnight to six in the workspace time zone and clips to the range', () => {
+    // 11/08 14:00（台北）起算：前一夜不在區間內，只有 11/09 的 00:00–06:00。
+    expect(nightShades(NOW, NOW + 24 * HOUR)).toEqual([
+      { from: NOW + 10 * HOUR, to: NOW + 16 * HOUR },
+    ]);
+    // 區間從 03:00（台北）開始：第一段只剩 03:00–06:00。
+    const three = Date.parse('2026-11-07T19:00:00Z');
+    expect(nightShades(three, three + 24 * HOUR)[0]).toEqual({ from: three, to: three + 3 * HOUR });
+  });
+});
+
+describe('boardSummary', () => {
+  const board = (tasks: ScheduledTaskDto[]): ScheduledTaskBoardDto => ({
+    serverTime: at(0),
+    executesHere: true,
+    timelineFrom: at(-4 * HOUR),
+    timelineTo: at(20 * HOUR),
+    tasks,
+  });
+
+  it('counts the states and the runs of the coming hour', () => {
+    const summary = boardSummary(
+      board([
+        task({ name: '甲', intervalSeconds: 600, nextRunAt: at(5 * MINUTE) }),
+        task({ name: '乙', nextRunAt: at(2 * MINUTE), isPaused: true }),
+        task({ name: '丙', nextRunAt: at(30 * MINUTE), consecutiveFailures: 1 }),
+        task({ name: '丁', nextRunAt: at(-MINUTE), currentRun: run({ status: 'running' }) }),
+      ]),
+    );
+    expect(summary.next).toEqual({ name: '甲', at: NOW + 5 * MINUTE });
+    // 甲 6 輪、丙 1 輪、丁下一輪剛好在一小時整；暫停的乙不算。
+    expect(summary.upcoming).toBe(8);
+    expect(summary).toMatchObject({ running: 1, failing: 1, paused: 1 });
+  });
+
+  it('has no next run when nothing is scheduled', () => {
+    expect(boardSummary(board([task({ isPaused: true })])).next).toBeNull();
   });
 });
 

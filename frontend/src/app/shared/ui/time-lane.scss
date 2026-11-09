@@ -1,0 +1,132 @@
+:host {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--time-lane-label-width) minmax(0, 1fr) var(--time-lane-end-width);
+  transition: background-color var(--motion-panel) var(--ease);
+}
+:host(:not(:last-child)) {
+  border-block-end: 1px solid var(--tile-line);
+}
+:host(:hover) {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.lane-label {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-3);
+}
+.lane-end {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--p-space-1);
+  padding-inline-end: var(--p-space-2);
+}
+.lane-track {
+  position: relative;
+  min-height: 2.75rem;
+}
+svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+path {
+  fill: none;
+  stroke: var(--lane-stroke);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+[data-kind='planned'] {
+  --lane-stroke: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+[data-kind='planned-band'] {
+  --lane-stroke: color-mix(in srgb, var(--muted) 45%, transparent);
+  stroke-width: 3px;
+  stroke-dasharray: 3 4;
+}
+[data-kind='neutral'] {
+  --lane-stroke: color-mix(in srgb, var(--muted) 55%, transparent);
+}
+[data-kind='neutral-band'] {
+  --lane-stroke: color-mix(in srgb, var(--muted) 55%, transparent);
+  stroke-width: 3px;
+}
+[data-kind='success'] {
+  --lane-stroke: var(--success);
+}
+[data-kind='warning'] {
+  --lane-stroke: var(--warning);
+}
+[data-kind='danger'] {
+  --lane-stroke: var(--danger);
+  stroke-width: 3px;
+}
+[data-kind='active'] {
+  --lane-stroke: var(--accent);
+  stroke-width: 6px;
+  animation: live-breathe var(--motion-signal) var(--ease) infinite;
+}
+.lane-flag {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  color: var(--ink);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  translate: -0.3125rem -50%;
+  white-space: nowrap;
+  i {
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-full);
+    box-sizing: border-box;
+    background: var(--surface);
+  }
+  &.is-flipped {
+    flex-direction: row-reverse;
+    translate: calc(-100% + 0.3125rem) -50%;
+  }
+}
+.lane-note {
+  position: absolute;
+  top: 50%;
+  inset-inline-start: calc(var(--time-now) + var(--p-space-3));
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+@container time-lanes (max-width: 40rem) {
+  :host {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .lane-track {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 2rem;
+    margin-inline: var(--p-space-3);
+    // 窄版的列與列之間隔著名稱，共用的現在線會穿過文字，改由每條軌道自己畫。
+    &::after {
+      content: '';
+      position: absolute;
+      inset-block: 0;
+      inset-inline-start: var(--time-now);
+      width: 2px;
+      background: var(--accent);
+    }
+  }
+}
+@media (forced-colors: active) {
+  path {
+    stroke: CanvasText;
+  }
+  .lane-flag i {
+    border-color: CanvasText;
+  }
+}

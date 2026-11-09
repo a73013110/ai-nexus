@@ -15,7 +15,7 @@
     @if (!current.executesHere) {
       <nx-notice
         tone="info"
-        message="回應這個頁面的站台不執行排程，或只執行部分任務，其餘由其他站台執行。&#10;倒數歸零後一直沒有開始時，請確認正式站台是否在執行。"
+        message="回應這個頁面的站台不執行排程，或只執行部分任務，其餘由其他站台執行。&#10;過了預定時間仍沒有開始時，請確認正式站台是否在執行。"
       />
     }
   }
@@ -36,131 +36,141 @@
       [value]="view()"
       (valueChange)="view.set($any($event))"
     />
-    @if (view() === 'tasks' && board()) {
-      <p class="form-note scheduling-counts">
-        共 {{ counts().total }} 項
-        @if (counts().running) {
-          ・<span class="scheduling-count is-running">執行中 {{ counts().running }}</span>
-        }
-        @if (counts().failing) {
-          ・<span class="scheduling-count is-failing">連續失敗 {{ counts().failing }}</span>
-        }
-        @if (counts().paused) {
-          ・暫停 {{ counts().paused }}
-        }
-      </p>
-    }
   </div>
 
   @if (view() === 'tasks') {
+    <nx-stat-grid label="排程摘要" [busy]="boardLoading()">
+      <nx-stat-tile
+        label="下一個"
+        [loading]="boardLoading()"
+        [value]="summary()?.next ? formatTimeOfDay(summary()!.next!.at) : null"
+      >
+        @if (summary()?.next; as next) {
+          <small class="scheduling-next">
+            <span class="ui-truncate">{{ next.name }}</span>
+            <nx-ticking-time [to]="iso(next.at)" />後
+          </small>
+        }
+      </nx-stat-tile>
+      <nx-stat-tile
+        label="接下來 1 小時"
+        unit="輪"
+        [loading]="boardLoading()"
+        [value]="count(summary()?.upcoming)"
+      />
+      <nx-stat-tile label="執行中" [loading]="boardLoading()" [value]="count(summary()?.running)" />
+      <nx-stat-tile
+        label="連續失敗"
+        [loading]="boardLoading()"
+        [value]="count(summary()?.failing)"
+        [tone]="summary()?.failing ? 'danger' : 'neutral'"
+      />
+      <nx-stat-tile label="已暫停" [loading]="boardLoading()" [value]="count(summary()?.paused)" />
+    </nx-stat-grid>
+
     @if (boardLoading()) {
-      <div class="scheduling-groups" aria-busy="true">
-        <div class="skeleton scheduling-skeleton" aria-label="正在載入排程任務"></div>
-        <div class="skeleton scheduling-skeleton"></div>
-        <div class="skeleton scheduling-skeleton"></div>
-      </div>
-    } @else {
-      <div class="scheduling-groups">
-        @for (group of groups(); track group.category) {
-          <section
-            class="scheduling-group"
-            [class.is-attention]="group.category === attentionGroup"
-            [attr.aria-labelledby]="'scheduling-group-' + $index"
-          >
-            <h2 class="ui-section-heading" [id]="'scheduling-group-' + $index">
-              {{ group.category }}
+      <div
+        class="skeleton scheduling-skeleton"
+        aria-busy="true"
+        aria-label="正在載入排程任務"
+      ></div>
+    } @else if (timeline(); as line) {
+      <nx-time-lanes
+        class="scheduling-lanes"
+        label="排程任務的 24 小時時間軸"
+        heading="任務"
+        [class.is-readonly]="!manage()"
+        [from]="line.from"
+        [to]="line.to"
+        [shades]="line.shades"
+      >
+        @for (group of line.groups; track group.label) {
+          <section class="scheduling-group" [attr.aria-labelledby]="'scheduling-group-' + $index">
+            <h2
+              class="scheduling-group-heading"
+              [class.is-attention]="group.label === attentionGroup"
+              [id]="'scheduling-group-' + $index"
+            >
+              {{ group.label }}
             </h2>
-            <ul class="scheduling-list">
-              @for (item of group.tasks; track item.task.key) {
-                @let task = item.task;
+            <div role="list">
+              @for (lane of group.lanes; track lane.task.key) {
+                @let task = lane.task;
                 @let phase = phases().get(task.key) ?? 'waiting';
-                <li
-                  class="scheduling-card"
-                  [attr.data-phase]="phase"
-                  [class.is-failing]="task.consecutiveFailures > 0"
-                >
-                  <nx-timer-ring
-                    [mode]="ringMode(phase)"
-                    [from]="item.from"
-                    [to]="task.nextRunAt"
-                    [progress]="item.progress"
-                  >
-                    <!-- 執行中：外圈繞行（或填滿進度），中心是經過時間；只留一個在動的東西。 -->
-                    @if (phase === 'running' && task.currentRun; as run) {
-                      <nx-ticking-time compact [from]="run.startedAt" />
-                    } @else {
-                      <nx-run-state [state]="taskRunState(task, phase)" />
-                    }
-                  </nx-timer-ring>
-                  <div class="scheduling-main">
-                    <button
-                      type="button"
-                      class="scheduling-name"
-                      [attr.aria-label]="task.name + '，查看詳情與執行紀錄'"
-                      (click)="open(task)"
-                    >
-                      {{ task.name }}
-                    </button>
-                    <p class="scheduling-phase">
-                      @switch (phase) {
-                        @case ('unavailable') {
-                          <span class="scheduling-muted">{{ task.unavailableReason }}</span>
-                        }
-                        @case ('running') {
-                          @if (task.currentRun; as run) {
-                            @if (task.cancelRequested) {
-                              正在停止…
-                            } @else {
-                              {{ run.stage || '執行中' }}
-                              @if (run.totalUnits; as total) {
-                                ・{{ run.completedUnits }} / {{ total }}
-                              }
+                <nx-time-lane [marks]="lane.marks" [summary]="lane.summary" [note]="lane.note">
+                  <div lane-label class="scheduling-label">
+                    <nx-run-state
+                      [state]="taskRunState(task, phase)"
+                      [label]="stateLabel(task, phase)"
+                      [title]="stateLabel(task, phase)"
+                    />
+                    <div class="scheduling-main">
+                      <button
+                        type="button"
+                        class="scheduling-name"
+                        [class.is-muted]="phase === 'unavailable' || phase === 'done'"
+                        [attr.aria-label]="task.name + '，查看詳情與執行紀錄'"
+                        (click)="open(task)"
+                      >
+                        {{ task.name }}
+                      </button>
+                      <p class="scheduling-phase">
+                        @switch (phase) {
+                          @case ('unavailable') {
+                            <span class="ui-truncate" [title]="task.unavailableReason">{{
+                              task.unavailableReason
+                            }}</span>
+                          }
+                          @case ('running') {
+                            @if (task.currentRun; as run) {
+                              <span class="ui-truncate">
+                                @if (task.cancelRequested) {
+                                  正在停止…
+                                } @else {
+                                  {{ run.stage || '執行中' }}
+                                  @if (run.totalUnits; as total) {
+                                    ・{{ run.completedUnits }} / {{ total }}
+                                  }
+                                }
+                              </span>
+                              <nx-ticking-time [from]="run.startedAt" />
                             }
-                            <!-- 經過時間畫在圓環中心；圓環對報讀器隱藏，這裡補給報讀器。 -->
-                            <span class="sr-only"
-                              >，<nx-ticking-time [from]="run.startedAt"
-                            /></span>
+                          }
+                          @case ('requested') {
+                            已要求執行，等待開始
+                          }
+                          @case ('due') {
+                            等待開始
+                          }
+                          @case ('paused') {
+                            <span class="ui-truncate"
+                              >已暫停{{
+                                task.pausedByName ? '（' + task.pausedByName + '）' : ''
+                              }}</span
+                            >
+                          }
+                          @case ('done') {
+                            已在啟動時執行
+                          }
+                          @default {
+                            @if (task.consecutiveFailures) {
+                              <span class="scheduling-failing"
+                                >連續失敗 {{ task.consecutiveFailures }} 次</span
+                              >
+                            } @else {
+                              <span
+                                class="ui-truncate"
+                                [title]="task.nextRunAt ? '下次 ' + formatDate(task.nextRunAt) : ''"
+                                >{{ task.schedule }}</span
+                              >
+                            }
                           }
                         }
-                        @case ('requested') {
-                          已要求執行，等待開始
-                        }
-                        @case ('due') {
-                          等待開始
-                        }
-                        @case ('paused') {
-                          已暫停{{ task.pausedByName ? '（' + task.pausedByName + '）' : '' }}
-                        }
-                        @case ('done') {
-                          <span class="scheduling-muted">已在啟動時執行</span>
-                        }
-                        @default {
-                          <!-- 倒數寫成「後執行」，避免 14:57:33 被讀成時刻；實際時刻在 title。 -->
-                          <span [title]="task.nextRunAt ? formatDate(task.nextRunAt) : ''">
-                            <nx-ticking-time [to]="task.nextRunAt" />
-                          </span>
-                          後執行
-                        }
-                      }
-                    </p>
-                    <p class="scheduling-meta">
-                      <span>{{ task.schedule }}</span>
-                      @if (task.lastRun; as last) {
-                        <span
-                          >上次<span class="scheduling-tone" [attr.data-tone]="item.last?.tone">{{
-                            item.last?.label
-                          }}</span
-                          >{{ runDuration(last) ? '・' + runDuration(last) : '' }}</span
-                        >
-                        @if (last.summary) {
-                          <span class="ui-truncate" [title]="last.summary">{{ last.summary }}</span>
-                        }
-                      }
-                    </p>
+                      </p>
+                    </div>
                   </div>
-                  <nx-run-strip class="scheduling-strip" [runs]="item.strip" />
                   @if (manage()) {
-                    <div class="scheduling-actions">
+                    <div lane-end class="scheduling-actions">
                       @if (phase === 'running' || phase === 'requested') {
                         <button
                           nxPending
@@ -217,12 +227,12 @@
                       }
                     </div>
                   }
-                </li>
+                </nx-time-lane>
               }
-            </ul>
+            </div>
           </section>
         }
-      </div>
+      </nx-time-lanes>
     }
 
     <nx-detail-drawer

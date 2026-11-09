@@ -22,4 +22,21 @@ public sealed class ScheduleTests
     [InlineData("32.00:00:00")]
     [InlineData("every hour")]
     public void AnUnreadableOrOutOfRangeSettingIsRejected(string value) => Assert.Null(Schedule.Parse(value));
+
+    [Fact]
+    public void CronListsItsFixedTimesInTaipeiWithinTheWindow()
+    {
+        var after = new DateTimeOffset(2026, 11, 9, 5, 0, 0, TimeSpan.Zero);
+        Assert.Equal(
+            [new DateTimeOffset(2026, 11, 9, 19, 30, 0, TimeSpan.Zero)],
+            Schedule.Parse("30 3 * * *")!.Occurrences(after, after.AddHours(24)));
+    }
+
+    [Fact]
+    public void SchedulesWithoutFixedTimesListNoOccurrences()
+    {
+        var after = new DateTimeOffset(2026, 11, 9, 5, 0, 0, TimeSpan.Zero);
+        Assert.Empty(Schedule.Parse("00:05:00")!.Occurrences(after, after.AddHours(24)));
+        Assert.Empty(Schedule.AtStartup(TimeSpan.FromMinutes(1)).Occurrences(after, after.AddHours(24)));
+    }
 }

@@ -1,7 +1,7 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 
 /**
- * 每秒跳一次的共用時鐘，倒數與經過時間（`TickingTime`、`TimerRing`）都讀它，同一頁的數字因此同時跳。
+ * 每秒跳一次的共用時鐘，倒數與經過時間（`TickingTime`）、時間軸的現在線（`TimeLanes`）都讀它，同一頁的數字因此同時跳。
  * 以 `sync()` 校正到伺服器時間：下次執行時間是伺服器排的，客戶端時鐘快慢幾分鐘時倒數仍對得上。
  * 只在有元件 `watch()` 且分頁可見時計時；回到前景立刻補上一跳，不讓背景分頁每秒喚醒。
  */

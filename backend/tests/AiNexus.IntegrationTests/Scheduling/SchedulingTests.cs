@@ -348,8 +348,11 @@ public sealed class SchedulingTests
         var board = (await admin.GetFromJsonAsync<ScheduledTaskBoardDto>("/api/v1/scheduled-tasks", Ct))!;
         var probe = Assert.Single(board.Tasks, x => x.Key == ProbeTask.Key);
         Assert.Equal(("interval", 600, "處理 1 筆"), (probe.ScheduleKind, probe.IntervalSeconds, probe.LastRun?.Summary));
-        Assert.Single(probe.RecentRuns);
+        Assert.Equal("處理 1 筆", Assert.Single(probe.TimelineRuns).Summary);
+        Assert.Empty(probe.PlannedRuns);
         Assert.Null(probe.CurrentRun);
+        Assert.Equal(TimeSpan.FromHours(24), board.TimelineTo - board.TimelineFrom);
+        Assert.InRange(app.Clock.GetUtcNow() - board.TimelineFrom, TimeSpan.FromHours(4), TimeSpan.FromHours(5));
 
         (await admin.PostAsync($"/api/v1/scheduled-tasks/{ProbeTask.Key}/run", null, Ct)).EnsureSuccessStatusCode();
         Assert.NotNull((await app.TaskAsync()).RunRequestedAt);

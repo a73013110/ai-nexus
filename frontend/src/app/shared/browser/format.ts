@@ -17,6 +17,9 @@ export const formatDate = (value: string, calendar: CalendarSystem = 'gregory') 
 /** 時間戳記在工作區時區的日期，不含時間。 */
 export const formatDay = (value: string, calendar: CalendarSystem = 'gregory') =>
   formatCalendarValue(formatDateTimeInput(new Date(value)), calendar, false);
+/** 毫秒時間戳在工作區時區的時刻（`03:15`）。 */
+export const formatTimeOfDay = (value: number) =>
+  formatDateTimeInput(new Date(value)).slice(11, 16);
 /** ISO 的牆上時間一律使用工作區時區，與瀏覽器的語系與時區無關。 */
 export function formatDateTimeInput(date: Date) {
   if (!Number.isFinite(date.getTime())) return '';

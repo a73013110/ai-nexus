@@ -1,28 +1,13 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ServerClock } from '@shared/browser/server-clock';
 import { RunState, type RunStateKind } from '@shared/ui/run-state';
-import { RunStrip, type RunStripItem } from '@shared/ui/run-strip';
 import { TickingTime } from '@shared/ui/ticking-time';
-import { TimerRing } from '@shared/ui/timer-ring';
+import { TimeLane, type TimeMark, type TimeMarkKind } from '@shared/ui/time-lane';
+import { TimeLanes } from '@shared/ui/time-lanes';
 import { DesignExample, DesignSection } from './design-section';
 
-const COUNTDOWN = 8000;
-const RUN_TIME = 4000;
-const OUTCOMES: RunStateKind[] = [
-  'succeeded',
-  'succeeded',
-  'idle',
-  'failed',
-  'succeeded',
-  'interrupted',
-];
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
 const STATE_NAMES: Record<RunStateKind, string> = {
   queued: '排隊中',
   running: '執行中',
@@ -34,25 +19,20 @@ const STATE_NAMES: Record<RunStateKind, string> = {
   paused: '暫停',
 };
 
-/** 本機假紀錄：耗時與結果寫死，看起來像一個每幾分鐘跑一次的清理任務。 */
-function sampleRuns(now: number): RunStripItem[] {
-  const seconds = [3, 2, 41, 3, 2, 2, 95, 3, 4, 2, 3, 260, 2, 3];
-  const statuses = ['succeeded', 'idle', 'succeeded', 'idle', 'idle', 'idle', 'failed'];
-  return seconds.map((duration, index) => {
-    const startedAt = now - (seconds.length - index) * 5 * 60_000;
-    return {
-      id: `sample-${index}`,
-      status: statuses[index % statuses.length],
-      startedAt: new Date(startedAt).toISOString(),
-      finishedAt: new Date(startedAt + duration * 1000).toISOString(),
-    };
-  });
+/** 往前往後每 `step` 一個記號；`past` 依序循環當作結果。 */
+function rhythm(now: number, from: number, to: number, step: number, past: TimeMarkKind[]) {
+  const marks: TimeMark[] = [];
+  let index = 0;
+  for (let at = from + step; at < now; at += step)
+    marks.push({ at, kind: past[index++ % past.length] });
+  for (let at = now + step; at <= to; at += step) marks.push({ at, kind: 'planned' });
+  return marks;
 }
 
-/** 執行與計時：倒數、圓環、執行狀態與紀錄條，以一個本機模擬的排程任務串起來。 */
+/** 執行與計時：泳道時間軸、執行狀態與計時，都讀同一個伺服器校正的時鐘。資料是本機假資料。 */
 @Component({
   selector: 'nx-design-run-timing',
-  imports: [DesignExample, DesignSection, RunState, RunStrip, TickingTime, TimerRing],
+  imports: [DesignExample, DesignSection, RunState, TickingTime, TimeLane, TimeLanes],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -64,85 +44,42 @@ function sampleRuns(now: number): RunStripItem[] {
       align-items: center;
       gap: var(--p-space-2) var(--p-space-3);
     }
-    .design-run-task {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      align-items: center;
-      gap: var(--p-space-1) var(--p-space-3);
-      width: min(26rem, 100%);
-    }
-    .design-run-task nx-timer-ring {
-      --timer-ring-size: 2.75rem;
-      grid-row: span 2;
-    }
-    .design-run-task strong {
-      font-size: var(--text-ui);
-    }
-    .design-run-task p {
-      display: flex;
-      align-items: center;
-      gap: var(--p-space-2);
-      margin: 0;
-      color: var(--secondary);
-      font-size: var(--text-caption);
-    }
-    .design-run-strip {
-      width: min(16rem, 100%);
-    }
     .design-run-clock {
       font-size: var(--p-font-lg);
       font-weight: 600;
+    }
+    nx-time-lanes {
+      --time-lane-label: 9rem;
+      --time-lane-end: 0px;
+      width: 100%;
+    }
+    [lane-label] {
+      font-size: var(--text-ui);
     }
   `,
   template: `<nx-design-section
     id="design-run-timing"
     title="執行與計時"
-    api="TickingTime · TimerRing · RunState · RunStrip"
-    description="排程與背景工作的狀態：倒數與圓環讀同一個伺服器校正的時鐘，同一頁的數字同時跳；狀態改變時才播描繪與長出動效，第一次顯示不播。時間與狀態的文字都另給報讀器。"
+    api="TimeLanes · TimeLane · RunState · TickingTime"
+    [stacked]="true"
+    description="排程與背景工作的狀態。泳道把過去的結果與未來的預定放在同一條時間上，刻度、底色與現在線只畫一份；滑過記號看詳情，軌道另給報讀器一句摘要。"
   >
-    <nx-design-example label="模擬任務">
-      <div class="design-run-task">
-        <nx-timer-ring
-          [mode]="ringMode()"
-          [from]="windowFrom()"
-          [to]="nextAt()"
-          [progress]="progress()"
-        >
-          @if (phase() === 'running') {
-            <nx-ticking-time compact [from]="startedAt()" />
-          } @else {
-            <nx-run-state [state]="shownState()" />
+    <nx-design-example label="TimeLanes">
+      <nx-time-lanes
+        label="範例排程的時間軸"
+        heading="任務"
+        [from]="range().from"
+        [to]="range().to"
+        [shades]="range().shades"
+      >
+        <div role="list">
+          @for (lane of lanes(); track lane.name) {
+            <nx-time-lane [marks]="lane.marks" [summary]="lane.summary" [note]="lane.note">
+              <span lane-label>{{ lane.name }}</span>
+            </nx-time-lane>
           }
-        </nx-timer-ring>
-        <strong>暫存檔清理</strong>
-        <p>
-          @switch (phase()) {
-            @case ('running') {
-              執行中<span class="sr-only">，<nx-ticking-time [from]="startedAt()" /></span>
-            }
-            @case ('paused') {
-              已暫停
-            }
-            @default {
-              下次 <nx-ticking-time [to]="nextAt()" (reached)="begin()" />
-            }
-          }
-        </p>
-      </div>
-      <div class="design-run-strip"><nx-run-strip [runs]="runs()" [slots]="18" /></div>
-      <span class="design-run-row">
-        <button
-          type="button"
-          class="secondary-button"
-          [disabled]="phase() === 'running'"
-          (click)="begin()"
-        >
-          立即執行
-        </button>
-        <button type="button" class="quiet-button" (click)="togglePause()">
-          {{ phase() === 'paused' ? '恢復' : '暫停' }}
-        </button>
-      </span>
+        </div>
+      </nx-time-lanes>
     </nx-design-example>
     <nx-design-example label="RunState">
       <span class="design-run-row">
@@ -153,21 +90,10 @@ function sampleRuns(now: number): RunStripItem[] {
         }
       </span>
     </nx-design-example>
-    <nx-design-example label="TimerRing">
-      <span class="design-run-row">
-        <nx-timer-ring [from]="windowFrom()" [to]="nextAt()" />
-        <nx-timer-ring mode="running" />
-        <nx-timer-ring mode="running" [progress]="0.62" />
-        <nx-timer-ring mode="due" />
-        <nx-timer-ring mode="paused" />
-        <nx-timer-ring mode="off" />
-      </span>
-    </nx-design-example>
     <nx-design-example label="TickingTime">
       <span class="design-run-row">
         <span class="design-run-clock"><nx-ticking-time [to]="later" /></span>
         <span class="design-run-clock"><nx-ticking-time [from]="since" /></span>
-        <nx-ticking-time compact [from]="since" />
         <nx-ticking-time unknown="未排定" />
       </span>
     </nx-design-example>
@@ -175,95 +101,54 @@ function sampleRuns(now: number): RunStripItem[] {
 })
 export class DesignRunTiming {
   private readonly clock = inject(ServerClock);
-  readonly states: RunStateKind[] = [
-    'queued',
-    'running',
-    'succeeded',
-    'idle',
-    'failed',
-    'cancelled',
-    'interrupted',
-    'paused',
-  ];
+  private readonly started = this.clock.now();
+  readonly states = Object.keys(STATE_NAMES) as RunStateKind[];
   readonly stateNames = STATE_NAMES;
-  readonly later = new Date(this.clock.now() + 2 * 3_600_000 + 15 * 60_000).toISOString();
-  readonly since = new Date(this.clock.now() - 47_000).toISOString();
+  readonly later = new Date(this.started + 2 * HOUR + 15 * MINUTE).toISOString();
+  readonly since = new Date(this.started - 47_000).toISOString();
 
-  readonly phase = signal<'countdown' | 'running' | 'paused'>('countdown');
-  readonly windowFrom = signal(new Date(this.clock.now()).toISOString());
-  readonly nextAt = signal(new Date(this.clock.now() + COUNTDOWN).toISOString());
-  readonly startedAt = signal<string | null>(null);
-  readonly progress = signal<number | null>(null);
-  readonly runs = signal<RunStripItem[]>(sampleRuns(this.clock.now()));
-  private readonly lastState = signal<RunStateKind>('succeeded');
-  private turn = 0;
-  private timers: ReturnType<typeof setTimeout>[] = [];
-
-  readonly ringMode = computed(() => (this.phase() === 'countdown' ? 'countdown' : this.phase()));
-  readonly shownState = computed<RunStateKind>(() =>
-    this.phase() === 'running'
-      ? 'running'
-      : this.phase() === 'paused'
-        ? 'paused'
-        : this.lastState(),
-  );
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.clear());
-  }
-
-  begin() {
-    if (this.phase() === 'running') return;
-    this.clear();
-    const startedAt = this.clock.now();
-    const id = `demo-${startedAt}`;
-    this.phase.set('running');
-    this.startedAt.set(new Date(startedAt).toISOString());
-    this.progress.set(null);
-    this.runs.update((runs) => [
-      ...runs,
-      { id, status: 'running', startedAt: new Date(startedAt).toISOString(), finishedAt: null },
-    ]);
-    // 先繞行一下（還不知道有多少要做），再以進度填滿。
-    for (const [delay, value] of [
-      [1200, 0.25],
-      [2000, 0.55],
-      [2800, 0.8],
-      [3500, 1],
-    ] as const)
-      this.timers.push(setTimeout(() => this.progress.set(value), delay));
-    this.timers.push(setTimeout(() => this.finish(id), RUN_TIME));
-  }
-
-  togglePause() {
-    if (this.phase() === 'paused') {
-      this.schedule();
-      return;
-    }
-    if (this.phase() === 'running') return;
-    this.clear();
-    this.phase.set('paused');
-  }
-
-  private finish(id: string) {
-    const outcome = OUTCOMES[this.turn++ % OUTCOMES.length];
-    const finishedAt = new Date(this.clock.now()).toISOString();
-    this.runs.update((runs) =>
-      runs.map((run) => (run.id === id ? { ...run, status: outcome, finishedAt } : run)),
-    );
-    this.lastState.set(outcome);
-    this.schedule();
-  }
-
-  private schedule() {
-    const now = this.clock.now();
-    this.phase.set('countdown');
-    this.windowFrom.set(new Date(now).toISOString());
-    this.nextAt.set(new Date(now + COUNTDOWN).toISOString());
-  }
-
-  private clear() {
-    for (const timer of this.timers) clearTimeout(timer);
-    this.timers = [];
-  }
+  readonly range = computed(() => {
+    const from = Math.floor(this.started / HOUR) * HOUR - 4 * HOUR;
+    const to = from + 24 * HOUR;
+    return { from, to, shades: [{ from: from + 9 * HOUR, to: from + 15 * HOUR }] };
+  });
+  readonly lanes = computed(() => {
+    const { from, to } = this.range();
+    const now = this.started;
+    return [
+      {
+        name: '暫存檔清理',
+        summary: '每 10 分鐘一輪，大多沒有事做，一輪失敗',
+        note: '',
+        marks: rhythm(now, from, to, 10 * MINUTE, ['neutral', 'neutral', 'success', 'danger']),
+      },
+      {
+        name: '報表彙整',
+        summary: '每 3 小時一輪，目前執行中',
+        note: '',
+        marks: [
+          ...rhythm(now - 2 * MINUTE, from, to, 3 * HOUR, ['success']).filter(
+            (mark) => mark.kind !== 'planned',
+          ),
+          { at: now - 2 * MINUTE, kind: 'active', title: '執行中' },
+          ...rhythm(now, from, to, 3 * HOUR, []).filter((mark) => mark.kind === 'planned'),
+        ] as TimeMark[],
+      },
+      {
+        name: '索引重建',
+        summary: '每天一次，下次 03:15',
+        note: '',
+        marks: [
+          { at: from + HOUR, kind: 'success', title: '昨天的一輪・成功' },
+          { at: from + 11 * HOUR + 15 * MINUTE, kind: 'planned', label: '03:15' },
+        ] as TimeMark[],
+      },
+      {
+        name: '資料同步',
+        summary: '已暫停，區間內沒有預定',
+        note: '暫停中，不依排程執行',
+        marks: [] as TimeMark[],
+      },
+    ];
+  });
 }

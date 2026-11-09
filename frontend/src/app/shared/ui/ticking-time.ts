@@ -1,5 +1,4 @@
 import {
-  booleanAttribute,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -29,18 +28,6 @@ export function clockText(milliseconds: number) {
   return hours
     ? `${hours}:${String(minutes).padStart(2, '0')}:${seconds}`
     : `${minutes}:${seconds}`;
-}
-
-/**
- * 擠在小地方（圓環中心）的時鐘字樣，最多五個字：一小時內同 {@link clockText}（`4:05`），一天內 `2h04`，超過一天 `3d`。
- */
-export function compactClockText(milliseconds: number) {
-  if (milliseconds < HOUR) return clockText(milliseconds);
-  if (milliseconds < DAY) {
-    const minutes = Math.floor((milliseconds % HOUR) / MINUTE);
-    return `${Math.floor(milliseconds / HOUR)}h${String(minutes).padStart(2, '0')}`;
-  }
-  return `${Math.floor(milliseconds / DAY)}d`;
 }
 
 /** 給螢幕閱讀器的概略時間（「約 5 分鐘」），不逐秒變化，免得讀屏一直重念。 */
@@ -95,8 +82,6 @@ export class TickingTime {
   /** 經過時間的起點（ISO），例如執行開始的時間。 */
   readonly from = input<string | null>(null);
   readonly unknown = input('—');
-  /** 用 {@link compactClockText} 的短字樣，放在圓環中心這類只容得下幾個字的地方。 */
-  readonly compact = input(false, { transform: booleanAttribute });
   /** 倒數到零。 */
   readonly reached = output<void>();
 
@@ -113,11 +98,7 @@ export class TickingTime {
   });
   readonly text = computed(() => {
     const value = this.milliseconds();
-    return value === null || Number.isNaN(value)
-      ? this.unknown()
-      : this.compact()
-        ? compactClockText(value)
-        : clockText(value);
+    return value === null || Number.isNaN(value) ? this.unknown() : clockText(value);
   });
   readonly glyphs = computed(() => {
     const chars = [...this.text()];

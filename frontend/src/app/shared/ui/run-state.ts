@@ -37,7 +37,7 @@ const GLYPHS: Record<RunStateKind, string[]> = {
   paused: ['M15 13v10', 'M21 13v10'],
 };
 
-/** 狀態對應的色調，給同一列的其他元件（徽章、紀錄條）共用。 */
+/** 狀態對應的色調，給同一列的其他元件（徽章、時間軸）共用。 */
 export function runStateTone(state: string): BadgeTone {
   return TONES[state as RunStateKind] ?? 'neutral';
 }

@@ -2,94 +2,53 @@
   display: block;
   min-width: 0;
 }
-.scheduling-counts {
-  margin: 0;
+nx-stat-grid {
+  margin-block-end: var(--section-gap);
 }
-.scheduling-count.is-running {
-  color: var(--accent);
-}
-.scheduling-count.is-failing {
-  color: var(--error);
-}
-.scheduling-groups {
-  display: grid;
-  gap: var(--section-gap);
+.scheduling-next {
+  display: flex;
+  gap: var(--p-space-1);
   min-width: 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  nx-ticking-time {
+    flex: none;
+  }
 }
 .scheduling-skeleton {
-  height: 9rem;
+  height: 28rem;
   border-radius: var(--radius-surface);
 }
-.scheduling-group .ui-section-heading {
-  margin-top: 0;
+// 名稱與按鈕的欄寬；只讀的人沒有按鈕，時間軸多拿回那一欄。
+.scheduling-lanes {
+  --time-lane-label: 17rem;
+  --time-lane-end: 5.25rem;
+  &.is-readonly {
+    --time-lane-end: 0px;
+  }
 }
-.scheduling-group.is-attention .ui-section-heading {
-  color: var(--error);
+.scheduling-group + .scheduling-group {
+  border-block-start: 1px solid var(--line);
 }
-// 一列一個任務、共用一個表面：紀錄條與按鈕對齊成欄，上下比對比卡片牆容易。
-.scheduling-list {
-  display: grid;
+.scheduling-group-heading {
   margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-surface);
-  background: var(--surface);
-  overflow: hidden;
-  container-type: inline-size;
+  padding: var(--p-space-2) var(--p-space-3) var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 600;
+  &.is-attention {
+    color: var(--error);
+  }
 }
-.scheduling-card {
-  --card-tint: transparent;
-  position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(8rem, 13rem) auto;
+.scheduling-label {
+  display: flex;
   align-items: center;
-  gap: var(--p-space-2) var(--p-space-4);
-  padding: var(--p-space-3) var(--p-space-4);
-  background: var(--card-tint);
-  transition: background-color var(--motion-panel) var(--ease);
-  & + & {
-    border-top: 1px solid var(--line);
-  }
-  // 左緣的色條：執行中與連續失敗，從中間往上下長出。
-  &::before {
-    content: '';
-    position: absolute;
-    inset: var(--p-space-2) auto var(--p-space-2) 0;
-    width: 3px;
-    border-radius: 0 var(--radius-data) var(--radius-data) 0;
-    background: var(--card-edge, transparent);
-    scale: 1 0;
-    transition:
-      scale var(--motion-morph) var(--ease-spring),
-      background-color var(--motion-panel) var(--ease);
-  }
-  &[data-phase='running'] {
-    --card-tint: color-mix(in srgb, var(--accent) 5%, transparent);
-    --card-edge: var(--accent);
-    &::before {
-      scale: 1;
-    }
-  }
-  &.is-failing {
-    --card-edge: var(--danger);
-    &::before {
-      scale: 1;
-    }
-  }
-  &[data-phase='unavailable'],
-  &[data-phase='done'] {
-    .scheduling-name {
-      color: var(--secondary);
-    }
-  }
-  nx-timer-ring {
-    --timer-ring-size: 2.75rem;
-  }
+  gap: var(--p-space-2);
+  min-width: 0;
+  flex: 1;
 }
 .scheduling-main {
   display: grid;
-  gap: 2px;
   min-width: 0;
 }
 .scheduling-name {
@@ -111,47 +70,22 @@
     text-decoration: underline;
     text-underline-offset: 3px;
   }
-}
-.scheduling-phase,
-.scheduling-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--p-space-1);
-  margin: 0;
-  min-width: 0;
+  &.is-muted {
+    color: var(--secondary);
+  }
 }
 .scheduling-phase {
-  color: var(--text-body, var(--ink));
-  font-size: var(--text-caption);
-}
-.scheduling-meta {
-  column-gap: var(--p-space-3);
+  display: flex;
+  gap: var(--p-space-1);
+  margin: 0;
+  min-width: 0;
   color: var(--secondary);
   font-size: var(--text-caption);
-  > .ui-truncate {
-    flex: 1 1 8rem;
-    min-width: 0;
-  }
+  white-space: nowrap;
 }
-.scheduling-muted {
-  color: var(--secondary);
-}
-.scheduling-tone {
-  margin-inline-start: var(--p-space-1);
+.scheduling-failing {
+  color: var(--error);
   font-weight: 600;
-  &[data-tone='success'] {
-    color: var(--success);
-  }
-  &[data-tone='danger'] {
-    color: var(--error);
-  }
-  &[data-tone='warning'] {
-    color: var(--warning);
-  }
-}
-.scheduling-strip {
-  --run-strip-height: 1.75rem;
 }
 .scheduling-actions {
   display: flex;
@@ -190,19 +124,4 @@
 .scheduling-code {
   font-family: var(--font-code);
   font-size: var(--p-font-xs);
-}
-// 清單窄的時候（手機、抽屜開著）：紀錄條換到名稱下方，按鈕留在右上。
-@container (max-width: 40rem) {
-  .scheduling-card {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    padding-inline: var(--p-space-3);
-  }
-  .scheduling-strip {
-    grid-column: 2 / -1;
-    grid-row: 2;
-  }
-  .scheduling-actions {
-    grid-column: 3;
-    grid-row: 1;
-  }
 }

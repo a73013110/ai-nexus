@@ -1,0 +1,127 @@
+// 刻度、底色與現在線只畫一份，疊在所有泳道上下；泳道本身透明。
+:host {
+  --time-lane-label-width: var(--time-lane-label, 15rem);
+  --time-lane-end-width: var(--time-lane-end, 5rem);
+  display: block;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  container: time-lanes / inline-size;
+}
+.time-axis {
+  display: grid;
+  grid-template-columns: var(--time-lane-label-width) minmax(0, 1fr) var(--time-lane-end-width);
+  border-block-end: 1px solid var(--line);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background: var(--surface-inset);
+}
+.time-heading {
+  align-self: end;
+  padding: 0 var(--p-space-3) var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.time-scale {
+  position: relative;
+  grid-column: 2;
+  height: 3.25rem;
+}
+.time-tick,
+.time-now {
+  position: absolute;
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  translate: -50% 0;
+}
+.time-tick {
+  bottom: var(--p-space-2);
+  color: var(--secondary);
+  &.is-start {
+    translate: 0 0;
+  }
+  &.is-end {
+    translate: -100% 0;
+  }
+}
+.time-now {
+  top: var(--p-space-1);
+  inset-inline-start: var(--time-now);
+  padding: 1px var(--p-space-2);
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.time-body {
+  position: relative;
+}
+.time-guides,
+.time-front {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: var(--time-lane-label-width) var(--time-lane-end-width);
+  pointer-events: none;
+}
+.time-shade,
+.time-rule,
+.time-now-line {
+  position: absolute;
+  inset-block: 0;
+}
+.time-shade {
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.time-rule {
+  width: 1px;
+  background: var(--tile-line);
+}
+.time-now-line {
+  inset-inline-start: var(--time-now);
+  width: 2px;
+  background: var(--accent);
+}
+.time-tip {
+  position: absolute;
+  max-width: 22rem;
+  padding: var(--p-space-1) var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-block);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  font-size: var(--p-font-xs);
+  translate: -50% -100%;
+  &.is-start {
+    translate: 0 -100%;
+  }
+  &.is-end {
+    translate: -100% -100%;
+  }
+}
+@container time-lanes (max-width: 40rem) {
+  .time-axis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .time-heading,
+  .time-guides,
+  .time-now-line,
+  .time-tick:nth-of-type(even) {
+    display: none;
+  }
+  .time-scale {
+    grid-column: 1;
+    margin-inline: var(--p-space-3);
+  }
+  .time-front {
+    inset-inline: var(--p-space-3);
+  }
+}
+@media (forced-colors: active) {
+  .time-now-line,
+  .time-rule {
+    background: CanvasText;
+  }
+}
