@@ -22,6 +22,7 @@
 
 ## 現有的選擇器
 
+- 輸入目前密碼用 `PasswordField` 包住標 `nxPasswordInput` 的輸入框（顯示切換、大寫鎖定提示，`disabled` 時自動收起顯示）；輸入框的綁定與樣式留在呼叫端，標籤用 `<label for>`，不要把外框包進 label。
 - 選人 `PersonPicker`、從名單挑人 `PersonBrowser`、平面清單 `Select`（長清單用選項的 `group` 分組、`keywords` 供搜尋代碼）、階層（單位、分群）`TreeSelect`，選項狀態標籤 `OptionTags`；用法見 [表單](forms.md)「選擇對象」。
 - 由管理者決定先後的列表直接在表格上排序：`nxSortableRows`＋`nx-sort-handle`＋`nx-sort-rank`，規則見 [手動排序](../architecture/manual-ordering.md)。
 - 表格的排序、欄位篩選與分頁用 [`table-model.ts`](../../frontend/src/app/shared/ui/table-model.ts) 的表格模型＋`th[nxHeader]`，已套用條件的 chip 用 `ChipList`；規則見 [資料工作區](data-workspace.md)。

@@ -20,6 +20,8 @@ public static class AuthEndpoints
             .MapSlice<WindowsLogin>()
             .MapSlice<LogIn>()
             .MapSlice<LogOut>()
+            .MapSlice<ReportSessionActivity>()
+            .MapSlice<UnlockSession>()
             .MapSlice<SelectIdentity>()
             .MapSlice<StartTestIdentity>()
             .MapSlice<EndTestIdentity>();

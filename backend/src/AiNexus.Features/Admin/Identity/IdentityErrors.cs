@@ -5,6 +5,7 @@ namespace AiNexus.Features.Admin.Identity;
 internal static class IdentityErrors
 {
     public static readonly Error SessionRevoked = Error.Unauthenticated("session_revoked");
+    public static readonly Error SessionLocked = Error.Unauthenticated("session_locked");
     public static readonly Error WindowsSidRequired = Error.Forbidden("windows_sid_required");
     public static readonly Error WindowsAccountRequired = Error.Forbidden("windows_account_required");
     public static readonly Error LoginMethodDisabled = Error.Forbidden("login_method_disabled");

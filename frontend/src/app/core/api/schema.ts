@@ -726,6 +726,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ReportSessionActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/unlock": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["UnlockSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/identity": {
         parameters: {
             query?: never;
@@ -5430,6 +5462,7 @@ export interface components {
             testing: null | components["schemas"]["TestIdentityDto"];
             identities: null | components["schemas"]["SignInIdentityDto"][];
             identity: null | string;
+            lifetime: null | components["schemas"]["SessionLifetimeDto"];
         };
         BackupMessage: {
             /** Format: uuid */
@@ -7923,6 +7956,15 @@ export interface components {
         SelectIdentityRequest: {
             identity: string;
         };
+        SessionLifetimeDto: {
+            lockedBy: null | string;
+            /** Format: int32 */
+            secondsUntilLock: number;
+            /** Format: int32 */
+            idleLockMinutes: number;
+            /** Format: int32 */
+            reauthenticationHours: number;
+        };
         SharedContentDto: {
             share: components["schemas"]["ShareDto"];
             snapshot: components["schemas"]["ShareSnapshot"];
@@ -8389,6 +8431,9 @@ export interface components {
             headRank: null | number;
             /** Format: int64 */
             rowVersion: number;
+        };
+        UnlockSessionRequest: {
+            password: string;
         };
         UsageDayDto: {
             /** Format: date */
@@ -8883,6 +8928,7 @@ export type SchemaChangeDto = components['schemas']['SchemaChangeDto'];
 export type SchemaObjectDto = components['schemas']['SchemaObjectDto'];
 export type SelectBranchRequest = components['schemas']['SelectBranchRequest'];
 export type SelectIdentityRequest = components['schemas']['SelectIdentityRequest'];
+export type SessionLifetimeDto = components['schemas']['SessionLifetimeDto'];
 export type SharedContentDto = components['schemas']['SharedContentDto'];
 export type SharedMessageDto = components['schemas']['SharedMessageDto'];
 export type ShareDto = components['schemas']['ShareDto'];
@@ -8932,6 +8978,7 @@ export type UnitMemberDto = components['schemas']['UnitMemberDto'];
 export type UnitMemberRequest = components['schemas']['UnitMemberRequest'];
 export type UnitOrderRequest = components['schemas']['UnitOrderRequest'];
 export type UnitUpdateRequest = components['schemas']['UnitUpdateRequest'];
+export type UnlockSessionRequest = components['schemas']['UnlockSessionRequest'];
 export type UsageDayDto = components['schemas']['UsageDayDto'];
 export type UsageKindDto = components['schemas']['UsageKindDto'];
 export type UsageModelDto = components['schemas']['UsageModelDto'];
@@ -10194,6 +10241,52 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ReportSessionActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    UnlockSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnlockSessionRequest"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

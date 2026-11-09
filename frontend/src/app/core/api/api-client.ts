@@ -90,7 +90,10 @@ export class ApiClient {
   private identity: string | null = null;
   private readonly reads = new Map<string, Promise<string>>();
   private readonly references = new Map<string, { at: number; body: Promise<string> }>();
+  private gate: { opened: Promise<void>; open: () => void } | null = null;
   readonly expired = signal(0);
+  /** 工作區鎖定中：`/auth` 以外的請求停在閘門，解鎖後才送出，呼叫端只會多等一下，不會失敗。 */
+  readonly locked = signal(false);
   /** 伺服器在登入後的 API 回應帶的 `X-App-Version`；和前端的 `APP_VERSION` 不同代表網站已更新、這個分頁還是舊版。 */
   readonly serverVersion = signal<string | null>(null);
 
@@ -104,6 +107,18 @@ export class ApiClient {
   }
   token(value: string) {
     this.csrf = value;
+  }
+  lock() {
+    if (this.gate) return;
+    let open = () => {};
+    const opened = new Promise<void>((resolve) => (open = resolve));
+    this.gate = { opened, open };
+    this.locked.set(true);
+  }
+  unlock() {
+    this.gate?.open();
+    this.gate = null;
+    this.locked.set(false);
   }
 
   get<P extends ApiPath<'get'>>(path: P, ...[request]: Arguments<Operation<P, 'get'>>) {
@@ -200,6 +215,7 @@ export class ApiClient {
     body?: unknown,
     request: Untyped = {},
   ): Promise<Response> {
+    if (this.gate && !isAuthPath(url)) await this.passGate(this.gate, request.signal);
     let response: Response;
     const multipart = body instanceof FormData;
     try {
@@ -233,14 +249,19 @@ export class ApiClient {
       this.identity = identity;
     }
     if (!response.ok) {
+      // 代理或閘道擋下的回應不一定是 problem+json，所以每個欄位都可能不存在。
+      const problem = (await response.json().catch(() => ({}))) as Partial<SafeProblemDetails>;
+      if (problem.code === 'session_locked' && !isAuthPath(url)) {
+        // 伺服器在 handler 之前就拒絕了，寫入也沒有執行過，解鎖後原樣重送是安全的。
+        this.lock();
+        return this.send(method, url, body, request);
+      }
       if (response.status === 401 && !isAuthPath(url)) {
         this.expire();
         this.references.clear();
         if (!this.router.url.startsWith('/login'))
           void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       }
-      // 代理或閘道擋下的回應不一定是 problem+json，所以每個欄位都可能不存在。
-      const problem = (await response.json().catch(() => ({}))) as Partial<SafeProblemDetails>;
       throw new ApiError(
         response.status,
         problem.code ?? 'request_failed',
@@ -259,6 +280,20 @@ export class ApiClient {
       this.reads.clear();
     }
     return response;
+  }
+
+  /** 呼叫端離開（`AbortSignal`）時不再等解鎖，和進行中的 fetch 被取消一樣丟出中止錯誤。 */
+  private passGate(gate: { opened: Promise<void> }, signal?: AbortSignal) {
+    if (!signal) return gate.opened;
+    return new Promise<void>((resolve, reject) => {
+      const abort = () => reject(signal.reason);
+      if (signal.aborted) return abort();
+      signal.addEventListener('abort', abort, { once: true });
+      void gate.opened.then(() => {
+        signal.removeEventListener('abort', abort);
+        resolve();
+      });
+    });
   }
 
   /** 工作階段已不屬於此分頁：作廢 CSRF，並通知 `AuthService` 開始新的登入世代。 */

@@ -2140,6 +2140,62 @@
         }
       }
     },
+    "/api/v1/auth/activity": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "ReportSessionActivity",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/unlock": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "UnlockSession",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/auth/identity": {
       "post": {
         "tags": [
@@ -13230,7 +13286,8 @@
           "userId",
           "testing",
           "identities",
-          "identity"
+          "identity",
+          "lifetime"
         ],
         "type": "object",
         "properties": {
@@ -13303,6 +13360,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "lifetime": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SessionLifetimeDto"
+              }
             ]
           }
         }
@@ -22908,6 +22975,35 @@
           }
         }
       },
+      "SessionLifetimeDto": {
+        "required": [
+          "lockedBy",
+          "secondsUntilLock",
+          "idleLockMinutes",
+          "reauthenticationHours"
+        ],
+        "type": "object",
+        "properties": {
+          "lockedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "secondsUntilLock": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "idleLockMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reauthenticationHours": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "SharedContentDto": {
         "required": [
           "share",
@@ -24589,6 +24685,17 @@
           "rowVersion": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "UnlockSessionRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
           }
         }
       },

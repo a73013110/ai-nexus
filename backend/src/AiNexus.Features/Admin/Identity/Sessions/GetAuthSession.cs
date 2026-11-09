@@ -11,7 +11,7 @@ internal sealed class GetAuthSession(IOptions<AdAuthenticationOptions> options, 
 {
     public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapGet("/session", (HttpContext http, GetAuthSession handler) => handler.Handle(http))
-        .AllowAnonymous().NotAudited("每個頁面載入都會查詢的登入狀態").WithName("GetAuthSession");
+        .AllowAnonymous().AllowWhileLocked().NotAudited("每個頁面載入都會查詢的登入狀態").WithName("GetAuthSession");
 
     public Ok<AuthSessionDto> Handle(HttpContext http) => TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
 }

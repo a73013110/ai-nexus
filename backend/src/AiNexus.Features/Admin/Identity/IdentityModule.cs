@@ -41,6 +41,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSettings<AdminBootstrapOptions, AdminBootstrapOptionsValidator>(AdminBootstrapOptions.Section);
         services.AddSettings<SelfServiceOptions, SelfServiceOptionsValidator>(SelfServiceOptions.Section);
+        services.AddSettings<SessionLifetimeOptions, SessionLifetimeOptionsValidator>(SessionLifetimeOptions.Section);
         var authentication = services.AddAuthentication("Session")
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
@@ -53,10 +54,11 @@ public sealed class IdentityModule : IFeatureModule
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SameSite = SameSiteMode.Strict;
                 options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
-                options.ExpireTimeSpan = TimeSpan.FromHours(8);
-                options.SlidingExpiration = true;
+                // 到期由 SessionTicket 在簽發時指定；滑動到期會被背景輪詢延長，不能開。
+                options.SlidingExpiration = false;
                 options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
-                options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AuthenticationRequired);
+                options.Events.OnRedirectToLogin = context => Problems.WriteAsync(context.HttpContext,
+                    SessionLock.IsRejected(context.HttpContext) ? IdentityErrors.SessionLocked : HttpErrors.AuthenticationRequired);
                 options.Events.OnRedirectToAccessDenied = context => Problems.WriteAsync(context.HttpContext, HttpErrors.AccessDenied);
             });
         ApiClientAccess.Add(services, authentication);

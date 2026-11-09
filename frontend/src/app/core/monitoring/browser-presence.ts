@@ -6,13 +6,13 @@ import { ApiClient } from '../api/api-client';
 import { featureForUrl } from '../api/catalog';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { BrowserSession } from './browser-session';
+import { INTERACTIONS } from './interactions';
 
 const HEARTBEAT_MS = 25_000;
 /** 導覽後最快多久再送一次心跳，連續換頁時不必每頁都送。 */
 const NAVIGATION_GAP_MS = 5000;
 /** 超過這段時間沒有操作就回報為閒置。 */
 const IDLE_MS = 120_000;
-const INTERACTIONS = ['pointerdown', 'keydown', 'wheel'] as const;
 
 /**
  * 在線狀態只回報目前網址在功能目錄中的 ID（頁面或閱讀器），個人設定回報 `settings`；

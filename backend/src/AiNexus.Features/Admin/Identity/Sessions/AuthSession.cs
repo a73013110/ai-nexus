@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using AiNexus.Features.Admin.Identity.Authentication;
 
 namespace AiNexus.Features.Admin.Identity.Sessions;
@@ -13,7 +12,7 @@ public sealed record SignInIdentityDto(string Id, string Kind, string Name, stri
 
 public sealed record AuthSessionDto(string Mode, bool Authenticated, bool Configured, string? Account, string? DisplayName, string CsrfToken,
     IReadOnlyList<string>? Methods = null, string? Method = null, Guid? UserId = null, TestIdentityDto? Testing = null,
-    IReadOnlyList<SignInIdentityDto>? Identities = null, string? Identity = null);
+    IReadOnlyList<SignInIdentityDto>? Identities = null, string? Identity = null, SessionLifetimeDto? Lifetime = null);
 
 /// <summary>所有 auth 端點共用的 session 描述，以及測試身分相關的共用計算。</summary>
 internal static class AuthSession
@@ -42,7 +41,8 @@ internal static class AuthSession
         return new(options.Mode, http.User.Identity?.IsAuthenticated == true, true, http.User.Identity?.Name, http.User.FindFirstValue(SessionIdentity.DisplayName), csrf.GetAndStoreTokens(http).RequestToken!,
             methods, http.User.Identity?.IsAuthenticated == true ? http.User.FindFirstValue(SessionIdentity.Method) ?? options.DirectoryMethod : null,
             Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var id) ? id : null, testing,
-            identities, identities.FirstOrDefault(x => x.Id == chosen)?.Id ?? (identities.Count > 0 ? identities[0].Id : null));
+            identities, identities.FirstOrDefault(x => x.Id == chosen)?.Id ?? (identities.Count > 0 ? identities[0].Id : null),
+            http.User.Identity?.IsAuthenticated == true ? http.RequestServices.GetRequiredService<SessionTicket>().Describe(http) : null);
     }
 
     /// <summary>記錄 <paramref name="previous"/> 攜帶的測試身分已結束；若已記錄過就不重複寫入。</summary>
@@ -54,13 +54,5 @@ internal static class AuthSession
         if (await SessionIdentity.TestEndedAsync(db, testId, ct)) return;
         SessionIdentity.RecordTestEnded(audit, actorId, testId, targetId, reason);
         await db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>以 <paramref name="principal"/> 重新簽發 session cookie，沿用原 cookie 的到期時間，切換身分不會延長登入。</summary>
-    public static async Task ReplaceSessionAsync(HttpContext http, ClaimsPrincipal principal)
-    {
-        var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
-        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false, ExpiresUtc = previous.Properties?.ExpiresUtc, AllowRefresh = true });
-        http.User = principal;
     }
 }

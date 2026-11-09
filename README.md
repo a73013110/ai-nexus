@@ -54,6 +54,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 對話 | 文件／圖片分析、分支、停止與斷線恢復、範本、搜尋、收藏／封存／標籤、草稿、文字備份、快捷指令 | [對話](docs/features/chat.md)、[文件與圖片](docs/features/attachments.md) |
 | 個人設定 | 當頁設定視窗、主題、閱讀與密度、通知、草稿、用量、快捷鍵 | [個人設定](docs/features/settings.md) |
 | 帳號安全 | 通知信箱與 AD 同步、步升驗證、自助設定本地登入 | [帳號安全](docs/features/account-security.md) |
+| 工作階段鎖定 | 閒置或太久沒驗證時鎖定、輸入密碼回到原畫面、24 小時硬上限 | [工作階段鎖定](docs/features/session-lock.md) |
 | 檔案庫 | 對話／知識／專案原檔、搜尋篩選、重用、容量 | [檔案庫](docs/features/files.md)、[附件保存](docs/features/attachment-storage.md) |
 | 知識庫 | ACL、OCR 與索引、SQL 向量檢索、引用與原文核對、背景任務 | [知識庫](docs/features/knowledge.md) |
 | 專案 | 共用指示、文件、範本與成果，提問仍屬個人 | [專案](docs/features/projects.md) |

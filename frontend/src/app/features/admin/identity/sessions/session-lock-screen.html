@@ -1,0 +1,67 @@
+<dialog
+  #dialog
+  class="lock-dialog"
+  aria-labelledby="lock-title"
+  autofocus
+  tabindex="-1"
+  (cancel)="$event.preventDefault()"
+  (keydown)="contain($event)"
+>
+  <div class="lock-ground"></div>
+  <div class="lock-stage">
+    <div
+      #wrap
+      class="lock-wrap"
+      [class.shake-a]="rejections() % 2 === 1"
+      [class.shake-b]="rejections() > 0 && rejections() % 2 === 0"
+    >
+      <div class="lock-surface"></div>
+      <div class="lock-pill" aria-hidden="true">
+        <span class="lock-pill-state" data-for="locking"><nx-icon name="lock" />正在鎖定</span>
+        <span class="lock-pill-state" data-for="unlocking"><nx-icon name="check" />已解鎖</span>
+      </div>
+      <div class="lock-card">
+        <div class="lock-head">
+          <span class="avatar" aria-hidden="true">{{ initial(name()) }}</span>
+          <div>
+            <h2 id="lock-title">工作區已鎖定</h2>
+            <p class="lock-reason">{{ reasonText() }}</p>
+          </div>
+        </div>
+        <form (submit)="submit($event)">
+          <p class="lock-who">
+            <b>{{ name() }}</b
+            ><span>{{ auth.session()?.account }}</span>
+          </p>
+          @if (error(); as message) {
+            <nx-notice tone="danger" [message]="message" />
+          }
+          <label for="lock-password">{{ passwordLabel() }}</label>
+          <nx-password-field [disabled]="submitting()">
+            <input
+              #input
+              id="lock-password"
+              nxField
+              nxPasswordInput
+              required
+              maxlength="1024"
+              [value]="password()"
+              [readOnly]="submitting()"
+              (input)="password.set($any($event.target).value)"
+            />
+          </nx-password-field>
+          <button
+            nxLoginSubmit
+            type="submit"
+            busy="正在解鎖…"
+            [phase]="submitPhase()"
+            [disabled]="submitting() || !password()"
+          >
+            解鎖
+          </button>
+        </form>
+        <button type="button" class="lock-other" (click)="auth.abandon()">改用其他帳號登入</button>
+      </div>
+    </div>
+  </div>
+</dialog>

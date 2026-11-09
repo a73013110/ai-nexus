@@ -18,7 +18,7 @@ namespace AiNexus.Features.Admin.Identity.SelfService;
 /// </summary>
 [Scoped]
 public sealed class Reauthentication(DirectoryCredentials directory, LocalAuthenticator local, AppDbContext db, IOptions<SelfServiceOptions> options,
-    IOptions<AdAuthenticationOptions> ad, TimeProvider clock)
+    IOptions<AdAuthenticationOptions> ad, TimeProvider clock, SessionTicket ticket)
 {
     /// <summary>這次請求是否由 session cookie 驗證（登入表單或本地密碼）；否則是每個請求都重新驗證的 Windows 身分。</summary>
     public static bool HasSession(HttpContext http) => http.User.FindFirstValue(SessionIdentity.UserId) is not null;
@@ -93,6 +93,6 @@ public sealed class Reauthentication(DirectoryCredentials directory, LocalAuthen
         var identity = (ClaimsIdentity)principal.Identity!;
         if (http.User.FindFirstValue(SessionIdentity.ActiveIdentity) is { } active) identity.AddClaim(new(SessionIdentity.ActiveIdentity, active));
         if (reauthenticated is { } at) identity.AddClaim(new(SessionIdentity.Reauthenticated, at.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)));
-        await AuthSession.ReplaceSessionAsync(http, principal);
+        await ticket.ReissueAsync(http, principal);
     }
 }

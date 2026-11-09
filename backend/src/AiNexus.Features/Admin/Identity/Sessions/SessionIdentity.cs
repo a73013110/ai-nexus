@@ -108,6 +108,8 @@ public static class SessionIdentity
             await RejectAsync(context);
             return;
         }
+        var ticket = http.RequestServices.GetRequiredService<SessionTicket>();
+        SessionTicket.Remember(http, context.Properties);
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (Guid.TryParse(principal.FindFirstValue(ActorId), out var actorId))
         {
@@ -120,17 +122,21 @@ public static class SessionIdentity
             }
             var ended = await TestEndedAsync(db, testId, ct);
             var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
-            if (ended || expired || user is null || !Accepts(user, principal))
+            var idle = ticket.LockedBy(context.Properties) is not null;
+            if (ended || expired || idle || user is null || !Accepts(user, principal))
             {
-                // 只切回仍有權限的原管理者，且絕不延長測試身分的有效期。
-                context.ReplacePrincipal(Principal(actor!, principal.FindFirstValue(ActorMethod)!)); context.ShouldRenew = true;
+                // 只切回仍有權限的原管理者，且絕不延長測試身分的有效期。不用 ShouldRenew：它會把 cookie 的到期時間往後滑。
+                // 測試身分本身不鎖定（密碼屬於別人）；時限到了先回到管理者，管理者閒置就接著由下面鎖定，要輸入的是自己的密碼。
+                var restored = Principal(actor!, principal.FindFirstValue(ActorMethod)!);
+                context.ReplacePrincipal(restored);
+                await ticket.ReissueAsync(http, restored);
                 http.Items[Restored] = true;
-                context.Properties.AllowRefresh = true;
                 if (!ended)
                 {
-                    RecordTestEnded(http.RequestServices.GetRequiredService<AuditTrail>(), actorId, testId, id, expired ? "expired" : "target_changed");
+                    RecordTestEnded(http.RequestServices.GetRequiredService<AuditTrail>(), actorId, testId, id, expired ? "expired" : idle ? "idle" : "target_changed");
                     await db.SaveChangesAsync(ct);
                 }
+                SessionLock.Enforce(context, ticket);
                 return;
             }
             http.Items[Validated] = user;
@@ -142,6 +148,7 @@ public static class SessionIdentity
             return;
         }
         http.Items[Validated] = user;
+        SessionLock.Enforce(context, ticket);
     }
 
     private static async Task RejectAsync(CookieValidatePrincipalContext context)

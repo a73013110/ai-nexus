@@ -6,7 +6,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Authentication;
@@ -20,7 +19,7 @@ public sealed record TestIdentityRequest(Guid UserId, string Reason);
 /// <summary>
 /// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
 /// </summary>
-internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, AuditTrail audit) : IEndpointSlice
+internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, AuditTrail audit, SessionTicket ticket) : IEndpointSlice
 {
     public const int MinReasonLength = 4, MaxReasonLength = 240;
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
@@ -48,10 +47,7 @@ internal sealed class StartTestIdentity(CurrentUser current, AppDbContext db, Ac
         var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? options.Value.DirectoryMethod;
         audit.Describe(testId, target.Id, new { testId, administratorId = actor.Id, userId = target.Id, reason, expiresAt = expiry });
         await db.SaveChangesAsync(ct);
-        var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
-        var properties = new AuthenticationProperties { IsPersistent = false, AllowRefresh = false, ExpiresUtc = previous.Properties?.ExpiresUtc ?? now.AddHours(8) };
-        var principal = SessionIdentity.Principal(target, "test", actor, sourceMethod, expiry, testId);
-        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, properties); http.User = principal;
+        await ticket.ReissueAsync(http, SessionIdentity.Principal(target, "test", actor, sourceMethod, expiry, testId));
         return AuthSession.Describe(http, options.Value, csrf);
     }
 }

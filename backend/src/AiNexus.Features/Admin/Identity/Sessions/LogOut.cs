@@ -18,7 +18,7 @@ internal sealed class LogOut(AppDbContext db, CurrentUser current, Authenticatio
     public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/logout", (HttpContext http, LogOut handler, CancellationToken ct) =>
             handler.HandleAsync(http, ct))
-        .NotAudited("登出由登入稽核記錄").WithName("AdLogout");
+        .AllowWhileLocked().NotAudited("登出由登入稽核記錄").WithName("AdLogout");
 
     public async Task<Result<AuthSessionDto>> HandleAsync(HttpContext http, CancellationToken ct)
     {

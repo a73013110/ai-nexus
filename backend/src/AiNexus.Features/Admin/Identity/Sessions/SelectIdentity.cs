@@ -21,7 +21,7 @@ internal sealed class SelectIdentityRequestValidator : RequestValidator<SelectId
 /// 把 session 切換到帳號提供的另一個身分（<see cref="AuthSession.Identities"/>），保留同一位使用者、登入方式與 cookie 存續時間。
 /// 回應附新的 CSRF token。
 /// </summary>
-internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) : IEndpointSlice
+internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, SessionTicket ticket) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/identity", (SelectIdentityRequest body, HttpContext http, SelectIdentity handler) =>
@@ -33,7 +33,7 @@ internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, 
         if (!AuthSession.Identities(http.User).Any(x => x.Id == body.Identity)) return IdentityErrors.IdentityNotFound;
         var claims = http.User.Claims.Where(x => x.Type != SessionIdentity.ActiveIdentity).Append(new(SessionIdentity.ActiveIdentity, body.Identity));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthEndpoints.CookieScheme));
-        await AuthSession.ReplaceSessionAsync(http, principal);
+        await ticket.ReissueAsync(http, principal);
         return AuthSession.Describe(http, options.Value, csrf);
     }
 }

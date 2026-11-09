@@ -207,6 +207,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   test_session_invalid: '測試登入已失效。',
   schema_object_not_found: '找不到這個物件，可能名稱有誤或已移除；請重新整理異動清單。',
   session_revoked: '登入已失效，請重新登入工作區。',
+  session_locked: '工作區已鎖定，請輸入密碼解鎖。',
   web_search_unavailable: '網路搜尋服務忙碌或額度受限，請稍後重試。',
   windows_sid_required: '無法取得 AD SID，請確認登入設定。',
   windows_account_required: 'Windows 帳號資料不完整。',

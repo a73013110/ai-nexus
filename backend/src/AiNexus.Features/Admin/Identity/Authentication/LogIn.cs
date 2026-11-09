@@ -7,7 +7,6 @@ using System.Security.Claims;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.Sessions;
@@ -20,7 +19,7 @@ public sealed record AdLoginRequest(string Account, string Password, string Meth
 
 /// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
 internal sealed class LogIn(DirectoryCredentials directory, LocalAuthenticator local, CurrentUser current, AppDbContext db, AuthenticationAudit audit, Issues issues,
-    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail, LoginThrottle throttle) : IEndpointSlice
+    IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AuditTrail trail, LoginThrottle throttle, SessionTicket ticket) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder auth) => auth
         .MapPost("/login", (AdLoginRequest body, HttpContext http, LogIn handler, CancellationToken ct) => handler.HandleAsync(http, body, ct))
@@ -47,9 +46,7 @@ internal sealed class LogIn(DirectoryCredentials directory, LocalAuthenticator l
         }
         await AuthSession.EndExistingTestAsync(previous, db, trail, "signed_in", ct);
         await audit.WriteAsync(IdentityAudit.SignedIn, user.Value.Id, UserAccounts.LoginName(user.Value), body.Method, ct);
-        var principal = SessionIdentity.Principal(user.Value, body.Method);
-        await http.SignInAsync(AuthEndpoints.CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
-        http.User = principal;
+        await ticket.IssueAsync(http, SessionIdentity.Principal(user.Value, body.Method));
         return TypedResults.Ok(AuthSession.Describe(http, options.Value, csrf));
     }
 

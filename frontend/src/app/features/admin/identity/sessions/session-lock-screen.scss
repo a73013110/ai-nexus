@@ -1,0 +1,260 @@
+// 不透明的底蓋住整個工作區；外框是獨立一層，陰影才會跟著形變。
+.lock-dialog {
+  --lock-pill-top: 44px;
+  --lock-pill-width: 148px;
+  --lock-pill-height: 40px;
+  // --lock-card-* 由元件量測；卡片中心到膠囊位置的距離，與卡片收成膠囊的內縮量。
+  --lock-drop: calc(var(--lock-pill-top) - var(--lock-card-center));
+  --lock-inset-x: max(0px, calc((var(--lock-card-width) - var(--lock-pill-width)) / 2));
+  --lock-inset-y: max(0px, calc((var(--lock-card-height) - var(--lock-pill-height)) / 2));
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+}
+.lock-dialog:focus {
+  outline: none;
+}
+.lock-dialog::backdrop {
+  background: transparent;
+}
+.lock-ground {
+  position: absolute;
+  inset: 0;
+  background: var(--canvas);
+}
+.lock-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: var(--p-space-4);
+  padding-block-end: calc(var(--p-space-4) + var(--keyboard-inset, 0px));
+  overflow-y: auto;
+}
+.lock-wrap {
+  position: relative;
+  width: min(100%, 24rem);
+}
+.lock-surface {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+.lock-pill {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  opacity: 0;
+  font-size: var(--p-font-data);
+  white-space: nowrap;
+}
+.lock-pill-state {
+  display: none;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.lock-card {
+  position: relative;
+  display: grid;
+  gap: var(--p-space-4);
+  padding: var(--p-space-6);
+}
+.lock-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+}
+.lock-head .avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: var(--p-font-lg);
+}
+h2 {
+  margin: 0;
+  font-size: var(--p-font-xl);
+  font-weight: 600;
+}
+.lock-reason {
+  margin: 0;
+  color: var(--secondary);
+  font-size: var(--text-label);
+  white-space: pre-line;
+}
+form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+}
+.lock-who {
+  display: flex;
+  gap: var(--p-space-2);
+  margin: 0;
+  color: var(--secondary);
+}
+.lock-who b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.lock-other {
+  justify-self: center;
+  min-height: var(--button-target);
+  padding-inline: var(--p-space-3);
+  border-radius: var(--radius-action);
+  color: var(--secondary);
+  font-size: var(--text-label);
+}
+.lock-other:hover {
+  background: var(--hover);
+}
+.lock-wrap.shake-a {
+  animation: login-shake-a 420ms var(--ease) both;
+}
+.lock-wrap.shake-b {
+  animation: login-shake-b 420ms var(--ease) both;
+}
+
+// 膠囊從頂端落下撐成卡片，解鎖時收回膠囊升走。keyframes 只有這個元件用，跟著延後載入的 chunk，不進初始樣式。
+@keyframes lock-ground-arrive {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes lock-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes lock-drop {
+  from {
+    opacity: 0;
+    translate: 0 calc(var(--lock-drop) - 72px);
+    animation-timing-function: var(--ease-spring);
+  }
+  41% {
+    opacity: 1;
+    translate: 0 var(--lock-drop);
+    animation-timing-function: var(--ease-spring);
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes lock-rise {
+  from {
+    opacity: 1;
+    translate: 0 0;
+    animation-timing-function: var(--ease-spring);
+  }
+  54% {
+    opacity: 1;
+    translate: 0 var(--lock-drop);
+    animation-timing-function: linear;
+  }
+  80% {
+    opacity: 1;
+    translate: 0 var(--lock-drop);
+    animation-timing-function: var(--ease-exit);
+  }
+  to {
+    opacity: 0;
+    translate: 0 calc(var(--lock-drop) - 72px);
+  }
+}
+@keyframes lock-shell-open {
+  from,
+  41% {
+    inset: var(--lock-inset-y) var(--lock-inset-x);
+    border-radius: var(--radius-full);
+    animation-timing-function: var(--ease-spring);
+  }
+  to {
+    inset: 0;
+    border-radius: var(--radius-surface);
+  }
+}
+@keyframes lock-shell-close {
+  from {
+    inset: 0;
+    border-radius: var(--radius-surface);
+    animation-timing-function: var(--ease-spring);
+  }
+  54%,
+  to {
+    inset: var(--lock-inset-y) var(--lock-inset-x);
+    border-radius: var(--radius-full);
+  }
+}
+@keyframes lock-pill-leave {
+  from,
+  41% {
+    opacity: 1;
+  }
+  56%,
+  to {
+    opacity: 0;
+  }
+}
+@keyframes lock-pill-return {
+  from,
+  26% {
+    opacity: 0;
+  }
+  42%,
+  to {
+    opacity: 1;
+  }
+}
+
+[data-phase='locking'] .lock-pill-state[data-for='locking'],
+[data-phase='unlocking'] .lock-pill-state[data-for='unlocking'] {
+  display: inline-flex;
+}
+[data-phase='locking'] {
+  --lock-motion: 780ms;
+  .lock-ground {
+    animation: lock-ground-arrive var(--motion-panel) linear both;
+  }
+  .lock-wrap {
+    animation: lock-drop var(--lock-motion) linear both;
+  }
+  .lock-surface {
+    animation: lock-shell-open var(--lock-motion) linear both;
+  }
+  .lock-pill {
+    animation: lock-pill-leave var(--lock-motion) linear both;
+  }
+  .lock-card {
+    animation: panel-arrive 280ms var(--ease-spring) 600ms both;
+  }
+}
+[data-phase='unlocking'] {
+  --lock-motion: 1s;
+  .lock-ground {
+    animation: lock-fade-out 320ms linear 300ms both;
+  }
+  .lock-wrap {
+    animation: lock-rise var(--lock-motion) linear both;
+  }
+  .lock-surface {
+    animation: lock-shell-close var(--lock-motion) linear both;
+  }
+  .lock-pill {
+    animation: lock-pill-return var(--lock-motion) linear both;
+  }
+  .lock-card {
+    animation: lock-fade-out 120ms var(--ease-exit) both;
+  }
+}

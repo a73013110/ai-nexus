@@ -14,6 +14,7 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
+import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { PendingButton } from '@shared/ui/pending-button';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { AccountSecurityStore } from './account-security-store';
@@ -33,6 +34,8 @@ const METHODS = [
     DialogHeader,
     Field,
     Notice,
+    PasswordField,
+    PasswordInput,
     PendingButton,
     VerificationCodeField,
     ViewSwitch,
@@ -68,18 +71,21 @@ const METHODS = [
           />
         }
         @if (method() === 'password') {
-          <label
-            >{{ passwordLabel()
-            }}<input
-              nxField
-              type="password"
-              autocomplete="current-password"
-              required
-              maxlength="1024"
-              [value]="password()"
-              [readOnly]="busy()"
-              (input)="password.set($any($event.target).value)"
-          /></label>
+          <div class="ui-field">
+            <label for="reauthentication-password">{{ passwordLabel() }}</label>
+            <nx-password-field [disabled]="busy()">
+              <input
+                id="reauthentication-password"
+                nxField
+                nxPasswordInput
+                required
+                maxlength="1024"
+                [value]="password()"
+                [readOnly]="busy()"
+                (input)="password.set($any($event.target).value)"
+              />
+            </nx-password-field>
+          </div>
         } @else if (method() === 'code') {
           @if (challenge(); as current) {
             <nx-verification-code-field [challenge]="current" [(code)]="code" />

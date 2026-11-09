@@ -17,13 +17,12 @@ import {
   readonly as readonlyField,
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
-import { EyeOff } from 'lucide';
 import { AuthService } from '@core/auth/auth-service';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewMorph } from '@core/layout/view-morph';
 import { WORKSPACE_HOME } from '@core/layout/workspace-home';
 import { ThemeService } from '@core/preferences/theme-service';
-import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
+import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { LoginIdentity } from './login-identity';
 import { LoginIntro, type LoginStage } from './intro/login-intro';
 import { isLoginMethod, LOGIN_METHODS, type LoginMethod, offeredMethods } from './login-methods';
@@ -39,8 +38,15 @@ const ENTRANCE_MS = 2400;
 @Component({
   selector: 'nx-login-page',
   styleUrl: './login-page.scss',
-  imports: [Notice, FormField, LoginIntro, LoginIdentity, LoginSubmit, Icon],
-  providers: [{ provide: EXTRA_ICONS, useValue: { 'eye-off': EyeOff } }],
+  imports: [
+    Notice,
+    FormField,
+    LoginIntro,
+    LoginIdentity,
+    LoginSubmit,
+    PasswordField,
+    PasswordInput,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })
@@ -74,7 +80,6 @@ export class LoginPage {
   readonly methods = computed(() => offeredMethods(this.auth.session()));
   readonly spec = computed(() => LOGIN_METHODS[this.method()]);
   readonly passwordVisible = signal(false);
-  readonly capsLock = signal(false);
   /** Windows 提示說明的是失敗的挑戰，所以要等第一次嘗試之後才出現。 */
   readonly windowsFailed = signal(false);
   readonly loginForm = form(this.credentials, (schema) => {
@@ -138,7 +143,6 @@ export class LoginPage {
     event.preventDefault();
     if (this.submitting() || this.loginForm().invalid() || !this.auth.session()?.configured) return;
     const { account, password } = this.credentials();
-    this.passwordVisible.set(false);
     await this.attempt(() => this.auth.login(account.trim(), password, this.method()));
     this.credentials.update((value) => ({ ...value, password: '' }));
   }
@@ -237,9 +241,5 @@ export class LoginPage {
     this.passwordVisible.set(false);
     this.windowsFailed.set(false);
     this.error.set(null);
-  }
-  /** CapsLock 沒有自己的事件，所以密碼欄位中的每個按鍵都會回報其狀態。 */
-  readCapsLock(event: KeyboardEvent) {
-    this.capsLock.set(event.getModifierState?.('CapsLock') ?? false);
   }
 }

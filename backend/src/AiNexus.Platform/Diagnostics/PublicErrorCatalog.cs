@@ -337,6 +337,7 @@ public static class PublicErrorCatalog
         ["run_not_found"] = "找不到這次生成。",
         ["schema_object_not_found"] = "找不到這個物件，可能名稱有誤或已移除；請重新整理異動清單。",
         ["session_revoked"] = "登入已失效，請重新登入工作區。",
+        ["session_locked"] = "工作區已鎖定，請輸入密碼解鎖。",
         ["share_content_limit"] = "分享內容過長，請改分享整理後的成果文件。",
         ["share_generation_active"] = "請先等待或停止回答，再分享完整內容。",
         ["share_history_invalid"] = "對話分支資料不完整。",

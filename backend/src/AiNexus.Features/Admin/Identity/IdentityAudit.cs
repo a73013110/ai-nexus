@@ -7,6 +7,7 @@ public static class IdentityAudit
 {
     public static readonly AuditAction SignedIn = AuditAction.Authentication("identity.session.signed_in", "登入");
     public static readonly AuditAction SignedOut = AuditAction.Authentication("identity.session.signed_out", "登出");
+    public static readonly AuditAction SessionUnlocked = AuditAction.Authentication("identity.session.verified", "解鎖工作區");
     public static readonly AuditAction IdentitySelected = AuditAction.Authentication("identity.session.selected", "切換身分");
     public static readonly AuditAction TestIdentityStarted = AuditAction.Authentication("identity.test_identity.started", "開始測試身分");
     public static readonly AuditAction TestIdentityEnded = AuditAction.Authentication("identity.test_identity.ended", "結束測試身分");

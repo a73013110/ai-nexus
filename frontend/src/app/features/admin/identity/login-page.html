@@ -78,33 +78,9 @@
             />
             <p id="account-hint" class="login-field-hint">{{ copy.hint }}</p>
             <label for="login-password">{{ copy.password }}</label>
-            <div class="login-password">
-              <input
-                id="login-password"
-                [type]="passwordVisible() ? 'text' : 'password'"
-                autocomplete="current-password"
-                [formField]="loginForm.password"
-                [attr.aria-describedby]="capsLock() ? 'caps-hint' : null"
-                (keydown)="readCapsLock($event)"
-                (keyup)="readCapsLock($event)"
-                (blur)="capsLock.set(false)"
-              />
-              <button
-                type="button"
-                class="icon-button"
-                aria-controls="login-password"
-                [attr.aria-pressed]="passwordVisible()"
-                [attr.aria-label]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
-                [attr.title]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
-                [disabled]="submitting()"
-                (click)="passwordVisible.set(!passwordVisible())"
-              >
-                <nx-icon [name]="passwordVisible() ? 'eye-off' : 'eye'" />
-              </button>
-            </div>
-            @if (capsLock()) {
-              <p id="caps-hint" class="login-caps" role="status">大寫鎖定已開啟</p>
-            }
+            <nx-password-field [(visible)]="passwordVisible" [disabled]="submitting()">
+              <input id="login-password" nxPasswordInput [formField]="loginForm.password" />
+            </nx-password-field>
             <button
               nxLoginSubmit
               type="submit"

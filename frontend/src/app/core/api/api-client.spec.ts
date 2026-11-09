@@ -104,6 +104,41 @@ describe('api client reads', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('holds requests while locked and sends them after unlock', async () => {
+    const client = TestBed.inject(ApiClient);
+    client.lock();
+    const read = client.get('/api/v1/models');
+    await Promise.resolve();
+    expect(fetch).not.toHaveBeenCalled();
+    client.unlock();
+    await read;
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('replays a request refused by the lock instead of ending the session', async () => {
+    const client = TestBed.inject(ApiClient);
+    fetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'session_locked' }), { status: 401 }),
+    );
+    const read = client.get('/api/v1/models');
+    await vi.waitFor(() => expect(client.locked()).toBe(true));
+    expect(client.expired()).toBe(0);
+    client.unlock();
+    await expect(read).resolves.toEqual({ items: [1] });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('lets a held request go when its caller aborts', async () => {
+    const client = TestBed.inject(ApiClient);
+    client.lock();
+    const controller = new AbortController();
+    const read = client.get('/api/v1/models', { signal: controller.signal });
+    controller.abort();
+    await expect(read).rejects.toBeDefined();
+    expect(fetch).not.toHaveBeenCalled();
+    client.unlock();
+  });
+
   it('sends the JSON body with the CSRF token and returns nothing for 204', async () => {
     fetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
     const api = TestBed.inject(ApiClient);

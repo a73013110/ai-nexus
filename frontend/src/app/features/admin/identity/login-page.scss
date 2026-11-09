@@ -112,32 +112,10 @@ input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
 }
-.login-password {
-  position: relative;
-}
-.login-password input {
-  padding-inline-end: calc(var(--button-target) + var(--p-space-1));
-}
-// Edge draws its own reveal button; the page's toggle replaces it.
-.login-password input::-ms-reveal {
-  display: none;
-}
-.login-password button {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-end: 1px;
-  margin-block: auto;
-}
-.login-field-hint,
-.login-caps {
+.login-field-hint {
   margin: 0 0 0.375rem;
   color: var(--secondary);
   font-size: var(--text-caption);
-}
-.login-caps {
-  margin: 0;
-  color: var(--warning);
-  animation: arrive var(--motion) var(--ease-spring);
 }
 .login-retry {
   width: 100%;

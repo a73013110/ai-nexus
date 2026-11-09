@@ -42,15 +42,7 @@ export class AuthService {
   async load(): Promise<AuthSessionDto> {
     if (this.pending) return this.pending;
     this.pending = this.api.authSession().then((session) => {
-      const previous = this.session();
-      if (
-        previous?.authenticated &&
-        (previous.account !== session.account ||
-          previous.testing?.userId !== session.testing?.userId)
-      )
-        this.generation.update((value) => value + 1);
-      this.session.set(session);
-      this.confirmedAt = session.authenticated ? Date.now() : 0;
+      this.adopt(session);
       return session;
     });
     try {
@@ -58,6 +50,17 @@ export class AuthService {
     } finally {
       this.pending = null;
     }
+  }
+  /** 套用伺服器回傳的目前狀態；帳號或測試身分變了才開始新的登入世代。 */
+  adopt(session: AuthSessionDto) {
+    const previous = this.session();
+    if (
+      previous?.authenticated &&
+      (previous.account !== session.account || previous.testing?.userId !== session.testing?.userId)
+    )
+      this.generation.update((value) => value + 1);
+    this.session.set(session);
+    this.confirmedAt = session.authenticated ? Date.now() : 0;
   }
   /** 回傳的檢查結果會維持為 true，直到帳號改變；遲到的回應會先檢查它。 */
   guard() {
@@ -101,6 +104,12 @@ export class AuthService {
     await this.router.navigate(['/login']);
     this.morph.discard();
     this.announce();
+  }
+  /** 從鎖定畫面離開：整頁換到登入頁，前一位使用者留在記憶體裡的畫面與資料一起清掉。 */
+  async abandon() {
+    await this.api.logout().catch(() => null);
+    this.channel?.postMessage('changed');
+    window.location.assign('/login');
   }
   async testIdentity(userId: string, reason: string) {
     const session = await this.api.testIdentity(userId, reason);

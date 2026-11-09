@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   effect,
   inject,
@@ -12,6 +13,7 @@ import { RouterOutlet } from '@angular/router';
 import { SettingsDialog } from '@features/platform/account/settings-dialog';
 import { TestIdentityIndicator } from '@core/auth/test-identity-indicator';
 import { IdentityVeil } from '@core/auth/identity-veil';
+import { SessionLockScreen } from '@features/admin/identity/sessions/session-lock-screen';
 import { ReaderDialog } from '@features/work/knowledge/documents/reader-dialog';
 import { NotificationCenter } from '@features/platform/notifications/notification-center';
 import { NotificationStore } from '@features/platform/notifications/notification-store';
@@ -28,6 +30,7 @@ import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
     ReaderDialog,
     NotificationCenter,
     RouteProgress,
+    SessionLockScreen,
   ],
   // eslint-disable-next-line @angular-eslint/component-selector -- index.html bootstrap element
   selector: 'app-root',
@@ -38,6 +41,8 @@ export class App {
   private readonly session = inject(WorkspaceSession);
   readonly testing = this.session.testing;
   readonly notifications = inject(NotificationStore);
+  /** Windows 整合驗證沒有 cookie 期限，不需要鎖定畫面。 */
+  readonly lockable = computed(() => !!this.session.auth.session()?.lifetime);
   constructor() {
     const injector = inject(Injector);
     const destroyRef = inject(DestroyRef);

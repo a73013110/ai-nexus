@@ -15,6 +15,7 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InlineTitle } from '@shared/ui/inline-title';
 import { KeyCombo } from '@shared/ui/key-combo';
+import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { PersonBrowser, type BrowsePerson } from '@shared/ui/person-browser';
 import { SearchField } from '@shared/ui/search-field';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
@@ -93,6 +94,8 @@ const UNITS: TreeSelectNode[] = [
     Field,
     Icon,
     InlineTitle,
+    PasswordField,
+    PasswordInput,
     PersonBrowser,
     PersonPicker,
     KeyCombo,
@@ -135,13 +138,21 @@ const UNITS: TreeSelectNode[] = [
   template: `<nx-design-section
       id="design-fields"
       title="欄位與搜尋"
-      api="nxField · SearchField"
+      api="nxField · PasswordField · SearchField"
       description="驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。打字即搜尋時傳 busy（防抖等待加讀取中）：放大鏡換成轉圈，欄位仍可輸入。"
     >
       <nx-design-example label="nxField">
         <label class="ui-field"
           >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
         /></label>
+      </nx-design-example>
+      <nx-design-example label="PasswordField">
+        <div class="ui-field">
+          <label for="design-password">目前的密碼</label>
+          <nx-password-field
+            ><input id="design-password" nxField nxPasswordInput
+          /></nx-password-field>
+        </div>
       </nx-design-example>
       <nx-design-example label="SearchField">
         <nx-search-field

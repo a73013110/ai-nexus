@@ -528,6 +528,9 @@ export class ApiFixture {
   }[] = [];
   identity = "personal";
   loginMethod = "ad";
+  /** 有值時 session 帶期限，前端到時間就來問；`locked` 模擬伺服器已鎖定。 */
+  lockAfterSeconds: number | null = null;
+  locked = false;
   chatAccess = true;
   adminAccess = false;
   /** Platform operations (usage, prices, retrieval); administrators have it unless a test sets it on its own. */
@@ -577,6 +580,8 @@ export class ApiFixture {
         contentType: "application/json",
         body: JSON.stringify(body),
       });
+    if (this.locked && !path.startsWith("/auth/"))
+      return json({ title: "工作區已鎖定", code: "session_locked" }, 401);
     if (path === "/presence")
       return json({ enabled: true, heartbeatSeconds: 25 });
     if (path.startsWith("/presence/") && method === "DELETE")
@@ -586,8 +591,21 @@ export class ApiFixture {
       path === "/auth/windows" ||
       path === "/auth/login" ||
       path === "/auth/logout" ||
-      path === "/auth/identity"
+      path === "/auth/identity" ||
+      path === "/auth/unlock"
     ) {
+      if (path === "/auth/unlock") {
+        if (route.request().postDataJSON().password !== "fixture-password")
+          return json(
+            {
+              title: "密碼不正確，請重新輸入。",
+              code: "reauthentication_failed",
+            },
+            400,
+          );
+        this.locked = false;
+        this.lockAfterSeconds = 1800;
+      }
       if (path === "/auth/identity")
         this.identity = route.request().postDataJSON().identity;
       if (path === "/auth/login") {
@@ -628,6 +646,15 @@ export class ApiFixture {
           ...this.identities,
         ],
         identity: this.identity,
+        lifetime:
+          this.lockAfterSeconds === null
+            ? null
+            : {
+                lockedBy: this.locked ? "idle" : null,
+                secondsUntilLock: this.locked ? 0 : this.lockAfterSeconds,
+                idleLockMinutes: 30,
+                reauthenticationHours: 8,
+              },
       });
     }
     if (path === "/me") {
