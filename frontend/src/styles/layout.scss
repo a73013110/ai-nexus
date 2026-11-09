@@ -79,8 +79,9 @@ nx-feature-page {
 .feature-layout-wide .feature-content {
   max-width: none;
 }
+// 用 min-height：內容比視窗高時這層要跟著長高；固定高度會讓子項溢出，捲動範圍停在子項邊緣，頁尾內距就不見了。
 .feature-layout-data .feature-content {
-  height: 100%;
+  min-height: 100%;
 }
 .feature-layout-data .feature-content > * {
   flex: none;
