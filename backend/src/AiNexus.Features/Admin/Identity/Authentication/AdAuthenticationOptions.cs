@@ -30,6 +30,9 @@ public sealed class AdAuthenticationOptions : IValidatableObject
     /// </summary>
     public string[] AccountSuffixes { get; set; } = [];
 
+    /// <summary>註冊驗證 scheme 時（options 還無法解析）判斷是否用 Windows 整合驗證；與 <see cref="Mode"/> 同一個設定鍵、同一個預設值。</summary>
+    public static bool UsesWindows(IConfiguration configuration) => (configuration[$"{Section}:{nameof(Mode)}"] ?? "Ldap") == "Windows";
+
     public bool Configured => !string.IsNullOrWhiteSpace(BindPassword);
     public string Host => Server.Length > 0 ? Server : Domain;
     public int Port => UseLdaps ? 636 : 389;

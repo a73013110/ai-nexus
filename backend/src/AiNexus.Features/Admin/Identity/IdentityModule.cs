@@ -46,9 +46,11 @@ public sealed class IdentityModule : IFeatureModule
             // 已有 session cookie 時優先使用 cookie；否則依目錄模式決定：Ldap 走 cookie，Windows 走 Negotiate。
             .AddPolicyScheme("Session", null, options => options.ForwardDefaultSelector = http =>
                 http.Request.Cookies.ContainsKey(SessionCookie) || http.RequestServices.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
-                    ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)
-            .AddNegotiate()
-            .AddCookie(AuthEndpoints.CookieScheme, options =>
+                    ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme);
+        // Negotiate 只在 Windows 模式註冊：在 IIS 上它要求站台啟用 Windows 驗證，否則啟動即失敗；而 IIS 一啟用 Windows 驗證，
+        // 就會在每個 401（包括鎖定的 session_locked）加上 Negotiate 挑戰，讓瀏覽器跳出自己的帳密框。模式改了要重啟。
+        if (AdAuthenticationOptions.UsesWindows(builder.Configuration)) authentication.AddNegotiate();
+        authentication.AddCookie(AuthEndpoints.CookieScheme, options =>
             {
                 options.Cookie.Name = SessionCookie;
                 options.Cookie.HttpOnly = true;

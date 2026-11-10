@@ -18,7 +18,7 @@
 
 啟用 IIS Application Initialization，網站／application 設 `preloadEnabled=true`，讓 AlwaysRunning 的集區載入應用。排程回收安排於離峰，先確認沒有生成或索引任務；回收仍會中斷正在生成的回答，租約到期後保留部分輸出並可手動重新生成，不會自動再次付費呼叫模型。
 
-若用 LDAP：**Anonymous Authentication 啟用，Windows Authentication 停用**，由網站登入表單驗證 AD。若改 `Mode=Windows`，需安裝 IIS Windows Authentication role service、啟用 Windows Authentication並設定瀏覽器 Intranet 信任；先確認 `/auth/session` 能拿到身分。每個 in-process 網站使用獨立集區。
+若用 LDAP：**Anonymous Authentication 啟用，Windows Authentication 停用**，由網站登入表單驗證 AD。Windows Authentication 開著時，IIS 會在每個 401（例如工作區鎖定）加上 Negotiate 挑戰，瀏覽器就跳出自己的帳密框。若改 `Mode=Windows`，需安裝 IIS Windows Authentication role service、啟用 Windows Authentication（沒啟用時網站啟動失敗，500.30）並設定瀏覽器 Intranet 信任；先確認 `/auth/session` 能拿到身分。切換模式要同時改 IIS 驗證並回收集區。每個 in-process 網站使用獨立集區。
 
 在主機管理員的 **Windows PowerShell 5.1** 可設定既有集區（不要在開發機照跑）：
 

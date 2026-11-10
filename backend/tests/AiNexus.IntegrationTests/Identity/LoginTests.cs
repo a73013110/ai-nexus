@@ -26,6 +26,21 @@ public sealed class LoginTests
     }
 
     [Fact]
+    public async Task LdapModeAnswersWindowsLoginWithoutAskingForAWindowsIdentity()
+    {
+        // Ldap 模式沒有 Negotiate scheme：未登入照一般 fallback 回 401，已登入回模式不支援；兩者都不能因找不到 scheme 而 500。
+        await using var factory = new AppFactory(ldap: true);
+        using var client = factory.CreateClient();
+        using var anonymous = await client.GetAsync("/api/v1/auth/windows");
+        Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
+        Assert.Equal("authentication_required", (await anonymous.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        await Login(client, "alice");
+        using var signedIn = await client.GetAsync("/api/v1/auth/windows");
+        Assert.Equal(HttpStatusCode.BadRequest, signedIn.StatusCode);
+        Assert.Equal("authentication_mode", (await signedIn.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task InvalidAdPasswordDoesNotIssueAnAuthenticatedCookie()
     {
         await using var factory = new AppFactory(ldap: true);

@@ -16,11 +16,17 @@ namespace AiNexus.Features.Admin.Identity.Authentication;
 /// <summary>Windows 整合驗證登入：呼叫者已由 Negotiate 驗證完成，這裡只負責解析使用者並寫入稽核。</summary>
 internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, AuthenticationAudit audit, Issues issues) : IEndpointSlice
 {
-    public static void MapEndpoints(RouteGroupBuilder auth) => auth
-        .MapGet("/windows", (HttpContext http, WindowsLogin handler, CancellationToken ct) => handler.HandleAsync(http, ct))
-        .RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build())
-        .NotAudited("登入結果由登入稽核記錄")
-        .WithName("WindowsLogin");
+    public static void MapEndpoints(RouteGroupBuilder auth)
+    {
+        var endpoint = auth
+            .MapGet("/windows", (HttpContext http, WindowsLogin handler, CancellationToken ct) => handler.HandleAsync(http, ct))
+            .NotAudited("登入結果由登入稽核記錄")
+            .WithName("WindowsLogin");
+        // Ldap 模式不註冊 Negotiate（見 IdentityModule），要求它驗證會在授權階段丟例外；端點照樣存在，由 handler 回模式不支援。
+        var services = ((IEndpointRouteBuilder)auth).ServiceProvider;
+        if (services.GetRequiredService<IOptions<AdAuthenticationOptions>>().Value.Mode == "Windows")
+            endpoint.RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build());
+    }
 
     public async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> HandleAsync(HttpContext http, CancellationToken ct)
     {
