@@ -38,7 +38,14 @@
 - `Scheduling:ExecuteOnly`：非空時只執行列出的任務 Key（仍要 `Execute=true`）。開發機要試某個任務時用它，其他任務留給正式站。
 - `Scheduling:Tasks:<Key>`：每個任務的唯一設定來源，`appsettings.json` 列出全部，環境設定檔只寫要改的欄位。`Schedule` 寫間隔（`00:05:00`，上一輪結束後隔多久，新任務立即跑一次）或五欄 cron（`30 3 * * *`，台灣時間），同一個鍵，覆寫時整個取代；`FixedSchedule` 的任務不能填。缺任務、缺欄位、鍵不是已註冊的任務都會在啟動時一次列出、拒絕啟動。
 - 每天一次的清理排在凌晨並互相錯開；要讓人第一時間看到的檢查排在上班時間（結構異動檢查 08:00）。
-- 不是定期工作的 `BackgroundService` 仍然存在：使用者送出的佇列（`BackgroundJobWorker`、`MailDispatcher`、`GenerationWorker`）、取樣器（`RuntimeSampler`）、日誌管線（`DiagnosticWorker`：寫檔、補送 SQL、清本機日誌檔；檔案在各自的主機上，每個程序都要做，不能只由持有租約的那個做）。日誌與稽核在資料庫的保存期清理是任務（`diagnostics.retention`、`audit.retention`）。佇列工作在管理頁另一個檢視列出。
+- 日誌與稽核在資料庫的保存期清理是任務（`diagnostics.retention`、`audit.retention`）；本機日誌檔由每個程序自己清，見下一節。
+
+## 常駐服務
+
+- 只有兩種工作常駐、不寫成任務：每個程序都得自己做的（本機日誌檔、記憶體取樣、自己手上的租約），以及要立刻反應的佇列。目前是 `DiagnosticWorker`、`ScheduledTaskHost`、`BackgroundJobWorker`、`MailDispatcher`、`GenerationWorker`、`RunRecoveryWorker`、`RuntimeSampler`。
+- 寫法：繼承 `BackgroundService` 並實作 [`IResidentService`](../../backend/src/AiNexus.Platform/Scheduling/IResidentService.cs)，宣告 `Definition`（Key、名稱、分類、一句說明、節奏；選填 `Inactive`，回傳依設定不做事的原因）。組合產生器會註冊；Platform 自己的服務手動呼叫 `AddResidentService<T>()`。
+- 管理頁的「常駐服務」檢視自動列出。狀態由 `ResidentServices` 直接讀 `ExecuteTask`，實作不必回報；它只在各程序的記憶體，頁面顯示的是回應請求的站台。
+- 每個 hosted service 都必須宣告（`ResidentServiceTests`），不留管理頁看不到的背景動作。
 
 ## 測試
 

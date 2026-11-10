@@ -394,11 +394,36 @@ public sealed class SchedulingTests
     }
 
     [Fact]
+    public async Task ResidentServicesAreListedWithTheirStateInThisProcess()
+    {
+        await using var app = await StartAsync(administrators: ["alice"]);
+        using var admin = await app.Factory.SignedInAsync();
+
+        var board = (await admin.GetFromJsonAsync<ResidentServiceBoardDto>("/api/v1/resident-services", Ct))!;
+        Assert.Equal(Environment.MachineName, board.Host);
+        Assert.Equal(
+            ["chat.generation", "chat.run-recovery", "diagnostics.pipeline", "jobs.worker", "mail.dispatcher", "monitoring.sampler", "scheduling.engine"],
+            board.Services.Select(x => x.Key).Order(StringComparer.Ordinal));
+        // 測試主機只啟動生成 worker；其餘沒有啟動的服務不能顯示成執行中。
+        Assert.Equal(ResidentServiceStates.Running, board.Services.Single(x => x.Key == "chat.generation").State);
+        var jobs = board.Services.Single(x => x.Key == "jobs.worker");
+        Assert.Equal((ResidentServiceStates.Stopped, (string?)null), (jobs.State, jobs.Reason));
+
+        // 依設定不做事的服務帶著原因，和「該跑卻停了」分得開。
+        await using var idle = await StartAsync(administrators: ["alice"], scheduling: options => options.Execute = false);
+        using var other = await idle.Factory.SignedInAsync();
+        var engine = (await other.GetFromJsonAsync<ResidentServiceBoardDto>("/api/v1/resident-services", Ct))!.Services.Single(x => x.Key == "scheduling.engine");
+        Assert.Equal(ResidentServiceStates.Inactive, engine.State);
+        Assert.Contains("Scheduling:Execute", engine.Reason);
+    }
+
+    [Fact]
     public async Task OnlyAdministratorsSeeTheBoard()
     {
         await using var app = await StartAsync();
         using var user = await app.Factory.SignedInAsync("bob");
         Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/v1/scheduled-tasks", Ct)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/v1/background-jobs", Ct)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/v1/resident-services", Ct)).StatusCode);
     }
 }

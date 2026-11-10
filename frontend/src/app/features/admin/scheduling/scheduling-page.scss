@@ -103,6 +103,34 @@ nx-stat-grid {
 .scheduling-jobs table {
   min-width: 52rem;
 }
+// 最小寬度交給 stacked 表格：寬版橫向捲動，手機卡片不受它撐寬。
+.scheduling-services {
+  --table-min-width: 58rem;
+}
+.scheduling-services table {
+  table-layout: fixed;
+}
+// 說明與原因是完整的句子，要換行讀完，不截斷。
+.scheduling-services :is(th, td) {
+  vertical-align: top;
+  white-space: normal;
+}
+.scheduling-service-name {
+  font-weight: 600;
+}
+// 共用規則只給 td 的小字；這裡的說明放在列標題裡，補上同樣的呈現。
+.scheduling-services th small {
+  display: block;
+  margin-top: 0.125rem;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.scheduling-service-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  font-weight: 600;
+}
 .scheduling-time-column {
   --column-width: 11rem;
 }
@@ -114,6 +142,12 @@ nx-stat-grid {
 }
 .scheduling-status-column {
   --column-width: 12rem;
+}
+.scheduling-rhythm-column {
+  --column-width: 16rem;
+}
+.scheduling-state-column {
+  --column-width: 18rem;
 }
 .scheduling-count-column {
   --column-width: 4.5rem;

@@ -1,4 +1,5 @@
 import type {
+  ResidentServiceDto,
   ScheduledTaskBoardDto,
   ScheduledTaskDto,
   ScheduledTaskRunDto,
@@ -267,4 +268,33 @@ export function nextPoll(tasks: readonly ScheduledTaskDto[] | undefined, now: nu
     if (until > 0) delay = Math.min(delay, until + 1500);
   }
   return delay;
+}
+
+/** 常駐服務在回應請求的那個站台的狀態；`kind` 沿用執行狀態的圖示與色調。 */
+const SERVICE_STATES: Record<string, { label: string; kind: RunStateKind }> = {
+  running: { label: '執行中', kind: 'running' },
+  inactive: { label: '未啟用', kind: 'idle' },
+  stopped: { label: '已停止', kind: 'interrupted' },
+  failed: { label: '已中止', kind: 'failed' },
+};
+
+export function serviceState(state: string) {
+  return SERVICE_STATES[state] ?? { label: state, kind: 'idle' as RunStateKind };
+}
+
+/**
+ * 狀態下面那一句：未啟用寫設定上的原因；該跑卻停了的兩種狀況寫去哪裡查，
+ * 因為這一頁只知道它停了，原因在啟動當時的日誌裡。照常執行時不必說明。
+ */
+export function serviceNote(service: Pick<ResidentServiceDto, 'state' | 'reason'>) {
+  switch (service.state) {
+    case 'inactive':
+      return service.reason ?? '';
+    case 'stopped':
+      return '這個站台沒有在執行，請到系統日誌查啟動時的紀錄。';
+    case 'failed':
+      return `因為發生錯誤而中止${service.reason ? `（${service.reason}）` : ''}，重新啟動站台才會恢復。`;
+    default:
+      return '';
+  }
 }

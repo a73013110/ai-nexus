@@ -18,6 +18,8 @@ import {
   plannedTimes,
   runDuration,
   runFailure,
+  serviceNote,
+  serviceState,
   stateLabel,
   taskPhase,
   taskRunState,
@@ -275,5 +277,25 @@ describe('nextPoll', () => {
     expect(nextPoll([task({ nextRunAt: at(-60_000) })], NOW)).toBe(IDLE_POLL);
     expect(nextPoll([task({ nextRunAt: at(4000), isPaused: true })], NOW)).toBe(IDLE_POLL);
     expect(nextPoll(undefined, NOW)).toBe(IDLE_POLL);
+  });
+});
+
+describe('resident services', () => {
+  it('names each state and keeps an unknown one readable', () => {
+    expect(serviceState('running')).toEqual({ label: '執行中', kind: 'running' });
+    expect(serviceState('inactive').kind).toBe('idle');
+    expect(serviceState('stopped').kind).toBe('interrupted');
+    expect(serviceState('failed').kind).toBe('failed');
+    expect(serviceState('draining')).toEqual({ label: 'draining', kind: 'idle' });
+  });
+
+  it('explains only the states that need it', () => {
+    expect(serviceNote({ state: 'running', reason: null })).toBe('');
+    expect(serviceNote({ state: 'inactive', reason: '這個站台不執行排程。' })).toBe(
+      '這個站台不執行排程。',
+    );
+    expect(serviceNote({ state: 'stopped', reason: null })).toContain('系統日誌');
+    expect(serviceNote({ state: 'failed', reason: 'SqlException' })).toContain('（SqlException）');
+    expect(serviceNote({ state: 'failed', reason: null })).not.toContain('（');
   });
 });

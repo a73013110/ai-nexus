@@ -2048,6 +2048,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/resident-services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListResidentServices"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/attendance-records": {
         parameters: {
             query?: never;
@@ -7631,6 +7647,19 @@ export interface components {
             entries: components["schemas"]["RepositoryEntryDto"][];
             readme: null | components["schemas"]["RepositoryFileDto"];
         };
+        ResidentServiceBoardDto: {
+            host: string;
+            services: components["schemas"]["ResidentServiceDto"][];
+        };
+        ResidentServiceDto: {
+            key: string;
+            name: string;
+            category: string;
+            description: string;
+            rhythm: string;
+            state: string;
+            reason: null | string;
+        };
         ResourceAclDto: {
             members: components["schemas"]["ResourceMemberDto"][];
             groupIds: string[];
@@ -8952,6 +8981,8 @@ export type RepositoryReviewReportDto = components['schemas']['RepositoryReviewR
 export type RepositoryReviewSectionDto = components['schemas']['RepositoryReviewSectionDto'];
 export type RepositoryStatusDto = components['schemas']['RepositoryStatusDto'];
 export type RepositoryTreeDto = components['schemas']['RepositoryTreeDto'];
+export type ResidentServiceBoardDto = components['schemas']['ResidentServiceBoardDto'];
+export type ResidentServiceDto = components['schemas']['ResidentServiceDto'];
 export type ResourceAclDto = components['schemas']['ResourceAclDto'];
 export type ResourceAclRequest = components['schemas']['ResourceAclRequest'];
 export type ResourceDto = components['schemas']['ResourceDto'];
@@ -11408,6 +11439,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListResidentServices: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResidentServiceBoardDto"];
+                };
             };
             default: components["responses"]["Problem"];
         };

@@ -3,6 +3,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Mail;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -22,8 +23,14 @@ public sealed partial class MailDispatcher(
     IOptions<MailOptions> options,
     Issues issues,
     ILogger<MailDispatcher> logger,
-    TimeProvider clock) : BackgroundService
+    TimeProvider clock) : BackgroundService, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "mail.dispatcher", "郵件寄送", "郵件", "寄出待寄的郵件，失敗依退避時間重試。", "每 2 秒檢查待寄郵件")
+    {
+        Inactive = static services => services.GetRequiredService<IOptions<MailOptions>>().Value.Enabled ? null : "郵件傳輸未啟用，信件只會入列不會寄出。",
+    };
+
     public static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(2);
     public static readonly TimeSpan LeaseDuration = TimeSpan.FromSeconds(120);
 

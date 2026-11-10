@@ -1,12 +1,19 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using AiNexus.Platform.Scheduling;
 using Microsoft.Data.SqlClient.Diagnostics;
 
 namespace AiNexus.Features.Admin.Monitoring.Traffic;
 
 /// <summary>掛在 SqlClient 的共用診斷邊界上，涵蓋 EF、Dapper 與直接命令，且不讀取 SQL 文字。</summary>
-public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog catalog, TimeProvider clock) : BackgroundService, IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>
+public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog catalog, TimeProvider clock) : BackgroundService, IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "monitoring.sampler", "執行狀態取樣", "即時監控", "取樣 CPU、記憶體、執行緒與資料庫命令耗時，供即時監控顯示；只存在記憶體。", "每 3 秒")
+    {
+        Inactive = static services => services.GetRequiredService<RuntimeTraffic>().Enabled ? null : "即時監控未啟用（Monitoring:Enabled）。",
+    };
+
     /// <summary>程序取樣間隔；取樣會併入 <see cref="RuntimeTraffic"/> 的十秒資源區間。</summary>
     public static readonly TimeSpan SampleInterval = TimeSpan.FromSeconds(3);
     private readonly ConcurrentDictionary<Guid, (string Id, long Start)> commands = new();

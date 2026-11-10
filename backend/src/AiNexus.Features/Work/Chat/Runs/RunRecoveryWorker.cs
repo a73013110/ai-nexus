@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Features.Platform.Inference.Runs;
+using AiNexus.Platform.Scheduling;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
@@ -13,8 +14,11 @@ public sealed partial class RunRecoveryWorker(
     GenerationScheduler scheduler,
     StorageReadiness storage,
     ILogger<RunRecoveryWorker> logger,
-    TimeProvider clock) : BackgroundService
+    TimeProvider clock) : BackgroundService, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "chat.run-recovery", "生成續約與復原", "聊天", "為這個站台生成中的回答續約、同步別處送出的取消，並收回逾時沒人處理的回答。", "每 15 秒");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));

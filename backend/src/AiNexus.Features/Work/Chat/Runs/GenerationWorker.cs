@@ -16,6 +16,7 @@ using AiNexus.Features.Work.Projects;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Scheduling;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -35,8 +36,11 @@ public sealed partial class GenerationWorker(
     StorageReadiness storage,
     ILogger<GenerationWorker> logger,
     Issues issues,
-    TimeProvider clock) : BackgroundService
+    TimeProvider clock) : BackgroundService, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "chat.generation", "回答生成", "聊天", "執行聊天的模型推論，把回答分批寫進資料庫。", "有排隊的回答就立即處理");
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!storage.Configured)

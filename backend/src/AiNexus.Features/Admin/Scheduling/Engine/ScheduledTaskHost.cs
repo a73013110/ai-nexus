@@ -1,4 +1,5 @@
 using AiNexus.Data.App;
+using AiNexus.Platform.Scheduling;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Scheduling.Engine;
@@ -13,8 +14,14 @@ public sealed partial class ScheduledTaskHost(
     StorageReadiness readiness,
     IOptions<SchedulingOptions> options,
     ILogger<ScheduledTaskHost> logger,
-    TimeProvider clock) : BackgroundService
+    TimeProvider clock) : BackgroundService, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "scheduling.engine", "排程引擎", "背景作業", "認領到期的排程任務並執行，管理逾時、停止與執行紀錄。", "依 Scheduling:PollSeconds 檢查到期任務；手動執行時立即喚醒")
+    {
+        Inactive = static services => services.GetRequiredService<IOptions<SchedulingOptions>>().Value.Execute ? null : "這個站台不執行排程（Scheduling:Execute），由其他站台執行。",
+    };
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var settings = options.Value;

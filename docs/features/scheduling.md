@@ -1,6 +1,6 @@
 # 背景作業
 
-結論：「背景作業」頁（`/admin/scheduling`，功能 `scheduling`）列出系統定期執行的所有任務與使用者送出的佇列工作：下次何時跑、正在跑什麼、結果如何；有 `scheduling.manage` 時可立即執行、停止、暫停與恢復。寫任務的方式見 [排程任務](../architecture/scheduled-tasks.md)。
+結論：「背景作業」頁（`/admin/scheduling`，功能 `scheduling`）列出系統自己會做的所有事：定期執行的任務、使用者送出的佇列工作與常駐服務；任務看得到下次何時跑、正在跑什麼、結果如何，有 `scheduling.manage` 時可立即執行、停止、暫停與恢復。寫任務的方式見 [排程任務](../architecture/scheduled-tasks.md)。
 
 - 授權：`scheduling`（看）與 `scheduling.manage`（操作），初始都給 administrators 群組；選單在「監控與紀錄」。
 - 開發與正式共用資料庫：只有 `Scheduling:Execute` 為 `true` 的站台會執行任務（預設 `false`，正式站打開）；`Scheduling:ExecuteOnly` 可限定只執行哪些任務。回應頁面的站台不執行或只執行部分任務時，頁面上方會提示。
@@ -32,7 +32,15 @@
 - 使用者送出的文件辨識、評測、程式碼 Review 等工作（`jobs.BackgroundJobs`），全部使用者的都在這裡；可依類型、內容、狀態與時間篩選。使用者自己的工作在「背景任務」頁。
 - 有 `scheduling.manage` 時可停止排隊中或處理中的工作，稽核為 `jobs.queue_job.cancelled`；查閱稽核為 `jobs.queue.read`。
 
+## 常駐服務
+
+- 隨站台啟動、一直執行到停站的背景服務：日誌管線、排程引擎、佇列工作處理、郵件寄送、回答生成、生成續約與復原、執行狀態取樣。每列寫它做什麼、多久做一次。
+- 狀態：執行中、未啟用（依設定不做事，附原因，例如這個站台不執行排程）、已停止（該跑卻沒在跑，到系統日誌查啟動紀錄）、已中止（因錯誤結束，重啟站台才恢復）。
+- 狀態存在各站台的記憶體：頁面顯示回應請求的那個站台（表格右上角的站台名稱），其他站台要到那個站台看。各服務的健康指標在[即時營運監控](monitoring.md)。
+- 只能看，不能在頁面上停止或重啟。
+
 ## 驗證
 
-- `SchedulingTests`：認領、續租、停止、中斷、補跑、失敗通知與管理端點。
+- `SchedulingTests`：認領、續租、停止、中斷、補跑、失敗通知與管理端點（含常駐服務清單）。
+- `ResidentServiceTests`：每個 hosted service 都有宣告。
 - 前端：`scheduling-presentation.spec.ts`、共用元件的 spec。

@@ -55,6 +55,8 @@ import {
   runDuration,
   runFailure,
   runStatus,
+  serviceNote,
+  serviceState,
   stateLabel,
   taskPhase,
   taskRunState,
@@ -66,11 +68,13 @@ const PLANNED_RESOLUTION = 500;
 const VIEWS = [
   { value: 'tasks', label: '排程任務' },
   { value: 'queue', label: '佇列工作' },
+  { value: 'services', label: '常駐服務' },
 ] as const;
 type View = (typeof VIEWS)[number]['value'];
 
 /**
- * 背景作業（`scheduling`）：所有排程任務放在同一條 24 小時時間軸上，過去的結果與接下來的預定一眼看完；另一個檢視是使用者送出的佇列工作。
+ * 背景作業（`scheduling`）：系統自己會做的事都在這一頁。所有排程任務放在同一條 24 小時時間軸上，過去的結果與接下來的預定一眼看完；
+ * 另外兩個檢視是使用者送出的佇列工作，以及隨站台常駐的服務（狀態只代表回應請求的那個站台）。
  * 看板依處境調整輪詢（{@link nextPoll}），並以回應裡的伺服器時間校正共用時鐘，現在線與計時不受使用者電腦時鐘誤差影響。
  * 有 `scheduling.manage` 時可立即執行、停止、暫停與恢復任務，以及停止佇列工作；都是記下要求就回應，結果靠輪詢更新。
  */
@@ -246,6 +250,22 @@ export class SchedulingPage {
     })),
   );
   readonly cancellingJob = action({ concurrent: true });
+
+  /** 常駐服務：切到這個檢視才讀；狀態很少變，用閒置的節奏更新就夠。 */
+  readonly servicesRead = apiResource({
+    feature: 'scheduling',
+    params: () => (this.view() === 'services' ? true : undefined),
+    loader: (_params, signal) => this.api.services(signal),
+    poll: () => IDLE_POLL,
+  });
+  readonly services = this.servicesRead.value;
+  readonly serviceRows = computed(() =>
+    (this.services()?.services ?? []).map((row) => ({
+      row,
+      status: serviceState(row.state),
+      note: serviceNote(row),
+    })),
+  );
 
   reloadBoard() {
     this.boardRead.reload();

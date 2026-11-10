@@ -1,3 +1,4 @@
+using AiNexus.Platform.Scheduling;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Diagnostics;
@@ -6,8 +7,11 @@ namespace AiNexus.Platform.Diagnostics;
 /// 診斷日誌的背景服務。檔案日誌（Journal）與 SQL 匯入是兩條獨立的軌道；
 /// 即使 SQL 緩慢或離線，也不會拖慢或阻塞本機檔案的即時寫入。
 /// </summary>
-public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService
+public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService, IResidentService
 {
+    public static ResidentServiceDefinition Definition { get; } = new(
+        "diagnostics.pipeline", "日誌管線", "系統日誌", "把日誌寫進本機檔案、補送到資料庫，並清掉已補送且過期的本機檔。", "持續寫入與補送；本機檔每 5 分鐘清一次");
+
     /// <summary>多久清一次已補送且過期的本機日誌檔。</summary>
     private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(5);
 

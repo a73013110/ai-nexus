@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Scheduling;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Exporter;
@@ -237,6 +238,7 @@ public static class DiagnosticRegistration
 
         // 最先註冊，因此最後才停止，確保業務 Worker 發出的終態事件都能寫入。
         builder.Services.AddHostedService<DiagnosticWorker>();
+        builder.Services.AddResidentService<DiagnosticWorker>();
 
         var configuration = DiagnosticOptions.Read(builder.Configuration);
         var telemetry = builder.Services.AddOpenTelemetry();

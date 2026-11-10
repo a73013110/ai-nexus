@@ -1,6 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('scheduling')"
-  description="系統定期執行的任務與使用者送出的佇列工作：下次何時跑、正在跑什麼、結果如何。"
+  description="系統自己會做的事都在這裡：定期執行的任務、使用者送出的佇列工作與常駐服務。"
   density="compact"
   layoutMode="data"
 >
@@ -362,7 +362,7 @@
         </div>
       }
     </nx-detail-drawer>
-  } @else {
+  } @else if (view() === 'queue') {
     @if (cancellingJob.error()) {
       <nx-notice
         tone="danger"
@@ -471,6 +471,72 @@
         errorTitle="無法取得佇列工作"
         emptyTitle="沒有符合條件的佇列工作"
         emptyText="使用者送出文件辨識、評測或程式碼 Review 後，工作會出現在這裡。"
+      />
+    </nx-data-table>
+  } @else {
+    <nx-data-table
+      class="scheduling-services"
+      label="常駐服務"
+      [stacked]="true"
+      [busy]="servicesRead.refreshing()"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>常駐服務</h2>
+        @if (services(); as current) {
+          <span class="ui-count-label" title="狀態存在各站台的記憶體，其他站台要到那個站台看"
+            >站台 {{ current.host }}</span
+          >
+        }
+      </div>
+      <table>
+        <caption class="sr-only">
+          隨站台啟動、一直執行到停站的背景服務，以及它們在回應這個頁面的站台上的狀態。
+        </caption>
+        <colgroup>
+          <col />
+          <col class="scheduling-kind-column" />
+          <col class="scheduling-rhythm-column" />
+          <col class="scheduling-state-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">服務</th>
+            <th scope="col">分類</th>
+            <th scope="col">節奏</th>
+            <th scope="col">狀態</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of serviceRows(); track item.row.key) {
+            <tr>
+              <th scope="row">
+                <span class="scheduling-service-name">{{ item.row.name }}</span>
+                <small>{{ item.row.description }}</small>
+              </th>
+              <td data-label="分類">{{ item.row.category }}</td>
+              <td data-label="節奏">{{ item.row.rhythm }}</td>
+              <td>
+                <span class="scheduling-service-state">
+                  <nx-run-state [state]="item.status.kind" />
+                  {{ item.status.label }}
+                </span>
+                @if (item.note) {
+                  <small>{{ item.note }}</small>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      <nx-table-state
+        [count]="serviceRows().length"
+        [loading]="servicesRead.loading()"
+        [retrying]="servicesRead.refreshing()"
+        [error]="servicesRead.error()"
+        loadingText="正在載入常駐服務…"
+        errorTitle="無法取得常駐服務"
+        emptyTitle="沒有常駐服務"
+        (retry)="servicesRead.reload()"
       />
     </nx-data-table>
   }
