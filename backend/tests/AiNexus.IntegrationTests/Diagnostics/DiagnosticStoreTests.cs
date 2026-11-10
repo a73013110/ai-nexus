@@ -4,6 +4,7 @@ using AiNexus.Data.App.Identity;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Platform.Account;
+using AiNexus.Features.Admin.Audit;
 using AiNexus.Features.Admin.Diagnostics;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Auditing;
@@ -31,15 +32,17 @@ public sealed class DiagnosticStoreTests
         var raw = JsonSerializer.Serialize(new { password = Secret, before = new { token = Secret, enabled = true }, reason = Secret });
         await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [audit].[AuditEvents] SET [DetailsJson] = {raw} WHERE [Id] = {legacy.Id}");
         var response = await client.GetStringAsync("/api/v1/admin/audit?action=fixture.legacy.updated"); Assert.Contains("fixture.legacy.updated", response); Assert.DoesNotContain(Secret, response);
-        await factory.Services.GetRequiredService<IDiagnosticStore>().CleanupAsync(CancellationToken.None);
+        Assert.True(await factory.InScopeAsync((DiagnosticConfigurationTask task) => task.RecordAsync(CancellationToken.None)));
+        // 設定沒變時不重複記錄：每次啟動都跑，不能每次多一筆。
+        Assert.False(await factory.InScopeAsync((DiagnosticConfigurationTask task) => task.RecordAsync(CancellationToken.None)));
         var system = await client.GetStringAsync($"/api/v1/admin/audit?action={DiagnosticsAudit.ConfigurationActivated.Name}"); Assert.Contains("system", system); Assert.Contains("fingerprint", system);
         Assert.DoesNotContain("ainexus-test-", system); Assert.DoesNotContain("localhost:4318", system);
     }
 
     [Fact]
-    public async Task SqlCapacityAllowsDuplicateReplayAndRetentionKeepsDistinctAuditPolicy()
+    public async Task SqlCapacityAllowsDuplicateReplayAndRetentionTasksKeepDistinctPolicies()
     {
-        await using var factory = new AppFactory(services: services => services.PostConfigure<DiagnosticOptions>(x => { x.MaxSqlRows = 1000; x.CleanupBatchSize = 10; }));
+        await using var factory = new AppFactory(services: services => services.PostConfigure<DiagnosticOptions>(x => x.MaxSqlRows = 1000));
         using var client = factory.CreateClient(); (await client.GetAsync("/health/live")).EnsureSuccessStatusCode();
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var old = Enumerable.Range(0, 1000).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31), Level = LogLevel.Information }).ToArray();
@@ -47,21 +50,21 @@ public sealed class DiagnosticStoreTests
         db.AddRange(retained, expired); await db.SaveChangesAsync(); var store = factory.Services.GetRequiredService<IDiagnosticStore>();
         await store.WriteAsync([old[0]], CancellationToken.None); // 重複寫入是安全的，即使已超過軟性容量上限。
         await Assert.ThrowsAsync<DiagnosticCapacityException>(() => store.WriteAsync([new DiagnosticEvent()], CancellationToken.None));
-        await store.CleanupAsync(CancellationToken.None);
+        // 日誌 30 天、稽核 365 天：31 天前的日誌全刪，31 天前的稽核留著。
+        Assert.Equal(old.Length, await factory.InScopeAsync((DiagnosticRetentionTask task) => task.DeleteExpiredAsync(CancellationToken.None)));
+        Assert.Equal(1, await factory.InScopeAsync((AuditRetentionTask task) => task.DeleteExpiredAsync(CancellationToken.None)));
         Assert.False(await db.DiagnosticEvents.AnyAsync(x => x.LogId == old[0].LogId)); Assert.True(await db.AuditEvents.AnyAsync(x => x.Id == retained.Id));
         Assert.False(await db.AuditEvents.AnyAsync(x => x.Id == expired.Id)); await store.WriteAsync([new DiagnosticEvent()], CancellationToken.None);
     }
 
     [Fact]
-    public async Task SqlServerBulkImportIsIdempotentIndependentAndRetentionIsBounded()
+    public async Task SqlServerBulkImportIsIdempotentAndIndependent()
     {
         await TestDatabase.WithContextAsync(async db => {
             var services = new ServiceCollection();
             services.AddDbContext<AppDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
-            services.AddSingleton(TimeProvider.System).AddSingleton<AuditContextSource>().AddSingleton<RepeatedReads>().AddScoped<AuditTrail>();
             using var provider = services.BuildServiceProvider(); using var health = new DiagnosticHealth();
-            var options = Options.Create(new DiagnosticOptions { CleanupBatchSize = 2 });
-            var store = new DiagnosticStore(provider.GetRequiredService<IServiceScopeFactory>(), options, health, TimeProvider.System);
+            var store = new DiagnosticStore(provider.GetRequiredService<IServiceScopeFactory>(), Options.Create(new DiagnosticOptions()), health);
             var code = Issues.NewCode();
             var row = new DiagnosticEvent { IssueCode = code, Level = LogLevel.Error, At = DateTimeOffset.UtcNow, TraceId = new string('a', 32) };
             var user = new User { Sid = "diagnostic-rollback", AdAccount = "rollback", DisplayName = "fixture" };
@@ -72,9 +75,6 @@ public sealed class DiagnosticStoreTests
             Assert.False(await db.Users.AsNoTracking().AnyAsync(x => x.Id == user.Id));
             Assert.Equal(1, await db.DiagnosticEvents.CountAsync(x => x.IssueCode == code));
             Assert.Equal(row.TraceId, (await db.DiagnosticEvents.AsNoTracking().SingleAsync(x => x.LogId == row.LogId)).TraceId);
-            await store.WriteAsync(Enumerable.Range(0, 5).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31) }).ToArray(), CancellationToken.None);
-            await store.CleanupAsync(CancellationToken.None);
-            Assert.Equal(1, await db.DiagnosticEvents.CountAsync());
         });
     }
 }

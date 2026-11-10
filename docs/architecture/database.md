@@ -70,5 +70,5 @@ procedure、function、view 的命名、檔頭、交易寫法與流程見 [SQL �
 ## 保存與備份
 
 - `RunEvents` 預設保留 24 小時供 SSE 重播，權威狀態在 `GenerationRuns`；未被引用的草稿附件依保留期清理；分享到期後清理快照。
-- 軟刪除的對話、成果，以及稽核、評測資料的保存期由部署單位制定，目前沒有自動硬刪。
+- 日誌與稽核超過保存期由排程任務刪除；軟刪除的對話、成果與評測資料沒有自動硬刪，保存期由部署單位制定。
 - 完整備份＝同一時點的 SQL＋站外附件目錄＋設定與 Data Protection key ring，步驟見 [BACKUP](../operations/backup.md)。

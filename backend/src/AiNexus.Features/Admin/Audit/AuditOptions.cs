@@ -12,6 +12,9 @@ public sealed class AuditOptions
 
     /// <summary>匯出查詢的 SQL 逾時秒數；不限時間的文字搜尋會掃描詳情欄位，不能無限等待。</summary>
     [Range(1, 300)] public int ExportTimeoutSeconds { get; set; } = 30;
+
+    /// <summary>稽核保存天數；超過的由 <see cref="AuditRetentionTask"/> 刪除。下限 30 天，避免設錯值一次清光。</summary>
+    [Range(30, 36500)] public int RetentionDays { get; set; } = 365;
 }
 
 [OptionsValidator]

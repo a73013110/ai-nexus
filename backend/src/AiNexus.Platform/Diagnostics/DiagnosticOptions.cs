@@ -25,8 +25,6 @@ public sealed class DiagnosticOptions : IValidatableObject
     [Range(1000d, 1_000_000_000d)] public long MaxSqlRows { get; set; } = 5_000_000;
     [Range(1, 365)] public int FileRetentionDays { get; set; } = 14;
     [Range(1, 3650)] public int RetentionDays { get; set; } = 30;
-    [Range(30, 36500)] public int AuditRetentionDays { get; set; } = 365;
-    [Range(1, 10000)] public int CleanupBatchSize { get; set; } = 1000;
     [Range(1, 1000)] public int LowLevelSampleEvery { get; set; } = 1;
     [Range(1, 366)] public int MaxQueryDays { get; set; } = 31;
     [Range(1, 10000)] public int MaxExportRows { get; set; } = 5000;

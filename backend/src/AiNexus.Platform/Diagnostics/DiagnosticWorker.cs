@@ -8,6 +8,9 @@ namespace AiNexus.Platform.Diagnostics;
 /// </summary>
 public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService
 {
+    /// <summary>多久清一次已補送且過期的本機日誌檔。</summary>
+    private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(5);
+
     private List<DiagnosticEvent> pending = [];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -77,24 +80,20 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                 delay = options.Value.RetrySeconds * 1000;
             }
 
-            // 匯入器因容量上限被阻塞時，清理仍必須能執行。
+            // 只清本機日誌檔：檔案在各自的主機上，每個程序都要自己做，所以不是排程任務；
+            // 資料庫的保存期清理由排程任務負責。匯入失敗的那一輪也照清，已補送的舊檔不必等 SQL 恢復。
             if (!ct.IsCancellationRequested && cleanupAt < clock.GetUtcNow())
             {
                 try
                 {
-                    using var timeout = SqlTimeout(ct);
-                    await store.CleanupAsync(timeout.Token);
                     journal.Cleanup();
                     health.Recovered(DiagnosticComponent.Cleanup);
-                    cleanupAt = clock.GetUtcNow().AddMinutes(5);
-                }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                {
-                    return;
+                    cleanupAt = clock.GetUtcNow().Add(CleanupInterval);
                 }
                 catch (Exception)
                 {
-                    health.Emergency(DiagnosticComponent.Cleanup, "sql_cleanup_failed");
+                    // 清不掉（權限、檔案被占用）只記在健康狀態，不能讓匯入迴圈跟著停。
+                    health.Emergency(DiagnosticComponent.Cleanup, "journal_cleanup_failed");
                     cleanupAt = clock.GetUtcNow().AddSeconds(options.Value.RetrySeconds);
                 }
             }
@@ -110,7 +109,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
         pending = [];
     }
 
-    /// <summary>SQL 回放與清理每輪的時限：單一指令逾時的四倍，避免 SQL 卡住時整個匯入迴圈停擺。</summary>
+    /// <summary>SQL 回放每輪的時限：單一指令逾時的四倍，避免 SQL 卡住時整個匯入迴圈停擺。</summary>
     private CancellationTokenSource SqlTimeout(CancellationToken ct)
     {
         var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);

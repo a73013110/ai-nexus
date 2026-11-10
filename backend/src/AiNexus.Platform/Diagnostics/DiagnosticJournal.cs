@@ -376,6 +376,9 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         return (events, checkpoint);
     }
 
+    /// <summary>一輪最多刪幾個分段：清理期間持有跨程序的容量鎖，積壓再多也分幾輪清完，不讓寫入等太久。</summary>
+    private const int CleanupFilesPerPass = 1000;
+
     /// <summary>清除已完整同步到 SQL、且超出保留期限的歷史分段。尚未確認同步的資料，絕不因容量或保留期限而刪除。</summary>
     public void Cleanup()
     {
@@ -392,7 +395,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
 
         using (capacity)
         {
-            var remaining = options.Value.CleanupBatchSize;
+            var remaining = CleanupFilesPerPass;
             foreach (var directory in Sessions())
             {
                 if (remaining == 0) break;

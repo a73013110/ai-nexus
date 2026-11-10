@@ -1,6 +1,7 @@
 # 診斷日誌架構
 
-- 業務模組只用 `ILogger`（`[LoggerMessage]`）、`Activity` 與既有稽核。白名單、遮罩、查證代碼、例外分類、佇列、檔案、SQL 匯入、查詢與清理集中在 `AiNexus.Platform/Diagnostics`，模組不依賴儲存目的地。
+- 業務模組只用 `ILogger`（`[LoggerMessage]`）、`Activity` 與既有稽核。白名單、遮罩、查證代碼、例外分類、佇列、檔案與 SQL 匯入集中在 `AiNexus.Platform/Diagnostics`，模組不依賴儲存目的地。
+- 清理分兩處：本機日誌檔由每個程序的 `DiagnosticWorker` 清（檔案在各自的主機上）；資料庫的保存期清理是[排程任務](scheduled-tasks.md) `diagnostics.retention`，只由執行排程的站台跑。
 - 一份站外 JSONL 同時是輪替日誌與 SQL 補送 journal；背景批次匯入 `diagnostics.DiagnosticEvents`，以 `LogId` 去重。SQL 故障不會擋住檔案保存。
 - 日誌寫入不加入業務交易。安全稽核（`audit.AuditEvents`）是另一套：與業務同交易、獨立保存政策、不經診斷採樣。
 - 相關文件：[事件清單](log-events.md)、[錯誤回應與遮罩](error-contract.md)、[設定與故障排除](../operations/diagnostics.md)、[系統日誌頁](../features/system-logs.md)。

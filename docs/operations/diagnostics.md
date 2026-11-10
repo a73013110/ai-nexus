@@ -1,7 +1,7 @@
 # 診斷日誌維運
 
 - 日誌存在站外 `Diagnostics.Directory` 的 JSONL，背景補送到 SQL；SQL 離線時尚未補送的檔案是唯一副本，發版、備份或清理時都不能刪。
-- 預設保存：SQL 診斷 30 天、已補送的檔案 14 天、稽核 365 天。這只是可設定的預設，組織保存期限與法定保留仍待確認（見文末）。
+- 預設保存：SQL 診斷 30 天（`Diagnostics:RetentionDays`）、已補送的檔案 14 天（`Diagnostics:FileRetentionDays`）、稽核 365 天（`Audit:RetentionDays`）。這只是可設定的預設，組織保存期限與法定保留仍待確認（見文末）。
 - 架構與故障時的行為見 [診斷日誌架構](../architecture/diagnostics.md)；查詢頁操作見 [系統日誌](../features/system-logs.md)。
 
 ## 目錄與權限
@@ -17,9 +17,10 @@
 
 - `MaxDiskBytes`（預設 2 GiB）是整個目錄的上限；`MaxSqlRows` 由 metadata 估算，是近似的 soft limit。到上限不會提前刪除未過期資料，要擴容或調整保存政策。
 - 檔案只清理已確認匯入 SQL、非活動且到期的 segment。**未補送的資料不會為了 14 天政策而刪除**，所以 SQL 長期離線時可能先用完磁碟上限。
-- SQL 診斷與稽核各自分批 autocommit 清理（單次 command 最多 5 秒、背景總預算約 20 秒），每 5 分鐘排程一次。
+- SQL 診斷與稽核的保存期清理是排程任務 `diagnostics.retention`、`audit.retention`（每天凌晨、分批 autocommit），在「背景作業」頁看每輪刪了幾筆，也可以立即執行；只有 `Scheduling:Execute` 的站台會跑，該站台停機期間不清理，容量仍由 `MaxSqlRows` 擋住。
+- 本機檔案由每個程序自己每 5 分鐘清一次，不經排程；清不掉時健康資訊顯示 `journal_cleanup_failed`。
 - 佇列以筆數計，記憶體用量取決於實際事件大小；不要把大佇列當成廉價容量。
-- 日誌設定的安全摘要變更會寫一筆 `diagnostics.configuration.activated` 稽核，不含路徑或 exporter URL；主機設定檔的 ACL 與變更管理另行治理。
+- 日誌設定的安全摘要有變更時，啟動任務 `diagnostics.record-configuration` 寫一筆 `diagnostics.configuration.activated` 稽核，不含路徑或 exporter URL；只記執行排程的站台。主機設定檔的 ACL 與變更管理另行治理。
 
 ## Windows 緊急事件來源
 

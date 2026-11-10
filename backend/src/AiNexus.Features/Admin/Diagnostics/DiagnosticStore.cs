@@ -3,9 +3,6 @@ using AiNexus.Platform.Modules;
 using System.Globalization;
 using System.Data;
 using System.Transactions;
-using System.Text.Json;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -16,10 +13,8 @@ namespace AiNexus.Features.Admin.Diagnostics;
 
 /// <summary>使用自己的連線與交易寫入，絕不共用呼叫端的業務 DbContext 或交易，避免日誌寫入跟著業務交易一起回滾。</summary>
 [Singleton<IDiagnosticStore>]
-public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
+public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health) : IDiagnosticStore
 {
-    private static readonly string ConfigurationAction = DiagnosticsAudit.ConfigurationActivated.Name;
-    private bool configurationRecorded;
     // EF 模型在程式執行期間不變，欄位與存取子只建一次；並行時重複建立也無妨。
     private (string Name, Type Type, Func<DiagnosticEvent, object?> Value)[]? mapped;
     public async Task WriteAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct)
@@ -33,7 +28,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         await using var connection = new SqlConnection(connectionString); await connection.OpenAsync(ct);
         SqlCommand Command(string sql, SqlTransaction? transaction = null) => new(sql, connection, transaction) { CommandTimeout = settings.SqlTimeoutSeconds };
         // 列數取自系統中繼資料，避免對持續成長的表做 COUNT(*)。容量只是近似的軟上限（並行批次與估計值可能略超出），
-        // 這裡不會為了騰空間而提前清除，保留期清理由 CleanupAsync 負責。
+        // 這裡不會為了騰空間而提前清除，保存期清理由 DiagnosticRetentionTask 負責。
         await using (var count = Command("SELECT COALESCE(SUM([rows]),0) FROM sys.partitions WHERE [object_id]=OBJECT_ID(N'diagnostics.DiagnosticEvents') AND [index_id] IN (0,1);"))
         {
             var rows = Convert.ToInt64(await count.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture); Interlocked.Exchange(ref health.EstimatedSqlRows, rows);
@@ -79,54 +74,4 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
                 (Func<DiagnosticEvent, object?>)(item => getter.GetClrValue(item) is { } value ? converter?.ConvertToProvider(value) ?? value : null));
         }),
     ];
-    public async Task CleanupAsync(CancellationToken ct)
-    {
-        using var suppress = DiagnosticSuppression.Enter();
-        using var ambient = new TransactionScope(TransactionScopeOption.Suppress, TransactionScopeAsyncFlowOption.Enabled);
-        using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var settings = options.Value;
-        db.Database.SetCommandTimeout(settings.SqlTimeoutSeconds);
-        if (!configurationRecorded)
-        {
-            await RecordConfigurationAsync(db, scope.ServiceProvider.GetRequiredService<AuditTrail>(), settings, ct);
-            configurationRecorded = true;
-        }
-        var now = clock.GetUtcNow();
-        var diagnosticBefore = now.AddDays(-settings.RetentionDays);
-        var auditBefore = now.AddDays(-settings.AuditRetentionDays);
-        // 每批各自 autocommit，總工作量由取消與逾時限制；刻意不用一筆長交易清除。
-        for (var batch = 0; batch < 100; batch++)
-        {
-            var ids = await db.DiagnosticEvents.Where(x => x.At < diagnosticBefore).OrderBy(x => x.At).Select(x => x.LogId).Take(settings.CleanupBatchSize).ToArrayAsync(ct);
-            var auditIds = await db.AuditEvents.Where(x => x.At < auditBefore).OrderBy(x => x.At).Select(x => x.Id).Take(settings.CleanupBatchSize).ToArrayAsync(ct);
-            if (ids.Length > 0) await db.DiagnosticEvents.Where(x => ids.Contains(x.LogId)).ExecuteDeleteAsync(ct);
-            if (auditIds.Length > 0) await db.AuditEvents.Where(x => auditIds.Contains(x.Id)).ExecuteDeleteAsync(ct);
-            if (ids.Length < settings.CleanupBatchSize && auditIds.Length < settings.CleanupBatchSize) break;
-        }
-    }
-    /// <summary>
-    /// 設定變更只稽核一次，且要等 SQL 可用後才寫。路徑與匯出端 URL 刻意排除，避免把內部位置寫進稽核；
-    /// 版本與實例證據由主機事件提供。
-    /// </summary>
-    private static async Task RecordConfigurationAsync(AppDbContext db, AuditTrail audit, DiagnosticOptions o, CancellationToken ct)
-    {
-        var snapshot = JsonSerializer.Serialize(new {
-            serviceName = o.ServiceName, minimumLevel = o.MinimumLevel.ToString(), frameworkMinimumLevel = o.FrameworkMinimumLevel.ToString(),
-            queueCapacity = o.QueueCapacity, importantQueueCapacity = o.ImportantQueueCapacity, batchSize = o.BatchSize, flushIntervalMs = o.FlushIntervalMs,
-            retrySeconds = o.RetrySeconds, sqlTimeoutSeconds = o.SqlTimeoutSeconds, shutdownSeconds = o.ShutdownSeconds,
-            fileSizeBytes = o.FileSizeBytes, maxDiskBytes = o.MaxDiskBytes, maxSqlRows = o.MaxSqlRows,
-            fileRetentionDays = o.FileRetentionDays, retentionDays = o.RetentionDays, auditRetentionDays = o.AuditRetentionDays, cleanupBatchSize = o.CleanupBatchSize,
-            locationFingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(o.Directory + "\n" + o.OtlpEndpoint))),
-            lowLevelSampleEvery = o.LowLevelSampleEvery, maxQueryDays = o.MaxQueryDays, maxExportRows = o.MaxExportRows, maxExportDays = o.MaxExportDays, otlpEnabled = o.OtlpEnabled
-        });
-        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(snapshot)));
-        var previous = await db.AuditEvents.AsNoTracking().Where(x => x.Action == ConfigurationAction).OrderByDescending(x => x.Id).Select(x => x.DetailsJson).FirstOrDefaultAsync(ct);
-        string? previousFingerprint = null;
-        try { if (previous is not null) { using var document = JsonDocument.Parse(previous); previousFingerprint = document.RootElement.GetProperty("fingerprint").GetString(); } }
-        // 舊紀錄格式無法解析時視為沒有先前指紋，會多寫一筆稽核，但不會阻擋清理。
-        catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { }
-        if (previousFingerprint == fingerprint) return;
-        audit.Record(DiagnosticsAudit.ConfigurationActivated, Guid.Empty, details: new { fingerprint, after = JsonSerializer.Deserialize<JsonElement>(snapshot) });
-        await db.SaveChangesAsync(ct);
-    }
 }
