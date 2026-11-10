@@ -26,6 +26,7 @@
 - 停止先記取消要求；離開頁面不會取消。
 - 外部 RPC 不保證跨程序 exactly-once：結果尚未保存的呼叫可能在重試時重做。
 - 新工作實作 `IBackgroundJobHandler`，以 `AddBackgroundJobHandler<T>(種類)` 註冊，在遠端呼叫前後都驗證授權，以 checkpoint 保存結果；Job／Attempt 的日誌關聯自動帶入。
+- 資料表記著工作 Id（不論有沒有外鍵）就實作 `IJobReferences`：保存期清理（`jobs.retention`）不刪還被引用的工作；有外鍵卻沒宣告會讓清理被資料庫擋下（`JobRetentionTests`）。
 - 評測凍結題庫、指令與模型設定指紋，設定變更會阻擋執行與重試；來源文字以不可信資料封裝。
 
 ## 程序內鎖

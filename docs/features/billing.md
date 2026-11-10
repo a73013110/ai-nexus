@@ -51,6 +51,8 @@ Google 的 prompt tokens 包含快取，輸出統計另有 thoughts tokens。本
 
 期間使用開始含／結束不含；網頁所選結束日期含當天，送出時轉為隔天零點。每日分組依瀏覽器時區，API 預設 UTC+8，可用 `offsetMinutes` 明確指定固定偏移。單次最多 366 天；跨夏令時間的每日分組目前使用查詢開始日的固定偏移。費用歸屬呼叫建立日期，不是供應商出帳日期。
 
+保存期：費用紀錄（`ModelCharges`）不清。模型工作的呼叫紀錄（`ModelInvocations`，用量報表的來源之一）保存 `Inference:InvocationRetentionDays`（預設 400 天），由任務 `inference.invocation-retention` 每天刪除；下限 366 天＝報表最長的查詢期間，更短會讓較早的日子少算。
+
 | API | 權限 |
 | --- | --- |
 | `GET /api/v1/billing/spend` | 已登入，只查自己 |

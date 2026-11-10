@@ -18,6 +18,12 @@ public sealed class InferenceOptions : IValidatableObject
     public bool AllowModelSelection { get; set; } = true;
     public bool ShowModelNames { get; set; } = true;
 
+    /// <summary>
+    /// 模型工作呼叫紀錄（<c>ModelInvocations</c>）的保存天數；超過的由 <see cref="ModelTasks.ModelInvocationRetentionTask"/> 刪除。
+    /// 下限 366 天＝用量與花費報表最長的查詢期間（<c>SpendPeriod</c>）；更短的話，報表較早的日子會少算模型工作的用量。
+    /// </summary>
+    [Range(366, 36500)] public int InvocationRetentionDays { get; set; } = 400;
+
     /// <summary>預先選取之模型路由識別碼（格式為 <c>provider/native-id</c>）；為 null 時自動挑選第一個已核准模型。</summary>
     public string? DefaultModelId { get; set; }
 

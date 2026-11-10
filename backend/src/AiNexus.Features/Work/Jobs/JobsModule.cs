@@ -1,6 +1,7 @@
 using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Features.Work.Jobs.Management;
 using AiNexus.Features.Work.Jobs.Queue;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Work.Jobs;
@@ -12,6 +13,9 @@ namespace AiNexus.Features.Work.Jobs;
 /// </summary>
 public sealed class JobsModule : IFeatureModule
 {
+    public static void AddServices(IHostApplicationBuilder builder)
+        => builder.Services.AddSettings<JobsOptions, JobsOptionsValidator>(JobsOptions.Section);
+
     // 端點註冊順序即 OpenAPI 發佈順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {

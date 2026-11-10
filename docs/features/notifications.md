@@ -37,7 +37,7 @@
 
 ## 何時算未讀
 
-未讀只留給需要收件者處理的事：自己發起的事（`OwnAction`）只有失敗提醒；同一目標的新結果取代舊的未讀；分頁可見且網址顯示目標就算讀過；來源恢復就撤下（`ResolveAsync`）；7 天後自動已讀。理由與邊界寫在 `NotificationService`、`NotificationStore`、`NotificationExpiryTask`。
+未讀只留給需要收件者處理的事：自己發起的事（`OwnAction`）只有失敗提醒；同一目標的新結果取代舊的未讀；分頁可見且網址顯示目標就算讀過；來源恢復就撤下（`ResolveAsync`）；7 天後自動已讀；已讀的 90 天後刪除。理由與邊界寫在 `NotificationService`、`NotificationStore`、`NotificationExpiryTask`。
 
 ## 事件與提交
 

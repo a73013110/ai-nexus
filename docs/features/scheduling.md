@@ -31,6 +31,7 @@
 
 - 使用者送出的文件辨識、評測、程式碼 Review 等工作（`jobs.BackgroundJobs`），全部使用者的都在這裡；可依類型、內容、狀態與時間篩選。使用者自己的工作在「背景任務」頁。
 - 有 `scheduling.manage` 時可停止排隊中或處理中的工作，稽核為 `jobs.queue_job.cancelled`；查閱稽核為 `jobs.queue.read`。
+- 保存期：結束超過 `Jobs:RetentionDays`（預設 180 天，下限 30）的工作由任務 `jobs.retention` 每天刪除。評測結果、程式碼 Review、文件目前的處理工作還指著的不刪，跟著那些資料走。
 
 ## 常駐服務
 
