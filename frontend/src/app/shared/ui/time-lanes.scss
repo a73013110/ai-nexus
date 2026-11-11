@@ -1,8 +1,13 @@
 // 刻度、底色與現在線只畫一份，疊在所有泳道上下；泳道本身透明。
+// 頁面給了高度（資料版面）時只有泳道在框內捲，刻度列在捲動區外、捲軸只長在泳道旁；沒給高度時跟著內容長、不捲。
+// 泳道保留固定的捲軸寬度（stable gutter），刻度列在結尾補上同樣寬度（`--scrollbar-gutter`），兩邊的時間軸才一樣寬、
+// 記號對得上刻度；捲軸出現或消失時欄位也不位移。
 :host {
   --time-lane-label-width: var(--time-lane-label, 15rem);
   --time-lane-end-width: var(--time-lane-end, 5rem);
-  display: block;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-surface);
@@ -10,8 +15,10 @@
   container: time-lanes / inline-size;
 }
 .time-axis {
+  flex: none;
   display: grid;
   grid-template-columns: var(--time-lane-label-width) minmax(0, 1fr) var(--time-lane-end-width);
+  padding-inline-end: var(--scrollbar-gutter);
   border-block-end: 1px solid var(--line);
   border-start-start-radius: inherit;
   border-start-end-radius: inherit;
@@ -56,6 +63,16 @@
   font-weight: 600;
 }
 .time-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+}
+// 底色與格線要涵蓋全部泳道，不只看得到的那一段，所以疊在捲動內容這層而不是捲動區上。
+.time-rows {
   position: relative;
 }
 .time-guides,
@@ -83,9 +100,11 @@
   width: 2px;
   background: var(--accent);
 }
+// 放在捲動區外：最上面那列的提示往上伸進刻度列，不被捲動區裁掉。
 .time-tip {
   position: absolute;
   max-width: 22rem;
+  pointer-events: none;
   padding: var(--p-space-1) var(--p-space-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-block);

@@ -90,6 +90,7 @@ nx-feature-page {
 // scrolls) and its frame fills that height, so every data page ends on the same line however few
 // rows it has (DataTable). A wrapper between the page and its table, such as a tab panel or a
 // tab's host, adds `ui-table-fill` to pass the height on.
+// 泳道時間軸（`TimeLanes`）是同一種資料框：吃剩下的高度、刻度列固定、泳道在框內捲動。
 // 抽屜同一套：內容（`.ui-drawer-sections`）加 `ui-table-fill` 就撐滿抽屜，表格吃其他區塊剩下的高度、在框內捲動；
 // 不到 18rem 時整個抽屜捲動。
 .ui-drawer-body:has(> .ui-table-fill) {
@@ -101,7 +102,7 @@ nx-feature-page {
   min-height: 0;
 }
 :is(.feature-layout-data :is(.feature-content, .ui-table-fill), .ui-drawer-body .ui-table-fill)
-  > nx-data-table {
+  > :is(nx-data-table, nx-time-lanes) {
   flex: 1 0 18rem;
   min-height: 0;
 }
