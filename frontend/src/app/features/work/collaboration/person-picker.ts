@@ -33,8 +33,7 @@ import type { DirectorySearch } from './directory-search';
   imports: [Icon, TextHighlight],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './person-picker.scss',
-  host: { '[class.is-disabled]': 'disabled() && !pendingId()' },
-  template: `<div #anchor class="person-picker-field">
+  template: `<div #anchor class="field-box" [class.is-disabled]="disabled() && !pendingId()">
       <nx-icon
         [name]="search().loading() ? 'loading' : 'search'"
         [class.is-busy]="search().loading()"
@@ -74,12 +73,12 @@ import type { DirectorySearch } from './directory-search';
     <div
       #panel
       popover="manual"
-      class="popover-panel person-picker-panel"
+      class="popover-panel person-picker-panel option-list"
       (mousedown)="$event.preventDefault()"
     >
       @if (!search().results().length) {
         <!-- 防抖等待與查詢途中還沒有答案，不先說「沒有符合」。 -->
-        <p class="person-picker-empty">
+        <p class="option-empty">
           {{
             search().loading()
               ? '正在搜尋…'
@@ -96,7 +95,7 @@ import type { DirectorySearch } from './directory-search';
             type="button"
             role="option"
             tabindex="-1"
-            class="person-picker-option"
+            class="option-row person-picker-option"
             [id]="id + '-' + i"
             [class.is-active]="active() === i"
             [attr.aria-selected]="active() === i"
@@ -120,7 +119,7 @@ import type { DirectorySearch } from './directory-search';
             type="button"
             role="option"
             tabindex="-1"
-            class="person-picker-option is-name"
+            class="option-row person-picker-option is-name"
             [id]="id + '-' + i"
             [class.is-active]="active() === i"
             [attr.aria-selected]="active() === i"

@@ -103,9 +103,11 @@ export class DesignSection {
   template: `<span class="design-example-label">{{ label() }}</span
     ><ng-content />`,
   styles: `
+    // 並排的範例上緣對齊，變體名稱排在同一行；舞台置中只給沒有標籤的元件。
     :host {
       display: inline-flex;
       flex-direction: column;
+      align-self: flex-start;
       align-items: flex-start;
       gap: var(--p-space-2);
       min-width: 0;

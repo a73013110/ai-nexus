@@ -1,3 +1,5 @@
+@use 'field';
+
 // Edge 自己會畫顯示鈕，PasswordField 的鈕取代它。
 .password-input::-ms-reveal {
   display: none;
@@ -238,4 +240,70 @@ kbd {
 // 儲存中的開關（nx-setting-row 的 pending）：旁邊轉圈，開關本身維持原樣、游標表示正在處理。
 .switch[aria-busy='true'] {
   cursor: progress;
+}
+
+// 原生 input、textarea、select（nxField）。:where 讓功能的 class 不必加權重就能改排版，例如長篇編輯框。
+input:where(.ui-input),
+textarea:where(.ui-input),
+select:where(.ui-input) {
+  @include field.frame;
+  width: 100%;
+  min-width: 0;
+  padding: var(--control-padding-block) var(--control-padding-inline);
+  line-height: var(--line-ui);
+}
+.ui-input:focus-visible {
+  @include field.focus;
+}
+.ui-input:disabled {
+  @include field.disabled;
+}
+// 外框裡放輸入框，前後接圖示或按鈕（SearchField、PersonPicker、DateTimePicker）。外框屬於這一格，
+// 焦點與停用都標在外框上；輸入框與按鈕的高度是欄高扣掉外框（--field-inner），不會把欄位撐高。
+// 無外框的外觀（SearchField 的 filled、bare）把 --field-inner 設回 --field-height。
+.field-box {
+  --field-height: var(--button-target);
+  --field-inner: calc(var(--field-height) - 2px);
+  --field-padding: var(--control-padding-inline);
+  @include field.frame;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: 0 var(--field-padding);
+}
+.field-box > input {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--field-inner);
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.field-box > nx-icon {
+  --icon-size: var(--icon-lg);
+  flex: none;
+  color: var(--muted);
+}
+.field-box > nx-icon.is-busy {
+  color: var(--secondary);
+}
+// 尾端的按鈕（清除、開日曆）離外框留一小段。
+.field-box > .icon-button {
+  width: var(--field-inner);
+  height: var(--field-inner);
+  margin-inline-end: calc(var(--p-space-1) - var(--field-padding));
+}
+.field-box:has(> input:focus) {
+  @include field.focus;
+}
+.field-box:is(.is-disabled, :has(> input:disabled)) {
+  @include field.disabled;
+}
+// 外框已整體淡化，裡面停用的按鈕不再淡一次。
+.field-box:is(.is-disabled, :has(> input:disabled)) > button {
+  opacity: 1;
 }

@@ -1,0 +1,28 @@
+// 收集值的控制項共用的外框（docs/frontend/lines.md）：nxField、Select（field 與 pill）、TreeSelect、
+// TimeRangePicker 的觸發鈕，與外框裡放輸入框的 .field-box（DateTimePicker、SearchField、PersonPicker）。
+// 高度是含外框的 --button-target，並排的欄位才會等高；外框、圓角、底色與字都在這裡，元件只寫排版。
+// 換形狀用 --field-radius（例如 SearchField 的膠囊），換欄高用 --field-height。
+@mixin frame {
+  min-height: var(--field-height, var(--button-target));
+  border: 1px solid var(--control-line);
+  border-radius: var(--field-radius, var(--radius-field));
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--control-font-size);
+  // 欄位標籤是 500；值用一般字重，不承接外層 label。
+  font-weight: 400;
+}
+
+// 焦點：外框換成焦點色，內側再補 1px，合成一道 2px 實線。不在外框外再留空隙加一圈（看起來像兩道框），
+// 也不改圓角。
+@mixin focus {
+  border-color: var(--focus);
+  outline: 1px solid var(--focus);
+  outline-offset: -2px;
+}
+
+// 停用：整個欄位淡化，與停用的按鈕相同。
+@mixin disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

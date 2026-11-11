@@ -76,28 +76,6 @@
   font-weight: 400;
   white-space: nowrap;
 }
-// Native control defaults stay below feature classes, including long-form editors.
-input:where(.ui-input),
-textarea:where(.ui-input),
-select:where(.ui-input) {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--button-target);
-  padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-field);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--control-font-size);
-  // 欄位標籤是 500；值用一般字重，不承接外層 label。
-  font-weight: 400;
-  line-height: var(--line-ui);
-}
-.ui-input:focus-visible {
-  border-color: var(--focus);
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
 .ui-table-toolbar,
 .ui-table-footer {
   flex: none;

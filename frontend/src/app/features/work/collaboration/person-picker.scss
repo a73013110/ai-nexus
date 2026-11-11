@@ -1,68 +1,12 @@
+// 表單欄位：外框、焦點與停用來自 .field-box（styles/controls.scss），寬度跟著表單欄。
+// 選的是一個值（人），所以是欄位的圓角，不是 SearchField 的膠囊（docs/frontend/shapes.md）。
 :host {
   display: block;
-  width: min(100%, 28rem);
   min-width: 0;
 }
-// 與 SearchField 同一個外觀，結果改浮在下方。
-.person-picker-field {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  min-height: var(--button-target);
-  padding: 0 var(--p-space-3);
-  background: var(--surface);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-action);
-}
-.person-picker-field:focus-within {
-  border-color: var(--focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 12%, transparent);
-}
-.person-picker-field input {
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  min-height: var(--button-target);
-  padding: 0;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--control-font-size);
-}
-.person-picker-field > nx-icon {
-  --icon-size: var(--icon-lg);
-  color: var(--muted);
-}
-.person-picker-field > nx-icon.is-busy {
-  color: var(--secondary);
-}
-.person-picker-field .icon-button {
-  width: var(--button-target);
-  height: var(--button-target);
-  margin-right: -0.5rem;
-}
-:host(.is-disabled) .person-picker-field {
-  background: var(--surface-subtle);
-  color: var(--secondary);
-}
+// 結果的列、內距與空狀態來自 .option-list（styles/option-list.scss）；這裡只有頭像與「使用姓名」。
 .person-picker-panel {
-  padding: var(--p-space-1);
   overflow: auto;
-}
-.person-picker-option {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  width: 100%;
-  min-height: var(--button-target);
-  padding: var(--p-space-2);
-  border-radius: var(--radius-item);
-  color: var(--ink);
-  text-align: left;
-}
-.person-picker-option.is-active {
-  background: var(--hover);
 }
 .person-picker-option[aria-busy='true'] {
   cursor: progress;
@@ -106,10 +50,4 @@
 }
 .person-picker-pending {
   color: var(--secondary);
-}
-.person-picker-empty {
-  margin: 0;
-  padding: var(--p-space-2) var(--p-space-3);
-  color: var(--secondary);
-  font-size: var(--text-caption);
 }

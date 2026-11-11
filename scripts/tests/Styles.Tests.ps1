@@ -101,13 +101,9 @@ Describe 'Frontend lines' {
     # 外框是辨識元件邊界的控制項：外框只取 --control-line，不經旋鈕、不因 appearance 換色。
     It '<Selector> outlines with --control-line' -ForEach @(
         @{ File = 'frontend/src/styles/controls.scss'; Selector = '.secondary-button' }
-        @{ File = 'frontend/src/app/shared/ui/search-field.scss'; Selector = '.search-field' }
-        @{ File = 'frontend/src/app/shared/ui/select.scss'; Selector = '.select-trigger' }
+        @{ File = 'frontend/src/styles/field.scss'; Selector = '@mixin frame' }
         @{ File = 'frontend/src/styles/option-list.scss'; Selector = '.option-box' }
-        @{ File = 'frontend/src/styles/data-workspace.scss'; Selector = 'select:where(.ui-input)' }
         @{ File = 'frontend/src/styles/data-workspace.scss'; Selector = '.ui-pagination-group' }
-        @{ File = 'frontend/src/app/shared/ui/date-time-picker.scss'; Selector = '.ui-date-control' }
-        @{ File = 'frontend/src/app/shared/ui/time-range-picker.scss'; Selector = '.ui-time-range-trigger' }
         @{ File = 'frontend/src/app/shared/ui/checkbox.scss'; Selector = '.selection-indicator' }
         @{ File = 'frontend/src/app/features/work/dashboard/dashboard-toolbar.scss'; Selector = '.toolbar-pill' }
     ) {
@@ -122,5 +118,15 @@ Describe 'Frontend lines' {
         @($borders).Count | Should -BeGreaterThan 0 -Because "$Selector 應宣告外框"
         $borders | Where-Object { $_ -notmatch 'var\(--control-line\)' -or $_ -match 'var\(--[a-z-]+,' } | Should -BeNullOrEmpty
         $text | Should -Not -Match '--(?:tile|material)-line' -Because "$File 是控制項，外框不取表面或材質的線條"
+    }
+
+    # 收集值的控制項只從 field.frame 取外框，高度、焦點與停用才不會各寫一份而漸漸不同（docs/frontend/lines.md）。
+    It '<File> takes its field frame from field.frame' -ForEach @(
+        @{ File = 'frontend/src/styles/controls.scss' }
+        @{ File = 'frontend/src/app/shared/ui/select.scss' }
+        @{ File = 'frontend/src/app/shared/ui/tree-select.scss' }
+        @{ File = 'frontend/src/app/shared/ui/time-range-picker.scss' }
+    ) {
+        [IO.File]::ReadAllText((Join-Path $root $File)) | Should -Match '@include field\.frame;'
     }
 }

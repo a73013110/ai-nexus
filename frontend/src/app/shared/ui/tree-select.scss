@@ -1,3 +1,4 @@
+@use 'field';
 :host {
   display: block;
   min-width: 0;
@@ -8,17 +9,14 @@
   align-items: center;
   gap: var(--p-space-3);
   width: 100%;
-  min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-field);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--control-font-size);
-  font-weight: 400;
   text-align: left;
+  @include field.frame;
   &:hover:not(:disabled) {
     background: var(--hover);
+  }
+  &:focus-visible {
+    @include field.focus;
   }
   &[aria-busy='true'] {
     cursor: progress;

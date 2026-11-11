@@ -80,6 +80,10 @@ button:not(:disabled):hover {
 :focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
+}
+// 沒有圓角的元素（連結、文字）聚焦時給焦點框一點圓角；:where 不加權重，自己有圓角的元素
+// （欄位、按鈕）聚焦時維持原本的形狀。
+:where(:focus-visible) {
   border-radius: var(--radius-mark);
 }
 ::selection {

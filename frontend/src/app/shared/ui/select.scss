@@ -1,3 +1,5 @@
+@use 'field';
+
 :host {
   display: block;
   min-width: 0;
@@ -8,15 +10,13 @@
   justify-content: space-between;
   gap: var(--p-space-3);
   width: 100%;
-  min-height: var(--button-target);
   padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-field);
-  background: var(--surface);
-  color: var(--ink);
   text-align: left;
-  font-size: var(--control-font-size);
-  font-weight: 400;
+  @include field.frame;
+}
+// inline 沒有外框，沿用全站的焦點框。
+:host(:not(.select-inline)) .select-trigger:focus-visible {
+  @include field.focus;
 }
 // 名稱放不下時截名稱，標籤完整保留。
 .select-value {

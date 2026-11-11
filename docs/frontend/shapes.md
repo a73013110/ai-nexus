@@ -7,7 +7,7 @@
 | 角色 | 值 | 用於 |
 | --- | --- | --- |
 | `--radius-action` | 膠囊 | 主要／次要／危險／quiet 按鈕、icon 按鈕（圓形）、segment `ViewSwitch`、`SearchField`、`Select` 的 `pill` 與 `inline`、chip 上的按鈕 |
-| `--radius-field` | 6px | `nxField` 的 input／textarea／select、`Select` 的 `field`、`DateTimePicker`、`TimeRangePicker` |
+| `--radius-field` | 6px | `nxField` 的 input／textarea／select、`Select` 的 `field`、`TreeSelect`、`DateTimePicker`、`TimeRangePicker`、`PersonPicker`（選的是值，不是搜尋動作） |
 | `--radius-item` | 6px | 清單列、選單與 select 選項、側欄導覽、分頁標籤與底線 `ViewSwitch` 的按鈕 |
 | `--radius-block` | 6px | 內嵌區塊：程式碼、預覽、`Notice`、表單 fieldset、`ChoiceGroups`、小型 tooltip |
 | `--radius-surface` | 12px | 浮層、選單面板、toast、composer、`QueryBar`、選項卡片 |

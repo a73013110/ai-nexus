@@ -3,34 +3,9 @@
   min-width: 0;
   gap: var(--field-label-gap);
 }
-.ui-date-control {
-  display: flex;
-  align-items: center;
-  min-height: var(--button-target);
-  border: 1px solid var(--control-line);
-  border-radius: var(--radius-field);
-  background: var(--surface);
-}
-.ui-date-control:focus-within {
-  border-color: var(--focus);
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
+// 外框、焦點與停用來自 .field-box（styles/controls.scss）。
 .ui-date-control input {
-  min-width: 0;
-  width: 100%;
-  padding: var(--control-padding-block) var(--control-padding-inline);
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  color: var(--ink);
-  font-size: var(--control-font-size);
-  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  outline: none;
-}
-.ui-date-control .icon-button {
-  border-radius: inherit;
 }
 .ui-date-control.is-invalid {
   border-color: var(--danger);

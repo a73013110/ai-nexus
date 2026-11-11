@@ -137,13 +137,13 @@ const UNITS: TreeSelectNode[] = [
   `,
   template: `<nx-design-section
       id="design-fields"
-      title="欄位與搜尋"
-      api="nxField · PasswordField · SearchField"
-      description="驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。打字即搜尋時傳 busy（防抖等待加讀取中）：放大鏡換成轉圈，欄位仍可輸入。"
+      title="欄位"
+      api="nxField · PasswordField"
+      description="收集值的控制項（nxField、Select、TreeSelect、日期、選人）共用一個外框：同高、6px 圓角，聚焦時外框成為 2px 焦點色，停用時整個淡化。驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。"
     >
       <nx-design-example label="nxField">
         <label class="ui-field"
-          >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
+          >事件名稱<input nxField aria-label="示範資料篩選" placeholder="例如：登入失敗"
         /></label>
       </nx-design-example>
       <nx-design-example label="PasswordField">
@@ -154,7 +154,17 @@ const UNITS: TreeSelectNode[] = [
           /></nx-password-field>
         </div>
       </nx-design-example>
-      <nx-design-example label="SearchField">
+      <nx-design-example label="停用">
+        <label class="ui-field">帳號<input nxField value="lin.jiayi" disabled /></label>
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-search"
+      title="搜尋"
+      api='SearchField · appearance="filled" · "bare"'
+      description="頁面、工具列的搜尋是膠囊，外框、焦點與停用同欄位。打字即搜尋時傳 busy：放大鏡換成轉圈，仍可輸入。放進已有外框的地方不再加框：浮層與側欄頂端用 filled（浮層加 popover-search），對話框標題列用 bare。帶動清單時給 controls，輸入框成為 combobox。"
+    >
+      <nx-design-example label="預設">
         <nx-search-field
           label="示範搜尋"
           placeholder="搜尋文件與對話"
@@ -162,16 +172,9 @@ const UNITS: TreeSelectNode[] = [
           (valueChange)="search.set($event)"
         />
       </nx-design-example>
-      <nx-design-example label="SearchField busy">
+      <nx-design-example label="busy">
         <nx-search-field label="示範搜尋中" value="星河" [busy]="true" />
       </nx-design-example>
-    </nx-design-section>
-    <nx-design-section
-      id="design-search-bare"
-      title="列內搜尋"
-      api='SearchField appearance="filled" · "bare"'
-      description="放進已有外框的地方時不再加欄位外框。浮層頂端（加 popover-search）與側欄頂端用 filled：淡底圓角就看得出是輸入框，放大鏡對齊下方選項。對話框標題列用 bare，由標題列的細線與游標標示。帶動清單時給 controls，輸入框成為 combobox；Select 與 TreeSelect 的搜尋就是 filled。"
-    >
       <nx-design-example label="filled（浮層、側欄頂端）">
         <div class="design-bar-frame">
           <nx-search-field
@@ -204,7 +207,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-person-picker"
       title="人員選擇器"
       api="PersonPicker · directorySearch · .form-chips"
-      description="輸入兩個字起搜尋，結果浮在欄位下方（↑↓ 移動、Enter 選取、Esc 收起）。查詢狀態由呼叫端的 directorySearch 管理，選取後要不要清空由呼叫端決定。可選多人時已選的排成膠囊；nameHint 讓沒有帳號的人只記姓名。試試輸入「林佳」或「lin」。"
+      description="表單欄位，外框同 nxField。輸入兩個字起搜尋，結果浮在欄位下方（↑↓ 移動、Enter 選取、Esc 收起）。查詢狀態由呼叫端的 directorySearch 管理，選取後要不要清空由呼叫端決定。可選多人時已選的排成膠囊；nameHint 讓沒有帳號的人只記姓名。試試輸入「林佳」或「lin」。"
     >
       <nx-design-example label="加入多人">
         <div class="design-picker">

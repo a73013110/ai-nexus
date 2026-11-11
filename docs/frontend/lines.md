@@ -6,7 +6,7 @@
 
 | 角色 | 淺色／深色 | 用於 |
 | --- | --- | --- |
-| `--control-line` | `--ink` 混入 `--line` 46%／32% | 次要按鈕、`SearchField`、`Select`（`field` 與 `pill`）、`nxField` 的 input／textarea／select、`DateTimePicker`、`TimeRangePicker`、勾選框、分頁按鈕組、有外框的 chip 與篩選鈕、Markdown 編輯框、switch 關閉時的軌道（填色） |
+| `--control-line` | `--ink` 混入 `--line` 46%／32% | 次要按鈕、`SearchField`、`Select`（`field` 與 `pill`）、`nxField` 的 input／textarea／select、`DateTimePicker`、`TimeRangePicker`、`TreeSelect`、`PersonPicker`、勾選框、分頁按鈕組、有外框的 chip 與篩選鈕、Markdown 編輯框、switch 關閉時的軌道（填色） |
 | `--line` | `--p-stone-300`／`--p-night-600` | 列與區塊之間的分隔線、側欄與抽屜邊、浮層、對話框、toast、內嵌區塊（程式碼、預覽、`Notice`） |
 | `--tile-line` | `--line` 70% | 資源表面（總覽、`Panel`、`ResourceCard`、檔案與儲存庫卡片）與其內的分隔 |
 | `--material-line` | `--ink` 8% | 半透明材質（`FloatingToolbar`、黏頂列），見[質感](materials.md) |
@@ -14,6 +14,7 @@
 - 判斷順序：使用者要點它、在裡面輸入或勾選，且外框是看出它在哪裡的線索 → control；圍住一塊內容 → surface（`--tile-line` 或 `--line`）；只是隔開兩段 → `--line`。
 - 選項卡片、清單列與資源卡片靠內容辨識，仍屬表面；只有長得像表單控制項的才用 `--control-line`。
 - 搜尋框在頁面、工具列或表單裡是控制項（`SearchField` 預設外框）；在浮層或側欄的頂端用 `appearance="filled"`（`--field-fill` 淡底、無外框，浮層加 `.popover-search`），在對話框標題列用 `appearance="bare"`，由標題列的 `--line` 標示，都不再框中有框。
+- 收集值的控制項外框只寫在 [`field.scss`](../../frontend/src/styles/field.scss)：`field.frame`（含外框的欄高、外框、圓角、字）、`field.focus`（外框換焦點色並向內補 1px，成一道 2px 實線，不在外面隔一段再加一圈）、`field.disabled`（整個淡化，同停用的按鈕）。外框裡放輸入框加圖示或按鈕的用 `.field-box`；新的欄位元件用它們，不另寫外框，並排的欄位才會等高、聚焦一致。
 - 狀態不是角色：焦點 `--focus`、錯誤 `--danger`／`--error`、選取 `--accent` 與 `--selected-ring`、表面 hover 從 `--tile-line` 加深到 `--line`，都照原樣疊在角色上。
 
 ## 為什麼控制項要更深

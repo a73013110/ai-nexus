@@ -23,7 +23,7 @@ import { Icon } from './icon';
     '[class.search-filled]': "appearance() === 'filled'",
     '[class.search-bare]': "appearance() === 'bare'",
   },
-  template: `<div class="search-field">
+  template: `<div class="search-field field-box">
     <nx-icon [name]="busy() ? 'loading' : 'search'" [class.is-busy]="busy()" /><input
       #field
       type="search"
