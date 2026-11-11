@@ -211,7 +211,10 @@ export class Select {
   /** 選項達到這個數量才顯示搜尋框，短清單打開直接是選項。 */
   readonly searchFrom = input(0);
   readonly search = computed(() => this.searchable() && this.options().length >= this.searchFrom());
-  /** `inline` 去掉欄位外框，用在輸入區控制列這類工具列。 */
+  /**
+   * 依所在位置選：`field` 是表單裡要送出的值（6px）；`pill` 是工具列上立即篩選畫面的膠囊，
+   * 與並排的 `SearchField` 同形；`inline` 去掉外框，用在本身就是外框的列（輸入區控制列、浮動工具列）。
+   */
   readonly appearance = input<'field' | 'inline' | 'pill'>('field');
   readonly query = signal('');
   /** 每個選項的搜尋文字，選項不變就不重算（長清單每打一個字都要比對全部）。 */

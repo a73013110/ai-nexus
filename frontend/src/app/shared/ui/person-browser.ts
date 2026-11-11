@@ -32,7 +32,9 @@ export interface BrowsePerson {
           [disabled]="disabled() || loading()"
           (valueChange)="text.set($event)"
         />
+        <!-- 兩個都是篩選名單的工具、不是要送出的值：同為膠囊，才不會和表單欄位混在一起。 -->
         <nx-select
+          appearance="pill"
           label="分組"
           [options]="groupOptions()"
           [value]="group()"

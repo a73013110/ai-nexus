@@ -11,14 +11,12 @@ import {
 import type { DirectoryUserDto } from '@core/api/schema';
 import { nameInitial } from '@shared/browser/format';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
-import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InlineTitle } from '@shared/ui/inline-title';
 import { KeyCombo } from '@shared/ui/key-combo';
 import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { PersonBrowser, type BrowsePerson } from '@shared/ui/person-browser';
-import { SearchField } from '@shared/ui/search-field';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
 import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
@@ -68,7 +66,6 @@ function sampleDirectory(chosen: () => string[]): DirectorySearch {
   };
 }
 
-/** 文字欄位、搜尋、選人、表單段落、日期與原地編輯。 */
 /** 名稱前段相同、含停用（與停用上層之下）的單位：平面清單看不出差別，樹狀才分得清楚。 */
 const UNITS: TreeSelectNode[] = [
   { value: 'hq', label: '星河科技股份有限公司（總公司）' },
@@ -86,11 +83,11 @@ const UNITS: TreeSelectNode[] = [
   { value: 'lab', label: '星河測試據點', inactive: true },
 ];
 
+/** 文字欄位、選人、表單段落、日期與原地編輯。 */
 @Component({
   selector: 'nx-design-forms',
   imports: [
     DateTimePicker,
-    DialogHeader,
     DesignExample,
     DesignSection,
     Field,
@@ -101,7 +98,6 @@ const UNITS: TreeSelectNode[] = [
     PersonBrowser,
     PersonPicker,
     KeyCombo,
-    SearchField,
     SettingGroup,
     SettingRow,
     TimeRangePicker,
@@ -115,10 +111,6 @@ const UNITS: TreeSelectNode[] = [
     nx-design-example > * {
       width: 100%;
     }
-    // 對話框縮影要有標題、搜尋與關閉並排的寬度。
-    nx-design-example.design-wide {
-      flex: 2 1 26rem;
-    }
     .design-picker {
       display: grid;
       gap: var(--p-space-3);
@@ -128,33 +120,6 @@ const UNITS: TreeSelectNode[] = [
     }
     .design-settings {
       width: min(100%, 40rem);
-    }
-    // 浮層與對話框的靜態縮影：外框取正式的角色，裡面是正式的搜尋、選項列與標題列，看到的就是實際長相。
-    .design-popover {
-      width: min(100%, 16rem);
-      border: 1px solid var(--line);
-      border-radius: var(--radius-surface);
-      background: var(--surface);
-      box-shadow: var(--shadow-floating);
-    }
-    .design-dialog {
-      width: min(100%, 28rem);
-      overflow: hidden;
-      border: 1px solid var(--line);
-      border-radius: var(--dialog-radius);
-      background: var(--surface);
-    }
-    // 與 lg 對話框相同：標題列上下等距，與內容之間一道細線（styles/dialogs.scss）。
-    .design-dialog > .dialog-bar {
-      min-height: calc(var(--button-target) + 2 * var(--p-space-2));
-      padding-block: var(--p-space-2);
-      border-bottom: 1px solid var(--line);
-    }
-    .design-dialog > p {
-      margin: 0;
-      padding: var(--p-space-3) var(--p-space-5);
-      color: var(--secondary);
-      font-size: var(--text-caption);
     }
   `,
   template: `<nx-design-section
@@ -178,72 +143,6 @@ const UNITS: TreeSelectNode[] = [
       </nx-design-example>
       <nx-design-example label="停用">
         <label class="ui-field">帳號<input nxField value="lin.jiayi" disabled /></label>
-      </nx-design-example>
-    </nx-design-section>
-    <nx-design-section
-      id="design-search"
-      title="搜尋"
-      api="SearchField"
-      description="頁面、工具列的搜尋是膠囊，外框、焦點與停用同欄位。打字即搜尋時傳 busy：放大鏡換成轉圈，仍可輸入。"
-    >
-      <nx-design-example label="預設">
-        <nx-search-field
-          label="示範搜尋"
-          placeholder="搜尋文件與對話"
-          [value]="search()"
-          (valueChange)="search.set($event)"
-        />
-      </nx-design-example>
-      <nx-design-example label="busy">
-        <nx-search-field label="示範搜尋中" value="星河" [busy]="true" />
-      </nx-design-example>
-    </nx-design-section>
-    <nx-design-section
-      id="design-search-embedded"
-      title="浮層與標題列的搜尋"
-      api='SearchField appearance="filled" · "bare"'
-      description="放進已有外框的地方不再加框。浮層裡、側欄與清單窗格頂端用 filled（在浮層頂端加 popover-search）：淡底圓角，放大鏡對齊下方選項。所在的列就是外框時（對話框標題列、浮動工具列）用 bare。帶動清單時給 controls，輸入框成為 combobox。"
-    >
-      <nx-design-example label="filled（浮層、側欄頂端）">
-        <div class="design-popover">
-          <nx-search-field
-            class="popover-search"
-            appearance="filled"
-            label="示範浮層搜尋"
-            placeholder="搜尋狀態"
-            [value]="filledSearch()"
-            (valueChange)="filledSearch.set($event)"
-          />
-          <div class="option-list">
-            @for (status of filledMatches(); track status) {
-              <button type="button" class="option-row">
-                <span class="option-text"
-                  ><span class="option-label">{{ status }}</span></span
-                >
-              </button>
-            } @empty {
-              <p class="option-empty">沒有符合的狀態</p>
-            }
-          </div>
-        </div>
-      </nx-design-example>
-      <nx-design-example class="design-wide" label="bare（對話框標題列）">
-        <div class="design-dialog">
-          <nx-dialog-header
-            heading="選取檔案"
-            [detail]="bareMatches().length + ' 份'"
-            closeLabel="關閉示範對話框"
-          >
-            <nx-search-field
-              appearance="bare"
-              label="示範列內搜尋"
-              placeholder="搜尋檔案"
-              [value]="bareSearch()"
-              (valueChange)="bareSearch.set($event)"
-            />
-          </nx-dialog-header>
-          <p>{{ bareMatches().join('、') || '沒有符合的檔案' }}</p>
-        </div>
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
@@ -535,19 +434,6 @@ export class DesignForms {
   readonly periodStart = signal('2026-10-08T09:00:00');
   readonly periodEnd = signal('');
   private readonly title = viewChild.required(InlineTitle);
-  readonly search = signal('');
-  readonly filledSearch = signal('');
-  readonly filledMatches = computed(() =>
-    ['全部狀態', '進行中', '已完成', '已封存'].filter((status) =>
-      status.includes(this.filledSearch().trim()),
-    ),
-  );
-  readonly bareSearch = signal('');
-  readonly bareMatches = computed(() =>
-    ['季度營運報告.pdf', '產品路線圖.xlsx', '客服常見問答.docx'].filter((name) =>
-      name.toLowerCase().includes(this.bareSearch().trim().toLowerCase()),
-    ),
-  );
   readonly calendarDate = signal('2026-10-08T14:30:45');
   readonly optionalDate = signal('');
   readonly ranges = [

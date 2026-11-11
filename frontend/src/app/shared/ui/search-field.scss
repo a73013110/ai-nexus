@@ -6,8 +6,8 @@
   min-width: 0;
 }
 // 外框、焦點、停用與欄高來自 .field-box（styles/controls.scss），這裡只依 appearance 換形狀與底色。
-// 頁面與工具列的搜尋是動作，用膠囊（docs/frontend/shapes.md）。呼叫端可用 --search-height 指定欄高，
-// 例如側欄對齊頂端列高。
+// 預設的 pill：頁面與工具列的搜尋立即改變畫面，與旁邊的按鈕、Select 的 pill 同為膠囊
+// （docs/frontend/shapes.md）。呼叫端可用 --search-height 指定欄高，例如側欄對齊頂端列高。
 .search-field {
   --field-height: var(--search-height, var(--button-target));
   --field-radius: var(--radius-action);

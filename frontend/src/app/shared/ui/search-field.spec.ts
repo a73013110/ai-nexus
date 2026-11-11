@@ -34,6 +34,7 @@ describe('SearchField', () => {
     fixture.componentRef.setInput('label', '搜尋動作');
     fixture.detectChanges();
     const host = fixture.nativeElement as HTMLElement;
+    expect(fixture.componentInstance.appearance()).toBe('pill');
     expect(host.className).toBe('');
 
     fixture.componentRef.setInput('appearance', 'filled');

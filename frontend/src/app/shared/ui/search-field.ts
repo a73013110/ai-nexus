@@ -65,11 +65,13 @@ export class SearchField {
   readonly busy = input(false);
   readonly maxLength = input(120);
   /**
-   * `field` 有外框：頁面、工具列、表單裡的搜尋。
+   * 依所在位置選，名稱與 `Select` 的 `appearance` 同義（`pill` 都是工具列膠囊）。
+   * `pill` 有外框的膠囊：頁面與工具列上的搜尋，與旁邊的按鈕、`Select` 的 `pill`、segment 同形。
    * `filled` 淡底無框：浮層裡（在頂端時加 `class="popover-search"`）與側欄、清單窗格的頂端。
    * `bare` 無框無底：本身就是外框的列，對話框標題列（`.dialog-bar`）與 `FloatingToolbar`。
+   * 沒有 6px 的欄位外觀：表單裡「搜尋後選一個值」是 `PersonPicker`、可搜尋的 `Select` 與 `TreeSelect`。
    */
-  readonly appearance = input<'field' | 'filled' | 'bare'>('field');
+  readonly appearance = input<'pill' | 'filled' | 'bare'>('pill');
   /**
    * 這個搜尋過濾的清單 id。給了才是 combobox；清除鈕此時不進 Tab 順序，
    * 因為浮層裡的 Tab 是離開浮層；鍵盤以全選刪除清空。

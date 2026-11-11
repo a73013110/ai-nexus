@@ -24,8 +24,9 @@ import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignDialogs } from './design-dialogs';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
+import { DesignSearch } from './design-search';
 
-/** 按鈕、選單、確認與所有選取控制項。 */
+/** 按鈕、選單、確認、搜尋與所有選取控制項。 */
 @Component({
   selector: 'nx-design-controls',
   imports: [
@@ -35,6 +36,7 @@ import { DesignSamples } from './design-samples';
     ConfirmDialog,
     DesignDialogs,
     DesignExample,
+    DesignSearch,
     DesignSection,
     FloatingToolbar,
     IdleChrome,
@@ -269,6 +271,7 @@ import { DesignSamples } from './design-samples';
         </div>
       </div>
     </nx-design-section>
+    <nx-design-search />
     <nx-design-section
       id="design-floating-toolbar"
       title="浮動工具列"
