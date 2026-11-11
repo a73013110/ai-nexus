@@ -19,13 +19,13 @@ import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect } from '@shared/ui/tree-select';
 import { OrganizationApi } from './organization-api';
 import { OrganizationStore } from './organization-store';
 import { unitDialogTour } from './organization-tour';
 import { MAX_DEPTH, MAX_HEAD_RANK, headsOf, heightOf, subtree, unitNodes } from './unit-tree';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 interface Draft {
   /** 空字串為最上層。 */
@@ -55,6 +55,7 @@ const sameDraft = (a: Draft, b: Draft) =>
 @Component({
   selector: 'nx-unit-dialog',
   imports: [
+    DialogActions,
     Checkbox,
     CompactDialog,
     ConfirmDialog,
@@ -63,7 +64,6 @@ const sameDraft = (a: Draft, b: Draft) =>
     Field,
     InfoPopover,
     Notice,
-    PendingButton,
     Select,
     TreeSelect,
   ],
@@ -175,19 +175,12 @@ const sameDraft = (a: Draft, b: Draft) =>
             </div>
           </div>
           @if (!e.id) {
-            <footer class="dialog-foot">
-              <button
-                type="button"
-                class="secondary-button"
-                [attr.aria-disabled]="saving.pending() || null"
-                (click)="requestClose()"
-              >
-                取消
-              </button>
-              <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
-                {{ saving.pending() ? '建立中…' : '建立單位' }}
-              </button>
-            </footer>
+            <nx-dialog-actions
+              label="建立單位"
+              pendingLabel="建立中…"
+              [pending]="saving.pending()"
+              (dismiss)="requestClose()"
+            />
           } @else {
             <nx-dialog-save-bar
               label="儲存單位"

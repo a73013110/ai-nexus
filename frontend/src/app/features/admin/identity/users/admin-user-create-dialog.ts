@@ -10,11 +10,11 @@ import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { IdentityApi } from '../identity-api';
 import { AdminUsersStore } from '../admin-users-store';
 import { UserAccountFields, userAccountDraft, userAccountRequest } from './user-account-fields';
 import { UserRoleFields } from './user-role-fields';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /**
  * 建立使用者只需要帳號與其角色；模型政策、儲存空間與活動要等使用者建立後才有，
@@ -22,7 +22,7 @@ import { UserRoleFields } from './user-role-fields';
  */
 @Component({
   selector: 'nx-admin-user-create-dialog',
-  imports: [CompactDialog, DialogHeader, Notice, PendingButton, UserAccountFields, UserRoleFields],
+  imports: [DialogActions, CompactDialog, DialogHeader, Notice, UserAccountFields, UserRoleFields],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog nxCompactDialog size="md" #dialog class="platform-dialog" [busy]="saving.pending()">
@@ -50,19 +50,12 @@ import { UserRoleFields } from './user-role-fields';
               />
             </div>
           </div>
-          <footer class="dialog-foot">
-            <button
-              type="button"
-              class="secondary-button"
-              [attr.aria-disabled]="saving.pending() || null"
-              (click)="saving.pending() || dialog.close()"
-            >
-              取消
-            </button>
-            <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
-              {{ saving.pending() ? '建立中…' : '建立使用者' }}
-            </button>
-          </footer>
+          <nx-dialog-actions
+            label="建立使用者"
+            pendingLabel="建立中…"
+            [pending]="saving.pending()"
+            (dismiss)="dialog.close()"
+          />
         }
       </form>
     </dialog>

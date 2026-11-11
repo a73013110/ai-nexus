@@ -36,7 +36,6 @@ import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
@@ -52,6 +51,7 @@ import {
   sameModelPolicy,
   type ModelPolicyDraft,
 } from '@features/platform/inference/model-policies/model-policy-editor';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /** 使用者在使用者檢視器中編輯、在 `AdminUserCreateDialog` 中建立；側欄選單在選單頁編輯。 */
 export type AccessKind = 'role' | 'group' | 'feature';
@@ -209,6 +209,7 @@ export function featureNameOverride(name: string, defaultName: string) {
 @Component({
   selector: 'nx-access-editor-dialog',
   imports: [
+    DialogActions,
     Checkbox,
     ChoiceGroups,
     CompactDialog,
@@ -223,7 +224,6 @@ export function featureNameOverride(name: string, defaultName: string) {
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
-    PendingButton,
     Tabs,
     ViewMotion,
     ViewSwitch,

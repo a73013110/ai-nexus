@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { CopyValue } from '@shared/ui/copy-value';
+import { DialogActions } from '@shared/ui/dialog-actions';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
@@ -33,6 +34,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
     CopyValue,
     DesignExample,
     DesignSection,
+    DialogActions,
     DialogHeader,
     DialogSaveBar,
     Field,
@@ -106,7 +108,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
   template: `<nx-design-section
       id="design-dialog"
       title="對話框尺寸"
-      api="nxCompactDialog size · nx-dialog-header · .dialog-body · .dialog-foot · .dialog-note"
+      api="nxCompactDialog size · nx-dialog-header · .dialog-body · nx-dialog-actions · .dialog-foot · .dialog-note"
       description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。對話框從開啟它的按鈕長出來、關閉縮回去。檢視器（nxIdleChrome）的標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，放大只改外框。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
     >
       <nx-design-example label="sm · 確認或單一欄位">
@@ -189,11 +191,9 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
           <label>名稱<input nxField required /></label>
           <label>說明<textarea nxField></textarea></label>
         </div>
-        <footer class="dialog-foot">
+        <nx-dialog-actions label="建立" pendingLabel="建立中…" (dismiss)="form.close()">
           <p class="dialog-note">建立後可再加入文件與設定存取權限。</p>
-          <button type="button" class="secondary-button" (click)="form.close()">取消</button>
-          <button class="primary-button">建立</button>
-        </footer>
+        </nx-dialog-actions>
       </form>
     </dialog>
     <dialog nxCompactDialog size="lg" #record class="platform-dialog">

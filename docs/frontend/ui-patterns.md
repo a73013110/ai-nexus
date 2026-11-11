@@ -33,7 +33,7 @@
 - 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出。
 - 檢視器外層加 `nxIdleChrome`：標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，與工具列一起出現與淡出（焦點或展開的選單在內不淡出）。
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
-- `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
+- `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右，新增與執行類用 `DialogActions`。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal；組成見[詳情抽屜](detail-drawer.md)。
 - 與頁面並用、長時間開著的工具（助理）用 `FloatingPanel`：可拖動、調整大小、全螢幕或縮成[動態島](motion.md#動態島)，沒有關閉。
@@ -43,7 +43,7 @@
 
 ## 提示、載入與錯誤
 
-- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，讀取失敗的重試用 `retryable`＋`(retry)`，其他動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
+- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，重試用 `retryable`，其他動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
 - 讀取錯誤與重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)；載入、重讀與送出中見 [載入與送出中](loading.md)。
 - 進度只顯示真實階段（`JobProgress`），未知總量用不定進度；未知金額或用量寫明未知，不顯示為零。
 - 規則與計算方式收進 `InfoPopover`：短說明用 `.form-note-list`；長說明加 `heading`，內容用 `styles/popovers.scss` 的 `.info-*`。

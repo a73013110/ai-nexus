@@ -25,7 +25,6 @@ import { Field } from '@shared/ui/field';
 import { ICON_NAMES } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { optionTags } from '@shared/ui/option-tags';
-import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
@@ -37,6 +36,7 @@ import { sameIds } from '../roles/same-ids';
 import { NAVIGATION_KINDS, navigationKindLabel } from './navigation-kinds';
 import { MAX_DEPTH, depthOf, editorTree, type EditorNode } from './navigation-order';
 import type { NavigationKind } from '@core/layout/navigation-tree';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 interface Draft {
   kind: NavigationKind;
@@ -93,6 +93,7 @@ function sameDraft(first: Draft, second: Draft) {
 @Component({
   selector: 'nx-navigation-item-dialog',
   imports: [
+    DialogActions,
     Checkbox,
     ChoiceGroups,
     CompactDialog,
@@ -101,7 +102,6 @@ function sameDraft(first: Draft, second: Draft) {
     DialogSaveBar,
     Field,
     Notice,
-    PendingButton,
     Select,
     TreeSelect,
     ViewSwitch,

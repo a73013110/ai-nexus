@@ -16,7 +16,6 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
 import { ToastService } from '@shared/ui/toast-service';
 import { KnowledgeApi } from '@features/work/knowledge/knowledge-api';
@@ -24,11 +23,12 @@ import { JobToasts } from '@features/work/jobs/job-toasts';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryStore, shortSha } from '../repository-store';
 import { routeOf } from '@core/api/catalog';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /** 以釘選的提交，把資料夾下的文字檔匯入知識庫集合。 */
 @Component({
   selector: 'nx-repository-import-dialog',
-  imports: [RouterLink, CompactDialog, DialogHeader, Notice, PendingButton, Select],
+  imports: [DialogActions, RouterLink, CompactDialog, DialogHeader, Notice, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog nxCompactDialog #dialog class="platform-dialog" [busy]="saving.pending()">
@@ -60,26 +60,15 @@ import { routeOf } from '@core/api/catalog';
       }
     </div>
     @if (loading() || choices().length) {
-      <footer class="dialog-foot">
-        <button
-          type="button"
-          class="secondary-button"
-          [attr.aria-disabled]="saving.pending() || null"
-          (click)="saving.pending() || dialog.close()"
-        >
-          取消
-        </button>
-        <button
-          nxPending
-          type="button"
-          class="primary-button"
-          [pending]="saving.pending()"
-          [disabled]="loading() || !selected()"
-          (click)="save()"
-        >
-          {{ saving.pending() ? '安排中…' : '開始匯入' }}
-        </button>
-      </footer>
+      <nx-dialog-actions
+        label="開始匯入"
+        pendingLabel="安排中…"
+        [pending]="saving.pending()"
+        [disabled]="loading() || !selected()"
+        [submit]="false"
+        (confirm)="save()"
+        (dismiss)="dialog.close()"
+      />
     }
   </dialog>`,
 })

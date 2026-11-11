@@ -12,9 +12,9 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { AccountSecurityStore } from './account-security-store';
 import { bindSecurityDialog } from './security-dialog';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /** 本地密碼的長度規則與伺服器相同；常見密碼、包含帳號名等由伺服器判斷（`password_weak`）。 */
 export function localPasswordProblem(password: string, confirmation: string) {
@@ -27,7 +27,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
 /** 啟用本地登入，或變更本地帳號名與密碼。 */
 @Component({
   selector: 'nx-local-login-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Notice, PendingButton],
+  imports: [DialogActions, CompactDialog, DialogHeader, Field, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
@@ -82,19 +82,12 @@ export function localPasswordProblem(password: string, confirmation: string) {
         /></label>
         <p class="form-note">12–128 個字元，建議用一句好記的長句；不可包含帳號名稱或常見密碼。</p>
       </div>
-      <footer class="dialog-foot">
-        <button
-          type="button"
-          class="secondary-button"
-          [attr.aria-disabled]="saving.pending() || null"
-          (click)="saving.pending() || store.close()"
-        >
-          取消
-        </button>
-        <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
-          {{ saving.pending() ? '儲存中…' : '儲存' }}
-        </button>
-      </footer>
+      <nx-dialog-actions
+        label="儲存"
+        pendingLabel="儲存中…"
+        [pending]="saving.pending()"
+        (dismiss)="store.close()"
+      />
     </form>
   </dialog>`,
 })

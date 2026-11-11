@@ -15,13 +15,13 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { AttendanceApi } from '../attendance-api';
 import { attendanceProblem, taipeiToday } from '../attendance-presentation';
 import { reimportTour } from '../attendance-tour';
 import { MAX_REIMPORT_DAYS } from './imports-query';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 type ReimportMode = 'single' | 'range';
 
@@ -103,11 +103,11 @@ export function reimportOutcome(result: PunchReimportResult): {
 @Component({
   selector: 'nx-reimport-dialog',
   imports: [
+    DialogActions,
     CompactDialog,
     DateTimePicker,
     DialogHeader,
     Notice,
-    PendingButton,
     ViewMotion,
     ViewSwitch,
   ],
@@ -175,25 +175,13 @@ export function reimportOutcome(result: PunchReimportResult): {
           檔名日期不是出勤日，檔案可能含前一天深夜的刷卡；不論檔案有沒有變都會重新匯入。
         </p>
       </div>
-      <footer class="dialog-foot">
-        <button
-          type="button"
-          class="secondary-button"
-          [attr.aria-disabled]="running.pending() || null"
-          (click)="close()"
-        >
-          取消
-        </button>
-        <button
-          nxPending
-          type="submit"
-          class="primary-button"
-          [pending]="running.pending()"
-          [disabled]="!running.pending() && !range()"
-        >
-          {{ running.pending() ? '重匯中…' : '重匯' }}
-        </button>
-      </footer>
+      <nx-dialog-actions
+        label="重匯"
+        pendingLabel="重匯中…"
+        [pending]="running.pending()"
+        [disabled]="!range()"
+        (dismiss)="close()"
+      />
     </form>
   </dialog>`,
 })

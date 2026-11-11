@@ -17,7 +17,6 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { Select, type SelectOption } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { MailApi } from '../mail-api';
@@ -29,6 +28,7 @@ import {
   sampleExamples,
   sampleUsage,
 } from './mail-sample';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 const types: Record<string, string> = { text: '文字', number: '整數', flag: '是否', time: '時間' };
 
@@ -39,13 +39,13 @@ const types: Record<string, string> = { text: '文字', number: '整數', flag: 
 @Component({
   selector: 'nx-mail-test-dialog',
   imports: [
+    DialogActions,
     Checkbox,
     CompactDialog,
     CopyValue,
     DialogHeader,
     Field,
     Notice,
-    PendingButton,
     Select,
     StatusBadge,
   ],

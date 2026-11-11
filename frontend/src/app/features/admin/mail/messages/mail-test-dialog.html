@@ -106,23 +106,12 @@
         <nx-notice tone="danger" [message]="error()" />
       }
     </div>
-    <footer class="dialog-foot">
-      <button
-        type="button"
-        class="secondary-button"
-        [attr.aria-disabled]="busy() || null"
-        (click)="busy() || dialog.close()"
-      >
-        取消
-      </button>
-      <button
-        nxPending
-        class="primary-button"
-        [pending]="busy()"
-        [disabled]="!to().trim() || !sample() || !!invalid()"
-      >
-        {{ busy() ? '寄出中…' : '寄出測試信' }}
-      </button>
-    </footer>
+    <nx-dialog-actions
+      label="寄出測試信"
+      pendingLabel="寄出中…"
+      [pending]="busy()"
+      [disabled]="!to().trim() || !sample() || !!invalid()"
+      (dismiss)="dialog.close()"
+    />
   </form>
 </dialog>

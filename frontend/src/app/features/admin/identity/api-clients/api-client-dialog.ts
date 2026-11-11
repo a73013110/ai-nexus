@@ -16,8 +16,8 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { ApiClientsStore } from './api-clients-store';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 interface Draft {
   name: string;
@@ -41,13 +41,13 @@ const sameDraft = (a: Draft, b: Draft) =>
 @Component({
   selector: 'nx-api-client-dialog',
   imports: [
+    DialogActions,
     CompactDialog,
     ConfirmDialog,
     DialogHeader,
     DialogSaveBar,
     Field,
     Notice,
-    PendingButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -106,19 +106,12 @@ const sameDraft = (a: Draft, b: Draft) =>
             /></label>
           </div>
           @if (!e.client) {
-            <footer class="dialog-foot">
-              <button
-                type="button"
-                class="secondary-button"
-                [attr.aria-disabled]="store.busy() || null"
-                (click)="requestClose()"
-              >
-                取消
-              </button>
-              <button nxPending type="submit" class="primary-button" [pending]="store.busy()">
-                {{ store.busy() ? '新增中…' : '新增外部系統' }}
-              </button>
-            </footer>
+            <nx-dialog-actions
+              label="新增外部系統"
+              pendingLabel="新增中…"
+              [pending]="store.busy()"
+              (dismiss)="requestClose()"
+            />
           } @else {
             <nx-dialog-save-bar
               label="儲存外部系統"

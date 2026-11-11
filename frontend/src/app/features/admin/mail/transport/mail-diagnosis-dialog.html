@@ -108,18 +108,12 @@
         }
       }
     </div>
-    <footer class="dialog-foot">
-      <button
-        type="button"
-        class="secondary-button"
-        [attr.aria-disabled]="diagnosing.pending() || null"
-        (click)="diagnosing.pending() || dialog.close()"
-      >
-        關閉
-      </button>
-      <button nxPending class="primary-button" [pending]="diagnosing.pending()">
-        {{ diagnosing.pending() ? '診斷中…' : result() ? '再診斷一次' : '開始診斷' }}
-      </button>
-    </footer>
+    <nx-dialog-actions
+      [label]="result() ? '再診斷一次' : '開始診斷'"
+      pendingLabel="診斷中…"
+      cancelLabel="關閉"
+      [pending]="diagnosing.pending()"
+      (dismiss)="dialog.close()"
+    />
   </form>
 </dialog>

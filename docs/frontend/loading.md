@@ -40,7 +40,7 @@
 
 - 寫入按鈕用 `<button nxPending [pending]="saving()">`：前導圖示換成轉圈、`aria-busy`、`aria-disabled`（不用 `disabled`，焦點留在原處）、送出中忽略點擊與 Enter。
 - 重讀按鈕用 `button[nxRefresh]`（只有圖示，至少轉一圈）；讀取失敗的「重試」不自己寫按鈕：`nx-notice` 加 `retryable`、`nx-table-state` 已內建，兩者的 `retrying` 都綁該讀取的 `refreshing()`；`nx-table-state` 放在 `nx-data-table` 裡也跟著表格的 `busy` 轉。
-- 對話框送出中擋取消與 Esc，欄位唯讀；完成或失敗才解除（失敗訊息留在對話框內）。Esc 由 `nxCompactDialog` 的 `busy` 擋（同時設 `aria-busy`），「取消」鈕用 `aria-disabled`；共用的 `nx-dialog-save-bar`、`nx-name-dialog` 已照做。
+- 對話框送出中擋取消與 Esc，欄位唯讀；完成或失敗才解除（失敗訊息留在對話框內）。Esc 由 `nxCompactDialog` 的 `busy` 擋（同時設 `aria-busy`），「取消」鈕用 `aria-disabled`；共用的 `nx-dialog-actions`、`nx-dialog-save-bar`、`nx-name-dialog` 已照做。
 - 選單項目的動作（匯出、複製、刪除）送出中由觸發鈕顯示轉圈：`nx-action-menu` 的 `busy`；面板仍開著時用 `MenuAction.busy`。同一列表中只擋正在處理的那一列。
 - 立即生效的開關、勾選與單選：可還原的用樂觀更新、失敗還原並提示；不可還原或很慢的用元件的 `pending`（`nx-setting-row` 的開關、`nx-checkbox`、`nx-choice-groups`：控制項旁轉圈、`aria-busy`、忽略再次切換）。
 - 下載與匯出也是送出中；上傳顯示在動態島或 toast（`duration: 0`），不只停用按鈕。

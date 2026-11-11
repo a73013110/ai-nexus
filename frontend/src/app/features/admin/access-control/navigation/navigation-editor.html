@@ -165,12 +165,12 @@
         /></label>
         <p class="form-note">放在該層的最後；分群最多四層，同一層不能重複同一頁面。</p>
       </div>
-      <footer class="dialog-foot">
-        <button type="button" class="secondary-button" (click)="moveDialog.close()">取消</button>
-        <button nxPending type="submit" class="primary-button" [pending]="saving()">
-          {{ saving() ? '移動中…' : '移動' }}
-        </button>
-      </footer>
+      <nx-dialog-actions
+        label="移動"
+        pendingLabel="移動中…"
+        [pending]="saving()"
+        (dismiss)="moveDialog.close()"
+      />
     </form>
   }
 </dialog>

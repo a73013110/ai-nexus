@@ -17,8 +17,8 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { AttendanceCardsStore } from './attendance-cards-store';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 export interface CardDraft {
   cardNumber: string;
@@ -45,6 +45,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
 @Component({
   selector: 'nx-card-dialog',
   imports: [
+    DialogActions,
     Checkbox,
     CompactDialog,
     ConfirmDialog,
@@ -52,7 +53,6 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
     DialogSaveBar,
     Field,
     Notice,
-    PendingButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -142,19 +142,12 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
             }
           </div>
           @if (!e.card) {
-            <footer class="dialog-foot">
-              <button
-                type="button"
-                class="secondary-button"
-                [attr.aria-disabled]="store.busy() || null"
-                (click)="requestClose()"
-              >
-                取消
-              </button>
-              <button nxPending type="submit" class="primary-button" [pending]="store.busy()">
-                {{ store.busy() ? '新增中…' : '新增卡號' }}
-              </button>
-            </footer>
+            <nx-dialog-actions
+              label="新增卡號"
+              pendingLabel="新增中…"
+              [pending]="store.busy()"
+              (dismiss)="requestClose()"
+            />
           } @else {
             <nx-dialog-save-bar
               label="儲存備註"

@@ -31,6 +31,7 @@ import { RepositoriesApi } from '../repositories-api';
 import { purposeName, reviewScope } from './repository-reviews';
 import { RepositoryStore } from '../repository-store';
 import { routeOf } from '@core/api/catalog';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 const commentLimit = 20_000;
 
@@ -38,6 +39,7 @@ const commentLimit = 20_000;
 @Component({
   selector: 'nx-repository-review',
   imports: [
+    DialogActions,
     RouterLink,
     CompactDialog,
     DialogHeader,
@@ -215,24 +217,13 @@ const commentLimit = 20_000;
             <nx-notice tone="danger" [message]="posting.error()" />
           }
         </div>
-        <footer class="dialog-foot">
-          <button
-            type="button"
-            class="secondary-button"
-            [attr.aria-disabled]="posting.pending() || null"
-            (click)="posting.pending() || comment.close()"
-          >
-            取消
-          </button>
-          <button
-            nxPending
-            class="primary-button"
-            [pending]="posting.pending()"
-            [disabled]="!draft().trim()"
-          >
-            {{ posting.pending() ? '留言中…' : '留言' }}
-          </button>
-        </footer>
+        <nx-dialog-actions
+          label="留言"
+          pendingLabel="留言中…"
+          [pending]="posting.pending()"
+          [disabled]="!draft().trim()"
+          (dismiss)="comment.close()"
+        />
       </form>
     </dialog>`,
 })

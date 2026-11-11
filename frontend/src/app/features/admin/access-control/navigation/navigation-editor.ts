@@ -23,7 +23,6 @@ import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { EXTRA_ICONS, ICON_NAMES, Icon } from '@shared/ui/icon';
 import { MenuPanel } from '@shared/ui/menu-panel';
-import { PendingButton } from '@shared/ui/pending-button';
 import { TreeSelect, type TreeSelectNode } from '@shared/ui/tree-select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AccessControlApi } from '../access-control-api';
@@ -43,6 +42,7 @@ import {
   type Placement,
 } from './navigation-order';
 import { NAVIGATION_KINDS, navigationKindLabel } from './navigation-kinds';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /** 表格的一列：樹以深度優先攤平，`depth` 從 0 起算，`index`／`count` 是在同層的位置。 */
 export interface NavigationRow {
@@ -74,6 +74,7 @@ interface Drag {
 @Component({
   selector: 'nx-navigation-editor',
   imports: [
+    DialogActions,
     ActionMenu,
     CompactDialog,
     ConfirmDialog,
@@ -82,7 +83,6 @@ interface Drag {
     DialogHeader,
     Icon,
     MenuPanel,
-    PendingButton,
     TreeSelect,
     StatusBadge,
     TableState,

@@ -171,19 +171,12 @@
         </div>
       </div>
       @if (!e.id) {
-        <footer class="dialog-foot">
-          <button
-            type="button"
-            class="secondary-button"
-            [attr.aria-disabled]="saving.pending() || null"
-            (click)="requestClose()"
-          >
-            取消
-          </button>
-          <button nxPending type="submit" class="primary-button" [pending]="saving.pending()">
-            {{ saving.pending() ? '建立中…' : '建立' + label(e.draft.kind) }}
-          </button>
-        </footer>
+        <nx-dialog-actions
+          [label]="'建立' + label(e.draft.kind)"
+          pendingLabel="建立中…"
+          [pending]="saving.pending()"
+          (dismiss)="requestClose()"
+        />
       } @else {
         <nx-dialog-save-bar
           [label]="'儲存' + label(e.draft.kind)"

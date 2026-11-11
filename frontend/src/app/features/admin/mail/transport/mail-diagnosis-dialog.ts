@@ -16,7 +16,6 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { MailApi } from '../mail-api';
@@ -26,6 +25,7 @@ import {
   diagnosisVerdict,
   groupedThumbprint,
 } from './mail-diagnosis';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /**
  * 連線診斷：以目前設定跑一次 SMTP 對話（不寄出信），逐步顯示到哪裡失敗、伺服器憑證與對話紀錄（AUTH 已遮罩）。
@@ -34,12 +34,12 @@ import {
 @Component({
   selector: 'nx-mail-diagnosis-dialog',
   imports: [
+    DialogActions,
     CompactDialog,
     CopyValue,
     DialogHeader,
     Field,
     Notice,
-    PendingButton,
     StatusBadge,
     ViewMotion,
   ],

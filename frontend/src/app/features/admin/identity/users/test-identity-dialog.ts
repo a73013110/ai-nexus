@@ -13,12 +13,12 @@ import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
+import { DialogActions } from '@shared/ui/dialog-actions';
 
 /** 切換為另一位使用者的身分，進行短暫、受稽核的測試。 */
 @Component({
   selector: 'nx-test-identity-dialog',
-  imports: [CompactDialog, DialogHeader, Field, Notice, PendingButton],
+  imports: [DialogActions, CompactDialog, DialogHeader, Field, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog
@@ -54,19 +54,12 @@ import { PendingButton } from '@shared/ui/pending-button';
               (input)="reason.set($any($event.target).value)"
           /></label>
         </div>
-        <footer class="dialog-foot">
-          <button
-            type="button"
-            class="secondary-button"
-            [attr.aria-disabled]="busy() || null"
-            (click)="busy() || testDialog.close()"
-          >
-            取消
-          </button>
-          <button nxPending type="submit" class="primary-button" [pending]="busy()">
-            {{ busy() ? '切換中…' : '開始身分測試' }}
-          </button>
-        </footer>
+        <nx-dialog-actions
+          label="開始身分測試"
+          pendingLabel="切換中…"
+          [pending]="busy()"
+          (dismiss)="testDialog.close()"
+        />
       </form>
     </dialog>
   `,
