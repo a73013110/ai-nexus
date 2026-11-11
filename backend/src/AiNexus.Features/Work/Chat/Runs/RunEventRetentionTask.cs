@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Work.Chat.Runs;
 
@@ -25,6 +24,6 @@ public sealed class RunEventRetentionTask(AppDbContext db, TimeProvider clock) :
     {
         var cutoff = clock.GetUtcNow() - Retention;
         var expired = db.RunEvents.Where(x => x.CreatedAt < cutoff && db.GenerationRuns.Any(r => r.Id == x.RunId && r.ActiveOwnerId == null));
-        return await Batches.RepeatAsync(() => expired.Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return await expired.DeleteInBatchesAsync(ct);
     }
 }

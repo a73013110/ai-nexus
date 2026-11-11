@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Notifications;
@@ -25,6 +24,6 @@ public sealed class NotificationRetentionTask(AppDbContext db, IOptions<Notifica
     {
         var before = clock.GetUtcNow().AddDays(-options.Value.RetentionDays);
         var expired = db.Notifications.Where(x => x.CreatedAt < before && (x.ReadAt != null || x.DismissedAt != null));
-        return Batches.RepeatAsync(() => expired.Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return expired.DeleteInBatchesAsync(ct);
     }
 }

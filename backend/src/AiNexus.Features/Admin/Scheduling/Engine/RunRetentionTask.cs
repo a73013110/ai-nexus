@@ -2,7 +2,6 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Scheduling;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Scheduling.Engine;
@@ -27,5 +26,5 @@ internal sealed class RunRetentionTask(AppDbContext db, IOptions<SchedulingOptio
     }
 
     private static Task<int> DeleteAsync(IQueryable<ScheduledTaskRun> expired, CancellationToken ct)
-        => Batches.RepeatAsync(() => expired.OrderBy(x => x.StartedAt).Take(Batches.Size).ExecuteDeleteAsync(ct));
+        => expired.OrderBy(x => x.StartedAt).DeleteInBatchesAsync(ct);
 }

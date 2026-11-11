@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Office.CalendarSync.Sync;
@@ -19,7 +18,7 @@ internal sealed class SyncRunRetentionTask(AppDbContext db, IOptions<CalendarSyn
     {
         var cutoff = clock.GetUtcNow().AddDays(-options.Value.RunRetentionDays);
         var expired = db.SyncRuns.Where(x => x.StartedAt < cutoff).OrderBy(x => x.StartedAt);
-        var total = await Batches.RepeatAsync(() => expired.Take(Batches.Size).ExecuteDeleteAsync(ct));
+        var total = await expired.DeleteInBatchesAsync(ct);
         return TaskOutcome.Count(total, count => $"刪除 {count:N0} 筆紀錄");
     }
 }

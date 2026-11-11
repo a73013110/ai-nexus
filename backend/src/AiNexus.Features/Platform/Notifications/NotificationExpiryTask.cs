@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Platform.Notifications;
 
@@ -26,6 +25,6 @@ public sealed class NotificationExpiryTask(AppDbContext db, TimeProvider clock) 
         var now = clock.GetUtcNow();
         var cutoff = now - UnreadFor;
         var expired = db.Notifications.Unread().Where(x => x.CreatedAt < cutoff);
-        return await Batches.RepeatAsync(() => expired.Take(Batches.Size).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, now), ct));
+        return await expired.UpdateInBatchesAsync(p => p.SetProperty(x => x.ReadAt, now), ct);
     }
 }

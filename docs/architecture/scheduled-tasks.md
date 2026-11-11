@@ -15,7 +15,7 @@
 ## 必須可重複執行
 
 - 執行可能在任何時刻被停站或「停止」中斷，下一輪（可能在另一個程序）重來：分批提交、以資料狀態判斷還要做什麼，不依賴上一輪留在記憶體的東西。
-- 大量刪除或更新用 [`Batches.RepeatAsync`](../../backend/src/AiNexus.Platform/Data/Batches.cs)（每批 `Take(Batches.Size)`，自動提交、不升級成表鎖），不要自己寫迴圈。
+- 大量刪除或更新用 [`Batches`](../../backend/src/AiNexus.Platform/Data/Batches.cs) 的 `DeleteInBatchesAsync`、`UpdateInBatchesAsync`（查詢不必自己 `Take`；每批自動提交、不升級成表鎖），不要自己寫迴圈。分批更新的條件要能排除已更新的列。
 - 監控或頁面要顯示任務的結果時讀執行紀錄（`ScheduledTasks.GetStateAsync`），不放在記憶體：任務可能在另一個程序執行。
 - 預期內的失敗回傳 `Failed`，錯誤定義在 `<Module>Errors`；例外一樣記為失敗，`ExternalServiceException` 沿用它的錯誤代碼。紀錄只存審閱過的提示與查證代碼。
 - 尊重 `ct`：停止、逾時與停站都經由它；被取消時直接拋出，不要吞掉。

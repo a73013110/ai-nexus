@@ -92,8 +92,8 @@ public sealed partial class CalendarSyncRunner(
                 if (run.ErrorCode is not null) break;
                 if (!await db.CalendarEvents.AnyAsync(x => x.CalendarId == calendarId && x.State != CalendarEventStates.Removed, ct))
                 {
-                    var events = await Batches.RepeatAsync(() => db.CalendarEvents.Where(x => x.CalendarId == calendarId).Take(Batches.Size).ExecuteDeleteAsync(ct));
-                    var runs = await Batches.RepeatAsync(() => db.SyncRuns.Where(x => x.CalendarId == calendarId).Take(Batches.Size).ExecuteDeleteAsync(ct));
+                    var events = await db.CalendarEvents.Where(x => x.CalendarId == calendarId).DeleteInBatchesAsync(ct);
+                    var runs = await db.SyncRuns.Where(x => x.CalendarId == calendarId).DeleteInBatchesAsync(ct);
                     audit.Record(CalendarSyncAudit.Cleared, request.RequestedBy, details: new { calendarId, deleted = run.Deleted, events, runs });
                     await db.SaveChangesAsync(CancellationToken.None);
                     LogReset(logger, run.Deleted, events, runs);

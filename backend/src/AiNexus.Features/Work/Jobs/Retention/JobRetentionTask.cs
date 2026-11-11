@@ -32,6 +32,6 @@ public sealed class JobRetentionTask(AppDbContext db, IEnumerable<IJobReferences
             var referenced = source.JobIds(db);
             expired = expired.Where(x => !referenced.Contains(x.Id));
         }
-        return Batches.RepeatAsync(() => expired.OrderBy(x => x.CreatedAt).Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return expired.OrderBy(x => x.CreatedAt).DeleteInBatchesAsync(ct);
     }
 }

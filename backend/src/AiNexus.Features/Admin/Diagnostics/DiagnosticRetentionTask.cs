@@ -2,7 +2,6 @@ using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Diagnostics;
@@ -24,6 +23,6 @@ public sealed class DiagnosticRetentionTask(AppDbContext db, IOptions<Diagnostic
     public Task<int> DeleteExpiredAsync(CancellationToken ct)
     {
         var before = clock.GetUtcNow().AddDays(-options.Value.RetentionDays);
-        return Batches.RepeatAsync(() => db.DiagnosticEvents.Where(x => x.At < before).OrderBy(x => x.At).Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return db.DiagnosticEvents.Where(x => x.At < before).OrderBy(x => x.At).DeleteInBatchesAsync(ct);
     }
 }

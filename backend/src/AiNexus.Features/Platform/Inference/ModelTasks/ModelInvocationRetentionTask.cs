@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Platform.Inference.ModelTasks;
@@ -24,6 +23,6 @@ public sealed class ModelInvocationRetentionTask(AppDbContext db, IOptions<Infer
     public Task<int> DeleteExpiredAsync(CancellationToken ct)
     {
         var before = clock.GetUtcNow().AddDays(-options.Value.InvocationRetentionDays);
-        return Batches.RepeatAsync(() => db.ModelInvocations.Where(x => x.CreatedAt < before).OrderBy(x => x.CreatedAt).Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return db.ModelInvocations.Where(x => x.CreatedAt < before).OrderBy(x => x.CreatedAt).DeleteInBatchesAsync(ct);
     }
 }

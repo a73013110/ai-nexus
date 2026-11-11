@@ -1,7 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Scheduling;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Admin.Audit;
@@ -23,6 +22,6 @@ public sealed class AuditRetentionTask(AppDbContext db, IOptions<AuditOptions> o
     public Task<int> DeleteExpiredAsync(CancellationToken ct)
     {
         var before = clock.GetUtcNow().AddDays(-options.Value.RetentionDays);
-        return Batches.RepeatAsync(() => db.AuditEvents.Where(x => x.At < before).OrderBy(x => x.At).Take(Batches.Size).ExecuteDeleteAsync(ct));
+        return db.AuditEvents.Where(x => x.At < before).OrderBy(x => x.At).DeleteInBatchesAsync(ct);
     }
 }
