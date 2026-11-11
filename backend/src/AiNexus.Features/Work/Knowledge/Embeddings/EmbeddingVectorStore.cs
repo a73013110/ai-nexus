@@ -1,5 +1,6 @@
 using AiNexus.Data.App;
 using AiNexus.Data.App.Knowledge;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Modules;
 using System.Text.Json;
 using AiNexus.Platform.Data.Sql;
@@ -15,11 +16,12 @@ public sealed class EmbeddingRow
     public SqlVector<float> Vector { get; set; }
 }
 
+/// <summary>
+/// 向量依維度分表（768、1024）；選表只寫在這裡，其他地方一律經由這個類別讀寫，不直接碰 <c>ChunkEmbeddings*</c>。
+/// </summary>
 [Scoped]
 public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbContext> sql)
 {
-    private const int DeleteBatchSize = 1000;
-
     public IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile) => profile.Dimensions switch
     {
         768 => db.ChunkEmbeddings768.AsNoTracking().Where(x => x.ProfileId == profile.Id).Select(x => new EmbeddingRow { ChunkId = x.ChunkId, ContentHash = x.ContentHash, Vector = x.Vector }),
@@ -27,7 +29,7 @@ public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbCont
         _ => throw new ArgumentOutOfRangeException(nameof(profile))
     };
     /// <summary>
-    /// 刪除一批退役模型的向量，回傳筆數（0＝刪完，或模型已不是退役）。自動提交，呼叫端不要包交易：這個方法的用意就是不持有長交易。
+    /// 刪除一批（<see cref="Batches.Size"/>）退役模型的向量，回傳筆數（0＝刪完，或模型已不是退役）；整批刪完用 <see cref="Batches.RepeatAsync"/> 包起來。自動提交，呼叫端不要包交易：這個方法的用意就是不持有長交易。
     /// 狀態條件與刪除在同一句，恢復使用的模型不會被接著刪掉。
     /// </summary>
     public Task<int> DeleteRetiredBatchAsync(EmbeddingProfile profile, CancellationToken ct)
@@ -35,13 +37,20 @@ public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbCont
         var retired = db.EmbeddingProfiles.Where(x => x.Id == profile.Id && x.Status == "retired");
         return profile.Dimensions switch
         {
-            768 => db.ChunkEmbeddings768.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(DeleteBatchSize).ExecuteDeleteAsync(ct),
-            1024 => db.ChunkEmbeddings1024.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(DeleteBatchSize).ExecuteDeleteAsync(ct),
+            768 => db.ChunkEmbeddings768.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(Batches.Size).ExecuteDeleteAsync(ct),
+            1024 => db.ChunkEmbeddings1024.Where(x => x.ProfileId == profile.Id && retired.Any()).Take(Batches.Size).ExecuteDeleteAsync(ct),
             _ => throw new ArgumentOutOfRangeException(nameof(profile))
         };
     }
+    /// <summary>某個 profile 的向量數。只有 id、不知道維度時用（例如稽核快照，profile 可能已不存在），所以兩張表都數。</summary>
+    public async Task<int> CountAsync(int profileId, CancellationToken ct) =>
+        await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == profileId, ct) + await db.ChunkEmbeddings1024.CountAsync(x => x.ProfileId == profileId, ct);
+    private IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile, Guid document) =>
+        Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document));
     public async Task<IReadOnlyList<Guid>> ExistingAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) =>
-        await Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
+        await Rows(profile, document).Select(e => e.ChunkId).ToListAsync(ct);
+    /// <summary>一份文件在這個 profile 已有向量的片段數；每個片段最多一筆（<c>IX_ChunkEmbeddings*_ProfileId_ChunkId</c> 唯一）。</summary>
+    public Task<int> CountAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) => Rows(profile, document).CountAsync(ct);
     public async Task<Dictionary<string, float[]>> CachedAsync(EmbeddingProfile profile, IReadOnlyList<byte[]> hashes, CancellationToken ct)
     {
         if (hashes.Count == 0) return new(StringComparer.Ordinal);

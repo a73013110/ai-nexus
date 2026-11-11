@@ -15,7 +15,7 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 /// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量（重建與清除只排入背景工作，交易內不做耗時的事）。
 /// 每次變更都經 <see cref="AdministrativeWrite"/> 稽核，並在 <see cref="KnowledgeLocks.EmbeddingProfile"/> 排隊。
 /// </summary>
-internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, AdministrativeWrite write) : IEndpointSlice
+internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycle lifecycle, EmbeddingVectorStore vectors, AdministrativeWrite write) : IEndpointSlice
 {
     public static void MapEndpoints(RouteGroupBuilder routes)
     {
@@ -75,6 +75,6 @@ internal sealed class ManageEmbeddingProfiles(AppDbContext db, EmbeddingLifecycl
     private async Task<object?> SnapshotAsync(int profile, CancellationToken ct) => new
     {
         profiles = await db.EmbeddingProfiles.AsNoTracking().Select(x => new { x.Id, x.Status, x.ActivatedAt, x.RetiredAt }).ToArrayAsync(ct),
-        vectors = await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == profile, ct) + await db.ChunkEmbeddings1024.CountAsync(x => x.ProfileId == profile, ct)
+        vectors = await vectors.CountAsync(profile, ct)
     };
 }

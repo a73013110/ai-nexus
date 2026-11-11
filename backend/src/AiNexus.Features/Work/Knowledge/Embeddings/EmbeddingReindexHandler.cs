@@ -10,7 +10,7 @@ using AiNexus.Features.Work.Knowledge.Indexing;
 
 namespace AiNexus.Features.Work.Knowledge.Embeddings;
 
-public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle lifecycle, DocumentIndexer indexer,
+public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle lifecycle, EmbeddingVectorStore vectors, DocumentIndexer indexer,
     AccessService access, IOptions<KnowledgeOptions> options, AdministrativeWriteLock writes, AuditTrail audit) : IBackgroundJobHandler
 {
     public const string JobKind = "embedding-reindex";
@@ -64,9 +64,6 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
         var chunks = await db.Chunks.CountAsync(x => x.DocumentId == doc.Id, ct);
         if (chunks == 0) return false;
         if (profile.Provider == "none") return true;
-        var embeddings = profile.Dimensions == 768
-            ? await (from e in db.ChunkEmbeddings768 join c in db.Chunks on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct)
-            : await (from e in db.ChunkEmbeddings1024 join c in db.Chunks on e.ChunkId equals c.Id where e.ProfileId == profile.Id && c.DocumentId == doc.Id select e.Id).CountAsync(ct);
-        return chunks == embeddings;
+        return chunks == await vectors.CountAsync(profile, doc.Id, ct);
     }
 }

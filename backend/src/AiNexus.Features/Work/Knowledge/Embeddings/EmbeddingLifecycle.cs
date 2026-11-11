@@ -2,6 +2,7 @@ using AiNexus.Data.App;
 using AiNexus.Data.App.Jobs;
 using AiNexus.Data.App.Knowledge;
 using AiNexus.Features.Admin.AccessControl;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Modules;
 using System.Globalization;
 using AiNexus.Platform.Errors;
@@ -104,9 +105,7 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
             .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.Embedding.RetiredRetentionDays)).ToArray();
         foreach (var profile in expired)
         {
-            var cleared = 0;
-            int deleted;
-            do { deleted = await vectors.DeleteRetiredBatchAsync(profile, ct); cleared += deleted; } while (deleted > 0);
+            var cleared = await Batches.RepeatAsync(() => vectors.DeleteRetiredBatchAsync(profile, ct));
             if (cleared == 0) continue;
             total += cleared;
             audit.Record(KnowledgeAudit.ProfileCleared, Guid.Empty, details: new { profileId = profile.Id, vectors = cleared, automatic = true });
