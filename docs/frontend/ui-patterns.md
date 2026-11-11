@@ -39,7 +39,7 @@
 - 與頁面並用、長時間開著的工具（助理）用 `FloatingPanel`：可拖動、調整大小、全螢幕或縮成[動態島](motion.md#動態島)，沒有關閉。
 - 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與 `DialogSaveBar` 的面板。有未儲存變更的頁籤設 `TabItem.dirty`：標籤後加圓點，名稱加「（有未儲存的變更）」。tabpanel 掛 `nxViewMotion`、不固定高度（[動效](motion.md#對話框)）。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
-- 檔案一律用 `FileList`（點卡片進閱讀器、右側下載）：附件、分享與其他系統的檔案共用；其他系統的檔案以 `ReaderTarget.remote` 預覽；`layout` 選 `cards`／`tiles`／`rows`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
+- 檔案一律用 `FileList`（點檔案進閱讀器，動作在指到時出現）：附件、分享與其他系統的檔案共用，其他系統的以 `ReaderTarget.remote` 預覽；預設 `list`，訊息裡用 `tiles`，縮圖用 `thumbnail` 端點。簽核流程用 `ApprovalTimeline`（`summary` 給進度）。
 
 ## 提示、載入與錯誤
 

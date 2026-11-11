@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | 半透明材質 | `--material`、`--material-thick`＋`backdrop-filter: var(--material-filter)`，邊緣 `--material-line` | 黏頂列（`FeaturePage` 的 `stickyHeader`，內容捲到下方才顯現）、浮動工具列、檢視器的標題膠囊、頁首主視覺（hero）、浮層 |
 | 模態遮罩 | `--scrim-modal`＋`backdrop-filter: var(--scrim-filter)`，對話框用 `--shadow-modal` | 模態對話框後方的頁面：壓暗並模糊，只有這一層 |
+| 圖片上的控制項 | `--media-control`（hover `--media-control-hover`）＋圖示 `--on-media`；照片邊緣用內側細線，不在外面再框一圈 | 疊在縮圖、照片上的按鈕：深色半透明、不模糊、不加陰影；圓角與照片同心 |
 | 表面受光 | `--surface-sheen`（同色、約 3% 明度落差，由上往下） | 主視覺、重點卡片 |
 | 分層陰影 | `--tile-shadow`；抬起與主視覺用 `--tile-shadow-raised` | 卡片 hover、主視覺 |
 | 狀態暈染 | 狀態色 4–8% 混入表面（`color-mix`） | 只在真的有 warning／danger 時的區塊底色 |

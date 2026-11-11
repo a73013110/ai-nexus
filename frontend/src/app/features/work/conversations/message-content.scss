@@ -6,7 +6,7 @@
   align-items: var(--message-content-align, stretch);
   gap: var(--p-space-2);
 }
-// 附件清單是 inline-size 容器、沒有內容寬度，靠邊對齊時會縮成 0；一律撐滿，方塊靠哪側交給 --attachment-list-justify。
+// 附件方塊會換列，清單要有整列寬度才知道哪裡換行；一律撐滿，方塊靠哪側交給 --attachment-list-justify。
 :host > nx-attachment-list {
   align-self: stretch;
 }

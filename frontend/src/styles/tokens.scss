@@ -96,6 +96,10 @@
   // 模態對話框：比浮動面板再高一階，長而淡的環境陰影加一道貼地陰影；遮罩也比抽屜的深。
   --shadow-modal: 0 2px 6px -2px rgb(24 32 36 / 10%), 0 36px 80px -28px rgb(16 24 32 / 42%);
   --scrim-modal: rgb(16 24 32 / 50%);
+  // 疊在照片上的按鈕：照片可亮可暗，固定用深色半透明底配白色圖示，任何內容上都看得清（docs/frontend/materials.md）。
+  --media-control: rgb(16 24 32 / 58%);
+  --media-control-hover: rgb(16 24 32 / 76%);
+  --on-media: rgb(255 255 255);
   // Selected sidebar items and filters: a --surface chip with this ring, unlike the flat --hover.
   --selected-ring: inset 0 0 0 1px var(--line), 0 1px 2px rgb(38 48 38 / 10%);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
@@ -315,7 +319,7 @@
   --dialog-radius: var(--radius-floating);
   --dialog-inset: var(--p-space-2);
   --dialog-padding: var(--p-space-5);
-  --attachment-thumb: 3rem;
+  --attachment-thumb: 2.5rem;
   // 訊息裡的附件方塊：圖片顯示縮圖、其他檔案顯示類型與名稱；縮圖端點輸出 256px，3x 螢幕仍清晰。
   --attachment-tile: 4.5rem;
   --attachment-tile-wide: 11rem;
@@ -408,6 +412,8 @@
     inset 0 1px 0 rgb(255 255 255 / 7%), 0 2px 6px -2px rgb(0 0 0 / 40%),
     0 36px 80px -28px rgb(0 0 0 / 75%);
   --scrim-modal: rgb(0 0 0 / 62%);
+  --media-control: rgb(0 0 0 / 62%);
+  --media-control-hover: rgb(0 0 0 / 80%);
   --selected-ring: inset 0 0 0 1px var(--line);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);

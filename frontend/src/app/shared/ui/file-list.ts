@@ -25,16 +25,16 @@ export interface FileListItem {
 }
 
 /**
- * - `cards`：依寬度並排的卡片（草稿）。
- * - `tiles`：訊息裡的方塊，圖片只顯示縮圖、其他檔案顯示類型與名稱，下載鈕在指到時浮現。
- * - `rows`：一個檔案一整列（唯讀的單據、詳情）。
+ * - `list`：一個外框、一檔一列（草稿、單據、詳情）；可移除與否只差 `editable`。
+ * - `tiles`：訊息裡的方塊，圖片只顯示縮圖、其他檔案顯示類型與名稱，下載鈕在指到時浮現於右上角。
  */
-export type FileListLayout = 'cards' | 'tiles' | 'rows';
+export type FileListLayout = 'list' | 'tiles';
 
 /**
  * 檔案清單：點檔案在閱讀器預覽，另有下載原檔，`editable` 時多一個移除鈕。
  * 草稿與訊息的附件、公文系統表單的附件共用；資料來源不同，只差在呼叫端怎麼組 {@link FileListItem}。
  * 縮圖讀不到（檔案已清除、格式無法解碼）時改成檔案類型，不顯示破圖。
+ * `list` 限高用 `--file-list-max-height`，超過時在框內捲動。
  */
 @Component({
   selector: 'nx-file-list',
@@ -73,17 +73,12 @@ export type FileListLayout = 'cards' | 'tiles' | 'rows';
               (error)="settle(failed, file.key)"
             />
           } @else {
-            <span class="attachment-symbol" aria-hidden="true"
-              ><nx-icon name="document" /><span class="attachment-kind">{{
-                kind(file.fileName)
-              }}</span></span
-            >
+            <span class="attachment-symbol" aria-hidden="true">{{ kind(file.fileName) }}</span>
           }
           <span class="attachment-copy"
             ><strong>{{ file.fileName }}</strong
             ><small>{{ file.detail }}</small></span
           >
-          <nx-icon class="attachment-open" name="chevron" />
         </a>
         <a
           class="icon-button attachment-download"
@@ -111,7 +106,7 @@ export class FileList {
   /** 清單與按鈕的報讀名稱，例如「附件」。 */
   readonly label = input('附件');
   readonly editable = input(false);
-  readonly layout = input<FileListLayout>('cards');
+  readonly layout = input<FileListLayout>('list');
   readonly remove = output<string>();
   /** 縮圖已載入（淡入）與載入失敗（改顯示類型）的檔案。 */
   readonly loaded = signal<ReadonlySet<string>>(new Set());

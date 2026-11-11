@@ -80,6 +80,18 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
   joined: `2026-${String((index % 9) + 1).padStart(2, '0')}-${String((index % 27) + 1).padStart(2, '0')}`,
 }));
 
+/** 示意照片：天空、太陽與兩層山丘，亮處與暗處都有，看得出角落按鈕在照片上的對比。 */
+const SAMPLE_PHOTO =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">' +
+      '<rect width="96" height="96" fill="#cfe3f2"/>' +
+      '<circle cx="70" cy="26" r="11" fill="#f7dc8c"/>' +
+      '<path d="M0 62 Q24 40 50 58 T96 52 V96 H0Z" fill="#7fa98a"/>' +
+      '<path d="M0 78 Q30 60 60 76 T96 72 V96 H0Z" fill="#3f6a52"/>' +
+      '</svg>',
+  );
+
 /** 精簡的資料工作區（篩選、表格、詳情抽屜）與閱讀元件。 */
 @Component({
   selector: 'nx-design-data',
@@ -121,6 +133,10 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
+    /* 範例框依內容縮寬；檔案清單撐滿範例欄，才是放在表單或對話框裡的樣子。 */
+    nx-file-list {
+      width: 100%;
+    }
     .design-data-workspace nx-view-switch {
       margin-bottom: 0;
     }
@@ -442,16 +458,16 @@ const DESIGN_PEOPLE = Array.from({ length: 28 }, (_, index) => ({
       id="design-files"
       title="檔案清單"
       api="FileList"
-      description="附件、分享檔案與其他系統的檔案共用：點檔案在閱讀器預覽、另有下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。縮圖讀不到時改顯示檔案類型。"
+      description="附件、分享檔案與其他系統的檔案共用：點檔案在閱讀器預覽、另有下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。縮圖讀不到時改顯示檔案類型。滑過列或方塊才出現動作。"
     >
-      <nx-design-example label="可移除的附件">
+      <nx-design-example label="list · 草稿，可移除">
         <nx-file-list [files]="files" [editable]="true" />
+      </nx-design-example>
+      <nx-design-example label="list · 單據，唯讀">
+        <nx-file-list [files]="files" />
       </nx-design-example>
       <nx-design-example label="tiles · 訊息裡的附件方塊">
         <nx-file-list [files]="files" layout="tiles" />
-      </nx-design-example>
-      <nx-design-example label="rows · 單據的附件一檔一列">
-        <nx-file-list [files]="files" layout="rows" />
       </nx-design-example>
     </nx-design-section>
     <nx-design-section
@@ -705,7 +721,8 @@ export class DesignData {
     { label: '電子郵件', before: null, after: 'carol@example.test' },
     { label: '分機', before: '2051', after: null },
   ];
-  // 範例檔案沒有真的內容：預覽會顯示找不到檔案，下載連結不會離開本頁。照片的縮圖用站內的品牌圖示代替。
+  // 範例檔案沒有真的內容：預覽會顯示找不到檔案，下載連結不會離開本頁。照片的縮圖是一張不透明的示意風景，
+  // 與真的照片一樣貼滿到邊；去背或圓角圖示看不出縮圖的邊緣處理。
   readonly files: FileListItem[] = [
     {
       key: 'sample-photo',
@@ -713,7 +730,7 @@ export class DesignData {
       detail: '1.2 MB · 圖片分析',
       reader: { id: 'sample-photo', attachment: true },
       downloadUrl: '#design-files',
-      thumbnail: 'brand.svg',
+      thumbnail: SAMPLE_PHOTO,
     },
     {
       key: 'sample-pdf',

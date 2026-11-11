@@ -77,8 +77,8 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
     .evaluate((element) => element.scrollTop);
   const id = fixture.core.attachments[0].id;
   await expect(preview).toHaveAttribute("href", /returnTo=%2Fwork%2Fchat%2F/);
-  // 圖片方塊正中央是下載鈕，點角落才是開啟預覽。
-  await preview.click({ position: { x: 12, y: 12 } });
+  // 點縮圖正中央是開啟預覽；下載鈕在右上角，不擋在最常點的位置。
+  await preview.click();
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.getByRole("heading", { name: fileName })).toBeVisible();
   // 從點下去的附件方塊長出來（OriginMotion），不是預設的由下彈入。

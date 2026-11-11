@@ -22,7 +22,7 @@ import { FileList, fileSize, type FileListItem, type FileListLayout } from '@sha
 export class AttachmentList {
   readonly files = input.required<AttachmentDto[]>();
   readonly editable = input(false);
-  readonly layout = input<FileListLayout>('cards');
+  readonly layout = input<FileListLayout>('list');
   readonly scope = input<FileScope | null>(null);
   readonly remove = output<string>();
   readonly items = computed(() =>

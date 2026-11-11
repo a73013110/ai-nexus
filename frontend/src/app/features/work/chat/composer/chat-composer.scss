@@ -65,6 +65,12 @@
   color: var(--accent);
   border-radius: var(--radius-action);
 }
+// 草稿附件：限高、超過時在清單框內捲動，不把輸入框往上推出畫面；與下方輸入區的距離由這裡決定。
+nx-attachment-list {
+  --file-list-max-height: var(--attachment-list-max);
+  display: block;
+  margin-block-end: var(--p-space-2);
+}
 .upload-status {
   display: flex;
   align-items: center;

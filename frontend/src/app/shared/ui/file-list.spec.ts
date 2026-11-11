@@ -58,10 +58,10 @@ describe('FileList', () => {
     );
   });
 
-  it('exposes the layout to its styles, cards by default', () => {
+  it('exposes the layout to its styles, list by default', () => {
     const { fixture } = render([remote]);
     const host = fixture.nativeElement as HTMLElement;
-    expect(host.dataset['layout']).toBe('cards');
+    expect(host.dataset['layout']).toBe('list');
     fixture.componentRef.setInput('layout', 'tiles');
     fixture.detectChanges();
     expect(host.dataset['layout']).toBe('tiles');
@@ -78,7 +78,7 @@ describe('FileList', () => {
     fixture.detectChanges();
     expect(root.querySelectorAll('img')).toHaveLength(1);
     expect(root.querySelector('img')!.classList).toContain('is-loaded');
-    expect(root.querySelector('.attachment-kind')!.textContent).toBe('PDF');
+    expect(root.querySelector('.attachment-symbol')!.textContent).toBe('PDF');
   });
 
   it('names the file kind from a short extension only', () => {
