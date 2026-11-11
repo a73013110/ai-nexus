@@ -16,6 +16,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { Icon } from './icon';
 import { OptionTags, type OptionTag } from './option-tags';
+import { SearchField } from './search-field';
 import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
@@ -56,7 +57,7 @@ interface SelectSection {
  */
 @Component({
   selector: 'nx-select',
-  imports: [Icon, NgTemplateOutlet, OptionTags],
+  imports: [Icon, NgTemplateOutlet, OptionTags, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './select.scss',
   host: {
@@ -109,21 +110,18 @@ interface SelectSection {
       (keydown.escape)="dismiss($event)"
     >
       @if (search()) {
-        <div class="select-search">
-          <nx-icon name="search" /><input
-            type="search"
-            role="combobox"
-            aria-expanded="true"
-            aria-haspopup="listbox"
-            [attr.aria-controls]="id"
-            [attr.aria-activedescendant]="active() >= 0 ? id + '-' + active() : null"
-            [attr.aria-label]="'搜尋' + label()"
-            [placeholder]="'搜尋' + label() + '…'"
-            [value]="query()"
-            (input)="filter($any($event.target).value)"
-            (keydown)="searchKey($event)"
-          />
-        </div>
+        <nx-search-field
+          class="popover-search"
+          appearance="bare"
+          [label]="'搜尋' + label()"
+          [placeholder]="'搜尋' + label() + '…'"
+          [controls]="id"
+          [activeDescendant]="active() >= 0 ? id + '-' + active() : null"
+          [busy]="loading()"
+          [value]="query()"
+          (valueChange)="filter($event)"
+          (keydown)="searchKey($event)"
+        />
         <p class="sr-only" role="status">{{ visibleOptions().length }} 個選項</p>
       }
       <ng-template #optionRow let-entry>
@@ -164,34 +162,37 @@ interface SelectSection {
           }
         </button>
       </ng-template>
-      <div
-        role="listbox"
-        [id]="id"
-        [attr.aria-label]="label()"
-        [attr.aria-multiselectable]="multiple() || null"
-      >
-        @for (section of sections(); track $index) {
-          @if (section.group) {
-            <div role="group" [attr.aria-labelledby]="id + '-group-' + $index">
-              <div class="select-group" [id]="id + '-group-' + $index">{{ section.group }}</div>
+      <!-- 搜尋固定在頂端，選項與 footer 在下方一起捲動。 -->
+      <div class="select-body">
+        <div
+          role="listbox"
+          [id]="id"
+          [attr.aria-label]="label()"
+          [attr.aria-multiselectable]="multiple() || null"
+        >
+          @for (section of sections(); track $index) {
+            @if (section.group) {
+              <div role="group" [attr.aria-labelledby]="id + '-group-' + $index">
+                <div class="select-group" [id]="id + '-group-' + $index">{{ section.group }}</div>
+                @for (entry of section.entries; track entry.option.value) {
+                  <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
+                }
+              </div>
+            } @else {
               @for (entry of section.entries; track entry.option.value) {
                 <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
               }
-            </div>
-          } @else {
-            @for (entry of section.entries; track entry.option.value) {
-              <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
+            }
+          } @empty {
+            @if (loading()) {
+              <p class="select-empty" role="status">正在載入選項…</p>
+            } @else {
+              <p class="select-empty">沒有符合的選項</p>
             }
           }
-        } @empty {
-          @if (loading()) {
-            <p class="select-empty" role="status">正在載入選項…</p>
-          } @else {
-            <p class="select-empty">沒有符合的選項</p>
-          }
-        }
+        </div>
+        <ng-content select="[select-footer]" />
       </div>
-      <ng-content select="[select-footer]" />
     </div>`,
 })
 export class Select {

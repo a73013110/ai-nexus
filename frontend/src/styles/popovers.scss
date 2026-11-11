@@ -50,6 +50,13 @@
     interactivity: inert;
   }
 }
+// 浮層頂端的搜尋列：`<nx-search-field appearance="bare" class="popover-search">`。浮層已框住
+// 內容，搜尋不再加框，只用細線與清單分開；浮層排成直欄，捲動的是下方清單，搜尋固定在頂端。
+.popover-search {
+  flex: none;
+  padding-inline: var(--p-space-4);
+  border-bottom: 1px solid var(--line);
+}
 
 // 資訊面板（InfoPopover）的內容：分段（.info-section，段間細線）、段標題（h3）、小型對照表
 // （.info-table，數字等寬、列間細線）與「名詞＋說明」條列（.info-terms）。面板本身已是說明字級

@@ -28,4 +28,33 @@ describe('SearchField', () => {
     field.dispatchEvent(new Event('input'));
     expect(typed).toEqual(['星河']);
   });
+
+  it('becomes a combobox for the list it filters and keeps the clear button out of the tab order', () => {
+    const fixture = TestBed.createComponent(SearchField);
+    fixture.componentRef.setInput('label', '搜尋人員');
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const field = host.querySelector('input')!;
+    expect(field.hasAttribute('role')).toBe(false);
+    expect(field.hasAttribute('aria-controls')).toBe(false);
+
+    fixture.componentRef.setInput('controls', 'people');
+    fixture.componentRef.setInput('popup', 'tree');
+    fixture.componentRef.setInput('activeDescendant', 'people-2');
+    fixture.componentRef.setInput('value', '林');
+    fixture.detectChanges();
+    expect(field.getAttribute('role')).toBe('combobox');
+    expect(field.getAttribute('aria-controls')).toBe('people');
+    expect(field.getAttribute('aria-haspopup')).toBe('tree');
+    expect(field.getAttribute('aria-activedescendant')).toBe('people-2');
+    expect(field.getAttribute('autocomplete')).toBe('off');
+    const clear = host.querySelector<HTMLButtonElement>('button')!;
+    expect(clear.tabIndex).toBe(-1);
+
+    const cleared: string[] = [];
+    fixture.componentInstance.valueChange.subscribe((value) => cleared.push(value));
+    clear.click();
+    expect(cleared).toEqual(['']);
+    expect(document.activeElement).toBe(field);
+  });
 });

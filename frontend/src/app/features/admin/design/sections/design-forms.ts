@@ -170,7 +170,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-search-bare"
       title="列內搜尋"
       api='SearchField appearance="bare"'
-      description="放進已有外框的列（對話框標題列、面板頂端）時去掉欄位外框，由列的細線與游標標示輸入位置。"
+      description="放進已有外框的地方（對話框標題列、浮層頂端加 popover-search、側欄頂端）時去掉欄位外框，由列的細線與游標標示輸入位置。帶動清單時給 controls，輸入框成為 combobox；Select 與 TreeSelect 的搜尋就是這一種。"
     >
       <div class="design-bar-frame">
         <div class="dialog-bar">

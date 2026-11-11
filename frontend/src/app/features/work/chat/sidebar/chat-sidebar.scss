@@ -44,27 +44,12 @@
 .sidebar-tools > .icon-button {
   width: var(--button-target);
 }
+// 側欄頂端的搜尋列：無框，細線與列表分開；字級跟側欄列表一致。
 .history-search {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
+  --control-font-size: var(--text-label);
   min-height: max(var(--button-target), var(--sidebar-search-height));
+  padding-inline: var(--p-space-2);
   border-bottom: 1px solid var(--line);
-  padding: var(--control-padding-block) var(--p-space-2);
-  color: var(--secondary);
-}
-.history-search nx-icon {
-  --icon-size: var(--icon-lg);
-}
-.history-search input {
-  background: transparent;
-  border: 0;
-  min-width: 0;
-  width: 100%;
-  font-size: var(--text-label);
-}
-.history-search input::placeholder {
-  color: var(--muted);
 }
 // Like the pinned features, one chip springs between the equal-width views.
 .history-filters {

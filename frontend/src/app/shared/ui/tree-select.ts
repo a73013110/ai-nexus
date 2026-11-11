@@ -17,6 +17,7 @@ import { uniqueId } from '../browser/unique-id';
 import { Checkbox } from './checkbox';
 import { Icon } from './icon';
 import { OptionTags, type OptionTag } from './option-tags';
+import { SearchField } from './search-field';
 
 /** 樹的一個節點；清單依同層順序排列，`parent` 不在清單裡的當成最上層。 */
 export interface TreeSelectNode {
@@ -59,7 +60,7 @@ interface TreeSelectRow {
  */
 @Component({
   selector: 'nx-tree-select',
-  imports: [Checkbox, Icon, OptionTags],
+  imports: [Checkbox, Icon, OptionTags, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './tree-select.scss',
   template: `<button
@@ -107,22 +108,18 @@ interface TreeSelectRow {
       (keydown.escape)="dismiss($event)"
     >
       @if (search()) {
-        <div class="tree-select-search">
-          <nx-icon name="search" /><input
-            #searchBox
-            type="search"
-            role="combobox"
-            aria-expanded="true"
-            aria-haspopup="tree"
-            [attr.aria-controls]="id"
-            [attr.aria-activedescendant]="activeId()"
-            [attr.aria-label]="'搜尋' + noun()"
-            [placeholder]="'搜尋' + noun() + '…'"
-            [value]="query()"
-            (input)="filter($any($event.target).value)"
-            (keydown)="searchKey($event)"
-          />
-        </div>
+        <nx-search-field
+          class="popover-search"
+          appearance="bare"
+          popup="tree"
+          [label]="'搜尋' + noun()"
+          [placeholder]="'搜尋' + noun() + '…'"
+          [controls]="id"
+          [activeDescendant]="activeId()"
+          [value]="query()"
+          (valueChange)="filter($event)"
+          (keydown)="searchKey($event)"
+        />
         <p class="sr-only" role="status">{{ query() ? entries().length + ' 個結果' : '' }}</p>
       }
       <div class="tree-select-body" role="tree" [id]="id" [attr.aria-label]="label()">
@@ -339,7 +336,7 @@ export class TreeSelect {
 
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
-  private readonly searchBox = viewChild<ElementRef<HTMLInputElement>>('searchBox');
+  private readonly searchBox = viewChild(SearchField);
   protected readonly popover = anchoredPopover({
     panel: () => this.panel().nativeElement,
     trigger: () => this.trigger().nativeElement,
@@ -384,7 +381,7 @@ export class TreeSelect {
       entry.row ? entry.row.selectable : !this.allDisabled(),
     );
     this.active.set(Math.max(0, chosen >= 0 ? chosen : first));
-    this.searchBox()?.nativeElement.focus();
+    this.searchBox()?.focus();
     this.reveal();
   }
   close() {

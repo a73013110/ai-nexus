@@ -24,17 +24,16 @@
       <nx-icon name="command" />
     </button>
   </div>
-  <div class="history-search">
-    <nx-icon [name]="searching() ? 'loading' : 'search'" /><input
-      type="search"
-      aria-label="搜尋對話標題與內容"
-      placeholder="搜尋標題與內容"
-      [attr.aria-busy]="searching() || null"
-      [formField]="searchForm.query"
-      (input)="searchChanged()"
-      (keydown)="historyKey($event, history)"
-    />
-  </div>
+  <nx-search-field
+    class="history-search"
+    appearance="bare"
+    label="搜尋對話標題與內容"
+    placeholder="搜尋標題與內容"
+    [busy]="searching()"
+    [value]="query()"
+    (valueChange)="searchChanged($event)"
+    (keydown)="historyKey($event, history)"
+  />
   <div class="history-filters">
     <nx-view-switch
       label="對話篩選"
@@ -112,7 +111,7 @@
       @if (!firstLoad()) {
         <p class="sidebar-note">
           {{
-            searchModel().query
+            query()
               ? '沒有符合的對話。'
               : store.historyView() === 'archived'
                 ? '封存的對話會放在這裡。'

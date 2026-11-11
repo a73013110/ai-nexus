@@ -75,9 +75,19 @@
   border-radius: var(--radius-action);
   font-size: var(--text-caption);
 }
+// 搜尋固定在頂端、選項捲動；排版寫在 :popover-open 外（見 popovers.scss 開頭）。
 .select-panel {
+  flex-direction: column;
+}
+.select-panel:popover-open {
+  display: flex;
+}
+.select-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: var(--p-space-2);
   overflow: auto;
+  overscroll-behavior: contain;
 }
 .select-option {
   display: flex;
@@ -110,26 +120,6 @@
   gap: var(--p-space-1);
   min-width: 0;
   flex: 1;
-}
-.select-search {
-  position: sticky;
-  top: calc(-1 * var(--p-space-2));
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-2);
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  z-index: 1;
-}
-.select-search input {
-  width: 100%;
-  min-width: 0;
-  min-height: var(--button-target);
-  border: 0;
-  padding: var(--p-space-2);
-  background: transparent;
-  font-size: var(--text-ui);
 }
 .select-empty {
   font-size: var(--text-caption);

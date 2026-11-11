@@ -13,6 +13,7 @@
 
 - 判斷順序：使用者要點它、在裡面輸入或勾選，且外框是看出它在哪裡的線索 → control；圍住一塊內容 → surface（`--tile-line` 或 `--line`）；只是隔開兩段 → `--line`。
 - 選項卡片、清單列與資源卡片靠內容辨識，仍屬表面；只有長得像表單控制項的才用 `--control-line`。
+- 搜尋框在頁面、工具列或表單裡是控制項（`SearchField` 預設外框）；在浮層、對話框標題列或側欄的頂端時，位置本身就標示了輸入處，用 `appearance="bare"` 只留一條 `--line` 分隔（浮層加 `.popover-search`），不再框中有框。
 - 狀態不是角色：焦點 `--focus`、錯誤 `--danger`／`--error`、選取 `--accent` 與 `--selected-ring`、表面 hover 從 `--tile-line` 加深到 `--line`，都照原樣疊在角色上。
 
 ## 為什麼控制項要更深

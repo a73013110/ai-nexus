@@ -7,7 +7,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '@core/api/schema';
 import { SHORTCUTS } from '@core/layout/keyboard-shortcuts';
@@ -17,6 +16,7 @@ import { keyText } from '@shared/browser/hotkeys';
 import { rovingIndex } from '@shared/browser/roving-index';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
+import { SearchField } from '@shared/ui/search-field';
 import { MenuPanel } from '@shared/ui/menu-panel';
 import { PendingButton } from '@shared/ui/pending-button';
 import { Select } from '@shared/ui/select';
@@ -36,7 +36,7 @@ import { routeOf } from '@core/api/catalog';
  */
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, MenuPanel, PendingButton, ViewSwitch],
+  imports: [RouterLink, Icon, SearchField, Select, MenuPanel, PendingButton, ViewSwitch],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
@@ -55,8 +55,7 @@ export class ChatSidebar {
   readonly navigate = output<void>();
   readonly prompts = output<void>();
   readonly commands = output<void>();
-  readonly searchModel = signal({ query: '' });
-  readonly searchForm = form(this.searchModel, (schema) => maxLength(schema.query, 120));
+  readonly query = signal('');
   readonly labelOptions = computed(() => [
     { value: '', label: '全部標籤' },
     ...this.store.labels().map((value) => ({ value, label: value })),
@@ -106,12 +105,13 @@ export class ChatSidebar {
     if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0)
       this.morph.arm('conversation-title', title);
   }
-  searchChanged() {
+  searchChanged(query: string) {
+    this.query.set(query);
     this.typing.set(true);
     this.scope.later(
       () => {
         this.typing.set(false);
-        void this.store.searchHistory(this.searchModel().query);
+        void this.store.searchHistory(this.query());
       },
       250,
       'search',

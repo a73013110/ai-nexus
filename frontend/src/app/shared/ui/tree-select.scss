@@ -74,25 +74,6 @@
 .tree-select-panel:popover-open {
   display: flex;
 }
-.tree-select-search {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-1) var(--p-space-3);
-  border-bottom: 1px solid var(--line);
-  color: var(--secondary);
-  input {
-    flex: 1;
-    min-width: 0;
-    min-height: var(--control-height-compact);
-    border: 0;
-    background: transparent;
-    color: var(--ink);
-    font-size: var(--text-ui);
-    outline: none;
-  }
-}
 .tree-select-body {
   flex: 1 1 auto;
   min-height: 0;
