@@ -1,3 +1,5 @@
+@use 'surfaces';
+
 :host {
   display: grid;
   gap: var(--p-space-4);
@@ -17,10 +19,7 @@
   margin: 0;
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   list-style: none;
   li {
     border-top: 1px solid var(--tile-line);

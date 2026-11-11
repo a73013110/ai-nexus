@@ -1,0 +1,12 @@
+// 監控各區塊「展開更多」（<details>）的箭頭：展開時轉半圈。各元件的樣式互相隔離，所以以 mixin 共用。
+// `$chevron` 是箭頭的選擇器；箭頭畫在子元件裡、由外層設定樣式時傳入帶範圍的選擇器。
+@mixin fold-chevron($chevron: '.fold-chevron') {
+  #{$chevron} {
+    color: var(--muted);
+    transition: rotate var(--motion-panel) var(--ease-spring);
+    --icon-size: var(--icon-sm);
+  }
+  details[open] > summary .fold-chevron {
+    rotate: 180deg;
+  }
+}

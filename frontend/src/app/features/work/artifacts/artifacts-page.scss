@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'surfaces';
 
 .artifact-version {
   width: 9rem;
@@ -39,10 +40,7 @@
   min-height: 15rem;
   margin-inline: auto;
   padding: var(--p-space-6) var(--p-space-8);
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   overflow-wrap: anywhere;
 }
 .split .artifact-paper {

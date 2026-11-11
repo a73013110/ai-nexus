@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use '../fold-chevron' as fold;
 
 :host {
   display: grid;
@@ -134,11 +135,4 @@ li {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
-.fold-chevron {
-  color: var(--muted);
-  transition: rotate var(--motion-panel) var(--ease-spring);
-  --icon-size: var(--icon-sm);
-}
-details[open] > summary .fold-chevron {
-  rotate: 180deg;
-}
+@include fold.fold-chevron;

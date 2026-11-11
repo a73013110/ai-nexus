@@ -1,3 +1,5 @@
+@use 'surfaces';
+
 :host {
   display: grid;
   gap: var(--p-space-4);
@@ -47,10 +49,7 @@
 }
 .entries {
   overflow: hidden;
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
 }
 .row {
   display: flex;

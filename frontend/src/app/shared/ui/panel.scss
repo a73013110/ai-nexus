@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'surfaces';
 
 // The overview tile skin (`--tile-*`, tokens.scss): hairline and a whisper of shadow; hover only
 // deepens both, so nothing moves under the pointer.
@@ -7,10 +8,7 @@
   flex-direction: column;
   min-width: 0;
   padding: var(--p-space-4) var(--p-space-5) var(--p-space-5);
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   transition:
     box-shadow var(--motion) var(--ease),
     border-color var(--motion) var(--ease);

@@ -1,3 +1,5 @@
+@use '../fold-chevron' as fold;
+
 :host {
   display: block;
   min-width: 0;
@@ -134,14 +136,7 @@ nx-panel {
     font-size: var(--p-font-xs);
   }
 }
-.fold-chevron {
-  color: var(--muted);
-  transition: rotate var(--motion-panel) var(--ease-spring);
-  --icon-size: var(--icon-sm);
-}
-details[open] > summary .fold-chevron {
-  rotate: 180deg;
-}
+@include fold.fold-chevron;
 @media (pointer: coarse) {
   .map-more button {
     min-height: var(--button-target);

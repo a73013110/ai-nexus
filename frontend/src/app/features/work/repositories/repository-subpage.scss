@@ -1,3 +1,5 @@
+@use 'surfaces';
+
 // 儲存庫子頁（變更、討論串、AI 檢閱）共用的骨架：返回連結與頁首卡片；AI 檢閱的整體報告用同一張卡片。
 // 由各元件的 styleUrls 引入，仍受元件封裝。
 :host {
@@ -23,9 +25,6 @@
   display: grid;
   gap: var(--p-space-3);
   padding: var(--p-space-5);
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   animation: panel-arrive var(--motion-morph) var(--ease-spring) both;
 }

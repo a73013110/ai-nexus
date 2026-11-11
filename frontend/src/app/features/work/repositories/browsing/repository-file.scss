@@ -1,12 +1,10 @@
 @use 'breakpoints' as bp;
+@use 'surfaces';
 
 :host {
   display: block;
   overflow: hidden;
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   animation: panel-arrive var(--motion-morph) var(--ease-spring) both;
 }
 :host(.compact) {

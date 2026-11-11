@@ -1,3 +1,5 @@
+@use 'surfaces';
+
 // Six figures in the overview's tile skin: three across, two on a narrow page. Each figure scales
 // with its own tile (cqi) and never spills out of it.
 :host {
@@ -16,10 +18,7 @@
   gap: var(--p-space-1);
   min-width: 0;
   padding: var(--p-space-4) var(--p-space-5) var(--p-space-4);
-  border: 1px solid var(--tile-line);
-  border-radius: var(--tile-radius);
-  background: var(--surface);
-  box-shadow: var(--tile-shadow);
+  @include surfaces.tile;
   container-type: inline-size;
   transition:
     background-color var(--motion-panel) var(--ease),

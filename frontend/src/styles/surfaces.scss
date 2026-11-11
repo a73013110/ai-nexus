@@ -1,0 +1,11 @@
+// 資源表面（總覽磚、面板、資源卡片）的外觀：細線、大圓角、表面色與貼地陰影（docs/frontend/materials.md）。
+// 數值是 tokens.scss 的 `resource-surfaces`；這裡只把四個宣告綁在一起，元件不各自重抄，
+// 之後表面要多一層（例如受光）也只改這裡。抬起的狀態由元件自己換 `--tile-shadow-raised`。
+
+/// 靜止的磚面。內距、排版與 hover 留給元件。
+@mixin tile {
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+}
