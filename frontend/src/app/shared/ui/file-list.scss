@@ -122,9 +122,10 @@
   .attachment-card small {
     margin-top: 2px;
   }
+  // 列高本來就有 --button-target，按鈕用滿這個觸控尺寸，不必另外撐開點擊範圍。
   .attachment-card :is(.attachment-download, .attachment-remove) {
-    width: var(--control-height-compact);
-    height: var(--control-height-compact);
+    width: var(--button-target);
+    height: var(--button-target);
     border-radius: var(--radius-action);
     color: var(--secondary);
     --icon-size: var(--icon-md);
