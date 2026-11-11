@@ -45,12 +45,8 @@ public sealed class EmbeddingVectorStore(AppDbContext db, ISqlDatabase<AppDbCont
     /// <summary>某個 profile 的向量數。只有 id、不知道維度時用（例如稽核快照，profile 可能已不存在），所以兩張表都數。</summary>
     public async Task<int> CountAsync(int profileId, CancellationToken ct) =>
         await db.ChunkEmbeddings768.CountAsync(x => x.ProfileId == profileId, ct) + await db.ChunkEmbeddings1024.CountAsync(x => x.ProfileId == profileId, ct);
-    private IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile, Guid document) =>
-        Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document));
     public async Task<IReadOnlyList<Guid>> ExistingAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) =>
-        await Rows(profile, document).Select(e => e.ChunkId).ToListAsync(ct);
-    /// <summary>一份文件在這個 profile 已有向量的片段數；每個片段最多一筆（<c>IX_ChunkEmbeddings*_ProfileId_ChunkId</c> 唯一）。</summary>
-    public Task<int> CountAsync(EmbeddingProfile profile, Guid document, CancellationToken ct) => Rows(profile, document).CountAsync(ct);
+        await Rows(profile).Where(e => db.Chunks.Any(c => c.Id == e.ChunkId && c.DocumentId == document)).Select(e => e.ChunkId).ToListAsync(ct);
     public async Task<Dictionary<string, float[]>> CachedAsync(EmbeddingProfile profile, IReadOnlyList<byte[]> hashes, CancellationToken ct)
     {
         if (hashes.Count == 0) return new(StringComparer.Ordinal);

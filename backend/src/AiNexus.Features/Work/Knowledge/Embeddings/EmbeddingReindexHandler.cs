@@ -30,8 +30,15 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
         var found = await ProfileAsync(execution.Job, ct);
         if (!found.IsSuccess) return found.Error;
         var profile = found.Value;
-        var ids = await db.Documents.AsNoTracking().Where(x => x.CollectionId != null && !x.IsDeleted).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
-        var done = 0;
+        // 已經完成的文件一句查詢濾掉，不逐份檢查：重建被中斷後接續、或換模型時多數文件的向量都還在，逐份要各打數次查詢再寫一次進度。
+        // 有工作正在改寫、或缺頁的文件不算在內，留給下面的迴圈照原規則處理（略過或失敗）。
+        var documents = db.Documents.Where(x => x.CollectionId != null && !x.IsDeleted);
+        var settled = Indexed(profile).Where(d => db.DocumentPages.Any(p => p.DocumentId == d.Id)
+            && !db.BackgroundJobs.Any(j => j.SubjectId == d.Id && j.ActiveKey != null));
+        var total = await documents.CountAsync(ct);
+        var ids = await documents.Where(d => !settled.Any(x => x.Id == d.Id)).OrderBy(x => x.Id).Select(x => x.Id).ToListAsync(ct);
+        var done = total - ids.Count;
+        if (done > 0 && ids.Count > 0) await execution.CheckpointAsync("逐文件重建索引", done, total, ct);
         foreach (var id in ids)
         {
             if (await ValidateRetryAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
@@ -39,9 +46,10 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
             if (await db.BackgroundJobs.AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) continue;
             var doc = await db.Documents.SingleAsync(x => x.Id == id, ct);
             if (!await db.DocumentPages.AnyAsync(x => x.DocumentId == id, ct)) return KnowledgeErrors.DocumentPagesMissing;
-            var indexed = await VectorsCompleteAsync(doc, profile, ct);
+            // 查詢之後才由別的工作補完的文件不必再索引一次。
+            var indexed = await Indexed(profile).AnyAsync(x => x.Id == id, ct);
             if (!indexed && await indexer.IndexAsync(execution, doc, profile, ct) is { IsSuccess: false } failed) return failed;
-            await execution.CheckpointAsync("逐文件重建索引", ++done, ids.Count, ct);
+            await execution.CheckpointAsync("逐文件重建索引", ++done, total, ct);
             db.ChangeTracker.Clear();
         }
         var coverage = await lifecycle.CoverageAsync(profile, ct);
@@ -58,12 +66,15 @@ public sealed class EmbeddingReindexHandler(AppDbContext db, EmbeddingLifecycle 
         }
         return Result.Success;
     }
-    private async Task<bool> VectorsCompleteAsync(Document doc, EmbeddingProfile profile, CancellationToken ct)
+    /// <summary>
+    /// 這個 profile 的向量已完整的文件：狀態 ready、有片段，且每個片段都有向量（不需要向量的 provider 只看前兩項）。
+    /// 以存在性判斷而不比筆數，一句查詢就能套在整批文件上。
+    /// </summary>
+    private IQueryable<Document> Indexed(EmbeddingProfile profile)
     {
-        if (doc.Status != "ready") return false;
-        var chunks = await db.Chunks.CountAsync(x => x.DocumentId == doc.Id, ct);
-        if (chunks == 0) return false;
-        if (profile.Provider == "none") return true;
-        return chunks == await vectors.CountAsync(profile, doc.Id, ct);
+        var ready = db.Documents.Where(d => d.Status == "ready" && db.Chunks.Any(c => c.DocumentId == d.Id));
+        if (profile.Provider == "none") return ready;
+        var rows = vectors.Rows(profile);
+        return ready.Where(d => !db.Chunks.Any(c => c.DocumentId == d.Id && !rows.Any(e => e.ChunkId == c.Id)));
     }
 }
