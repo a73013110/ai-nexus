@@ -29,12 +29,15 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
     JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock, AuditTrail audit)
 {
     private IQueryable<Document> Documents => db.Documents.Where(x => x.CollectionId != null && !x.IsDeleted);
-    public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct)
+    private IQueryable<Chunk> Chunks => from c in db.Chunks join d in Documents on c.DocumentId equals d.Id select c;
+    public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct) => await MeasureAsync(profile, await CorpusAsync(ct), ct);
+    /// <summary>與 profile 無關的兩個數字：片段總數、還沒 ready 的文件數。列出多個 profile 時只讀一次。</summary>
+    private async Task<(int Chunks, int PendingDocuments)> CorpusAsync(CancellationToken ct) =>
+        (await Chunks.CountAsync(ct), await Documents.CountAsync(x => x.Status != "ready", ct));
+    private async Task<EmbeddingCoverageDto> MeasureAsync(EmbeddingProfile profile, (int Chunks, int PendingDocuments) corpus, CancellationToken ct)
     {
-        var chunks = from c in db.Chunks join d in Documents on c.DocumentId equals d.Id select c;
-        var total = await chunks.CountAsync(ct);
-        var completed = profile.Provider == "none" ? total : await (from e in vectors.Rows(profile) join c in chunks on e.ChunkId equals c.Id select e.ChunkId).CountAsync(ct);
-        return new(completed, total, await Documents.CountAsync(x => x.Status != "ready", ct));
+        var completed = profile.Provider == "none" ? corpus.Chunks : await (from e in vectors.Rows(profile) join c in Chunks on e.ChunkId equals c.Id select e.ChunkId).CountAsync(ct);
+        return new(completed, corpus.Chunks, corpus.PendingDocuments);
     }
     /// <summary>
     /// 啟用前的完整性判斷。RCSI 每一句各取一次快照，<see cref="CoverageAsync"/> 的三個計數可能跨過別的文件寫入而剛好相等，所以這裡不比計數：
@@ -54,9 +57,10 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
         await profiles.TargetAsync(ct);
         var all = await db.EmbeddingProfiles.AsNoTracking().OrderByDescending(x => x.Id).ToListAsync(ct);
         var tasks = await db.BackgroundJobs.AsNoTracking().Where(x => x.Kind == EmbeddingReindexHandler.JobKind || x.Kind == EmbeddingClearHandler.JobKind).OrderByDescending(x => x.CreatedAt).Take(200).ToListAsync(ct);
+        var corpus = await CorpusAsync(ct);
         var result = new List<EmbeddingProfileDto>();
         foreach (var p in all) result.Add(new(p.Id, p.Key, p.Provider, p.Model, p.Dimensions, p.Status, p.CreatedAt, p.ActivatedAt, p.RetiredAt,
-            await CoverageAsync(p, ct), tasks.FirstOrDefault(x => x.SubjectId == EmbeddingJobs.Subject(p.Id)) is { } job ? JobService.Describe(job) : null));
+            await MeasureAsync(p, corpus, ct), tasks.FirstOrDefault(x => x.SubjectId == EmbeddingJobs.Subject(p.Id)) is { } job ? JobService.Describe(job) : null));
         return result;
     }
     /// <summary>
@@ -101,8 +105,8 @@ public sealed class EmbeddingLifecycle(AppDbContext db, EmbeddingProfiles profil
     public async Task<int> CleanupExpiredAsync(CancellationToken ct)
     {
         var total = 0;
-        var expired = (await db.EmbeddingProfiles.AsNoTracking().Where(x => x.Status == "retired" && x.RetiredAt != null).ToListAsync(ct))
-            .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.Embedding.RetiredRetentionDays)).ToArray();
+        var before = clock.GetUtcNow().AddDays(-options.Value.Embedding.RetiredRetentionDays);
+        var expired = await db.EmbeddingProfiles.AsNoTracking().Where(x => x.Status == "retired" && x.RetiredAt < before).ToListAsync(ct);
         foreach (var profile in expired)
         {
             var cleared = await Batches.RepeatAsync(() => vectors.DeleteRetiredBatchAsync(profile, ct));
