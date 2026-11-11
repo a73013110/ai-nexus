@@ -14,18 +14,13 @@
   }
   @if (session.has('releases')) {
     @if (status.error()) {
-      <nx-notice tone="danger" [message]="status.error()">
-        <button
-          nxPending
-          notice-actions
-          type="button"
-          class="secondary-button"
-          [pending]="status.refreshing()"
-          (click)="status.reload()"
-        >
-          重試
-        </button>
-      </nx-notice>
+      <nx-notice
+        tone="danger"
+        [message]="status.error()"
+        retryable
+        [retrying]="status.refreshing()"
+        (retry)="status.reload()"
+      />
     } @else {
       @if (status.value()?.compatibility === 'incompatible') {
         <nx-notice
@@ -246,18 +241,13 @@
           <p class="form-note">資料表的定義是由欄位與約束組成的說明，不是可執行的 DDL。</p>
         }
       } @else if (detail.error()) {
-        <nx-notice tone="danger" [message]="detail.error()">
-          <button
-            nxPending
-            notice-actions
-            type="button"
-            class="secondary-button"
-            [pending]="detail.refreshing()"
-            (click)="detail.reload()"
-          >
-            重試
-          </button>
-        </nx-notice>
+        <nx-notice
+          tone="danger"
+          [message]="detail.error()"
+          retryable
+          [retrying]="detail.refreshing()"
+          (retry)="detail.reload()"
+        />
       } @else {
         <div class="releases-loading" role="status">
           <span class="sr-only">正在載入定義…</span>

@@ -17,17 +17,12 @@ import { PendingButton } from '@shared/ui/pending-button';
   styleUrl: './notification-feed.scss',
   host: { style: 'display: contents' },
   template: `@if (store.error()) {
-      <nx-notice [message]="store.error()"
-        ><button
-          notice-actions
-          nxPending
-          type="button"
-          [pending]="store.loading()"
-          (click)="store.refresh()"
-        >
-          {{ store.loading() ? '重試中…' : '重試' }}
-        </button>
-      </nx-notice>
+      <nx-notice
+        [message]="store.error()"
+        retryable
+        [retrying]="store.loading()"
+        (retry)="store.refresh()"
+      />
     }
     <div
       class="notification-list"

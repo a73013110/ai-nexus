@@ -13,7 +13,6 @@ import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar, QueryField } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -57,7 +56,6 @@ const count = new Intl.NumberFormat('zh-TW');
     Field,
     Icon,
     Notice,
-    PendingButton,
     QueryBar,
     QueryField,
     StatusBadge,

@@ -14,7 +14,6 @@ import { formatDate } from '@shared/browser/format';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 
 const GROUPS = [
   { type: 'feat', label: '新功能' },
@@ -32,7 +31,7 @@ export function releaseNoteGroups(changes: readonly ReleaseNoteDto[]) {
 /** 使用者選單的「關於」：版本、發布日期與本版更新。開啟時才讀，同一次登入只讀一次。 */
 @Component({
   selector: 'nx-about-dialog',
-  imports: [CompactDialog, DialogHeader, Notice, PendingButton],
+  imports: [CompactDialog, DialogHeader, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './about-dialog.scss',
   template: `<dialog nxCompactDialog size="sm" #dialog class="platform-dialog" aria-label="關於">
@@ -72,18 +71,13 @@ export function releaseNoteGroups(changes: readonly ReleaseNoteDto[]) {
           <p class="form-note">這一版沒有附上更新說明。</p>
         }
       } @else if (release.error()) {
-        <nx-notice tone="danger" [message]="release.error()">
-          <button
-            nxPending
-            notice-actions
-            type="button"
-            class="secondary-button"
-            [pending]="release.refreshing()"
-            (click)="release.reload()"
-          >
-            重試
-          </button>
-        </nx-notice>
+        <nx-notice
+          tone="danger"
+          [message]="release.error()"
+          retryable
+          [retrying]="release.refreshing()"
+          (retry)="release.reload()"
+        />
       } @else {
         <div class="about-loading" role="status">
           <span class="sr-only">正在載入版本資訊…</span>

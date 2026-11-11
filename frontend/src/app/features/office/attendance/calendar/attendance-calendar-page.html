@@ -62,18 +62,13 @@
   }
   @if (view() === 'calendar') {
     @if (readError(); as problem) {
-      <nx-notice class="calendar-error" [message]="problem">
-        <button
-          nxPending
-          notice-actions
-          type="button"
-          class="secondary-button"
-          [pending]="refreshing()"
-          (click)="reload()"
-        >
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button>
-      </nx-notice>
+      <nx-notice
+        class="calendar-error"
+        [message]="problem"
+        retryable
+        [retrying]="refreshing()"
+        (retry)="reload()"
+      />
     }
     <nx-month-calendar
       class="holiday-calendar"

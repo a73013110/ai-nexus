@@ -34,17 +34,12 @@
         [nxViewMotion]="current().id"
       >
         @if (showSaveBar() && store.error()) {
-          <nx-notice [message]="store.error()"
-            ><button
-              nxPending
-              type="button"
-              notice-actions
-              [pending]="store.refreshing()"
-              (click)="store.reload()"
-            >
-              {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
-            </button>
-          </nx-notice>
+          <nx-notice
+            [message]="store.error()"
+            retryable
+            [retrying]="store.refreshing()"
+            (retry)="store.reload()"
+          />
         }
         @if (current().saved && store.loading()) {
           <div class="settings-skeleton" role="status">

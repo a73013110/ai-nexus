@@ -5,11 +5,7 @@
   layoutMode="data"
 >
   @if (boardError() && !board()) {
-    <nx-notice tone="danger" [message]="boardError()"
-      ><button notice-actions type="button" class="secondary-button" (click)="reloadBoard()">
-        重試
-      </button></nx-notice
-    >
+    <nx-notice tone="danger" [message]="boardError()" retryable (retry)="reloadBoard()" />
   }
   @if (board(); as current) {
     @if (!current.executesHere) {

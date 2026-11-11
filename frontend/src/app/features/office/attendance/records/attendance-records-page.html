@@ -138,18 +138,13 @@
       />
     }
     @if (readError()) {
-      <nx-notice tone="danger" [message]="readError()"
-        ><button
-          nxPending
-          notice-actions
-          type="button"
-          class="secondary-button"
-          [pending]="refreshing()"
-          (click)="reload()"
-        >
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice
+        tone="danger"
+        [message]="readError()"
+        retryable
+        [retrying]="refreshing()"
+        (retry)="reload()"
+      />
     }
   }
   <nx-data-table

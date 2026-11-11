@@ -54,17 +54,7 @@ const needsAttention = (status: string) => status === 'failed' || status === 'ca
     [tour]="tour()"
   >
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button
-          notice-actions
-          nxPending
-          type="button"
-          [pending]="jobs.refreshing()"
-          (click)="reload()"
-        >
-          {{ jobs.refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="jobs.refreshing()" (retry)="reload()" />
     }
     <nx-resource-gallery
       label="任務"

@@ -21,7 +21,6 @@ import {
 import { Icon } from '@shared/ui/icon';
 import { CalendarDayTemplate, MonthCalendar, type CalendarDay } from '@shared/ui/month-calendar';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { queryField } from '@shared/ui/query-fields';
 import { queryState, type QueryStateOptions } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -98,7 +97,6 @@ interface HolidayCell extends CalendarDay {
     Icon,
     MonthCalendar,
     Notice,
-    PendingButton,
     StatusBadge,
     TableState,
     ViewSwitch,

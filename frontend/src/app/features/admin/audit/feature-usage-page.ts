@@ -18,7 +18,6 @@ import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { RefreshButton } from '@shared/ui/refresh-button';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { TrendChart } from '@shared/ui/trend-chart';
@@ -55,7 +54,6 @@ const isoDay = (date: Date) =>
     FeaturePage,
     Icon,
     Notice,
-    PendingButton,
     RefreshButton,
     RouterLink,
     StatGrid,

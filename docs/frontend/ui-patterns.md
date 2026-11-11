@@ -43,7 +43,7 @@
 
 ## 提示、載入與錯誤
 
-- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
+- 失敗、風險與要留著讀的資訊用 `Notice`；`message` 附可複製的查證代碼，讀取失敗的重試用 `retryable`＋`(retry)`，其他動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 與檢視器的狀態收斂在[動態島](motion.md#動態島)。
 - 讀取錯誤與重試見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)；載入、重讀與送出中見 [載入與送出中](loading.md)。
 - 進度只顯示真實階段（`JobProgress`），未知總量用不定進度；未知金額或用量寫明未知，不顯示為零。
 - 規則與計算方式收進 `InfoPopover`：短說明用 `.form-note-list`；長說明加 `heading`，內容用 `styles/popovers.scss` 的 `.info-*`。

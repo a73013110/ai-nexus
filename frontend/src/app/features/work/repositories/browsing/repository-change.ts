@@ -12,7 +12,6 @@ import { CopyFeedback } from '@shared/browser/copy-feedback';
 import { formatDate, nameInitial } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryDiff } from './repository-diff';
 import { RepositoryReviewDialog } from '../reviews/repository-review-dialog';
@@ -21,7 +20,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
 /** 單一提交與其父提交的比較，或從 `base` 到 `head` 之間的全部變更。 */
 @Component({
   selector: 'nx-repository-change',
-  imports: [RouterLink, Icon, Notice, PendingButton, RepositoryDiff, RepositoryReviewDialog],
+  imports: [RouterLink, Icon, Notice, RepositoryDiff, RepositoryReviewDialog],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../repository-subpage.scss', './repository-change.scss'],
@@ -29,11 +28,7 @@ import { RepositoryStore, shortSha } from '../repository-store';
       ><nx-icon name="left" />提交紀錄</a
     >
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     @if (change(); as change) {
       <header class="head">

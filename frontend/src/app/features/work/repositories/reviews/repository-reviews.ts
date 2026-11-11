@@ -5,7 +5,6 @@ import type { RepositoryReviewDto } from '@core/api/schema';
 import { formatModelDisplayName, relativeTime } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { jobStatus } from '@features/work/jobs/job-kind';
 import { RepositoriesApi } from '../repositories-api';
@@ -25,7 +24,7 @@ export function reviewScope(review: RepositoryReviewDto) {
 /** 儲存庫的 AI 審查，最新的在前。 */
 @Component({
   selector: 'nx-repository-reviews',
-  imports: [RouterLink, Icon, Notice, PendingButton, StatusBadge, RepositoryReviewDialog],
+  imports: [RouterLink, Icon, Notice, StatusBadge, RepositoryReviewDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-reviews.scss',
   template: `<div class="intro">
@@ -40,11 +39,7 @@ export function reviewScope(review: RepositoryReviewDto) {
       </button>
     </div>
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     @if (reviews(); as reviews) {
       @if (reviews.length) {

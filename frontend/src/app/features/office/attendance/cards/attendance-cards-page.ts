@@ -21,7 +21,6 @@ import { DrawerSummary } from '@shared/ui/drawer-summary';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { SettingRow } from '@shared/ui/setting-row';
@@ -64,7 +63,6 @@ const EMPTY_TEXT: Record<CardStatus, string> = {
     Field,
     Icon,
     Notice,
-    PendingButton,
     PunchTable,
     QueryBar,
     SettingRow,

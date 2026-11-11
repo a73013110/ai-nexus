@@ -30,11 +30,7 @@ const dayFormat = new Intl.DateTimeFormat('zh-TW', {
       <nx-icon name="compare" />點選左側圓點選擇兩個提交，就能看區間內的所有變更並交給 AI 摘要。
     </p>
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     @for (day of days(); track day.label) {
       <section class="day" [attr.aria-label]="day.label">

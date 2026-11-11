@@ -21,9 +21,7 @@ import { WORKSPACE_HOME } from './workspace-home';
     @if (account.loading()) {
       <p class="form-note" role="status">正在確認權限…</p>
     } @else if (account.error()) {
-      <nx-notice [message]="account.error()"
-        ><button notice-actions type="button" (click)="account.reload()">重新載入</button>
-      </nx-notice>
+      <nx-notice [message]="account.error()" retryable (retry)="account.reload()" />
     } @else if (missing(); as id) {
       <nx-feature-access-notice [feature]="id" />
     } @else {

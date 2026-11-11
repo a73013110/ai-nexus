@@ -128,7 +128,7 @@ describe('SettingsPage', () => {
     await open('conversation');
     expect(api.webSearchStatus).toHaveBeenCalledOnce();
     expect(root.querySelector('nx-notice')).not.toBeNull();
-    button('重新載入')!.click();
+    button('重試')!.click();
     await fixture.whenStable();
     expect(api.webSearchStatus).toHaveBeenCalledTimes(2);
     expect(root.textContent).toContain('網路搜尋 · 已啟用');

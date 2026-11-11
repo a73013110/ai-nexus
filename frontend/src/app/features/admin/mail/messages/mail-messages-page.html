@@ -239,18 +239,13 @@
         </nx-drawer-summary>
       }
       @if (detailError()) {
-        <nx-notice tone="danger" [message]="detailError()"
-          ><button
-            notice-actions
-            nxPending
-            type="button"
-            class="secondary-button"
-            [pending]="detailRefreshing()"
-            (click)="reloadDetail()"
-          >
-            {{ detailRefreshing() ? '重新載入中…' : '重新載入' }}
-          </button></nx-notice
-        >
+        <nx-notice
+          tone="danger"
+          [message]="detailError()"
+          retryable
+          [retrying]="detailRefreshing()"
+          (retry)="reloadDetail()"
+        />
       } @else if (detail(); as view) {
         <section aria-label="郵件寄送資訊">
           @if (detailAction.error()) {

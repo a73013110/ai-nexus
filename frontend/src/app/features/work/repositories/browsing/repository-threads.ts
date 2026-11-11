@@ -68,11 +68,7 @@ interface ThreadRow {
       }
     </div>
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     <ol class="list" [class.is-refreshing]="stale()" [attr.aria-busy]="stale() || null">
       @for (row of rows(); track row.number; let i = $index) {

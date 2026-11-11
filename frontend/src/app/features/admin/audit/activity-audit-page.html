@@ -7,18 +7,13 @@
 >
   @if (session.has('audit')) {
     @if (catalogError()) {
-      <nx-notice tone="danger" [message]="catalogError()"
-        ><button
-          notice-actions
-          nxPending
-          type="button"
-          class="secondary-button"
-          [pending]="catalogRefreshing()"
-          (click)="retryCatalog()"
-        >
-          {{ catalogRefreshing() ? '重新載入中…' : '重新載入' }}
-        </button></nx-notice
-      >
+      <nx-notice
+        tone="danger"
+        [message]="catalogError()"
+        retryable
+        [retrying]="catalogRefreshing()"
+        (retry)="retryCatalog()"
+      />
     }
     <nx-query-bar label="稽核查詢條件" [state]="query" [busy]="loading()">
       <nx-view-switch

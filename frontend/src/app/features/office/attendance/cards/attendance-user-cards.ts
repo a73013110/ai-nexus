@@ -6,7 +6,6 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { formatDate } from '@shared/browser/format';
 import { uniqueId } from '@shared/browser/unique-id';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { AttendanceApi } from '../attendance-api';
 import { covers } from './attendance-cards-store';
@@ -18,7 +17,7 @@ import { covers } from './attendance-cards-store';
  */
 @Component({
   selector: 'nx-attendance-user-cards',
-  imports: [Notice, PendingButton, RouterLink, StatusBadge],
+  imports: [Notice, RouterLink, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -67,18 +66,13 @@ import { covers } from './attendance-cards-store';
         </header>
         <div class="form-section-body">
           @if (read.error()) {
-            <nx-notice tone="danger" [message]="read.error()"
-              ><button
-                nxPending
-                notice-actions
-                type="button"
-                class="secondary-button"
-                [pending]="read.refreshing()"
-                (click)="read.reload()"
-              >
-                {{ read.refreshing() ? '重試中…' : '重試' }}
-              </button></nx-notice
-            >
+            <nx-notice
+              tone="danger"
+              [message]="read.error()"
+              retryable
+              [retrying]="read.refreshing()"
+              (retry)="read.reload()"
+            />
           } @else if (periods() === null) {
             <div class="user-cards-skeleton" role="status">
               <span class="skeleton"></span><span class="skeleton"></span>

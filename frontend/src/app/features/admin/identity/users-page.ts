@@ -12,7 +12,6 @@ import { FeaturePage } from '@core/layout/feature-page';
 import { ViewScope } from '@shared/browser/view-scope';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from '@features/admin/access-control/access-control-store';
 import { AdminUsersStore } from './admin-users-store';
 import { usersTour } from './identity-tour';
@@ -28,7 +27,6 @@ import { DirectoryImportDialog } from './users/directory-import-dialog';
   imports: [
     Icon,
     Notice,
-    PendingButton,
     FeaturePage,
     AccountReviews,
     AdminUserCreateDialog,
@@ -66,17 +64,12 @@ import { DirectoryImportDialog } from './users/directory-import-dialog';
       </div>
       <!-- 目錄與列表的首次載入都由表格的骨架表示；目錄讀取失敗時只留提示與重試。 -->
       @if (store.error()) {
-        <nx-notice [message]="store.error()"
-          ><button
-            notice-actions
-            nxPending
-            type="button"
-            [pending]="store.access.refreshing() || store.table.refreshing()"
-            (click)="store.load()"
-          >
-            {{ store.access.refreshing() || store.table.refreshing() ? '重新載入中…' : '重新載入' }}
-          </button>
-        </nx-notice>
+        <nx-notice
+          [message]="store.error()"
+          retryable
+          [retrying]="store.access.refreshing() || store.table.refreshing()"
+          (retry)="store.load()"
+        />
       }
       @if (store.access.catalog() || !store.access.error()) {
         <nx-admin-users-tab

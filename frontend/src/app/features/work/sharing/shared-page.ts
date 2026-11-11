@@ -30,7 +30,6 @@ import { Icon } from '@shared/ui/icon';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { Panel } from '@shared/ui/panel';
-import { PendingButton } from '@shared/ui/pending-button';
 import { ResourceCard } from '@shared/ui/resource-card';
 import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -54,7 +53,6 @@ import { routeOf } from '@core/api/catalog';
     MessageContent,
     ActionMenu,
     Panel,
-    PendingButton,
     ResourceCard,
     ResourceGallery,
     StatusBadge,

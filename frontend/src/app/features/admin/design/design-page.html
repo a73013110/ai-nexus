@@ -31,9 +31,7 @@
   @if (loading()) {
     <p role="status">正在載入介面工作區…</p>
   } @else if (error()) {
-    <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="load()">重新載入</button>
-    </nx-notice>
+    <nx-notice [message]="error()" retryable (retry)="load()" />
   } @else if (session.has('design')) {
     <div class="design-workbench">
       <nx-tabs

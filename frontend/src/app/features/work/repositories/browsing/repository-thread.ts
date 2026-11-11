@@ -43,11 +43,7 @@ interface Thread {
       ><nx-icon name="left" />{{ kind() === 'pulls' ? 'Pull Request' : '議題' }}</a
     >
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     @if (thread(); as thread) {
       <header class="head">

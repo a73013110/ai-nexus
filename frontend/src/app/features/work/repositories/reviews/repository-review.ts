@@ -53,11 +53,7 @@ const commentLimit = 20_000;
   styleUrls: ['../repository-subpage.scss', './repository-review.scss'],
   template: `<a class="back" [routerLink]="store.link('reviews')"><nx-icon name="left" />AI 檢閱</a>
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="reload()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="reload()" />
     }
     @if (detail(); as d) {
       <header class="head">

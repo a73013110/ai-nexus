@@ -16,17 +16,12 @@
   </div>
 </div>
 @if (read.error() && stats()) {
-  <nx-notice [message]="read.error()"
-    ><button
-      notice-actions
-      nxPending
-      type="button"
-      [pending]="read.refreshing()"
-      (click)="read.reload()"
-    >
-      {{ read.refreshing() ? '重新載入中…' : '重新載入' }}
-    </button>
-  </nx-notice>
+  <nx-notice
+    [message]="read.error()"
+    retryable
+    [retrying]="read.refreshing()"
+    (retry)="read.reload()"
+  />
 }
 @if (stats() || read.loading()) {
   <nx-stat-grid label="平台用量摘要" [busy]="read.refreshing()">

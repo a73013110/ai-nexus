@@ -19,17 +19,12 @@
   </button>
 </div>
 @if (catalogRead.error() && catalogRead.value()) {
-  <nx-notice [message]="catalogRead.error()"
-    ><button
-      notice-actions
-      nxPending
-      type="button"
-      [pending]="catalogRead.refreshing()"
-      (click)="catalogRead.reload()"
-    >
-      {{ catalogRead.refreshing() ? '重新載入中…' : '重新載入' }}
-    </button>
-  </nx-notice>
+  <nx-notice
+    [message]="catalogRead.error()"
+    retryable
+    [retrying]="catalogRead.refreshing()"
+    (retry)="catalogRead.reload()"
+  />
 }
 @if (view() === 'current') {
   <nx-data-table

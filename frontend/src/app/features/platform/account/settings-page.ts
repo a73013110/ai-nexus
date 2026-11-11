@@ -14,7 +14,6 @@ import { ViewScope } from '@shared/browser/view-scope';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { ProductTourButton } from '@shared/ui/product-tour-button';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewMotion } from '@shared/ui/view-motion';
@@ -34,7 +33,6 @@ import { settingsTour } from './settings-tour';
     Icon,
     NgComponentOutlet,
     Notice,
-    PendingButton,
     ProductTourButton,
     SearchField,
     ViewMotion,

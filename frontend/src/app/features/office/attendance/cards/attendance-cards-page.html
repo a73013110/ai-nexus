@@ -37,18 +37,13 @@
     /></label>
   </nx-query-bar>
   @if (store.cardsError() && store.cardsLoaded()) {
-    <nx-notice tone="danger" [message]="store.cardsError()"
-      ><button
-        nxPending
-        notice-actions
-        type="button"
-        class="secondary-button"
-        [pending]="store.cardsRefreshing()"
-        (click)="store.reloadCards()"
-      >
-        {{ store.cardsRefreshing() ? '重試中…' : '重試' }}
-      </button></nx-notice
-    >
+    <nx-notice
+      tone="danger"
+      [message]="store.cardsError()"
+      retryable
+      [retrying]="store.cardsRefreshing()"
+      (retry)="store.reloadCards()"
+    />
   }
   <nx-data-table
     class="cards-table"
@@ -265,18 +260,13 @@
           }
         </h3>
         @if (store.assignmentsError()) {
-          <nx-notice tone="danger" [message]="store.assignmentsError()"
-            ><button
-              nxPending
-              notice-actions
-              type="button"
-              class="secondary-button"
-              [pending]="store.assignmentsRefreshing()"
-              (click)="store.reloadAssignments()"
-            >
-              {{ store.assignmentsRefreshing() ? '重試中…' : '重試' }}
-            </button></nx-notice
-          >
+          <nx-notice
+            tone="danger"
+            [message]="store.assignmentsError()"
+            retryable
+            [retrying]="store.assignmentsRefreshing()"
+            (retry)="store.reloadAssignments()"
+          />
         } @else if (store.assignments() === null) {
           <div class="cards-skeleton" role="status">
             @for (width of skeleton; track $index) {

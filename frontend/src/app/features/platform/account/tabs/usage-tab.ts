@@ -12,7 +12,6 @@ import {
   formatNumber,
 } from '@shared/browser/format';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { TrendChart } from '@shared/ui/trend-chart';
@@ -26,7 +25,6 @@ import { SettingsStore } from '../settings-store';
   selector: 'nx-usage-tab',
   imports: [
     Notice,
-    PendingButton,
     SettingGroup,
     SettingRow,
     StatGrid,
@@ -38,17 +36,7 @@ import { SettingsStore } from '../settings-store';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './usage-tab.scss',
   template: `@if (error()) {
-      <nx-notice [message]="error()"
-        ><button
-          nxPending
-          type="button"
-          notice-actions
-          [pending]="refreshing()"
-          (click)="store.reload()"
-        >
-          {{ refreshing() ? '重新載入中…' : '重新載入' }}
-        </button>
-      </nx-notice>
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="store.reload()" />
     }
     @if (policy(); as limits) {
       <nx-setting-group

@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { AccessControlStore } from './access-control-store';
 import { ViewScope } from '@shared/browser/view-scope';
 import { accessPageNames, featuresTour } from './access-control-tour';
@@ -12,7 +11,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
 /** 功能：名稱與開關；網址與圖示來自功能目錄，只顯示不編輯。選單位置在選單頁。 */
 @Component({
   selector: 'nx-features-page',
-  imports: [Notice, PendingButton, FeaturePage, AccessEditorDialog, AdminFeaturesTab],
+  imports: [Notice, FeaturePage, AccessEditorDialog, AdminFeaturesTab],
   providers: [AccessControlStore, ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -23,17 +22,12 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
     >
       <!-- 首次載入由表格的骨架表示；讀取失敗且沒有資料時只留提示與重試。 -->
       @if (store.error()) {
-        <nx-notice [message]="store.error()"
-          ><button
-            notice-actions
-            nxPending
-            type="button"
-            [pending]="store.refreshing()"
-            (click)="store.load()"
-          >
-            {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
-          </button>
-        </nx-notice>
+        <nx-notice
+          [message]="store.error()"
+          retryable
+          [retrying]="store.refreshing()"
+          (retry)="store.load()"
+        />
       }
       @if (store.catalog() || !store.error()) {
         <nx-admin-features-tab class="ui-table-fill" (edit)="editor.open('feature', $event)" />

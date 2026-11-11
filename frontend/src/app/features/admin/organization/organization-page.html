@@ -38,17 +38,13 @@
       <span class="sr-only">正在載入組織…</span>
     </div>
   } @else if (store.error()) {
-    <nx-notice tone="danger" [message]="store.error()"
-      ><button
-        notice-actions
-        nxPending
-        type="button"
-        [pending]="store.refreshing()"
-        (click)="store.load()"
-      >
-        {{ store.refreshing() ? '重新載入中…' : '重新載入' }}
-      </button>
-    </nx-notice>
+    <nx-notice
+      tone="danger"
+      [message]="store.error()"
+      retryable
+      [retrying]="store.refreshing()"
+      (retry)="store.load()"
+    />
   }
   @if (store.ready()) {
     @if (!store.units().length) {

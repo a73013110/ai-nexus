@@ -28,17 +28,12 @@
   </div>
   <nx-dashboard-toolbar />
   @if (store.error()) {
-    <nx-notice [message]="store.error()"
-      ><button
-        notice-actions
-        nxPending
-        type="button"
-        [pending]="store.refreshing()"
-        (click)="store.load()"
-      >
-        {{ store.refreshing() ? '重試中…' : '重試' }}
-      </button>
-    </nx-notice>
+    <nx-notice
+      [message]="store.error()"
+      retryable
+      [retrying]="store.refreshing()"
+      (retry)="store.load()"
+    />
   }
   @if (store.loading() && !store.data()) {
     <div class="dashboard-skeleton" role="status">

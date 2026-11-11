@@ -42,11 +42,12 @@ const UNASSIGNED = '尚未分派部門';
       <nx-dialog-header heading="加入成員" closeLabel="關閉加入成員" [detail]="u.name" />
       <div class="dialog-body">
         @if (error()) {
-          <nx-notice tone="danger" [message]="error()">
-            @if (!candidates()) {
-              <button notice-actions type="button" (click)="reload()">重新載入</button>
-            }
-          </nx-notice>
+          <nx-notice
+            tone="danger"
+            [message]="error()"
+            [retryable]="!candidates()"
+            (retry)="reload()"
+          />
         }
         <nx-person-browser
           label="可加入的人員"

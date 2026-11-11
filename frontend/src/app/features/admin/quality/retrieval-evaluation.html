@@ -4,11 +4,7 @@
   [tour]="tour"
 >
   @if (error()) {
-    <nx-notice [message]="error()"
-      ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="load()">
-        {{ refreshing() ? '重試中…' : '重試' }}
-      </button></nx-notice
-    >
+    <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="load()" />
   }
   <div class="retrieval-layout">
     <!-- 紀錄清單讀取中先佔好報告面板的位置，回來後才不會把右側表單整個推開。 -->

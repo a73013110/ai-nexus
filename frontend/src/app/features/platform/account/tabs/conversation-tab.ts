@@ -5,14 +5,13 @@ import { formatModelName } from '@shared/browser/format';
 import { keyText } from '@shared/browser/hotkeys';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { SettingGroup, SettingRow } from '@shared/ui/setting-row';
 import { SettingsStore } from '../settings-store';
 
 /** 輸入與跟隨的習慣、新對話的模型與思考強度，以及這個部署是否能搜尋網路。 */
 @Component({
   selector: 'nx-conversation-tab',
-  imports: [Icon, Notice, PendingButton, SettingGroup, SettingRow],
+  imports: [Icon, Notice, SettingGroup, SettingRow],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -30,17 +29,7 @@ import { SettingsStore } from '../settings-store';
     }
   `,
   template: `@if (error()) {
-      <nx-notice [message]="error()"
-        ><button
-          nxPending
-          type="button"
-          notice-actions
-          [pending]="reloading()"
-          (click)="store.reload()"
-        >
-          {{ reloading() ? '重新載入中…' : '重新載入' }}
-        </button>
-      </nx-notice>
+      <nx-notice [message]="error()" retryable [retrying]="reloading()" (retry)="store.reload()" />
     }
     <nx-setting-group class="conversation-input" heading="輸入與瀏覽">
       <nx-setting-row

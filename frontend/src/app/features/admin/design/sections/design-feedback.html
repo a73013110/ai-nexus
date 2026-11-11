@@ -2,17 +2,17 @@
   id="design-notices"
   title="提示"
   api="Notice"
-  description="錯誤為 alert、其他為 status；錯誤附可複製的查證代碼，動作放 notice-actions。"
+  description="錯誤為 alert、其他為 status；錯誤附可複製的查證代碼。讀取失敗的重試用 retryable，其他動作放 notice-actions。"
   [stacked]="true"
 >
   <nx-notice tone="info" message="可加入文件、圖片或知識庫來源，提供更多背景。" />
   <nx-notice tone="success" message="變更已儲存，可以繼續工作。" />
   <nx-notice tone="warning" message="內容接近模型的 Context 上限，請精簡背景資料。" />
-  <nx-notice message="操作未完成，請確認連線後重試。">
-    <button notice-actions type="button" class="quiet-button" (click)="toast.success('已重新嘗試')">
-      重試
-    </button>
-  </nx-notice>
+  <nx-notice
+    message="操作未完成，請確認連線後重試。"
+    retryable
+    (retry)="toast.success('已重新嘗試')"
+  />
 </nx-design-section>
 <nx-design-section
   id="design-toasts"

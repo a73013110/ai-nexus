@@ -75,11 +75,7 @@ const chatLimit = 20;
       }
     </div>
     @if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="refreshing()" (click)="retry()">
-          {{ refreshing() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="refreshing()" (retry)="retry()" />
     }
     @if (filePath()) {
       @if (file(); as file) {

@@ -19,7 +19,6 @@ import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
-import { PendingButton } from '@shared/ui/pending-button';
 import { QueryBar } from '@shared/ui/query-bar';
 import { queryState } from '@shared/ui/query-state';
 import { StatusBadge } from '@shared/ui/status-badge';
@@ -59,7 +58,6 @@ import { ReimportDialog, reimportOutcome } from './reimport-dialog';
     Field,
     Icon,
     Notice,
-    PendingButton,
     PunchTable,
     QueryBar,
     ReimportDialog,

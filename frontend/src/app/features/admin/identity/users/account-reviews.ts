@@ -61,11 +61,11 @@ import { AccountReviewItems } from './account-review-items';
         [attr.aria-busy]="store.reviewsRead.refreshing() || null"
       >
         @if (store.reviewsRead.error()) {
-          <nx-notice [message]="store.reviewsRead.error()"
-            ><button notice-actions type="button" (click)="store.reviewsRead.reload()">
-              重新載入
-            </button></nx-notice
-          >
+          <nx-notice
+            [message]="store.reviewsRead.error()"
+            retryable
+            (retry)="store.reviewsRead.reload()"
+          />
         }
         @for (notice of store.reviews()?.notices ?? []; track notice) {
           <nx-notice tone="warning" [message]="notice" />

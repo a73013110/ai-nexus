@@ -28,11 +28,7 @@ import { routeOf } from '@core/api/catalog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-list.scss',
   template: `@if (error()) {
-      <nx-notice [message]="error()"
-        ><button notice-actions nxPending type="button" [pending]="loading()" (click)="reload()">
-          {{ loading() ? '重試中…' : '重試' }}
-        </button></nx-notice
-      >
+      <nx-notice [message]="error()" retryable [retrying]="loading()" (retry)="reload()" />
     }
     @if (pinned().length && !query()) {
       <section class="pinned" aria-labelledby="pinned-title">
