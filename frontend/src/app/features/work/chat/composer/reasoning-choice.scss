@@ -14,10 +14,11 @@ fieldset {
   border-top: 1px solid var(--line);
   min-width: 0;
 }
+// 放在 Select 的 footer（.option-list 內）：標題與選項列的左欄對齊。
 legend {
   float: left;
   width: 100%;
-  padding: 0 var(--p-space-2) var(--p-space-2);
+  padding: 0 var(--option-inset) var(--p-space-2);
   font-size: var(--text-caption);
   color: var(--muted);
 }

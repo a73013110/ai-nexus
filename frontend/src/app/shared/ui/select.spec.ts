@@ -105,14 +105,14 @@ describe('Select loading', () => {
     trigger.click();
     fixture.detectChanges();
     expect(HTMLElement.prototype.showPopover).toHaveBeenCalled();
-    const status = host.querySelector('.select-empty')!;
+    const status = host.querySelector('.option-empty')!;
     expect(status.getAttribute('role')).toBe('status');
     expect(status.textContent).toContain('正在載入選項…');
     expect(host.textContent).not.toContain('沒有符合的選項');
 
     fixture.componentRef.setInput('loading', false);
     fixture.detectChanges();
-    expect(host.querySelector('.select-empty')!.textContent).toContain('沒有符合的選項');
+    expect(host.querySelector('.option-empty')!.textContent).toContain('沒有符合的選項');
     expect(trigger.disabled).toBe(true);
   });
 });

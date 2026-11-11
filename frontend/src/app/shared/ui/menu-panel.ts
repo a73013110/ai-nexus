@@ -18,10 +18,11 @@ import { positionBesidePopover, positionPopover } from '../browser/popover-posit
 export interface MenuAction {
   id: string;
   label: string;
-  icon: string;
+  /** 左欄的操作圖示；核取項目的左欄是方框，不顯示圖示。 */
+  icon?: string;
   disabled?: boolean;
   danger?: boolean;
-  /** 讓此項目成為顯示狀態的核取方塊（menuitemcheckbox）。 */
+  /** 讓此項目成為顯示狀態的核取方塊（menuitemcheckbox），左欄顯示方框。 */
   checked?: boolean;
   /** 此項目的動作進行中：圖示換成轉圈，點擊不關閉選單也不送出。 */
   busy?: boolean;
@@ -43,7 +44,7 @@ export interface MenuAction {
     <div
       #panel
       [id]="id"
-      class="popover-panel action-menu-panel ui-density-compact"
+      class="popover-panel action-menu-panel option-list ui-density-compact"
       popover="auto"
       role="menu"
       [attr.aria-label]="label()"
@@ -61,6 +62,7 @@ export interface MenuAction {
       @for (item of items(); track item.id) {
         <button
           type="button"
+          class="option-row"
           [attr.role]="item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'"
           [attr.aria-checked]="item.checked ?? null"
           [disabled]="item.disabled"
@@ -69,12 +71,24 @@ export interface MenuAction {
           [class.danger-text]="item.danger"
           (click)="item.busy || choose(item.id)"
         >
-          <nx-icon [name]="item.busy ? 'loading' : item.icon" />{{ item.label }}
+          <span class="option-lead" aria-hidden="true">
+            @if (item.busy) {
+              <nx-icon name="loading" />
+            } @else if (item.checked !== undefined) {
+              <span class="option-box">
+                @if (item.checked) {
+                  <nx-icon name="check" />
+                }
+              </span>
+            } @else if (item.icon) {
+              <nx-icon [name]="item.icon" />
+            }
+          </span>
+          <span class="option-text"
+            ><span class="option-label" [attr.title]="item.label">{{ item.label }}</span></span
+          >
           @if (item.note) {
             <small class="menu-note">{{ item.note }}</small>
-          }
-          @if (item.checked) {
-            <nx-icon name="check" class="menu-check" />
           }
         </button>
       }

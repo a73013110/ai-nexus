@@ -103,7 +103,7 @@ Describe 'Frontend lines' {
         @{ File = 'frontend/src/styles/controls.scss'; Selector = '.secondary-button' }
         @{ File = 'frontend/src/app/shared/ui/search-field.scss'; Selector = '.search-field' }
         @{ File = 'frontend/src/app/shared/ui/select.scss'; Selector = '.select-trigger' }
-        @{ File = 'frontend/src/app/shared/ui/select.scss'; Selector = '.select-check' }
+        @{ File = 'frontend/src/styles/option-list.scss'; Selector = '.option-box' }
         @{ File = 'frontend/src/styles/data-workspace.scss'; Selector = 'select:where(.ui-input)' }
         @{ File = 'frontend/src/styles/data-workspace.scss'; Selector = '.ui-pagination-group' }
         @{ File = 'frontend/src/app/shared/ui/date-time-picker.scss'; Selector = '.ui-date-control' }

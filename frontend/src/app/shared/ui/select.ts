@@ -130,8 +130,7 @@ interface SelectSection {
           type="button"
           role="option"
           tabindex="-1"
-          class="select-option"
-          [class.is-multiple]="multiple()"
+          class="option-row"
           [id]="id + '-' + i"
           [attr.aria-selected]="isSelected(option.value)"
           [attr.aria-disabled]="!!option.disabled"
@@ -142,14 +141,16 @@ interface SelectSection {
           (click)="choose(i)"
         >
           @if (multiple()) {
-            <span class="select-check" aria-hidden="true">
-              @if (isSelected(option.value)) {
-                <nx-icon name="check" />
-              }
+            <span class="option-lead" aria-hidden="true">
+              <span class="option-box">
+                @if (isSelected(option.value)) {
+                  <nx-icon name="check" />
+                }
+              </span>
             </span>
           }
-          <span>
-            <strong [attr.title]="option.label">{{ option.label }}</strong>
+          <span class="option-text">
+            <span class="option-label" [attr.title]="option.label">{{ option.label }}</span>
             @if (option.description) {
               <small>{{ option.description }}</small>
             }
@@ -158,12 +159,12 @@ interface SelectSection {
             <nx-option-tags [tags]="option.tags" />
           }
           @if (!multiple() && option.value === value()) {
-            <nx-icon name="check" />
+            <nx-icon name="check" class="option-mark" />
           }
         </button>
       </ng-template>
       <!-- 搜尋固定在頂端，選項與 footer 在下方一起捲動。 -->
-      <div class="select-body">
+      <div class="select-body option-list">
         <div
           role="listbox"
           [id]="id"
@@ -173,7 +174,7 @@ interface SelectSection {
           @for (section of sections(); track $index) {
             @if (section.group) {
               <div role="group" [attr.aria-labelledby]="id + '-group-' + $index">
-                <div class="select-group" [id]="id + '-group-' + $index">{{ section.group }}</div>
+                <div class="option-group" [id]="id + '-group-' + $index">{{ section.group }}</div>
                 @for (entry of section.entries; track entry.option.value) {
                   <ng-container *ngTemplateOutlet="optionRow; context: { $implicit: entry }" />
                 }
@@ -185,9 +186,9 @@ interface SelectSection {
             }
           } @empty {
             @if (loading()) {
-              <p class="select-empty" role="status">正在載入選項…</p>
+              <p class="option-empty" role="status">正在載入選項…</p>
             } @else {
-              <p class="select-empty">沒有符合的選項</p>
+              <p class="option-empty">沒有符合的選項</p>
             }
           }
         </div>

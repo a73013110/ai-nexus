@@ -1,5 +1,3 @@
-@use 'optical';
-
 :host {
   display: block;
   min-width: 0;
@@ -78,97 +76,16 @@
 // 搜尋固定在頂端、選項捲動；排版寫在 :popover-open 外（見 popovers.scss 開頭）。
 .select-panel {
   flex-direction: column;
+  // 不留 popover 預設的 0.25em：搜尋列的分隔線貼齊面板兩側，選項的內距由 .option-list 決定。
+  padding: 0;
 }
 .select-panel:popover-open {
   display: flex;
 }
+// 選項列、分組標題與空狀態見 styles/option-list.scss。
 .select-body {
   flex: 1 1 auto;
   min-height: 0;
-  padding: var(--p-space-2);
   overflow: auto;
   overscroll-behavior: contain;
-}
-.select-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--p-space-3);
-  width: 100%;
-  min-height: var(--button-target);
-  text-align: left;
-  padding: var(--control-padding-block) var(--control-padding-inline);
-  border-radius: var(--radius-item);
-  color: var(--ink);
-}
-.select-option.is-active,
-.select-option:hover {
-  background: var(--hover);
-}
-.select-option[aria-selected='true'] {
-  color: var(--accent);
-}
-.select-option strong {
-  @include optical.label-line-truncate;
-  display: block;
-  font-weight: 500;
-  font-size: var(--control-font-size);
-}
-// 名稱修到字高（右側勾號、左側方框對齊字的中線），說明以 gap 隔開。
-.select-option > span:not(.select-check) {
-  display: grid;
-  gap: var(--p-space-1);
-  min-width: 0;
-  flex: 1;
-}
-.select-empty {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  margin: var(--p-space-2);
-}
-.select-option small {
-  display: block;
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  line-height: 1.5;
-}
-.select-option > nx-icon {
-  color: var(--signal);
-}
-.select-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 1rem;
-  height: 1rem;
-  border: 1.5px solid var(--control-line);
-  border-radius: var(--radius-mark);
-  background: var(--surface);
-  color: var(--on-accent);
-}
-.select-check nx-icon {
-  --icon-size: 0.75rem;
-}
-.select-option[aria-selected='true'] .select-check {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.select-option.is-multiple {
-  justify-content: flex-start;
-}
-.select-option.is-multiple[aria-selected='true'] {
-  color: var(--ink);
-}
-// 分組標題：不可選，字級與色調比選項低一階；第一組以外與上一組隔一段距離。
-.select-group {
-  padding: var(--p-space-2) var(--control-padding-inline) var(--p-space-1);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  font-weight: 600;
-  line-height: var(--line-ui);
-}
-[role='group'] + [role='group'] .select-group {
-  margin-top: var(--p-space-1);
-  border-top: 1px solid var(--line);
 }

@@ -1,0 +1,117 @@
+@use 'breakpoints' as bp;
+@use 'optical';
+
+// 浮層裡的選項清單：Select、TreeSelect、MenuPanel 共用同一種列（docs/frontend/shared-components.md）。
+// 名稱與說明對齊同一條文字線；分組標題與空狀態也對齊文字線，標題後接細線，不會被看成選項。
+// 單選的勾號放在尾端（.option-mark），不佔左邊寬度。只有每列都要有東西的清單才加左欄
+// （.option-lead：多選與核取項目的方框、操作圖示、樹的展開鈕），同一份清單的列都要有，空的也留著對齊。
+// 沒有左欄時文字對齊搜尋列（.popover-search）的放大鏡；有左欄時左欄對齊放大鏡、文字對齊輸入文字。
+.option-list {
+  --option-inset: var(--p-space-3);
+  --option-lead: var(--icon-lg);
+  --option-gap: var(--p-space-2);
+  --option-text-start: var(--option-inset);
+  padding: var(--p-space-1);
+  &:has(.option-lead) {
+    --option-text-start: calc(var(--option-inset) + var(--option-lead) + var(--option-gap));
+  }
+}
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: var(--option-gap);
+  width: 100%;
+  min-height: var(--control-height-compact);
+  padding: var(--p-space-1) var(--option-inset);
+  border-radius: var(--radius-item);
+  font-size: var(--text-label);
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  @include bp.below(phone, $or: '(pointer: coarse)') {
+    min-height: var(--button-target);
+  }
+  &:is(:hover, :focus-visible, .is-active):not(:disabled) {
+    background: var(--hover);
+  }
+  // 有說明時排成兩行：左欄對齊名稱那一行，尾端的標籤與勾號仍在兩行中間。
+  &:has(> .option-text > small) {
+    align-items: flex-start;
+    padding-block: var(--p-space-2);
+    > :not(.option-lead, .option-text) {
+      align-self: center;
+    }
+  }
+}
+// 高度只有名稱的字高：勾號、方框、圖示置中後對齊名稱的中線（名稱以 optical 修到字高）。
+.option-lead {
+  --icon-size: var(--icon-md);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--option-lead);
+  height: 1cap;
+}
+.option-mark {
+  --icon-size: var(--icon-md);
+  flex: none;
+  color: var(--signal);
+}
+// 多選與核取項目的方框；整列已是可點的 option／menuitemcheckbox，方框只是狀態圖示。
+.option-box {
+  --icon-size: 0.75rem;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--control-line);
+  border-radius: var(--radius-mark);
+  background: var(--surface);
+  color: var(--on-accent);
+}
+:is([aria-selected='true'], [aria-checked='true']) > .option-lead > .option-box {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.option-text {
+  display: grid;
+  flex: 1;
+  gap: var(--p-space-1);
+  min-width: 0;
+  > small {
+    color: var(--secondary);
+    font-size: var(--text-caption);
+    line-height: 1.4;
+  }
+}
+.option-label {
+  @include optical.label-line-truncate;
+}
+// 分組標題：不可選，比選項小一級、次要色；第一組以外上方多留一段。
+.option-group {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--option-inset) var(--p-space-1) var(--option-text-start);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: var(--line-ui);
+  :not(:first-child) > & {
+    padding-top: var(--p-space-3);
+  }
+  &::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--line);
+  }
+}
+.option-empty {
+  margin: 0;
+  padding: var(--p-space-2) var(--option-inset) var(--p-space-2) var(--option-text-start);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}

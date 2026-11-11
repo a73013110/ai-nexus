@@ -204,7 +204,7 @@ import { DesignSamples } from './design-samples';
       id="design-menu-check"
       title="核取選單項目"
       api="MenuPanel · MenuAction.checked"
-      description="設定 checked 的項目成為 menuitemcheckbox（aria-checked），勾選時右側打勾；選取後選單關閉，狀態由頁面切換。未設定 checked 的項目仍是一般操作。"
+      description="設定 checked 的項目成為 menuitemcheckbox（aria-checked），左欄是方框、不放圖示，與 Select 多選相同；選取後選單關閉，狀態由頁面切換。未設定 checked 的項目仍是一般操作。"
     >
       <nx-action-menu label="示範檢視選項" [items]="toggles()" (action)="toggle($event)" />
     </nx-design-section>
@@ -412,9 +412,9 @@ export class DesignControls {
   ];
   readonly options = signal({ web: true, time: false });
   readonly toggles = computed<MenuAction[]>(() => [
-    { id: 'web', label: '網路搜尋', icon: 'globe', checked: this.options().web },
-    { id: 'time', label: '顯示時間', icon: 'history', checked: this.options().time },
-    { id: 'locked', label: '由管理員鎖定', icon: 'lock', checked: true, disabled: true },
+    { id: 'web', label: '網路搜尋', checked: this.options().web },
+    { id: 'time', label: '顯示時間', checked: this.options().time },
+    { id: 'locked', label: '由管理員鎖定', checked: true, disabled: true },
   ]);
   readonly filter = signal('active');
   readonly range = signal('week');

@@ -54,7 +54,8 @@ describe('TreeSelect', () => {
     const select = fixture.componentInstance;
     const trigger = host.querySelector<HTMLButtonElement>('[role="combobox"]')!;
     const items = () => [...host.querySelectorAll<HTMLElement>('[role="treeitem"]')];
-    const names = () => items().map((item) => item.querySelector('strong')!.textContent!.trim());
+    const names = () =>
+      items().map((item) => item.querySelector('.option-label')!.textContent!.trim());
     const open = () => {
       trigger.click();
       fixture.detectChanges();
@@ -165,7 +166,7 @@ describe('TreeSelect', () => {
     select.filter('測試');
     fixture.detectChanges();
     expect(items()).toHaveLength(0);
-    expect(host.querySelector('.tree-select-empty')!.textContent).toContain('另有 2 個停用的單位');
+    expect(host.querySelector('.option-empty')!.textContent).toContain('另有 2 個停用的單位');
   });
 
   it('moves with the arrows, collapses and expands with left and right, and chooses with Enter', () => {

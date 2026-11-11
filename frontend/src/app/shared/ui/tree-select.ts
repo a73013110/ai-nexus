@@ -122,7 +122,7 @@ interface TreeSelectRow {
         />
         <p class="sr-only" role="status">{{ query() ? entries().length + ' 個結果' : '' }}</p>
       }
-      <div class="tree-select-body" role="tree" [id]="id" [attr.aria-label]="label()">
+      <div class="tree-select-body option-list" role="tree" [id]="id" [attr.aria-label]="label()">
         @for (entry of entries(); track entry.key; let i = $index) {
           @let row = entry.row;
           <!-- 指標點選的便利；鍵盤由搜尋框或觸發鈕處理（aria-activedescendant）。 -->
@@ -130,7 +130,7 @@ interface TreeSelectRow {
           <div
             role="treeitem"
             tabindex="-1"
-            class="tree-select-row"
+            class="option-row tree-select-row"
             [id]="id + '-' + i"
             [class.is-active]="active() === i"
             [class.is-root]="!query() && row?.depth === 1"
@@ -148,40 +148,42 @@ interface TreeSelectRow {
             (mousedown)="$event.preventDefault()"
             (click)="choose(i)"
           >
-            @if (row && !query()) {
-              <span
-                class="tree-select-twisty"
-                aria-hidden="true"
-                [class.is-leaf]="!row.children"
-                [class.is-open]="!collapsed().has(row.node.value)"
-                (click)="$event.stopPropagation(); expand(row, collapsed().has(row.node.value))"
-                ><nx-icon name="chevron"
-              /></span>
-            } @else if (!row && !query()) {
-              <span class="tree-select-twisty is-leaf" aria-hidden="true"></span>
+            <!-- 樹狀時左欄放展開鈕（葉節點留空對齊）；搜尋結果是平面清單，不留左欄。 -->
+            @if (!query()) {
+              <span class="option-lead">
+                @if (row && row.children) {
+                  <span
+                    class="tree-select-twisty"
+                    aria-hidden="true"
+                    [class.is-open]="!collapsed().has(row.node.value)"
+                    (click)="$event.stopPropagation(); expand(row, collapsed().has(row.node.value))"
+                    ><nx-icon name="chevron"
+                  /></span>
+                }
+              </span>
             }
-            <span class="tree-select-label">
+            <span class="option-text">
               @if (query() && row) {
                 <small>{{ row.path.length ? row.path.join(' › ') : '最上層' }}</small>
               }
               @let parts = highlight(row?.node?.label ?? allLabel());
-              <strong
+              <span class="option-label"
                 >{{ parts.before }}<mark>{{ parts.hit }}</mark
-                >{{ parts.after }}</strong
+                >{{ parts.after }}</span
               >
             </span>
             @if (row?.tags?.length) {
               <nx-option-tags [tags]="row.tags" />
             }
             @if (isSelected(entry)) {
-              <nx-icon class="tree-select-check" name="check" />
+              <nx-icon name="check" class="option-mark" />
             }
           </div>
           @if (!row && !query()) {
             <div class="tree-select-divider" role="none"></div>
           }
         } @empty {
-          <p class="tree-select-empty" [attr.role]="loading() ? 'status' : null">
+          <p class="option-empty" [attr.role]="loading() ? 'status' : null">
             @if (loading()) {
               正在載入選項…
             } @else if (query()) {
