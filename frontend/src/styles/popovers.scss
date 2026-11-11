@@ -50,12 +50,12 @@
     interactivity: inert;
   }
 }
-// 浮層頂端的搜尋列：`<nx-search-field appearance="bare" class="popover-search">`。浮層已框住
-// 內容，搜尋不再加框，只用細線與清單分開；浮層排成直欄，捲動的是下方清單，搜尋固定在頂端。
+// 浮層頂端的搜尋列：`<nx-search-field appearance="filled" class="popover-search">`。浮層排成直欄，
+// 搜尋固定在頂端、下方清單捲動；外距＋欄內距等於清單內距＋列內距，放大鏡因此對齊選項的左緣
+// （styles/option-list.scss）。
 .popover-search {
   flex: none;
-  padding-inline: var(--p-space-4);
-  border-bottom: 1px solid var(--line);
+  margin: var(--p-space-2) var(--p-space-2) 0;
 }
 
 // 資訊面板（InfoPopover）的內容：分段（.info-section，段間細線）、段標題（h3）、小型對照表

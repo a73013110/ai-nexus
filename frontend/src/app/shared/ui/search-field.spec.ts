@@ -29,6 +29,24 @@ describe('SearchField', () => {
     expect(typed).toEqual(['星河']);
   });
 
+  it('marks the host with its appearance so the frame comes from one place', () => {
+    const fixture = TestBed.createComponent(SearchField);
+    fixture.componentRef.setInput('label', '搜尋動作');
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    expect(host.className).toBe('');
+
+    fixture.componentRef.setInput('appearance', 'filled');
+    fixture.detectChanges();
+    expect(host.classList).toContain('search-filled');
+    expect(host.classList).not.toContain('search-bare');
+
+    fixture.componentRef.setInput('appearance', 'bare');
+    fixture.detectChanges();
+    expect(host.classList).toContain('search-bare');
+    expect(host.classList).not.toContain('search-filled');
+  });
+
   it('becomes a combobox for the list it filters and keeps the clear button out of the tab order', () => {
     const fixture = TestBed.createComponent(SearchField);
     fixture.componentRef.setInput('label', '搜尋人員');

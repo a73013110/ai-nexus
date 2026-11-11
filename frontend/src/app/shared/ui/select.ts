@@ -112,7 +112,7 @@ interface SelectSection {
       @if (search()) {
         <nx-search-field
           class="popover-search"
-          appearance="bare"
+          appearance="filled"
           [label]="'搜尋' + label()"
           [placeholder]="'搜尋' + label() + '…'"
           [controls]="id"

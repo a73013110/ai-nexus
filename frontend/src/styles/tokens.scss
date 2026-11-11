@@ -41,6 +41,9 @@
   --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
   // 凹下一階的底：引文、使用者的提問、表頭。往 --ink 混而不是取固定色，放在 --canvas 或 --surface 上都看得出來。
   --surface-inset: color-mix(in srgb, var(--ink) 4%, var(--canvas));
+  // 填色輸入框（浮層與側欄頂端的搜尋）：半透明的 --ink，放在白色浮層或側欄底上都淡淡看得出來，
+  // 又比列的 --hover 淺，不會和選中的第一列混在一起。
+  --field-fill: color-mix(in srgb, var(--ink) 5%, transparent);
   --hover: var(--p-stone-200);
   --ink: var(--p-ink-900);
   --secondary: var(--p-stone-600);
@@ -365,6 +368,7 @@
   --surface: var(--p-night-800);
   --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
   --surface-inset: color-mix(in srgb, var(--ink) 5%, var(--canvas));
+  --field-fill: color-mix(in srgb, var(--ink) 7%, transparent);
   --hover: var(--p-night-700);
   --ink: var(--p-silver-50);
   --secondary: var(--p-silver-200);

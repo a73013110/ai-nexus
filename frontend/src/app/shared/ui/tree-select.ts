@@ -110,7 +110,7 @@ interface TreeSelectRow {
       @if (search()) {
         <nx-search-field
           class="popover-search"
-          appearance="bare"
+          appearance="filled"
           popup="tree"
           [label]="'搜尋' + noun()"
           [placeholder]="'搜尋' + noun() + '…'"

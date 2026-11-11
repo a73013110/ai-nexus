@@ -19,7 +19,10 @@ import { Icon } from './icon';
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './search-field.scss',
-  host: { '[class.search-bare]': "appearance() === 'bare'" },
+  host: {
+    '[class.search-filled]': "appearance() === 'filled'",
+    '[class.search-bare]': "appearance() === 'bare'",
+  },
   template: `<div class="search-field">
     <nx-icon [name]="busy() ? 'loading' : 'search'" [class.is-busy]="busy()" /><input
       #field
@@ -62,10 +65,11 @@ export class SearchField {
   readonly busy = input(false);
   readonly maxLength = input(120);
   /**
-   * `bare` 去掉欄位外框，用在已有外框的列：對話框標題列（`.dialog-bar`）、
-   * 浮層頂端（加 `class="popover-search"`）、側欄頂端。
+   * `field` 有外框：頁面、工具列、表單裡的搜尋。
+   * `filled` 淡底無框：浮層頂端（加 `class="popover-search"`）與側欄頂端，上方已有外框的位置。
+   * `bare` 無框無底：對話框標題列（`.dialog-bar`），由標題列的細線標示。
    */
-  readonly appearance = input<'field' | 'bare'>('field');
+  readonly appearance = input<'field' | 'filled' | 'bare'>('field');
   /**
    * 這個搜尋過濾的清單 id。給了才是 combobox；清除鈕此時不進 Tab 順序，
    * 因為浮層裡的 Tab 是離開浮層；鍵盤以全選刪除清空。

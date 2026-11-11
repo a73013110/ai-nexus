@@ -169,21 +169,36 @@ const UNITS: TreeSelectNode[] = [
     <nx-design-section
       id="design-search-bare"
       title="列內搜尋"
-      api='SearchField appearance="bare"'
-      description="放進已有外框的地方（對話框標題列、浮層頂端加 popover-search、側欄頂端）時去掉欄位外框，由列的細線與游標標示輸入位置。帶動清單時給 controls，輸入框成為 combobox；Select 與 TreeSelect 的搜尋就是這一種。"
+      api='SearchField appearance="filled" · "bare"'
+      description="放進已有外框的地方時不再加欄位外框。浮層頂端（加 popover-search）與側欄頂端用 filled：淡底圓角就看得出是輸入框，放大鏡對齊下方選項。對話框標題列用 bare，由標題列的細線與游標標示。帶動清單時給 controls，輸入框成為 combobox；Select 與 TreeSelect 的搜尋就是 filled。"
     >
-      <div class="design-bar-frame">
-        <div class="dialog-bar">
+      <nx-design-example label="filled（浮層、側欄頂端）">
+        <div class="design-bar-frame">
           <nx-search-field
-            appearance="bare"
-            label="示範列內搜尋"
-            placeholder="搜尋檔案庫中的檔案"
-            [value]="bareSearch()"
-            (valueChange)="bareSearch.set($event)"
+            class="popover-search"
+            appearance="filled"
+            label="示範浮層搜尋"
+            placeholder="搜尋示範動作…"
+            [value]="filledSearch()"
+            (valueChange)="filledSearch.set($event)"
           />
+          <p>{{ filledSearch() ? '搜尋：' + filledSearch() : '選項列在搜尋下方。' }}</p>
         </div>
-        <p>{{ bareSearch() ? '搜尋：' + bareSearch() : '結果列在標題列下方。' }}</p>
-      </div>
+      </nx-design-example>
+      <nx-design-example label="bare（對話框標題列）">
+        <div class="design-bar-frame">
+          <div class="dialog-bar">
+            <nx-search-field
+              appearance="bare"
+              label="示範列內搜尋"
+              placeholder="搜尋檔案庫中的檔案"
+              [value]="bareSearch()"
+              (valueChange)="bareSearch.set($event)"
+            />
+          </div>
+          <p>{{ bareSearch() ? '搜尋：' + bareSearch() : '結果列在標題列下方。' }}</p>
+        </div>
+      </nx-design-example>
     </nx-design-section>
     <nx-design-section
       id="design-person-picker"
@@ -475,6 +490,7 @@ export class DesignForms {
   readonly periodEnd = signal('');
   private readonly title = viewChild.required(InlineTitle);
   readonly search = signal('');
+  readonly filledSearch = signal('');
   readonly bareSearch = signal('');
   readonly calendarDate = signal('2026-10-08T14:30:45');
   readonly optionalDate = signal('');

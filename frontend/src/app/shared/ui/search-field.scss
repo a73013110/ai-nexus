@@ -1,13 +1,17 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
   width: min(100%, 28rem);
   min-width: 0;
 }
+// 欄高：呼叫端可用 --search-height 指定（例如側欄對齊頂端列高），否則依外觀取預設。
 .search-field {
+  --field-height: var(--search-height, var(--button-target));
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
-  min-height: var(--button-target);
+  min-height: var(--field-height);
   padding: 0 var(--p-space-3);
   background: var(--surface);
   border: 1px solid var(--control-line);
@@ -20,7 +24,7 @@
   width: 100%;
   min-width: 0;
   padding: 0;
-  min-height: var(--button-target);
+  min-height: var(--field-height);
   font-size: var(--control-font-size);
 }
 .search-field input::-webkit-search-cancel-button {
@@ -31,8 +35,8 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 12%, transparent);
 }
 .search-field .icon-button {
-  width: var(--button-target);
-  height: var(--button-target);
+  width: var(--field-height);
+  height: var(--field-height);
   margin-right: -0.5rem;
 }
 .search-field > nx-icon {
@@ -42,10 +46,30 @@
 .search-field > nx-icon.is-busy {
   color: var(--secondary);
 }
-// A bare search fills its bar; the bar's hairline and the caret mark the field.
+// 填色與無框都用在已有外框的地方，寬度跟著所在的列；填色常留外距，用 auto 才不會撐出列外。
+:host(.search-filled) {
+  width: auto;
+}
 :host(.search-bare) {
   width: 100%;
 }
+// 填色：浮層與側欄頂端。淡底圓角就看得出是輸入框，不加外框（框中有框）也不靠分隔線（像清單的一列）；
+// 聚焦時底色略深，仍比列的 --hover 淺。桌面與清單列同為緊湊高度，觸控維持點按尺寸。
+:host(.search-filled) .search-field {
+  --field-height: var(--search-height, var(--control-height-compact));
+  padding: 0 var(--p-space-2);
+  border: 0;
+  border-radius: var(--radius-item);
+  background: var(--field-fill);
+  @include bp.below(phone, $or: '(pointer: coarse)') {
+    --field-height: var(--search-height, var(--button-target));
+  }
+  &:focus-within {
+    background: color-mix(in srgb, var(--ink) 2%, var(--field-fill));
+    box-shadow: none;
+  }
+}
+// 無框：對話框標題列；標題列的細線與游標標示輸入位置。
 :host(.search-bare) .search-field {
   padding: 0;
   border: 0;
