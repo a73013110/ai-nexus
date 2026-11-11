@@ -8,20 +8,21 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { OriginMotion } from './origin-motion';
 import { FrameMotion } from './view-motion';
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'full';
 
 /**
  * 共用的密度與無障礙命名；原生 dialog 負責焦點與關閉。每個這樣的對話框都是 `FrameMotion`：
- * 切換分頁（`nxViewMotion` 面板）、`size` 或 `maximized` 時，框架會過渡到新內容的大小，而非直接跳動。
- * `maximized`（邊到邊，`data-maximized`）是
- * toggled by the header's 放大視窗 button and resets on every open.
+ * 切換分頁（`nxViewMotion` 面板）、`size` 或 `maximized` 時，框架會過渡到新內容的大小，而非直接跳動；
+ * 也都是 `OriginMotion`：從開啟它的控制項長出來、關閉縮回去。
+ * `maximized`（邊到邊，`data-maximized`）由標題列的「放大視窗」切換，每次開啟都重設。
  */
 @Directive({
   selector: 'dialog[nxCompactDialog]',
   exportAs: 'nxCompactDialog',
-  hostDirectives: [FrameMotion],
+  hostDirectives: [FrameMotion, OriginMotion],
   host: {
     '[class.ui-density-compact]': 'compact()',
     '[attr.data-size]': 'size()',

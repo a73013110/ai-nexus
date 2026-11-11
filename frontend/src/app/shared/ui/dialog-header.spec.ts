@@ -91,8 +91,12 @@ describe('DialogHeader', () => {
     const bar = root.querySelector('nx-dialog-header')!;
     expect([...bar.children].map((item) => item.className)).toEqual([
       'dialog-heading',
+      'dialog-actions',
+    ]);
+    const actions = bar.querySelector('.dialog-actions')!;
+    expect([...actions.children].map((item) => item.className)).toEqual([
       'tool',
-      'icon-button',
+      'icon-button dialog-close',
     ]);
     expect(bar.classList).not.toContain('is-record');
   });
@@ -122,8 +126,8 @@ describe('DialogHeader', () => {
     const fixture = TestBed.createComponent(TourHost);
     fixture.detectChanges();
     const bar = (fixture.nativeElement as HTMLElement).querySelector('nx-dialog-header')!;
-    expect([...bar.children].map((item) => item.localName)).toEqual([
-      'div',
+    const actions = bar.querySelector('.dialog-actions')!;
+    expect([...actions.children].map((item) => item.localName)).toEqual([
       'nx-product-tour-button',
       'button',
     ]);
@@ -149,7 +153,7 @@ describe('DialogHeader', () => {
     expect(dialog.open).toBe(true);
   });
 
-  it('toggles the dialog to maximized; only inside a viewer scope does the bar become idle chrome', () => {
+  it('toggles the dialog to maximized; inside a viewer scope the bar is idle chrome either way', () => {
     const fixture = TestBed.createComponent(MaximizeHost);
     fixture.detectChanges();
     const [viewer, form] = [...(fixture.nativeElement as HTMLElement).querySelectorAll('dialog')];
@@ -157,14 +161,19 @@ describe('DialogHeader', () => {
       dialog.querySelector<HTMLButtonElement>('button[aria-label="放大視窗"]')!.click();
       fixture.detectChanges();
     };
+    const chrome = (dialog: HTMLDialogElement) =>
+      dialog.querySelector('nx-dialog-header')!.getAttribute('data-chrome');
+    // 檢視器的標題列放大與否都是浮在內容上的膠囊；截斷的標題另有完整提示。
     expect(viewer.hasAttribute('data-maximized')).toBe(false);
-    expect(viewer.querySelector('nx-dialog-header')!.hasAttribute('data-chrome')).toBe(false);
+    expect(chrome(viewer)).toBe('shown');
+    expect(viewer.querySelector('h2')!.title).toBe('圖表');
     toggle(viewer);
     expect(viewer.hasAttribute('data-maximized')).toBe(true);
-    expect(viewer.querySelector('nx-dialog-header')!.getAttribute('data-chrome')).toBe('shown');
+    expect(chrome(viewer)).toBe('shown');
     expect(viewer.querySelector('button[aria-label="還原視窗"]')).not.toBeNull();
     toggle(form);
     expect(form.hasAttribute('data-maximized')).toBe(true);
-    expect(form.querySelector('nx-dialog-header')!.hasAttribute('data-chrome')).toBe(false);
+    expect(chrome(form)).toBeNull();
+    expect(form.querySelector('h2')!.hasAttribute('title')).toBe(false);
   });
 });

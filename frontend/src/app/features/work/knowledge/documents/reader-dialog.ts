@@ -24,18 +24,14 @@ import { DocumentViewer } from './document-viewer';
     nxCompactDialog
     size="full"
     #dialog
-    class="platform-dialog reader-dialog"
+    class="platform-dialog"
     aria-label="檔案預覽"
     (cancel)="onCancel($event)"
     (close)="closed()"
   >
     @defer (when shown()) {
       @if (shown(); as target) {
-        <nx-document-viewer
-          [target]="target"
-          [embedded]="true"
-          (closeRequested)="overlay.close()"
-        />
+        <nx-document-viewer [target]="target" [embedded]="true" />
       }
     } @placeholder {
       <p class="reader-placeholder" role="status"><nx-icon name="loading" />正在開啟預覽…</p>

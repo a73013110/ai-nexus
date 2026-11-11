@@ -2,7 +2,6 @@ import {
   DestroyRef,
   Directive,
   ElementRef,
-  booleanAttribute,
   computed,
   effect,
   inject,
@@ -29,7 +28,7 @@ interface Part {
 }
 
 /**
- * 檢視器的沉浸式 chrome：範圍內登記的工具列與（放大時的）標題列一起出現、一起淡出。
+ * 檢視器的沉浸式 chrome：範圍內登記的工具列與對話框標題列一起出現、一起淡出。
  * 開啟、換內容時短暫出現；滑鼠只有移近 chrome（`REACH` 內）或停在上面才喚回，在內容上閱讀時的移動、
  * 點擊不喚回；觸控點一下內容切換；Tab 讓鍵盤焦點出現時喚回；Esc 或閒置 `delay` 毫秒後淡出。
  * 指標停在 chrome 上、其中有鍵盤焦點（`:focus-visible`）或展開的控制項（`aria-expanded="true"`）、
@@ -142,12 +141,11 @@ export class IdleChrome {
 }
 
 /**
- * 把 `element` 登記成最近 `IdleChrome` 的一部分，`active()` 為 false 時不參與（例如未放大的標題列）。
- * 回傳 `data-chrome` 的值：沒有範圍或未啟用為 null。必須在 injection context 呼叫。
+ * 把 `element` 登記成最近 `IdleChrome` 的一部分；`held()` 為 true 時整個範圍保留不淡出（例如搜尋中）。
+ * 回傳 `data-chrome` 的值，沒有範圍為 null。必須在 injection context 呼叫。
  */
 export function idleChromePart(
   element: HTMLElement,
-  active: () => boolean,
   held: () => boolean = () => false,
 ): Signal<ChromeState | null> {
   const scope = inject(IdleChrome, { optional: true });
@@ -165,26 +163,11 @@ export function idleChromePart(
     element.removeEventListener('pointerenter', enter);
     element.removeEventListener('pointerleave', leave);
   });
-  const enabled = computed(active);
-  effect((cleanup) => {
-    if (enabled()) cleanup(untracked(() => scope.add(part)));
-  });
-  // 外部要求保留（例如搜尋中）時立即出現。
+  // 在 effect 裡登記：此時範圍的 `delay` 已經綁定。
+  effect((cleanup) => cleanup(untracked(() => scope.add(part))));
+  // 外部要求保留時立即出現。
   effect(() => {
-    if (enabled() && held()) untracked(() => scope.reveal());
+    if (held()) untracked(() => scope.reveal());
   });
-  return computed(() => (enabled() ? (scope.shown() ? 'shown' : 'hidden') : null));
-}
-
-/** 範本裡的 chrome：`<header nxIdleChromePart [nxIdleChromePart]="maximized()">`。 */
-@Directive({
-  selector: '[nxIdleChromePart]',
-  host: { '[attr.data-chrome]': 'state()' },
-})
-export class IdleChromePart {
-  readonly active = input(true, { alias: 'nxIdleChromePart', transform: booleanAttribute });
-  protected readonly state = idleChromePart(
-    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
-    () => this.active(),
-  );
+  return computed(() => (scope.shown() ? 'shown' : 'hidden'));
 }

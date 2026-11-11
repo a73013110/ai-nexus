@@ -2,17 +2,21 @@
 @use 'optical';
 @use 'scroll-pad';
 
-// Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
-// scales in on the spring and leaves the same way; `overlay` and `display` keep it in the top layer
-// until the exit ends. Browsers without @starting-style simply open and close.
-// Inside, a dialog is `nx-dialog-header` (.dialog-bar) + .dialog-body + optional .dialog-foot, and
-// `size` (sm | md | lg | full, set by nxCompactDialog) picks the width and the density: sm and md
-// have no dividers, lg and full separate the three parts with hairlines.
+// 所有模態對話框共用一個外框：髮絲線、模態陰影與浮動面板的圓角，後方的頁面壓暗並模糊。
+// 進場：知道從哪個控制項開啟時由那裡長出來、關閉縮回去（shared/ui/origin-motion.ts，標 data-origin）；
+// 不知道時由下方小幅位移＋微縮彈入、沿原路退場。`overlay` 與 `display` 讓它留在 top layer 到退場結束；
+// 不支援 @starting-style 的瀏覽器直接開關。
+// 內部是 `nx-dialog-header`（.dialog-bar）＋ .dialog-body ＋ 選用的 .dialog-foot；`size`
+// （sm | md | lg | full，由 nxCompactDialog 設定）決定寬度與密度：sm、md 沒有分隔線，lg、full 以髮絲線
+// 切開三段。
 .platform-dialog {
   --dialog-max-height: calc(100dvh - 3rem);
   --dialog-enter-y: 0.5rem;
   --dialog-enter-scale: 0.97;
   --dialog-ease: var(--ease-spring);
+  // 檢視器浮在內容上的膠囊（標題、視窗動作）：高度與 FloatingToolbar 相同，兩側各自最多佔的寬度。
+  --dialog-chrome-height: calc(var(--button-target) + 2 * var(--p-space-1) + 2px);
+  --dialog-chrome-side: 16rem;
   flex-direction: column;
   width: min(var(--dialog-width), calc(100vw - 2rem));
   max-width: none;
@@ -25,7 +29,7 @@
   border-radius: var(--dialog-radius);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: var(--shadow-floating);
+  box-shadow: var(--shadow-modal);
   opacity: 0;
   translate: 0 var(--dialog-enter-y);
   scale: var(--dialog-enter-scale);
@@ -36,7 +40,7 @@
     overlay var(--motion) allow-discrete,
     display var(--motion) allow-discrete;
 }
-// Layout lives under [open] only: the exit keeps `display` but would drop the rest at once.
+// 版面只寫在 [open] 底下：退場保留 `display`，其餘屬性會立刻消失。
 .platform-dialog[open] {
   display: flex;
   opacity: 1;
@@ -45,13 +49,19 @@
   transition-duration: var(--motion-panel);
   transition-timing-function: var(--dialog-ease);
 }
-// A leaving dialog is still painted for its exit; it no longer takes clicks or focus.
+// 退場中的對話框仍在畫面上，但不接點擊與焦點。
 .platform-dialog:not([open]) {
   pointer-events: none;
   interactivity: inert;
 }
+// 從觸發處展開、縮回時，位移與縮放由 OriginMotion 的動畫負責，這裡只留淡入淡出。
+.platform-dialog[data-origin] {
+  --dialog-enter-y: 0;
+  --dialog-enter-scale: 1;
+}
 .platform-dialog::backdrop {
-  background: var(--scrim);
+  background: var(--scrim-modal);
+  backdrop-filter: var(--scrim-filter);
   opacity: 0;
   transition:
     opacity var(--motion) var(--ease),
@@ -91,7 +101,7 @@ form.dialog-form {
   display: contents;
 }
 
-// Header bar: title (+ detail), projected tools, close button.
+// 標題列：標題（＋細節）、投影進來的工具、關閉鈕。
 .dialog-bar {
   display: flex;
   align-items: center;
@@ -197,11 +207,20 @@ form.dialog-form {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dialog-bar > nx-search-field {
+// nx-dialog-header 把工具與視窗動作（放大、導覽、關閉）包成 .dialog-actions。一般標題列裡它不是一層
+// 版面，子元素直接排進標題列；檢視器裡才收成一顆膠囊（下方的 [data-chrome]）。
+.dialog-actions {
+  display: contents;
+}
+:is(.dialog-bar, .dialog-actions) > nx-search-field {
   flex: 1;
 }
-.dialog-bar > .icon-button {
+:is(.dialog-bar, .dialog-actions) > .icon-button {
   flex: none;
+}
+// 關閉鈕墊一層底，在沒有分隔線的標題列上也看得出是按鈕。
+.dialog-close:not(:hover) {
+  background: var(--surface-inset);
 }
 // 分類頁籤收在標題區（標題列與其下選用的摘要）之後、tabpanel 之上：tabpanel 是 .dialog-body，
 // 或含自己 body 與頁尾的面板。內容捲動時頁籤不動，第一個標籤與 body 文字對齊。
@@ -350,47 +369,86 @@ form.dialog-form {
   }
 }
 
-// 放大（CompactDialog.maximized）貼齊視窗邊緣。檢視器（nxIdleChrome）裡的標題列此時浮在內容上，
-// 與浮動工具列一起閒置淡出（data-chrome，shared/ui/idle-chrome.ts），隱藏時以 ::after 擋住看不見的
-// 按鈕；其後的內容區把工具列排在它下方。放在最後，覆蓋手機底部 sheet 的尺寸。
+// 檢視器（nxIdleChrome 範圍內的標題列，帶 data-chrome）：標題列不佔版面，標題與視窗動作各是一顆浮在
+// 內容上的膠囊，材質與 FloatingToolbar 相同、一起閒置淡出（shared/ui/idle-chrome.ts）。一般與放大是同一套
+// 版面，放大只改外框。隱藏時不接點擊，點到那裡是點內容，不會按到看不見的按鈕。
+// 工具列預設排在膠囊下一列；寬螢幕上的 full 與放大才與膠囊同一列，寬度以兩側膠囊的上限為界
+// （--floating-toolbar-side）。其後的內容以 --dialog-chrome-clearance 讓出這一列。
+.platform-dialog .dialog-bar[data-chrome] {
+  position: absolute;
+  inset: var(--p-space-3) var(--p-space-3) auto;
+  z-index: 3;
+  justify-content: space-between;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--motion) var(--ease),
+    translate var(--motion) var(--ease-spring);
+  > :is(.dialog-heading, .dialog-actions) {
+    display: flex;
+    box-sizing: border-box;
+    height: var(--dialog-chrome-height);
+    border: 1px solid var(--material-line);
+    border-radius: calc(var(--dialog-chrome-height) / 2);
+    background: var(--material-thick);
+    backdrop-filter: var(--material-filter);
+    box-shadow: var(--shadow-floating);
+    pointer-events: auto;
+  }
+  > .dialog-heading {
+    flex: 0 1 auto;
+    justify-content: center;
+    max-width: var(--dialog-chrome-side);
+    padding-inline: var(--p-space-4);
+  }
+  > .dialog-actions {
+    flex: none;
+    align-items: center;
+    padding-inline: var(--p-space-1);
+  }
+  .dialog-title {
+    flex: none;
+  }
+  h2 {
+    overflow: hidden;
+    font-size: var(--text-label);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dialog-close {
+    background: none;
+  }
+  ~ * {
+    --dialog-chrome-clearance: calc(2 * var(--p-space-3) + var(--dialog-chrome-height));
+    --floating-toolbar-offset: calc(
+      var(--p-space-3) + var(--dialog-chrome-height) + var(--p-space-2)
+    );
+  }
+}
+.platform-dialog .dialog-bar[data-chrome='hidden']:not(:has(:focus-visible)) {
+  opacity: 0;
+  translate: 0 -0.5rem;
+  transition:
+    opacity var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit);
+  > * {
+    pointer-events: none;
+  }
+}
+@include bp.above(wide) {
+  .platform-dialog:is([data-size='full'], [data-maximized]) .dialog-bar[data-chrome] ~ * {
+    --floating-toolbar-offset: var(--p-space-3);
+    --floating-toolbar-side: calc(var(--dialog-chrome-side) + var(--p-space-2));
+  }
+}
+
+// 放大（CompactDialog.maximized）貼齊視窗邊緣。放在最後，覆蓋手機底部 sheet 的尺寸。
 .platform-dialog[data-maximized] {
   --dialog-max-height: none;
-  --dialog-chrome-height: calc(var(--button-target) + 2 * var(--p-space-3));
   width: 100vw;
   height: 100dvh;
   border: 0;
   border-radius: 0;
-  .dialog-bar[data-chrome] {
-    position: absolute;
-    inset: 0 0 auto;
-    z-index: 3;
-    height: var(--dialog-chrome-height);
-    padding-block: 0;
-    border-bottom: 1px solid var(--material-line);
-    background: var(--material-thick);
-    backdrop-filter: var(--material-filter);
-    transition:
-      opacity var(--motion) var(--ease),
-      translate var(--motion) var(--ease-spring);
-    :is(h1, h2) {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    ~ * {
-      --floating-toolbar-offset: calc(var(--dialog-chrome-height) + var(--p-space-2));
-    }
-  }
-  .dialog-bar[data-chrome='hidden']:not(:has(:focus-visible)) {
-    opacity: 0;
-    translate: 0 -0.5rem;
-    transition:
-      opacity var(--motion) var(--ease-exit),
-      translate var(--motion) var(--ease-exit);
-    &::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-    }
-  }
 }

@@ -4,11 +4,14 @@ import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
+import { FloatingToolbar } from '@shared/ui/floating-toolbar';
 import { Icon } from '@shared/ui/icon';
+import { IdleChrome } from '@shared/ui/idle-chrome';
 import { SearchField } from '@shared/ui/search-field';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ToastService } from '@shared/ui/toast-service';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignExample, DesignSection } from './design-section';
 
 const FILES = [
@@ -33,10 +36,13 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
     DialogHeader,
     DialogSaveBar,
     Field,
+    FloatingToolbar,
     Icon,
+    IdleChrome,
     SearchField,
     StatusBadge,
     Tabs,
+    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -82,12 +88,26 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
     .design-save-frame .dialog-body {
       overflow: visible;
     }
+    .design-viewer {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      background: var(--canvas);
+    }
+    .design-viewer p {
+      max-width: 40rem;
+      margin: 0 auto;
+      padding: calc(var(--floating-toolbar-offset) + var(--button-target) + var(--p-space-6))
+        var(--p-space-5) var(--p-space-6);
+      color: var(--secondary);
+    }
   `,
   template: `<nx-design-section
       id="design-dialog"
       title="對話框尺寸"
       api="nxCompactDialog size · nx-dialog-header · .dialog-body · .dialog-foot · .dialog-note"
-      description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
+      description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。對話框從開啟它的按鈕長出來、關閉縮回去。檢視器（nxIdleChrome）的標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，放大只改外框。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
     >
       <nx-design-example label="sm · 確認或單一欄位">
         <button type="button" class="secondary-button" (click)="show(small)">開啟 sm</button>
@@ -103,6 +123,11 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       <nx-design-example label="lg · 單筆紀錄（icon＋dialog-subtitle）">
         <button type="button" class="secondary-button" (click)="show(record)">
           <nx-icon name="calendar" />開啟紀錄
+        </button>
+      </nx-design-example>
+      <nx-design-example label="full · 檢視器（nxIdleChrome＋maximizable）">
+        <button type="button" class="secondary-button" (click)="show(viewer)">
+          <nx-icon name="maximize" />開啟檢視器
         </button>
       </nx-design-example>
     </nx-design-section>
@@ -184,6 +209,29 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
         <p>標題列左側是種類圖示，第二行寫種類、單號（可複製）與時間；工具與關閉鈕對齊第一行。</p>
       </div>
     </dialog>
+    <dialog nxCompactDialog nxIdleChrome size="full" #viewer class="platform-dialog">
+      <nx-dialog-header
+        heading="季度營運報告.pdf"
+        detail="PDF 文件 · 12 頁"
+        closeLabel="關閉示範檢視器"
+        maximizable
+      />
+      <div class="design-viewer">
+        <nx-floating-toolbar label="示範檢視工具">
+          <nx-view-switch
+            label="示範檢視方式"
+            appearance="segment"
+            [options]="views"
+            [value]="view()"
+            (valueChange)="view.set($event)"
+          />
+        </nx-floating-toolbar>
+        <p>
+          標題與視窗動作是浮在內容上的兩顆膠囊，與工具列一起在閒置約 1.5 秒後淡出，指標移近上緣、Tab
+          或觸控點一下內容再出現。寬螢幕上三者同一列，視窗較窄時工具列排到下一列；放大只改外框，版面不變。
+        </p>
+      </div>
+    </dialog>
     <dialog nxCompactDialog size="lg" #picker class="platform-dialog">
       <nx-dialog-header
         heading="選取檔案"
@@ -225,6 +273,11 @@ export class DesignDialogs {
     { value: 'name', label: '名稱', dirty: this.draft().name !== this.saved().name },
     { value: 'note', label: '說明', dirty: this.draft().note !== this.saved().note },
   ]);
+  readonly views = [
+    { value: 'original', label: '原始文件' },
+    { value: 'text', label: '擷取文字' },
+  ];
+  readonly view = signal('original');
   readonly query = signal('');
   readonly matches = computed(() => {
     const query = this.query().trim().toLowerCase();

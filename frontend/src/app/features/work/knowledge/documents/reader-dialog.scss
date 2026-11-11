@@ -1,9 +1,4 @@
-// Size, frame, motion and the edge-to-edge maximized state come from nxCompactDialog
-// (styles/dialogs.scss); the reader only darkens the backdrop further.
-.reader-dialog::backdrop {
-  background: rgba(17, 29, 44, 0.7607843137);
-  backdrop-filter: blur(4px);
-}
+// 尺寸、外框、遮罩、動效與放大都來自 nxCompactDialog（styles/dialogs.scss），這裡只有延後載入的佔位。
 // @defer 的佔位與其他「形狀未知」的讀取相同：一行轉圈加狀態文字。
 .reader-placeholder {
   display: flex;

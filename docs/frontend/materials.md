@@ -6,7 +6,8 @@
 
 | 手法 | token | 用在 |
 | --- | --- | --- |
-| 半透明材質 | `--material`、`--material-thick`＋`backdrop-filter: var(--material-filter)`，邊緣 `--material-line` | 黏頂列（`FeaturePage` 的 `stickyHeader`，內容捲到下方才顯現）、浮動工具列、頁首主視覺（hero）、浮層 |
+| 半透明材質 | `--material`、`--material-thick`＋`backdrop-filter: var(--material-filter)`，邊緣 `--material-line` | 黏頂列（`FeaturePage` 的 `stickyHeader`，內容捲到下方才顯現）、浮動工具列、檢視器的標題膠囊、頁首主視覺（hero）、浮層 |
+| 模態遮罩 | `--scrim-modal`＋`backdrop-filter: var(--scrim-filter)`，對話框用 `--shadow-modal` | 模態對話框後方的頁面：壓暗並模糊，只有這一層 |
 | 表面受光 | `--surface-sheen`（同色、約 3% 明度落差，由上往下） | 主視覺、重點卡片 |
 | 分層陰影 | `--tile-shadow`；抬起與主視覺用 `--tile-shadow-raised` | 卡片 hover、主視覺 |
 | 狀態暈染 | 狀態色 4–8% 混入表面（`color-mix`） | 只在真的有 warning／danger 時的區塊底色 |
@@ -23,6 +24,6 @@
 ## 效能與無障礙
 
 - `backdrop-filter` 只放在少數固定層；不放在會重複、捲動或每秒更新的卡片與列表上，也不疊兩層模糊。
-- `prefers-reduced-transparency` 時材質 token 自動退回不透明表面；forced-colors 下不靠材質或暈染傳達狀態。
+- `prefers-reduced-transparency` 時材質 token 自動退回不透明表面、遮罩不模糊；forced-colors 下不靠材質或暈染傳達狀態。
 - 半透明表面上的文字仍要 WCAG AA 4.5:1，以最差的背景內容實測。
 - 動效規則與減少動態見 [動效](motion.md)。

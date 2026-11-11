@@ -1,22 +1,32 @@
-import { Component, signal } from '@angular/core';
+import { Component, Directive, ElementRef, inject, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TRANSIENT_HOLD_MS } from '../browser/motion-tokens';
-import { IdleChrome, IdleChromePart } from './idle-chrome';
+import { IdleChrome, idleChromePart } from './idle-chrome';
+
+@Directive({ selector: '[nxTestChromePart]', host: { '[attr.data-chrome]': 'state()' } })
+class ChromePart {
+  protected readonly state = idleChromePart(
+    inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
+  );
+}
 
 @Component({
   selector: 'nx-idle-chrome-host',
-  imports: [IdleChrome, IdleChromePart],
+  imports: [IdleChrome, ChromePart],
   template: `<section nxIdleChrome #scope="nxIdleChrome">
-    <header class="bar" [nxIdleChromePart]="immersive()">
+    <header class="bar" nxTestChromePart>
       <button type="button" class="tool">放大</button>
       <button type="button" class="menu" [attr.aria-expanded]="expanded()">縮放</button>
     </header>
+    @if (extra()) {
+      <footer class="extra" nxTestChromePart></footer>
+    }
     <p class="content">內容 <a href="#x" class="link">連結</a></p>
   </section>`,
 })
 class Host {
-  readonly immersive = signal(true);
+  readonly extra = signal(false);
   readonly expanded = signal(false);
 }
 
@@ -134,11 +144,10 @@ describe('IdleChrome', () => {
     expect(state()).toBe('hidden');
   });
 
-  it('leaves inactive parts alone and reveals briefly when a part joins or the dialog opens', () => {
+  it('reveals briefly when a part joins or the dialog opens', () => {
     const { host, scope, idle, state } = setup();
-    host.immersive.set(false);
-    expect(state()).toBeNull();
-    host.immersive.set(true);
+    expect(idle()).toBe('hidden');
+    host.extra.set(true);
     expect(state()).toBe('shown');
     expect(idle()).toBe('hidden');
     scope.dispatchEvent(Object.assign(new Event('toggle'), { newState: 'open' }));

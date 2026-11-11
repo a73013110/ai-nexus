@@ -81,6 +81,8 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
   await preview.click({ position: { x: 12, y: 12 } });
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.getByRole("heading", { name: fileName })).toBeVisible();
+  // 從點下去的附件方塊長出來（OriginMotion），不是預設的由下彈入。
+  await expect(dialog).toHaveAttribute("data-origin", "");
   await expect(dialog.locator(".reader-original img")).toBeVisible();
   await expect(dialog.locator(".viewer-stage")).not.toHaveAttribute(
     "aria-busy",
@@ -100,11 +102,13 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
       .evaluate((element) => element.scrollWidth > element.clientWidth),
   ).toBe(true);
   await chooseSelect(page, "圖片縮放", "符合視窗");
-  await dialog.getByRole("button", { name: "放大預覽視窗" }).click();
-  await expect(dialog).toHaveAttribute("data-maximized", "");
-  // 放大後標題列浮在內容上，閒置後與工具列一起淡出；閱讀時在內容上移動指標不喚回，移到上緣才出現。
-  const header = dialog.locator("header.dialog-bar");
+  // 標題列是浮在內容上的膠囊（放大與否都一樣），閒置後與工具列一起淡出；閱讀時在內容上移動指標不喚回，
+  // 移到上緣才出現。
+  const header = dialog.locator("nx-dialog-header");
   const tools = dialog.locator("nx-floating-toolbar");
+  await expect(header).toHaveCSS("position", "absolute");
+  await dialog.getByRole("button", { name: "放大視窗", exact: true }).click();
+  await expect(dialog).toHaveAttribute("data-maximized", "");
   // 內容貼齊視窗頂端，標題列浮在其上（等放大的 morph 結束）。
   const viewerStage = dialog.locator(".viewer-stage");
   await expect
@@ -124,9 +128,9 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
   await page.mouse.move(middle.x, 8, { steps: 4 });
   await expect(header).toHaveAttribute("data-chrome", "shown");
   await expect(tools).toHaveAttribute("data-chrome", "shown");
-  await dialog.getByRole("button", { name: "還原預覽視窗" }).click();
+  await dialog.getByRole("button", { name: "還原視窗", exact: true }).click();
   await expect(dialog).not.toHaveAttribute("data-maximized");
-  await expect(header).not.toHaveAttribute("data-chrome");
+  await expect(header).toHaveAttribute("data-chrome", "shown");
   await settleEntrance(page);
   await page.setViewportSize({ width: 375, height: 812 });
   expect(

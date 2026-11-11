@@ -1,12 +1,4 @@
-<header class="dialog-bar" [class.viewer-bar-page]="!embedded()" [nxIdleChromePart]="maximized()">
-  <div class="dialog-title">
-    @if (embedded()) {
-      <h2 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h2>
-    } @else {
-      <h1 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h1>
-    }
-    <small>{{ format() }}{{ total() > 1 ? ' · ' + total() + ' 頁' : '' }}</small>
-  </div>
+<ng-template #download>
   @if (document()?.hasOriginal) {
     <a
       class="icon-button viewer-download"
@@ -16,7 +8,17 @@
       ><nx-icon name="download"
     /></a>
   }
-  @if (embedded()) {
+</ng-template>
+<!-- 嵌在對話框時用共用標題列（放大、導覽、關閉都在裡面）；獨立頁面只有檔名與下載，返回在頁面自己的導覽。 -->
+@if (embedded()) {
+  <nx-dialog-header
+    [heading]="document()?.fileName || '檔案預覽'"
+    [detail]="detail()"
+    [tour]="tour()"
+    closeLabel="關閉檔案預覽"
+    maximizable
+  >
+    <ng-container [ngTemplateOutlet]="download" />
     <a
       class="icon-button viewer-new-tab"
       [href]="standaloneUrl()"
@@ -26,30 +28,17 @@
       title="在新分頁開啟"
       ><nx-icon name="external"
     /></a>
-    @if (dialog) {
-      <button
-        class="icon-button"
-        [attr.aria-label]="maximized() ? '還原預覽視窗' : '放大預覽視窗'"
-        [title]="maximized() ? '還原視窗' : '放大視窗'"
-        (click)="dialog.maximized.set(!maximized())"
-      >
-        <nx-icon [name]="maximized() ? 'minimize' : 'maximize'" />
-      </button>
-    }
-  }
-  <nx-product-tour-button [tour]="tour()" [compact]="true" />
-  @if (embedded()) {
-    <button
-      autofocus
-      class="icon-button"
-      aria-label="關閉檔案預覽"
-      title="關閉（Esc）"
-      (click)="closeRequested.emit()"
-    >
-      <nx-icon name="close" />
-    </button>
-  }
-</header>
+  </nx-dialog-header>
+} @else {
+  <header class="dialog-bar viewer-bar-page">
+    <div class="dialog-title">
+      <h1 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h1>
+      <small>{{ detail() }}</small>
+    </div>
+    <ng-container [ngTemplateOutlet]="download" />
+    <nx-product-tour-button [tour]="tour()" [compact]="true" />
+  </header>
+}
 <div class="viewer-body">
   <!-- 處理進度、失敗與錯誤收在檢視器自己的動態島，浮在內容上、不佔版面，重試就地完成。 -->
   <nx-island class="viewer-status" />

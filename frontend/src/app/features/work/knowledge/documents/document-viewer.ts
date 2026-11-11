@@ -2,8 +2,8 @@ import { NgTemplateOutlet } from '@angular/common';
 import { SearchField } from '@shared/ui/search-field';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { FloatingToolbar } from '@shared/ui/floating-toolbar';
-import { IdleChrome, IdleChromePart } from '@shared/ui/idle-chrome';
-import { CompactDialog } from '@shared/ui/compact-dialog';
+import { IdleChrome } from '@shared/ui/idle-chrome';
+import { DialogHeader } from '@shared/ui/dialog-header';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,7 +16,6 @@ import {
   effect,
   inject,
   input,
-  output,
   signal,
   untracked,
   viewChild,
@@ -84,7 +83,7 @@ const readyDocument = (
     SearchField,
     ViewSwitch,
     FloatingToolbar,
-    IdleChromePart,
+    DialogHeader,
     Icon,
     Select,
     TextHighlight,
@@ -94,7 +93,7 @@ const readyDocument = (
     ProductTourButton,
   ],
   host: { '(keydown)': 'shortcut($event)' },
-  // 標題列（放大時）與浮動工具列共用同一套出現／淡出規則。
+  // 檢視器的範圍：對話框裡浮在內容上的標題列與浮動工具列共用同一套出現／淡出規則。
   hostDirectives: [IdleChrome],
   // 自備島的佇列：只顯示這份文件的狀態，不和底下對話 composer 的島互相混入。
   providers: [ViewScope, IslandService],
@@ -112,11 +111,8 @@ export class DocumentViewer {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   readonly target = input.required<ReaderTarget>();
+  /** 嵌在 `ReaderDialog`：標題列換成對話框的（可放大、關閉），否則是獨立頁面的標題列。 */
   readonly embedded = input(false);
-  readonly closeRequested = output<void>();
-  /** 嵌在 `ReaderDialog` 時可放大；放大後標題列浮在內容上、閒置淡出。 */
-  readonly dialog = inject(CompactDialog, { optional: true });
-  readonly maximized = computed(() => !!this.dialog?.maximized());
   private readonly chrome = inject(IdleChrome);
   readonly document = signal<DocumentDto | null>(null);
   readonly pages = signal<DocumentPageDto[]>([]);
@@ -186,6 +182,10 @@ export class DocumentViewer {
   );
   readonly format = computed(() =>
     this.isPdf() ? 'PDF 文件' : this.isImage() ? '圖片' : '文字文件',
+  );
+  /** 標題旁的細節：格式，多頁時加頁數。 */
+  readonly detail = computed(
+    () => `${this.format()}${this.total() > 1 ? ` · ${this.total()} 頁` : ''}`,
   );
   readonly imageLoading = signal(false);
   readonly imageZoom = signal('fit');

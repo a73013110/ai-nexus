@@ -173,7 +173,7 @@ test("shared Mermaid reader renders Chinese flowcharts and nested sequences with
   ).toBe(true);
   expect(svg).not.toMatch(/<foreignObject|<script|<image/i);
   expect(svg).not.toMatch(/(?:href|onload|onclick)=/i);
-  // 放大後標題列浮在畫布上，閒置時與縮放工具列一起淡出；鍵盤焦點進入工具列時一起出現。
+  // 標題列浮在畫布上（放大與否都一樣），閒置時與縮放工具列一起淡出；鍵盤焦點進入工具列時一起出現。
   await dialog.getByRole("button", { name: "放大視窗", exact: true }).click();
   await expect(dialog).toHaveAttribute("data-maximized", "");
   const bar = dialog.locator("nx-dialog-header");

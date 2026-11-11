@@ -12,7 +12,8 @@
   inset-block-start: var(--floating-toolbar-offset, var(--p-space-3));
   inset-inline: var(--p-space-3);
   z-index: 2;
-  // 內容以 100cqw 為上限換行，外框寬度由此而來，不會反過來撐開 host。
+  // 內容以 100cqw 為上限換行，外框寬度由此而來，不會反過來撐開 host。與對話框的標題膠囊同一列時，
+  // 兩側各讓出 --floating-toolbar-side（styles/dialogs.scss）。
   container-type: inline-size;
   display: flex;
   justify-content: center;
@@ -44,7 +45,7 @@
   justify-items: center;
   gap: var(--p-space-1);
   width: max-content;
-  max-width: calc(100cqw - 2px);
+  max-width: calc(100cqw - 2 * var(--floating-toolbar-side, 0px) - 2px);
   padding: var(--floating-toolbar-pad) calc(var(--floating-toolbar-pad) * 2);
   box-sizing: border-box;
 }

@@ -31,7 +31,7 @@
 - 用原生 `<dialog class="platform-dialog" nxCompactDialog size="…">`：`sm` 確認與單欄、`md` 表單（預設）、`lg` 清單與檢視器、`full`。不接管 focus、Escape 或業務狀態。
 - 結構：`<nx-dialog-header heading detail>`（關閉鈕也經 `cancel`，忙碌與未儲存的攔截照常生效）＋ `.dialog-body`（唯一捲動區，欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`；表單可用 `form.dialog-form` 包住三者。開啟單筆紀錄（表單、單據）時標題列加 `icon` 與 `dialog-subtitle`（種類、單號、時間各一個子元素，分隔點由樣式畫）；單據日期一律帶年。
 - 標題列只放標題與視窗層級動作（下載、新分頁、放大、關閉；選取器可加搜尋欄）。檢視器的模式、搜尋、頁碼、縮放放 `FloatingToolbar`：浮在內容上、閒置淡出。
-- 檢視器外層加 `nxIdleChrome`：工具列與放大後（`maximizable`）浮在內容上的標題列共用一套出現與淡出規則，鍵盤焦點或展開的選單在內不淡出。
+- 檢視器外層加 `nxIdleChrome`：標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，與工具列一起出現與淡出（焦點或展開的選單在內不淡出）。
 - 分隔線與內距隨尺寸（`lg`、`full` 才切三段），元件不重寫外框、padding 或寬度。
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。編輯已儲存的設定，頁尾用 `DialogSaveBar`（說明｜還原｜儲存，未變更時兩鈕停用並寫明），關閉前確認未儲存的變更；新增時為「取消｜建立」。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消。危險動作一律經過確認。

@@ -14,7 +14,7 @@ import { morphSize } from './morph-size';
  * 外觀是動態島：膠囊依內容量測的寬高以彈簧變形（`morphSize`），切換模式、展開搜尋時不會跳動。
  * 標上 `floating-toolbar-detail` 的內容排在工具列下方另一列（例：搜尋結果），列寬不被它撐開。
  * 放在包住內容、`position: relative` 的容器裡，並在外層（檢視器或對話框）加 `nxIdleChrome`：
- * 何時出現與淡出由該範圍統一決定（見 `IdleChrome`），放大的對話框標題列也跟著同一規則。
+ * 何時出現與淡出由該範圍統一決定（見 `IdleChrome`），同範圍的對話框標題列也跟著同一規則。
  */
 @Component({
   selector: 'nx-floating-toolbar',
@@ -40,7 +40,6 @@ export class FloatingToolbar {
   readonly pinned = input(false);
   protected readonly state = idleChromePart(
     inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
-    () => true,
     () => this.pinned(),
   );
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');

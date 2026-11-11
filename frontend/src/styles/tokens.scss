@@ -23,11 +23,14 @@
   --material-thick: color-mix(in srgb, var(--surface) 88%, transparent);
   --material-filter: blur(20px) saturate(180%);
   --material-line: color-mix(in srgb, var(--ink) 8%, transparent);
+  // 模態對話框後方的頁面：壓暗並模糊，視線留在對話框上（styles/dialogs.scss）。
+  --scrim-filter: blur(10px);
 
   @media (prefers-reduced-transparency: reduce) {
     --material: var(--surface);
     --material-thick: var(--surface);
     --material-filter: none;
+    --scrim-filter: none;
   }
 }
 @mixin light-theme {
@@ -90,6 +93,9 @@
     0 0 0 1px rgb(24 32 36 / 3%), 0 4px 8px -2px rgb(24 32 36 / 6%),
     0 16px 32px -8px rgb(24 32 36 / 16%);
   --scrim: rgb(16 24 32 / 36%);
+  // 模態對話框：比浮動面板再高一階，長而淡的環境陰影加一道貼地陰影；遮罩也比抽屜的深。
+  --shadow-modal: 0 2px 6px -2px rgb(24 32 36 / 10%), 0 36px 80px -28px rgb(16 24 32 / 42%);
+  --scrim-modal: rgb(16 24 32 / 50%);
   // Selected sidebar items and filters: a --surface chip with this ring, unlike the flat --hover.
   --selected-ring: inset 0 0 0 1px var(--line), 0 1px 2px rgb(38 48 38 / 10%);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
@@ -306,7 +312,7 @@
   --command-width: 38rem;
   --scrollbar-size: 0.75rem;
   --scrollbar-inset: 0.1875rem;
-  --dialog-radius: var(--radius-surface);
+  --dialog-radius: var(--radius-floating);
   --dialog-inset: var(--p-space-2);
   --dialog-padding: var(--p-space-5);
   --attachment-thumb: 3rem;
@@ -397,6 +403,11 @@
   --shadow-floating:
     0 0 0 1px rgb(0 0 0 / 20%), 0 4px 8px -2px rgb(0 0 0 / 30%), 0 16px 40px -8px rgb(0 0 0 / 55%);
   --scrim: rgb(0 0 0 / 55%);
+  // 暗底上陰影分不出層次，頂緣加一道受光。
+  --shadow-modal:
+    inset 0 1px 0 rgb(255 255 255 / 7%), 0 2px 6px -2px rgb(0 0 0 / 40%),
+    0 36px 80px -28px rgb(0 0 0 / 75%);
+  --scrim-modal: rgb(0 0 0 / 62%);
   --selected-ring: inset 0 0 0 1px var(--line);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);

@@ -135,7 +135,7 @@ import { DesignSamples } from './design-samples';
       id="design-dialogs"
       title="對話框"
       api=".platform-dialog · ConfirmDialog · NameDialog"
-      description="同一套外框：細線、分層陰影、12px 圓角；開啟時由下方彈入，關閉時沿原路退場。初始焦點在取消，Esc 視為取消並還原焦點。不能復原、波及整批資料的動作給 typed，照打對象的識別才能確認。"
+      description="同一套外框：細線、模態陰影、18px 圓角，後方頁面壓暗並模糊；從開啟它的按鈕長出來，關閉縮回原處。初始焦點在取消，Esc 視為取消並還原焦點。不能復原、波及整批資料的動作給 typed，照打對象的識別才能確認。"
     >
       <div class="design-buttons">
         <button type="button" class="secondary-button" (click)="confirmPlain()">一般確認</button
@@ -273,7 +273,7 @@ import { DesignSamples } from './design-samples';
       id="design-floating-toolbar"
       title="浮動工具列"
       api="FloatingToolbar"
-      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 1.5 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。放大的檢視器標題列遵循同一規則。"
+      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 1.5 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。檢視器標題列的兩顆膠囊遵循同一規則（見「對話框」）。"
     >
       <div
         class="design-floating"
