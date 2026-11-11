@@ -15,20 +15,21 @@
 .search-field input::-webkit-search-cancel-button {
   display: none;
 }
-// 填色與無框都用在已有外框的地方，寬度跟著所在的列；填色常留外距，用 auto 才不會撐出列外。
-:host(.search-filled) {
+// 填色與無框放在已有外框的地方，寬度交給所在的版面（標題列與工具列用 flex，浮層頂端留外距），
+// 不套頁面搜尋的寬度上限。
+:host(.search-filled),
+:host(.search-bare) {
   width: auto;
 }
-:host(.search-bare) {
-  width: 100%;
-}
-// 填色：浮層與側欄頂端。淡底圓角就看得出是輸入框，不加外框（框中有框）也不靠分隔線（像清單的一列）；
+// 填色：浮層裡與側欄、清單窗格的頂端。淡底圓角就看得出是輸入框，不加外框（框中有框）也不靠分隔線（像清單的一列）；
 // 聚焦時底色略深，仍比列的 --hover 淺。桌面與清單列同為緊湊高度，觸控維持點按尺寸。
+// 底色與下方清單列的底色同寬時，放大鏡要對齊列的文字：內距預設是浮層選項列的 8px，
+// 列內距不同的清單（側欄導覽 12px）由所在版面設 --search-inset。
 :host(.search-filled) .search-field {
   --field-height: var(--search-height, var(--control-height-compact));
   --field-inner: var(--field-height);
   --field-radius: var(--radius-item);
-  --field-padding: var(--p-space-2);
+  --field-padding: var(--search-inset, var(--p-space-2));
   border: 0;
   background: var(--field-fill);
   @include bp.below(phone, $or: '(pointer: coarse)') {
@@ -39,7 +40,7 @@
     background: color-mix(in srgb, var(--ink) 2%, var(--field-fill));
   }
 }
-// 無框：對話框標題列；標題列的細線與游標標示輸入位置。
+// 無框：對話框標題列、浮動工具列；所在的列就是外框，游標標示輸入位置。
 :host(.search-bare) .search-field {
   --field-inner: var(--field-height);
   --field-padding: 0px;

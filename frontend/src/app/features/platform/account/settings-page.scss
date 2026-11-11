@@ -37,6 +37,10 @@
   font-weight: 650;
   letter-spacing: -0.025em;
 }
+// 搜尋與分類按鈕同寬，放大鏡對齊分類的圖示（按鈕內距 12px）。
+.settings-sidebar > nx-search-field {
+  --search-inset: var(--p-space-3);
+}
 .settings-categories {
   display: flex;
   flex-direction: column;

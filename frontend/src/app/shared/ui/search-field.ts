@@ -66,8 +66,8 @@ export class SearchField {
   readonly maxLength = input(120);
   /**
    * `field` 有外框：頁面、工具列、表單裡的搜尋。
-   * `filled` 淡底無框：浮層頂端（加 `class="popover-search"`）與側欄頂端，上方已有外框的位置。
-   * `bare` 無框無底：對話框標題列（`.dialog-bar`），由標題列的細線標示。
+   * `filled` 淡底無框：浮層裡（在頂端時加 `class="popover-search"`）與側欄、清單窗格的頂端。
+   * `bare` 無框無底：本身就是外框的列，對話框標題列（`.dialog-bar`）與 `FloatingToolbar`。
    */
   readonly appearance = input<'field' | 'filled' | 'bare'>('field');
   /**

@@ -49,6 +49,7 @@ import { routeOf } from '@core/api/catalog';
     >
       <div class="picker-heading"><strong>知識來源</strong><span>最多 3 個 · 選取即儲存</span></div>
       <nx-search-field
+        appearance="filled"
         label="搜尋可用知識庫"
         placeholder="尋找知識庫"
         [value]="query()"

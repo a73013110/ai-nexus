@@ -202,7 +202,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-search-embedded"
       title="浮層與標題列的搜尋"
       api='SearchField appearance="filled" · "bare"'
-      description="放進已有外框的地方不再加框。浮層與側欄頂端用 filled（浮層加 popover-search）：淡底圓角，放大鏡對齊下方選項。對話框標題列用 bare，由標題列的細線標示。帶動清單時給 controls，輸入框成為 combobox。"
+      description="放進已有外框的地方不再加框。浮層裡、側欄與清單窗格頂端用 filled（在浮層頂端加 popover-search）：淡底圓角，放大鏡對齊下方選項。所在的列就是外框時（對話框標題列、浮動工具列）用 bare。帶動清單時給 controls，輸入框成為 combobox。"
     >
       <nx-design-example label="filled（浮層、側欄頂端）">
         <div class="design-popover">

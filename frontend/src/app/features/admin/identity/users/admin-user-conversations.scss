@@ -37,16 +37,20 @@
   display: grid;
   flex: none;
   gap: var(--p-space-2);
-  padding: var(--p-space-3) var(--p-space-3) var(--p-space-2) var(--p-space-5);
+  padding: var(--p-space-3) var(--p-space-3) var(--p-space-2) var(--p-space-2);
+}
+// 搜尋的底色與對話列的底色同寬（左右各留 8px、12px），放大鏡與勾選框對齊列的標題。
+.conversation-tools > nx-search-field {
+  --search-inset: var(--p-space-3);
 }
 .conversation-filter {
+  padding-inline: var(--p-space-3);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--p-space-2);
 }
-// Rows keep their own inset, so the list starts 8px in to line titles up with the search field
-// and ends 12px in, under the tools' end.
+// 列自帶內距：清單從 8px 開始、在 12px 結束，與上方搜尋的底色同寬。
 .conversation-items {
   flex: 1;
   min-height: 0;
