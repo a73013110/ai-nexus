@@ -15,6 +15,7 @@ import {
 } from '@features/platform/inference/model-policies/model-policy-editor';
 import {
   sameUserAccount,
+  savedAccountDraft,
   userAccountDraft,
   userAccountRequest,
   type UserAccountDraft,
@@ -217,12 +218,7 @@ export class AdminUserStore {
           );
           // 成功的帳號寫入一定把版本加一；後送的端點要帶加過的版本，不必為此多讀一次。
           version += 1;
-          if (alive())
-            this.savedAccount.set({
-              ...draft,
-              password: '',
-              hasLocalPassword: draft.localEnabled && (draft.hasLocalPassword || !!draft.password),
-            });
+          if (alive()) this.savedAccount.set(savedAccountDraft(draft));
         }
         if (mail) {
           await this.api.email(id, email || null, version);

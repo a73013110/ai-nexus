@@ -8,7 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormField, form, maxLength, readonly, required } from '@angular/forms/signals';
 import { apiResource } from '@core/api/api-resource';
 import { isActive } from '@core/api/generation-status';
 import type {
@@ -68,11 +68,11 @@ const BENCH_COLLECTIONS = 3;
     ConfirmDialog,
     DataTable,
     Field,
+    FormField,
     Icon,
     JobProgress,
     Notice,
     PendingButton,
-    ReactiveFormsModule,
     RetrievalResults,
     Select,
     StatusBadge,
@@ -132,12 +132,17 @@ export class RetrievalAdmin {
       this.collectionsRead.error(),
   );
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly form = new FormGroup({
-    query: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(2000)],
-    }),
+  private readonly bench = signal({ query: '' });
+  readonly fields = form(this.bench, (schema) => {
+    required(schema.query);
+    maxLength(schema.query, 2000);
+    // 檢索中唯讀（不停用，焦點留在原處）。
+    readonly(schema.query, () => this.searching.pending());
   });
+  /** 只有空白的查詢不送出；欄位驗證不修剪，送出時保留原文。 */
+  readonly searchable = computed(
+    () => this.fields().valid() && !!this.bench().query.trim() && this.selected().length > 0,
+  );
   readonly mode = signal('hybrid');
   readonly rerank = signal(false);
   readonly modes = [
@@ -208,14 +213,12 @@ export class RetrievalAdmin {
   }
   async search(event: Event) {
     event.preventDefault();
-    if (this.form.invalid || !this.form.controls.query.value.trim() || !this.selected().length)
-      return;
-    if (this.searching.pending()) return;
+    if (!this.searchable() || this.searching.pending()) return;
     this.clearErrors();
     this.result.set(null);
     const outcome = await this.searching.run(() =>
       this.api.searchRetrieval({
-        query: this.form.controls.query.value,
+        query: this.bench().query,
         collectionIds: this.selected(),
         mode: this.mode(),
         rerank: this.rerank(),

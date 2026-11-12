@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLoginMethod, offeredMethods } from './login-methods';
+import { isLoginMethod, offeredMethods, passwordLabelFor } from './login-methods';
 
 describe('login methods', () => {
   it('keeps the server order and drops methods this build does not know', () => {
@@ -20,5 +20,13 @@ describe('login methods', () => {
     expect(isLoginMethod('local')).toBe(true);
     expect(isLoginMethod('toString')).toBe(false);
     expect(isLoginMethod(null)).toBe(false);
+  });
+
+  it('names the password by the directory that verifies it', () => {
+    expect(passwordLabelFor('local')).toBe('本地密碼');
+    expect(passwordLabelFor('ad')).toBe('AD 密碼');
+    // Windows 登入沒有帳密表單，解鎖與步升驗證以 AD 密碼驗證。
+    expect(passwordLabelFor('windows')).toBe('AD 密碼');
+    expect(passwordLabelFor(null)).toBe('AD 密碼');
   });
 });

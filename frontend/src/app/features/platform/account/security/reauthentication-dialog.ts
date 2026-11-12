@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import type { VerificationCodeDto } from '@core/api/schema';
+import { passwordLabelFor } from '@features/admin/identity/login-methods';
 import { action } from '@shared/browser/action';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
@@ -134,9 +135,7 @@ export class ReauthenticationDialog {
     METHODS.filter((method) => this.store.security()?.reauthMethods.includes(method.value)),
   );
   readonly method = linkedSignal(() => this.options()[0]?.value ?? '');
-  readonly passwordLabel = computed(() =>
-    this.store.security()?.currentMethod === 'local' ? '本地密碼' : 'AD 密碼',
-  );
+  readonly passwordLabel = computed(() => passwordLabelFor(this.store.security()?.currentMethod));
   readonly password = signal('');
   readonly code = signal('');
   readonly challenge = signal<VerificationCodeDto | null>(null);

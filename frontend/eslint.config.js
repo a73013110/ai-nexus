@@ -19,6 +19,14 @@ const relativeAreaImports = {
   regex: '^\\.{1,2}/(\\.\\./)*(core|shared|features)/',
   message: aliasMessage,
 };
+// 表單一律用 signal forms（@angular/forms/signals）：值是 signal，驗證規則與欄位狀態寫在同一個 schema。
+// 舊的 Reactive／Template-driven forms 不再引入，避免兩套表單模型並存。
+const legacyForms = {
+  name: '@angular/forms',
+  message: '表單改用 @angular/forms/signals 的 form() 與 [formField]，見 docs/frontend/forms.md。',
+};
+// 後面的設定會整組取代前面的 no-restricted-imports，所以每組都經由這裡帶上共同限制。
+const restrictedImports = (...patterns) => ['error', { paths: [legacyForms], patterns }];
 // 模組根目錄下 `depth` 層的檔案，多一個 `../` 就離開模組；跨模組（含跨區）一律改用 @features 別名。
 const crossFeatureImports = (depth) => ({
   regex: `^(\\.\\./){${depth + 1},}[^.]`,
@@ -79,44 +87,61 @@ module.exports = tseslint.config(
   },
   {
     files: ['src/app/**/*.ts'],
-    rules: { 'no-restricted-imports': ['error', { patterns: [relativeAreaImports] }] },
+    rules: {
+      'no-restricted-imports': restrictedImports(relativeAreaImports),
+      // 略過 Angular 清理只能在已審查的信任邊界：Markdown（DOMPurify 白名單）與 HTML 預覽（只收同源 render 路由）。
+      'no-restricted-properties': [
+        'error',
+        ...['Html', 'Style', 'Script', 'Url', 'ResourceUrl'].map((kind) => ({
+          property: `bypassSecurityTrust${kind}`,
+          message:
+            '不要略過 Angular 的清理；需要顯示 HTML 用 MarkdownView，iframe 預覽用 HtmlPreview（見 docs/architecture/security.md）。',
+        })),
+      ],
+    },
+  },
+  {
+    files: [
+      'src/app/shared/markdown/markdown-view.ts',
+      'src/app/features/work/knowledge/documents/html-preview.ts',
+    ],
+    rules: { 'no-restricted-properties': 'off' },
   },
   // Folder boundaries: shared is reusable without any feature, core holds app-wide singletons and only the
   // layout shell composes features, and features reach the backend through their own *-api.ts services.
   {
     files: ['src/app/shared/**/*.ts'],
     rules: {
-      'no-restricted-imports': [
-        'error',
-        { patterns: [featureImports, apiClientImports, relativeAreaImports] },
-      ],
+      'no-restricted-imports': restrictedImports(
+        featureImports,
+        apiClientImports,
+        relativeAreaImports,
+      ),
     },
   },
   {
     files: ['src/app/core/**/*.ts'],
     ignores: ['src/app/core/layout/**'],
     rules: {
-      'no-restricted-imports': ['error', { patterns: [featureImports, relativeAreaImports] }],
+      'no-restricted-imports': restrictedImports(featureImports, relativeAreaImports),
     },
   },
   ...featureDepths.flatMap(({ depth, files }) => [
     {
       files,
       rules: {
-        'no-restricted-imports': [
-          'error',
-          { patterns: [relativeAreaImports, crossFeatureImports(depth)] },
-        ],
+        'no-restricted-imports': restrictedImports(relativeAreaImports, crossFeatureImports(depth)),
       },
     },
     {
       files,
       ignores: ['src/app/features/**/*-api.ts'],
       rules: {
-        'no-restricted-imports': [
-          'error',
-          { patterns: [apiClientImports, relativeAreaImports, crossFeatureImports(depth)] },
-        ],
+        'no-restricted-imports': restrictedImports(
+          apiClientImports,
+          relativeAreaImports,
+          crossFeatureImports(depth),
+        ),
       },
     },
   ]),

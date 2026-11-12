@@ -92,7 +92,7 @@ public sealed partial class GdCalendarWriter(ExternalDatabase<GdDatabase> gd, IL
                         return await FailAsync(AttendanceErrors.CalendarRemarkInvalid);
                     }
 
-            var edit = new GdCalendarEdit(connection, transaction, before, previousUserId, this);
+            var edit = new GdCalendarEdit(connection, transaction, before, previousUserId, logger);
             connection = null;
             transaction = null;
             return edit;
@@ -118,8 +118,6 @@ public sealed partial class GdCalendarWriter(ExternalDatabase<GdDatabase> gd, IL
         }
     }
 
-    internal void CommitFailed(DbException ex) => LogCommitFailed(logger, ex.GetType().Name, (ex as SqlException)?.Number ?? 0);
-
     private static SqlCommand Command(string sql, SqlConnection connection, SqlTransaction transaction, DateOnly day)
     {
         // 逾時取連線字串的 Command Timeout（Databases:Gd:CommandTimeoutSeconds），等不到公文系統的鎖也算逾時。
@@ -131,26 +129,23 @@ public sealed partial class GdCalendarWriter(ExternalDatabase<GdDatabase> gd, IL
 
     [LoggerMessage(EventId = 3409, EventName = "attendance.calendar_write_failed", Level = LogLevel.Warning, Message = "GD calendar write-back failed ({ErrorType}, {SqlNumber}); nothing was changed in GD.")]
     private static partial void LogWriteFailed(ILogger logger, string errorType, int sqlNumber);
-
-    [LoggerMessage(EventId = 3410, EventName = "attendance.calendar_commit_failed", Level = LogLevel.Error, Message = "GD calendar commit failed after the audit was recorded ({ErrorType}, {SqlNumber}); the change may not have been applied.")]
-    private static partial void LogCommitFailed(ILogger logger, string errorType, int sqlNumber);
 }
 
 /// <summary>
 /// 已鎖定並更新、尚未提交的 GD 假日修改。呼叫端先在本系統寫稽核，再 <see cref="CommitAsync"/>；沒有提交就 Dispose 等於回滾。
 /// 這個順序讓「GD 改了卻沒有稽核」不會發生；反過來，提交本身失敗時已有一筆 saved 稽核，呼叫端要補一筆失敗紀錄。
 /// </summary>
-public sealed class GdCalendarEdit : IAsyncDisposable
+public sealed partial class GdCalendarEdit : IAsyncDisposable
 {
     private readonly SqlConnection connection;
     private readonly SqlTransaction transaction;
-    private readonly GdCalendarWriter writer;
+    private readonly ILogger logger;
 
-    internal GdCalendarEdit(SqlConnection connection, SqlTransaction transaction, GdCalendarValues before, string? previousUserId, GdCalendarWriter writer)
+    internal GdCalendarEdit(SqlConnection connection, SqlTransaction transaction, GdCalendarValues before, string? previousUserId, ILogger logger)
     {
         this.connection = connection;
         this.transaction = transaction;
-        this.writer = writer;
+        this.logger = logger;
         Before = before;
         PreviousUserId = previousUserId;
     }
@@ -173,7 +168,7 @@ public sealed class GdCalendarEdit : IAsyncDisposable
         }
         catch (DbException ex)
         {
-            writer.CommitFailed(ex);
+            LogCommitFailed(logger, ex.GetType().Name, (ex as SqlException)?.Number ?? 0);
             return false;
         }
     }
@@ -183,4 +178,8 @@ public sealed class GdCalendarEdit : IAsyncDisposable
         await transaction.DisposeAsync();
         await connection.DisposeAsync();
     }
+
+    // 分類沿用 GdCalendarWriter（由它傳入 logger），與寫入失敗的 3409 在同一處查得到。
+    [LoggerMessage(EventId = 3410, EventName = "attendance.calendar_commit_failed", Level = LogLevel.Error, Message = "GD calendar commit failed after the audit was recorded ({ErrorType}, {SqlNumber}); the change may not have been applied.")]
+    private static partial void LogCommitFailed(ILogger logger, string errorType, int sqlNumber);
 }

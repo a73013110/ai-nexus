@@ -25,7 +25,13 @@ import { ThemeService } from '@core/preferences/theme-service';
 import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { LoginIdentity } from './login-identity';
 import { LoginIntro, type LoginStage } from './intro/login-intro';
-import { isLoginMethod, LOGIN_METHODS, type LoginMethod, offeredMethods } from './login-methods';
+import {
+  isLoginMethod,
+  LOGIN_METHODS,
+  type LoginMethod,
+  offeredMethods,
+  passwordLabelFor,
+} from './login-methods';
 import { LoginSubmit, type SubmitPhase } from './login-submit';
 
 /** 按鈕需要夠長的時間停靠到勾號上，之後頁面才會淡出。 */
@@ -79,6 +85,7 @@ export class LoginPage {
   readonly method = signal<LoginMethod>('ad');
   readonly methods = computed(() => offeredMethods(this.auth.session()));
   readonly spec = computed(() => LOGIN_METHODS[this.method()]);
+  readonly passwordLabel = computed(() => passwordLabelFor(this.method()));
   readonly passwordVisible = signal(false);
   /** Windows 提示說明的是失敗的挑戰，所以要等第一次嘗試之後才出現。 */
   readonly windowsFailed = signal(false);
@@ -144,6 +151,10 @@ export class LoginPage {
     if (this.submitting() || this.loginForm().invalid() || !this.auth.session()?.configured) return;
     const { account, password } = this.credentials();
     await this.attempt(() => this.auth.login(account.trim(), password, this.method()));
+    this.clearPassword();
+  }
+  /** 送出後與換登入方式時都清掉密碼，不留在記憶體或畫面上；帳號保留。 */
+  private clearPassword() {
     this.credentials.update((value) => ({ ...value, password: '' }));
   }
   /** `report` 決定失敗是否也顯示為錯誤；預設會顯示。 */
@@ -237,7 +248,7 @@ export class LoginPage {
   }
   selectMethod(method: LoginMethod) {
     this.method.set(method);
-    this.credentials.update((value) => ({ ...value, password: '' }));
+    this.clearPassword();
     this.passwordVisible.set(false);
     this.windowsFailed.set(false);
     this.error.set(null);

@@ -55,6 +55,8 @@ export class MarkdownView {
       this.citations(),
     ),
   );
+  // 可信 HTML 邊界：rendered().html 已由 renderMarkdownWithDiagrams 停用原始 HTML 並經 DOMPurify 白名單清理。
+  // 不交給 Angular 再清一次，是因為它會拿掉白名單內的複製鈕、依據鈕與 data-* 插槽，且每次渲染多一輪解析。
   readonly html = computed(() => this.sanitizer.bypassSecurityTrustHtml(this.rendered().html));
   constructor() {
     afterRenderEffect(() => {

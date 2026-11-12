@@ -3,7 +3,6 @@ using AiNexus.Features.Admin.AccessControl;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
-using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Admin.Identity.ApiClients;
@@ -52,10 +51,8 @@ public sealed class IdentityModule : IFeatureModule
         if (AdAuthenticationOptions.UsesWindows(builder.Configuration)) authentication.AddNegotiate();
         authentication.AddCookie(AuthEndpoints.CookieScheme, options =>
             {
+                // HttpOnly、Secure、SameSite 由全站 cookie 原則（TransportSecurity）統一套用。
                 options.Cookie.Name = SessionCookie;
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
                 // 到期由 SessionTicket 在簽發時指定；滑動到期會被背景輪詢延長，不能開。
                 options.SlidingExpiration = false;
                 options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;

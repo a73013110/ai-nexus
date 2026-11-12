@@ -35,7 +35,8 @@ public static class PlatformServices
         services.AddMemoryCache();
         services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
         services.AddReverseProxy();
-        services.AddCsrfProtection(builder.Environment, builder.Configuration);
+        services.AddTransportSecurity(builder.Environment, builder.Configuration);
+        services.AddCsrfProtection();
 
         // 預設拒絕：端點除非明確標上 AllowAnonymous，否則都必須通過身分驗證。
         services.AddAuthorization(options =>

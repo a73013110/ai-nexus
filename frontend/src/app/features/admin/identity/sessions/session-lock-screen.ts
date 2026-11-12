@@ -20,6 +20,7 @@ import { Icon } from '@shared/ui/icon';
 import { morphSize } from '@shared/ui/morph-size';
 import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { TopIslandLane } from '@shared/ui/top-island-lane';
+import { passwordLabelFor } from '../login-methods';
 import { LoginSubmit, type SubmitPhase } from '../login-submit';
 
 /** 最後這幾秒倒數島自動展開按鈕：來不及去找滑鼠的人也按得到。 */
@@ -61,9 +62,7 @@ export class SessionLockScreen {
   protected readonly name = computed(
     () => this.auth.session()?.displayName || this.auth.session()?.account || '使用者',
   );
-  protected readonly passwordLabel = computed(() =>
-    this.auth.session()?.method === 'local' ? '本地密碼' : 'AD 密碼',
-  );
+  protected readonly passwordLabel = computed(() => passwordLabelFor(this.auth.session()?.method));
   protected readonly reasonText = computed(() => {
     const lifetime = this.auth.session()?.lifetime;
     if (!lifetime) return '';

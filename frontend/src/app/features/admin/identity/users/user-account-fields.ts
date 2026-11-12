@@ -32,6 +32,17 @@ export function userAccountDraft(user?: AdminUserDto | null): UserAccountDraft {
   };
 }
 
+/**
+ * 儲存成功後的新基準：密碼只送不讀回，所以清空；本地密碼是否已設定由這次送出推得，不必重讀使用者。
+ */
+export function savedAccountDraft(draft: UserAccountDraft): UserAccountDraft {
+  return {
+    ...draft,
+    password: '',
+    hasLocalPassword: draft.localEnabled && (draft.hasLocalPassword || !!draft.password),
+  };
+}
+
 /** 建立的使用者一律啟用；既有使用者沿用目前的狀態（`enabled`）。 */
 export function userAccountRequest(
   draft: UserAccountDraft,

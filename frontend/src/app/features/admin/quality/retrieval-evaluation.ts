@@ -11,7 +11,7 @@ import {
   computed,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormField, form, maxLength, readonly, required } from '@angular/forms/signals';
 import type {
   CollectionDto,
   RetrievalEvaluationCase,
@@ -41,8 +41,8 @@ import { RETRIEVAL_TOUR } from './quality-tour';
   imports: [
     Notice,
     Field,
+    FormField,
     PendingButton,
-    ReactiveFormsModule,
     DecimalPipe,
     Checkbox,
     Select,
@@ -107,15 +107,15 @@ export class RetrievalEvaluation {
   readonly date = formatDate;
   readonly active = isActive;
   readonly tour = RETRIEVAL_TOUR;
-  readonly form = new FormGroup({
-    title: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(120)],
-    }),
-    corpus: new FormControl('', {
-      nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(500000)],
-    }),
+  private readonly draft = signal({ title: '', corpus: '' });
+  readonly fields = form(this.draft, (schema) => {
+    required(schema.title);
+    maxLength(schema.title, 120);
+    required(schema.corpus);
+    maxLength(schema.corpus, 500000);
+    // 排入中唯讀（不停用，焦點留在原處）。
+    readonly(schema.title, () => this.working.pendingFor('start'));
+    readonly(schema.corpus, () => this.working.pendingFor('start'));
   });
   readonly example = JSON.stringify(
     [
@@ -151,10 +151,11 @@ export class RetrievalEvaluation {
   }
   async create(event: Event) {
     event.preventDefault();
-    if (this.busy() || this.form.invalid || !this.selected().length) return;
+    if (this.busy() || this.fields().invalid() || !this.selected().length) return;
+    const { title, corpus } = this.draft();
     let cases: RetrievalEvaluationCase[];
     try {
-      cases = JSON.parse(this.form.controls.corpus.value) as RetrievalEvaluationCase[];
+      cases = JSON.parse(corpus) as RetrievalEvaluationCase[];
       if (!Array.isArray(cases) || cases.length < 1 || cases.length > 20)
         throw new ClientValidationError('retrievalEvaluationFormat');
     } catch (error) {
@@ -168,7 +169,7 @@ export class RetrievalEvaluation {
     const outcome = await this.working.run(
       async () => {
         const run = await this.api.startRetrievalEvaluation({
-          title: this.form.controls.title.value.trim(),
+          title: title.trim(),
           collectionIds: this.selected(),
           cases,
         });
@@ -192,7 +193,7 @@ export class RetrievalEvaluation {
       return;
     }
     const outcome = await this.working.run(() => file.text(), { key: 'import' });
-    if (outcome.ok) this.form.controls.corpus.setValue(outcome.value);
+    if (outcome.ok) this.draft.update((value) => ({ ...value, corpus: outcome.value }));
   }
   async control(kind: 'cancel' | 'retry') {
     const report = this.report();

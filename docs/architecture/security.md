@@ -2,7 +2,7 @@
 
 錯誤回應、SSE、工作與通知禁止回傳 Exception.Message／SQL／provider 原始 body；共用安全契約提供固定提示、公開分類與伺服器查證代碼。管理日誌也只能看到遮罩後的型別、代碼與無路徑堆疊。日誌 query／detail／export 分開授權、特權讀取先保存稽核，CSV 防公式注入。白名單與前端不可信回報見 [錯誤回應與遮罩](error-contract.md)，保存與防竄改的界線見 [診斷日誌架構](diagnostics.md#能力界線)。
 
-安全政策集中於 `AiNexus.Platform/Security/WebSecurity.cs`。預設本機與正式網站使用 HTTPS；HTTPS 回應的 Session／Antiforgery Cookie 是 `Secure`、`HttpOnly`、`SameSite=Strict`。正式環境使用 HSTS；IIS 憑證、HTTPS binding、反向代理信任與 AD TLS 必須依 [部署驗收](../operations/iis-verification.md) 驗收。
+安全政策集中於 `AiNexus.Platform/Security/WebSecurity.cs`。預設本機與正式網站使用 HTTPS；全站 cookie 由 `TransportSecurity` 的 cookie 原則（`UseCookiePolicy`）一律加上 `Secure`、`HttpOnly`、`SameSite=Strict`，個別 cookie 只設名稱。IIS `web.config` 的 `system.web/httpCookies` 只作用於舊 ASP.NET，對 ASP.NET Core 無效，不在那裡設定；源碼掃描若標記此項，以這條原則與 `WebSecurityTests` 佐證。正式環境使用 HSTS；IIS 憑證、HTTPS binding、反向代理信任與 AD TLS 必須依 [部署驗收](../operations/iis-verification.md) 驗收。
 
 `Start-Local`／`Start-Dev` 只有明確 `-Http` 才開啟本機例外，且僅在 Development、Host 與來源 IP 同時是 loopback 時允許。Testing 的 HTTP Cookie 政策只供獨立測試 host；Production 不接受停用 HTTPS 的舊參數。
 
@@ -12,6 +12,7 @@
 - CSP 限制 script、connect、font、worker 到同源；image 限同源與本機建立的 `blob:`（Mermaid 清理後的 SVG 圖片），禁用 object、跨來源表單與任何 framing。Angular 動態樣式需要 `style-src 'unsafe-inline'`；script 沒有允許 inline 或 eval。另有 nosniff、DENY、no-referrer、COOP／CORP same-origin、停用不使用的 camera／microphone／geolocation／payment／USB，以及移除 Kestrel Server 標頭。
 - 原檔必須經 owner 或知識／專案／分享 ACL。只有 PDF／PNG／JPEG／WebP 可 inline 顯示；文字、XML、Markdown、Word 等作為附件下載。原檔回應使用獨立 `default-src 'none'; sandbox` CSP，防止上傳內容取得網站的執行能力。唯一例外是 HTML：`/render` 路由（附件、文件、分享檔案）回傳 `sandbox allow-scripts` CSP（無 `allow-same-origin`，不可連外、不載入外部資源）與 `X-Frame-Options: SAMEORIGIN`，只供應用程式自己的 iframe 預覽。檔名不成為檔案系統路徑，binary 不在 wwwroot。
 - 上傳沿用格式 allowlist、標記驗證、大小／頁數／擷取上限、owner quota（`Users` 列鎖）；拒絕 SVG 與巨集文件。讀檔、文件頁面、背景任務及檔案庫關聯均重新驗證權限。
+- 略過 Angular 清理（`bypassSecurityTrust*`）只允許兩個邊界，ESLint 擋其他位置：`MarkdownView`（內容已經 DOMPurify allowlist）與 `HtmlPreview`（只信任同源 `/api/v1/…/render`，其他網址換成 `about:blank`）。
 - Markdown 包含串流尾段，先關閉 raw HTML，再通過同一個 DOMPurify allowlist。外部連結僅 HTTP(S)，帶 noopener／noreferrer；圖片語法只顯示說明文字，不發起任意外部請求。
 - Mermaid 只接受完成的程式碼區塊。渲染使用 strict 模式與站點固定的設定；圖表圖片節點在量測前拒絕。輸出的 SVG 移除 active HTML／事件／圖片／連結及外部 CSS resource；清理完成後在隱藏量測容器確認完整圖形邊界，容器於 finally 移除。閱讀畫面只透過惰性 Blob 圖片呈現，不啟用圖表的 click handler；下載沿用同一份清理與邊界修正後的 SVG。
 - 成本會被單一使用者放大的端點有每人每分鐘上限：送出（含重新生成、編輯與網路搜尋）30、上傳 30、前端錯誤回報 10、日誌查詢 60、匯出 2、presence 120；超過回 429 `rate_limited` 與 `Retry-After`。帳密驗證以帳號為主：網站登入、步升驗證與[外部系統](../features/api-clients.md)的帳密驗證共用計數，同一帳號 5 分鐘內失敗 10 次就回 429 `login_rate_limited`，期間不再查 AD；來源 IP 只有每分鐘 120 次的寬鬆總上限，因為 NAT 後全公司可能共用一個 IP（`Identity/Authentication/LoginThrottle.cs`）。分組依登入 session 的使用者或 Windows SID，未登入才依來源 IP（`Identity/UserRateLimits.cs`）。網路搜尋另有每日配額，生成另有每人一個進行中與佇列上限。

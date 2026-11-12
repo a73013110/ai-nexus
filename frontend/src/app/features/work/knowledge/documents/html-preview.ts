@@ -49,6 +49,14 @@ export class HtmlPreview {
   readonly running = input(false);
   readonly run = output<void>();
   readonly viewSource = output<void>();
-  // 同源的渲染 URL 由應用程式建立，絕非使用者提供。
-  readonly frame = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.url()));
+  // iframe 的 src 必須是受信任的資源網址；這裡只信任同源 API 的 `/render` 路由（由 apiHref 產生），
+  // 其他任何值（外站、javascript:、協定相對網址）都換成空白頁，失敗即拒絕。
+  readonly frame = computed(() =>
+    this.sanitizer.bypassSecurityTrustResourceUrl(renderRoute(this.url())),
+  );
+}
+
+/** 同源 `/api/v1/…/render` 路徑原樣通過，其餘一律 `about:blank`。 */
+export function renderRoute(url: string) {
+  return /^\/api\/v1\/[^?#]+\/render(?:\?[^#]*)?$/.test(url) ? url : 'about:blank';
 }

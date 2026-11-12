@@ -20,11 +20,11 @@ public sealed class WebSecurityTests
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false });
         using var bootstrap = await client.GetAsync("/api/v1/auth/session");
         AssertNoStore(bootstrap);
-        Assert.Contains(bootstrap.Headers.GetValues("Set-Cookie"), value => value.Contains("secure", StringComparison.OrdinalIgnoreCase) && value.Contains("httponly", StringComparison.OrdinalIgnoreCase) && value.Contains("samesite=strict", StringComparison.OrdinalIgnoreCase));
+        AssertProtectedCookies(bootstrap, "AiNexus.Antiforgery=");
         client.DefaultRequestHeaders.Add("X-CSRF-Token", (await bootstrap.Content.ReadFromJsonAsync<AuthSessionDto>())!.CsrfToken);
         using var login = await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"));
         login.EnsureSuccessStatusCode(); AssertNoStore(login);
-        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value => value.StartsWith("AiNexus.Session=", StringComparison.Ordinal) && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
+        AssertProtectedCookies(login, "AiNexus.Session=");
         using var me = await client.GetAsync("/api/v1/me"); me.EnsureSuccessStatusCode(); AssertNoStore(me);
         Assert.Equal("DENY", me.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", me.Headers.GetValues("X-Content-Type-Options").Single());
@@ -37,6 +37,19 @@ public sealed class WebSecurityTests
         Assert.DoesNotContain("img-src *", csp);
         using var missing = await client.GetAsync("/api/v1/not-a-real-api"); Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode); AssertNoStore(missing);
         Assert.DoesNotContain(logs.Events, entry => entry.Category == "Microsoft.AspNetCore.Antiforgery.DefaultAntiforgery" && entry.Id == 8);
+    }
+
+    /// <summary>全站 cookie 原則：回應寫出的每一個 cookie（不只指定的那個）都必須帶 HttpOnly、Secure 與 SameSite=Strict。</summary>
+    private static void AssertProtectedCookies(HttpResponseMessage response, string expected)
+    {
+        var cookies = response.Headers.GetValues("Set-Cookie").ToList();
+        Assert.Contains(cookies, value => value.StartsWith(expected, StringComparison.Ordinal));
+        Assert.All(cookies, value =>
+        {
+            Assert.Contains("httponly", value, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("secure", value, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("samesite=strict", value, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     private static void AssertNoStore(HttpResponseMessage response)

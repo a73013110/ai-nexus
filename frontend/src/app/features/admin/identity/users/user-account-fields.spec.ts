@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AdminCatalogDto, AdminUserDto } from '@core/api/schema';
 import {
   emailState,
+  savedAccountDraft,
   signInMethods,
   userAccountDraft,
   userAccountRequest,
@@ -47,6 +48,18 @@ describe('user account form', () => {
       password: null,
       roleIds: ['member'],
       profileVersion: 4,
+    });
+  });
+
+  it('forgets the sent password and remembers whether a local one is now set', () => {
+    const draft = { ...userAccountDraft(user), localEnabled: true, password: 'fixture-password' };
+    expect(savedAccountDraft(draft)).toMatchObject({ password: '', hasLocalPassword: true });
+    expect(savedAccountDraft({ ...draft, password: '' })).toMatchObject({
+      hasLocalPassword: false,
+    });
+    // 本地登入關閉時，不算已設定本地密碼。
+    expect(savedAccountDraft({ ...draft, localEnabled: false })).toMatchObject({
+      hasLocalPassword: false,
     });
   });
 

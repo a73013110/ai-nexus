@@ -67,7 +67,7 @@
         }
         @if (spec().credentials; as copy) {
           <form (submit)="submit($event)">
-            <label for="login-account">{{ copy.account }}</label
+            <label for="login-account">{{ spec().label }}</label
             ><input
               #account
               id="login-account"
@@ -77,7 +77,7 @@
               aria-describedby="account-hint"
             />
             <p id="account-hint" class="login-field-hint">{{ copy.hint }}</p>
-            <label for="login-password">{{ copy.password }}</label>
+            <label for="login-password">{{ passwordLabel() }}</label>
             <nx-password-field [(visible)]="passwordVisible" [disabled]="submitting()">
               <input id="login-password" nxPasswordInput [formField]="loginForm.password" />
             </nx-password-field>

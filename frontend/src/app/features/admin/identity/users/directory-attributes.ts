@@ -72,11 +72,9 @@ export function attributeGroups(
     const text = value ? relativeTime(value, now) : '';
     return text && !/^\d{4}-/.test(text) ? text : undefined;
   };
-  const passwordExpires = detail.passwordMustChange
-    ? '下次登入時須變更'
-    : flags & DONT_EXPIRE_PASSWORD
-      ? '永不過期'
-      : (time(detail.passwordExpires) ?? '永不過期');
+  // 須變更時，最後設定與到期都寫同一句；設了永不過期旗標或 AD 沒給到期日，都是「永不過期」。
+  const mustChange = detail.passwordMustChange ? '下次登入時須變更' : null;
+  const expiry = flags & DONT_EXPIRE_PASSWORD ? null : time(detail.passwordExpires);
   return [
     group('identity', '身分', [
       { key: 'displayName', label: '顯示名稱', value: detail.displayName },
@@ -108,10 +106,14 @@ export function attributeGroups(
       {
         key: 'pwdLastSet',
         label: '密碼最後設定',
-        value: detail.passwordMustChange ? '下次登入時須變更' : time(detail.passwordLastSet),
-        hint: detail.passwordMustChange ? undefined : ago(detail.passwordLastSet),
+        value: mustChange ?? time(detail.passwordLastSet),
+        hint: mustChange ? undefined : ago(detail.passwordLastSet),
       },
-      { key: 'msDS-UserPasswordExpiryTimeComputed', label: '密碼到期', value: passwordExpires },
+      {
+        key: 'msDS-UserPasswordExpiryTimeComputed',
+        label: '密碼到期',
+        value: mustChange ?? expiry ?? '永不過期',
+      },
       { key: 'lockoutTime', label: '鎖定時間', value: time(detail.lockoutTime) },
     ]),
     group(

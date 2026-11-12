@@ -173,13 +173,12 @@
       <p class="form-note form-intro">
         每題標註相關文件與頁碼，使用同一批資料比較四種模式。評測結果僅供本人查看。
       </p>
-      <form class="platform-form" [formGroup]="form" (submit)="create($event)">
+      <form class="platform-form" (submit)="create($event)">
         <label
           >評測名稱<input
             nxField
             aria-label="檢索評測名稱"
-            formControlName="title"
-            maxlength="120"
+            [formField]="fields.title"
             placeholder="例如：採購規範驗收"
         /></label>
         <fieldset class="retrieval-collections">
@@ -207,7 +206,7 @@
           >驗收集 JSON（1 至 20 題）<textarea
             nxField
             aria-label="檢索驗收集 JSON"
-            formControlName="corpus"
+            [formField]="fields.corpus"
             rows="9"
             spellcheck="false"
             [placeholder]="example"
@@ -228,7 +227,7 @@
             class="primary-button retrieval-start"
             [pending]="working.pendingFor('start')"
             [disabled]="
-              (busy() && !working.pendingFor('start')) || form.invalid || !selected().length
+              (busy() && !working.pendingFor('start')) || fields().invalid() || !selected().length
             "
           >
             <nx-icon name="play" />{{ working.pendingFor('start') ? '排入中…' : '開始四模式評測' }}

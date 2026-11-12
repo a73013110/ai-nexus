@@ -11,14 +11,12 @@ public static class Csrf
 {
     public const string HeaderName = "X-CSRF-Token";
 
-    public static IServiceCollection AddCsrfProtection(this IServiceCollection services, IHostEnvironment environment, IConfiguration configuration)
+    /// <remarks>cookie 的 HttpOnly、Secure、SameSite 由 <see cref="TransportSecurity"/> 的全站 cookie 原則統一套用。</remarks>
+    public static IServiceCollection AddCsrfProtection(this IServiceCollection services)
         => services.AddAntiforgery(options =>
         {
             options.HeaderName = HeaderName;
             options.Cookie.Name = "AiNexus.Antiforgery";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.SameSite = SameSiteMode.Strict;
-            options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(environment, configuration);
         });
 
     public static IApplicationBuilder UseCsrfProtection(this IApplicationBuilder app) => app.Use(async (http, next) =>

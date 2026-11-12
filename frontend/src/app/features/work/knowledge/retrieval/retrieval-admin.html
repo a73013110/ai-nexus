@@ -220,7 +220,7 @@
     <h2 id="retrieval-bench-title">檢索測試台</h2>
     <span class="ops-table-note">以使用中索引搜尋你有權限的知識庫</span>
   </header>
-  <form class="form-sections" [formGroup]="form" (submit)="search($event)">
+  <form class="form-sections" (submit)="search($event)">
     <section class="form-section" role="group" aria-labelledby="retrieval-bench-collections">
       <header class="form-section-head">
         <h3 id="retrieval-bench-collections">知識庫</h3>
@@ -277,11 +277,9 @@
         <label
           >查詢內容<textarea
             nxField
-            formControlName="query"
+            [formField]="fields.query"
             aria-label="管理端查詢內容"
             rows="3"
-            maxlength="2000"
-            required
           ></textarea>
         </label>
         <div class="retrieval-submit">
@@ -290,7 +288,7 @@
             type="submit"
             class="primary-button"
             [pending]="searching.pending()"
-            [disabled]="form.invalid || !selected().length"
+            [disabled]="!searchable()"
           >
             <nx-icon name="search" />{{ searching.pending() ? '檢索中…' : '測試檢索' }}
           </button>

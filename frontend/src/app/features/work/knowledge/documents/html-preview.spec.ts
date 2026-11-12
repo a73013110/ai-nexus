@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { HtmlPreview } from './html-preview';
+import { HtmlPreview, renderRoute } from './html-preview';
 
 @Component({
   selector: 'nx-html-preview-host',
@@ -54,6 +54,21 @@ describe('HtmlPreview', () => {
     host.running.set(false);
     fixture.detectChanges();
     expect(frames()[0].getAttribute('sandbox')).toBe('');
+  });
+
+  it('trusts only same-origin render routes and blanks anything else', () => {
+    expect(renderRoute('/api/v1/documents/7/render')).toBe('/api/v1/documents/7/render');
+    expect(renderRoute('/api/v1/shares/s1/files/f1/render')).toBe(
+      '/api/v1/shares/s1/files/f1/render',
+    );
+    for (const url of [
+      'https://example.invalid/api/v1/documents/7/render',
+      '//example.invalid/api/v1/documents/7/render',
+      'javascript:alert(1)',
+      '/api/v1/documents/7/content',
+      '/render',
+    ])
+      expect(renderRoute(url)).toBe('about:blank');
   });
 
   it('offers view source and run while gated', () => {
