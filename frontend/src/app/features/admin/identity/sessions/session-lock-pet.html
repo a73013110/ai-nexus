@@ -1,0 +1,16 @@
+<div #figure class="pet" [attr.data-mood]="mood()">
+  <nx-lock-pet-art [mood]="mood()" [look]="look()" [open]="unlocked()" />
+  <span class="pet-z">z</span>
+  <span class="pet-z">z</span>
+</div>
+<p #bubble class="pet-say" [class.is-on]="speech()" [class.is-sign]="signing()">{{ speech() }}</p>
+@for (heart of hearts(); track heart.id) {
+  <svg
+    class="pet-heart"
+    viewBox="0 0 16 16"
+    [style.translate]="heart.x + 'px ' + heart.y + 'px'"
+    (animationend)="fade(heart.id)"
+  >
+    <path d="M8 14S2.5 10.6 2.5 6.8A3 3 0 0 1 8 4.6a3 3 0 0 1 5.5 2.2C13.5 10.6 8 14 8 14z" />
+  </svg>
+}

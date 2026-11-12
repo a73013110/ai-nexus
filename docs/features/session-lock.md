@@ -42,6 +42,19 @@ Chrome 會節流背景分頁的計時器，隱藏 5 分鐘後最多每分鐘跑�
 - 鎖定中仍可用的端點只有查狀態、鎖定、解鎖與登出（端點標 `.AllowWhileLocked()`）。
 - 背景是暗幕加重模糊：看得到原本的版面與顏色，看不出文字；瀏覽器不支援模糊時改為完全遮住。
 
+## 小鎖
+
+鎖定卡撐開後，一隻鎖頭造型的小角色落到卡片頂緣，讓等著解鎖的畫面不那麼乾：
+
+- 拎起來丟：落地報飛行距離，最遠紀錄依帳號存在這台瀏覽器（`localStorage`），不上傳；摔到地上會自己跳回卡片。
+- 跟著密碼欄：有字就遮住眼睛，按「顯示密碼」就轉身背對，大寫鎖定開著時閉眼舉牌。舉牌只是裝飾，給螢幕閱讀器的提示仍在密碼欄下方。
+- 跟著鎖定動效：倒數島出現時掛在島下打哈欠，到期撐開成卡片時從島上掉下來。解鎖成功時跳起來，自己的鎖扣和膠囊裡的同一刻彈開；輸錯被震暈。
+- 看時間換作息：早上醒來伸懶腰、中午拿便當嚼兩口、晚上睡覺蓋被子、被吵醒打哈欠。
+- 節日換裝：12/24–25 聖誕帽、1/1 派對帽、除夕到初五拿紅包、中秋拿月餅。農曆用瀏覽器內建的曆法換算，時間看這台電腦。
+- 滑過是摸摸、點一下會跳；6 秒沒動靜睡著。
+- 純裝飾：`aria-hidden`、不能聚焦，按下時不搶走密碼欄的焦點。卡片上方放不下（矮視窗、螢幕鍵盤）時先躲起來。
+- 減少動態時靜靜站著：表情與打扮照樣換，不能丟也不會跳。睡著時停掉逐幀更新，長時間鎖定不耗電。
+
 ## 例外
 
 - Windows 整合驗證每個請求都由 Kerberos／NTLM 重驗，沒有 cookie，不會鎖定。
@@ -58,4 +71,6 @@ Chrome 會節流背景分頁的計時器，隱藏 5 分鐘後最多每分鐘跑�
 
 - 簽發只走 [`SessionTicket`](../../backend/src/AiNexus.Features/Admin/Identity/Sessions/SessionTicket.cs)：剛驗過密碼用 `IssueAsync`，換 principal 用 `ReissueAsync`（沿用期限）。不要直接呼叫 `SignInAsync` 或設 `ShouldRenew`（會把到期時間往後滑）。
 - 兩個時間點放在票證的 Items，不放 claims：防偽 token 綁定 claims。
-- 畫面在 [`SessionLockScreen`](../../frontend/src/app/features/admin/identity/sessions/session-lock-screen.ts)，keyframes 留在元件樣式（只有它用，不進初始 bundle），程式用 `getAnimations()` 等動畫結束，長度只寫在樣式表。
+- 畫面在 [`SessionLockScreen`](../../frontend/src/app/features/admin/identity/sessions/session-lock-screen.ts)，keyframes 留在元件樣式（只有它用，不進初始 bundle），程式用 `getAnimations()` 等會結束的動畫，長度只寫在樣式表。
+- 小鎖的物理與情緒是純計算（[`lock-pet-physics.ts`](../../frontend/src/app/features/admin/identity/sessions/lock-pet-physics.ts)），作息與節日在 [`lock-pet-calendar.ts`](../../frontend/src/app/features/admin/identity/sessions/lock-pet-calendar.ts)。樣子是 [`LockPetArt`](../../frontend/src/app/features/admin/identity/sessions/lock-pet-art.ts)，卡片上會動的與島下掛著的共用；元件 [`SessionLockPet`](../../frontend/src/app/features/admin/identity/sessions/session-lock-pet.ts) 只量版面、接指標、寫樣式。角色色在 `tokens.scss` 的 `--mascot-*`。
+- 解鎖時鎖扣彈開的時間點是鎖定畫面的 `--lock-shackle-at`，膠囊與小鎖共用；要調整只改這個值。

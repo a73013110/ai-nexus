@@ -135,6 +135,8 @@
   --p-orange-50: #fff4e9;
   --p-amber-700: #885900;
   --p-amber-300: #f0c674;
+  --p-coral-300: #f0b095;
+  --p-crimson-500: #cf4a3c;
   --p-night-950: #181d21;
   --p-night-900: #1d2227;
   --p-night-800: #252c32;
@@ -218,6 +220,16 @@
   --danger-surface: var(--p-red-700);
   // 鋪在 --danger-surface 底上的字；錯誤色的文字用 --error。
   --on-danger: var(--p-white);
+  // 鎖定畫面的小鎖：身體與表情線跟著 --accent／--on-accent，這幾個是角色本身的顏色，兩個主題相同。
+  --mascot-metal: var(--p-silver-200);
+  --mascot-eye: var(--p-white);
+  --mascot-pupil: var(--p-night-900);
+  --mascot-blush: color-mix(in srgb, var(--p-coral-300) 75%, transparent);
+  --mascot-heart: var(--p-coral-300);
+  // 節日與時段的道具：聖誕帽、紅包、便當盒是紅，派對帽與月餅是金。
+  --mascot-red: var(--p-crimson-500);
+  --mascot-gold: var(--p-amber-300);
+  --mascot-crust: var(--p-amber-700);
   --font-ui: 'Segoe UI', 'Microsoft JhengHei UI', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-code: 'Cascadia Code', ui-monospace, monospace;
   // 個人設定的文字大小倍率（ThemeService、boot.js 寫在根元素），只乘在上面的字級階梯；根字級維持瀏覽器預設。

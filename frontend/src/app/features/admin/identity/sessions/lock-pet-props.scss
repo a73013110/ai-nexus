@@ -1,0 +1,90 @@
+// 帽子、手上的東西、被子與鎖扣彈開：平常都收著，依宿主的 data-* 露出來。
+.pet-held > g,
+.pet-santa,
+.pet-party,
+.pet-blanket {
+  display: none;
+}
+:host([data-held='bento']) .pet-bento,
+:host([data-held='red-envelope']) .pet-envelope,
+:host([data-held='mooncake']) .pet-mooncake,
+:host([data-hat='santa']) .pet-santa,
+:host([data-hat='party']) .pet-party,
+:host([data-moment='evening'][data-mood='sleep']) .pet-blanket {
+  display: inline;
+}
+// 手舉起來或轉過身時，東西不跟著飛上去。
+:host(:is([data-mood='shy'], [data-mood='sign'], [data-mood='stretch'], [data-mood='turned'])) {
+  .pet-held {
+    visibility: hidden;
+  }
+}
+.pet-bento > rect:first-child,
+.pet-envelope > rect,
+.pet-santa > path {
+  fill: var(--mascot-red);
+}
+.pet-band,
+.pet-trim {
+  fill: var(--mascot-eye);
+}
+.pet-flap {
+  fill: none;
+  stroke: var(--mascot-gold);
+  stroke-width: 1.2;
+}
+.pet-seal,
+.pet-mooncake > circle:first-child,
+.pet-party > path:first-child {
+  fill: var(--mascot-gold);
+}
+.pet-crust {
+  fill: none;
+  stroke: var(--mascot-crust);
+  stroke-width: 1.4;
+}
+.pet-blanket > path:first-child {
+  fill: var(--accent-soft);
+}
+.pet-blanket .pet-stripe,
+.pet-party .pet-stripe {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.pet-blanket .pet-stripe {
+  stroke: var(--mascot-blush);
+}
+.pet-party .pet-stripe {
+  stroke: var(--signal);
+}
+.pet-pom {
+  fill: var(--mascot-heart);
+}
+// 中午拿著便當，站著沒事時嚼兩口。
+:host([data-moment='lunch'][data-mood='idle']) .pet-mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pet-chew calc(var(--motion-waiting) * 1.2) var(--ease) infinite;
+}
+// 解鎖成功：和膠囊裡的鎖扣同一刻彈開（--lock-shackle-at 由鎖定畫面提供）。
+:host([data-open]) .pet-shackle {
+  animation: pet-shackle-open 300ms var(--ease-spring) var(--lock-shackle-at, 0ms) both;
+}
+
+@keyframes pet-chew {
+  8%,
+  24% {
+    scale: 1 2;
+  }
+  16%,
+  32% {
+    scale: 1 1;
+  }
+}
+@keyframes pet-shackle-open {
+  to {
+    translate: 0 -7px;
+    rotate: -26deg;
+  }
+}

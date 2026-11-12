@@ -81,3 +81,36 @@
   background: var(--accent);
   color: var(--on-accent);
 }
+// 小鎖掛在島下打哈欠，鎖扣卡在島的下緣；島落定後才從島裡滑出來。鎖定時牠從這裡掉到卡片上。
+// 擺盪的頭尾都是 0°：減少動態時動畫直接到終點，停在正中。
+.lock-island-pet {
+  position: absolute;
+  top: 100%;
+  right: var(--p-space-4);
+  width: 40px;
+  height: 32px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.lock-island-pet nx-lock-pet-art {
+  width: 28px;
+  height: 30px;
+  margin: -5px auto 0;
+  transform-origin: 50% 0;
+  translate: 0 -100%;
+  transition: translate var(--motion-panel) var(--ease-exit);
+}
+.lock-island[data-on] .lock-island-pet nx-lock-pet-art {
+  translate: 0 0;
+  transition: translate var(--motion-panel) var(--ease-spring) var(--motion-morph);
+  animation: lock-island-swing calc(var(--motion-waiting) * 1.5) var(--ease) infinite;
+}
+
+@keyframes lock-island-swing {
+  25% {
+    rotate: -6deg;
+  }
+  75% {
+    rotate: 6deg;
+  }
+}

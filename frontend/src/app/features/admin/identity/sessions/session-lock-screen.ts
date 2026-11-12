@@ -22,9 +22,15 @@ import { PasswordField, PasswordInput } from '@shared/ui/password-field';
 import { TopIslandLane } from '@shared/ui/top-island-lane';
 import { passwordLabelFor } from '../login-methods';
 import { LoginSubmit, type SubmitPhase } from '../login-submit';
+import { LockPetArt } from './lock-pet-art';
+import { petLook } from './lock-pet-calendar';
+import { SessionLockPet } from './session-lock-pet';
 
 /** 最後這幾秒倒數島自動展開按鈕：來不及去找滑鼠的人也按得到。 */
 const EXPAND_AT_SECONDS = 20;
+
+/** 會結束的動畫。無限循環的（睡著的小鎖冒 z）永遠等不到 `finished`，不算在階段裡。 */
+const ends = (animation: Animation) => animation.effect?.getComputedTiming().endTime !== Infinity;
 
 /**
  * 鎖定畫面與快到期的倒數島。用模態 dialog 而不是換路由：原本的頁面、草稿與進行中的串流都留在原處，解鎖後直接回到剛才的畫面。
@@ -38,7 +44,7 @@ const EXPAND_AT_SECONDS = 20;
     './session-lock-motion.scss',
   ],
   templateUrl: './session-lock-screen.html',
-  imports: [Field, Icon, LoginSubmit, PasswordField, PasswordInput],
+  imports: [Field, Icon, LockPetArt, LoginSubmit, PasswordField, PasswordInput, SessionLockPet],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class SessionLockScreen {
@@ -48,6 +54,7 @@ export class SessionLockScreen {
   private readonly wrap = viewChild.required<ElementRef<HTMLElement>>('wrap');
   private readonly input = viewChild.required<ElementRef<HTMLInputElement>>('input');
   private readonly island = viewChild<ElementRef<HTMLElement>>('island');
+  private readonly islandPet = viewChild('islandPet', { read: ElementRef<HTMLElement> });
   private readonly islandSize = morphSize(() => this.island()?.nativeElement);
   private readonly lane = inject(TopIslandLane);
   private syncing = false;
@@ -59,6 +66,11 @@ export class SessionLockScreen {
   protected readonly rejections = signal(0);
   protected readonly submitPhase = signal<SubmitPhase>('idle');
   protected readonly submitting = computed(() => this.submitPhase() !== 'idle');
+  /**
+   * 小鎖出場，對話框關上就收走。倒數島撐開成卡片時一開始就出場，從島下掛著的位置（`origin`）掉到卡片上；
+   * 其他時候等卡片撐開才從上方落下，不在變形途中亂跑。
+   */
+  protected readonly pet = signal<{ origin: { x: number; y: number } | null } | null>(null);
   protected readonly name = computed(
     () => this.auth.session()?.displayName || this.auth.session()?.account || '使用者',
   );
@@ -85,6 +97,11 @@ export class SessionLockScreen {
     () => this.islandEngaged() || (this.lock.countdown()?.seconds ?? Infinity) <= EXPAND_AT_SECONDS,
   );
   /** 已經過的比例，直接當環的 `stroke-dashoffset`（圓周以 `pathLength` 正規化為 1）。 */
+  /** 島下掛著的小鎖跟著時段與節日換裝；每次倒數島出現時重新看一次日期。 */
+  protected readonly islandLook = computed(() => {
+    this.islandOn();
+    return petLook(new Date());
+  });
   protected readonly islandElapsed = computed(() => {
     const countdown = this.lock.countdown();
     return countdown ? Math.min(1, 1 - countdown.seconds / countdown.warnFrom) : 1;
@@ -127,7 +144,11 @@ export class SessionLockScreen {
 
   private async show(dialog: HTMLDialogElement) {
     const islandWidth = this.islandOn() ? this.island()!.nativeElement.offsetWidth : 0;
+    // 島在 showModal 之後就讓位隱藏，先量好小鎖掛著的位置（腳底）。
+    const hanging = islandWidth ? this.islandPet()?.nativeElement.getBoundingClientRect() : null;
     dialog.showModal();
+    if (hanging?.height)
+      this.pet.set({ origin: { x: hanging.left + hanging.width / 2, y: hanging.bottom } });
     this.islandOn.set(false);
     this.islandEngaged.set(false);
     if (islandWidth) {
@@ -140,11 +161,13 @@ export class SessionLockScreen {
     // 觸控裝置不主動聚焦：鍵盤會擋住卡片，使用者準備好才點欄位。
     if (matchMedia('(pointer: fine)').matches)
       this.input().nativeElement.focus({ preventScroll: true });
+    if (!this.pet()) this.pet.set({ origin: null });
   }
 
   private async hide(dialog: HTMLDialogElement) {
     await this.play(dialog, 'unlocking');
     dialog.close();
+    this.pet.set(null);
     this.submitPhase.set('idle');
     this.rejections.set(0);
     this.error.set('');
@@ -159,7 +182,12 @@ export class SessionLockScreen {
     dialog.style.setProperty('--lock-card-width', `${box.width}px`);
     dialog.style.setProperty('--lock-card-height', `${box.height}px`);
     dialog.dataset['phase'] = phase;
-    await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((item) => item.finished));
+    await Promise.allSettled(
+      dialog
+        .getAnimations({ subtree: true })
+        .filter(ends)
+        .map((item) => item.finished),
+    );
     // 留著的話，階段的 animation 會一直蓋過輸錯密碼的抖動。
     delete dialog.dataset['phase'];
   }

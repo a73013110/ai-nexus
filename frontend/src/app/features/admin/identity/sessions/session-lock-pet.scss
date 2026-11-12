@@ -1,0 +1,133 @@
+// 和對話框一樣大的一層，自己不接指標：只有小鎖本體拿得起來，其他點擊照樣落到卡片。
+// 位置與形變每幀由元件寫進 transform／translate；小鎖的樣子在 lock-pet-art。
+:host {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+:host(.is-away) {
+  visibility: hidden;
+}
+.pet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  // 與 lock-pet-physics.ts 的 PET_WIDTH／PET_HEIGHT 相同：物理以 px 計算碰撞。
+  width: 56px;
+  height: 60px;
+  transform-origin: 50% 85%;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  will-change: transform;
+}
+.pet:active {
+  cursor: grabbing;
+}
+.pet-z {
+  position: absolute;
+  top: 6px;
+  right: -6px;
+  opacity: 0;
+  color: var(--accent);
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+.pet[data-mood='sleep'] .pet-z {
+  animation: pet-z var(--motion-waiting) linear infinite;
+}
+.pet[data-mood='sleep'] .pet-z + .pet-z {
+  animation-delay: calc(var(--motion-waiting) / 2);
+}
+.pet-say {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: var(--p-space-1) var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+  transform: translate(-50%, -100%);
+  opacity: 0;
+  transition: opacity var(--motion) var(--ease-exit);
+}
+.pet-say.is-on {
+  opacity: 1;
+  transition-timing-function: var(--ease);
+}
+// 大寫鎖定：泡泡變成牌子，木棍往下伸到舉高的手。
+.pet-say.is-sign {
+  border-color: var(--mascot-crust);
+  border-radius: var(--radius-item);
+  font-weight: 700;
+}
+.pet-say.is-sign::after {
+  position: absolute;
+  top: 100%;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 31px;
+  border-radius: var(--radius-full);
+  background: var(--mascot-crust);
+  content: '';
+}
+.pet-heart {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 15px;
+  height: 15px;
+  fill: var(--mascot-heart);
+  animation: pet-heart 1s var(--ease) forwards;
+}
+
+// 只有這個延後載入的元件用，跟著它的 chunk（docs/frontend/motion.md）。
+@keyframes pet-z {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(12px, -24px) scale(1.2);
+  }
+}
+@keyframes pet-heart {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -38px) scale(1.1);
+  }
+}
+
+// 減少動態：全域規則讓動畫直接到終點，睡著的 z 會停在透明；改成靜靜掛著。
+@mixin still {
+  .pet[data-mood='sleep'] .pet-z {
+    animation: none;
+    opacity: 1;
+  }
+  .pet[data-mood='sleep'] .pet-z + .pet-z {
+    translate: 8px -10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  @include still;
+}
+:host-context([data-reduced-motion='true']) {
+  @include still;
+}

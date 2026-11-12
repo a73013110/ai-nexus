@@ -21,6 +21,8 @@
 // 內容只在外框接近靜止時才淡入，變形途中不露出被切一半的文字。
 :host {
   --lock-motion: 520ms;
+  // 解鎖時膠囊裡的鎖扣彈開的時間點；小鎖自己的鎖扣也在這一刻打開（lock-pet-props.scss）。
+  --lock-shackle-at: 280ms;
 }
 @mixin shell-pill {
   --shell-x: var(--lock-inset-x);
@@ -109,10 +111,14 @@
   .lock-card {
     animation: lock-fade-out 90ms linear both;
   }
+  // 小鎖跳起來、鎖扣和膠囊裡的同一刻彈開，看到之後才淡出；不跟著收成膠囊。
+  nx-session-lock-pet {
+    animation: lock-fade-out 160ms linear calc(var(--lock-shackle-at) + 140ms) both;
+  }
   .lock-pill {
     animation: lock-fade-in 140ms linear 240ms both;
   }
   .lock-shackle {
-    animation: lock-shackle-lift 300ms var(--ease-spring) 280ms both;
+    animation: lock-shackle-lift 300ms var(--ease-spring) var(--lock-shackle-at) both;
   }
 }

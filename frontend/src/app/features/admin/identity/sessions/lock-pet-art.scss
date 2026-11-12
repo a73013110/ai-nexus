@@ -1,0 +1,146 @@
+// 小鎖本體與表情。大小跟著放它的容器；位置與形變由使用的地方處理。
+:host {
+  --pet-paw: color-mix(in srgb, var(--accent) 78%, var(--on-accent));
+  --pet-flip: calc(var(--motion-panel) / 2);
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.pet-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  // 轉身是左右翻面；翻到一半、寬度為 0 的那一刻正面換成背面。
+  transition: scale var(--motion-panel) var(--ease);
+}
+.pet-shackle {
+  fill: none;
+  stroke: var(--mascot-metal);
+  stroke-width: 5;
+  stroke-linecap: round;
+  // 鎖扣以左腳為軸彈開。
+  transform-origin: 17px 27px;
+}
+.pet-shell {
+  fill: var(--accent);
+}
+.pet-back {
+  fill: var(--on-accent);
+  visibility: hidden;
+}
+.pet-face,
+.pet-back {
+  transition: visibility 0s linear var(--pet-flip);
+}
+.pet-cheek {
+  fill: var(--mascot-blush);
+}
+.pet-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--motion-fast) var(--ease);
+}
+.pet-eye ellipse {
+  fill: var(--mascot-eye);
+}
+.pet-pupil {
+  fill: var(--mascot-pupil);
+  translate: var(--pet-look, 0 0);
+}
+.pet-line {
+  fill: none;
+  stroke: var(--on-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pet-yawn {
+  fill: var(--mascot-pupil);
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  scale: 1 0.25;
+}
+.pet-paws {
+  fill: var(--pet-paw);
+  transition:
+    translate var(--motion-panel) var(--ease-spring),
+    visibility 0s linear var(--pet-flip);
+}
+
+// 一次只露出一種眼睛與嘴。
+.pet-closed,
+.pet-glad,
+.pet-dazed,
+.pet-squint,
+.pet-yawn {
+  opacity: 0;
+}
+:host(:is([data-mood='sleep'], [data-mood='yawn'], [data-mood='stretch'], [data-mood='happy'])),
+:host(:is([data-mood='dizzy'], [data-mood='sign'])) {
+  .pet-eyes {
+    opacity: 0;
+  }
+}
+:host(:is([data-mood='sleep'], [data-mood='yawn'], [data-mood='stretch'])) .pet-closed,
+:host([data-mood='happy']) .pet-glad,
+:host([data-mood='dizzy']) .pet-dazed,
+:host([data-mood='sign']) .pet-squint {
+  opacity: 1;
+}
+:host([data-mood='yawn']) {
+  .pet-mouth {
+    opacity: 0;
+  }
+  .pet-yawn {
+    opacity: 1;
+    animation: pet-yawn calc(var(--motion-waiting) * 1.7) var(--ease) infinite;
+  }
+}
+:host([data-mood='fly']) .pet-eye {
+  scale: 1.2;
+}
+// 密碼欄有字：遮眼。大寫鎖定：閉緊眼睛把牌子舉高。
+:host([data-mood='shy']) .pet-paws {
+  translate: 0 -15px;
+}
+:host(:is([data-mood='sign'], [data-mood='stretch'])) .pet-paws {
+  translate: 0 -30px;
+}
+:host([data-mood='stretch']) .pet-art {
+  animation: pet-stretch 1.4s var(--ease) both;
+}
+// 密碼顯示出來：轉身背對。
+:host([data-mood='turned']) {
+  .pet-art {
+    scale: -1 1;
+  }
+  .pet-face,
+  .pet-paws {
+    visibility: hidden;
+  }
+  .pet-back {
+    visibility: visible;
+  }
+}
+
+// 只有延後載入的鎖定畫面用，跟著它的 chunk（docs/frontend/motion.md）。
+@keyframes pet-yawn {
+  10%,
+  24% {
+    scale: 1 1;
+  }
+  34%,
+  to {
+    scale: 1 0.25;
+  }
+}
+@keyframes pet-stretch {
+  35% {
+    scale: 0.94 1.12;
+  }
+  70% {
+    scale: 1.02 0.97;
+  }
+}

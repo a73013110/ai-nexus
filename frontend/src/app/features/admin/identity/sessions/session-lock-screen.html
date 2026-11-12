@@ -15,7 +15,7 @@
       [class.shake-a]="rejections() % 2 === 1"
       [class.shake-b]="rejections() > 0 && rejections() % 2 === 0"
     >
-      <div class="lock-surface"></div>
+      <div #surface class="lock-surface"></div>
       <div class="lock-pill" aria-hidden="true">
         <svg class="lock-glyph" viewBox="0 0 24 24">
           <circle cx="12" cy="16" r="1" />
@@ -39,7 +39,7 @@
         <form novalidate (submit)="submit($event)">
           <div class="lock-field">
             <label for="lock-password">{{ passwordLabel() }}</label>
-            <nx-password-field [disabled]="submitting()">
+            <nx-password-field #field [disabled]="submitting()">
               <input
                 #input
                 id="lock-password"
@@ -72,6 +72,19 @@
       </div>
     </div>
   </div>
+  @if (pet(); as entrance) {
+    <nx-session-lock-pet
+      [card]="surface"
+      [origin]="entrance.origin"
+      [shy]="!!password()"
+      [revealed]="field.visible()"
+      [capsLock]="field.capsLock()"
+      [busy]="submitting()"
+      [unlocked]="submitPhase() === 'success'"
+      [rejections]="rejections()"
+      [owner]="auth.session()?.userId ?? null"
+    />
+  }
 </dialog>
 <!--
   倒數島就是鎖定卡的起點：到期時卡片從它當下的尺寸撐開。
@@ -104,6 +117,9 @@
     />
   </svg>
   <span class="lock-island-text">{{ lock.statusText() }}</span>
+  <span class="lock-island-pet" aria-hidden="true">
+    <nx-lock-pet-art #islandPet mood="yawn" [look]="islandLook()" />
+  </span>
   <span class="lock-island-actions">
     <span class="lock-island-buttons">
       @if (lock.countdown()?.by === 'reauthentication') {
