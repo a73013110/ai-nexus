@@ -84,3 +84,10 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 - `.local/`（本機設定、秘密、日誌、個人筆記）與 `artifacts/`（建置與測試輸出）都不進 Git。
 - 看 `git status`／`git diff --cached`，只提交 source、公開預設值與範本、lockfile、產生的合約與 `database/` 匯出檔、長期文件。不要用 `git add -f` 強制加入本機資料。
 - stage 後執行 `./scripts/Test-Repository.ps1`（或 `-WorkingTree` 不動 index）：檢查本機與產物路徑、公開設定的秘密欄位、常見 live key、本機秘密值與 whitespace，只輸出檔名與結果。它不能取代審閱 diff 或組織的秘密掃描。
+
+## 源碼掃描
+
+`./scripts/Export-SourceArchive.ps1` 以 `git archive` 打包 HEAD 成根目錄的 `ai-nexus-source-<日期>-<commit>.zip`，上傳後手動刪除（已在 `.gitignore`）。
+
+- 只含已提交的檔案；排除文件、`.claude`、圖示與測試（測試裡的假帳密只會變成誤報，需要時加 `-IncludeTests`），保留 lockfile 供 SCA 使用。
+- 未提交的變更不會進 ZIP，工作目錄有變更時會提醒；要掃的版本請先提交。

@@ -12,6 +12,8 @@ TestResults/
 test-results/
 playwright-report/
 /artifacts/
+# 源碼掃描上傳用的 ZIP（Export-SourceArchive.ps1），上傳後手動刪除
+/ai-nexus-source-*.zip
 
 # Machine config, credentials, keys, logs, and working notes
 /.local/
