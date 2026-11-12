@@ -87,7 +87,7 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 
 ## 源碼掃描
 
-`./scripts/Export-SourceArchive.ps1` 以 `git archive` 打包 HEAD 成根目錄的 `ai-nexus-source-<日期>-<commit>.zip`，上傳後手動刪除（已在 `.gitignore`）。
+`./scripts/Export-SourceArchive.ps1` 把原始碼打包成根目錄的 `ai-nexus-source-<日期>-<commit>[-dirty].zip`，上傳後手動刪除（已在 `.gitignore`）。
 
-- 只含已提交的檔案；排除文件、`.claude`、圖示與測試（測試裡的假帳密只會變成誤報，需要時加 `-IncludeTests`），保留 lockfile 供 SCA 使用。
-- 未提交的變更不會進 ZIP，工作目錄有變更時會提醒；要掃的版本請先提交。
+- 預設打包工作目錄的現況：已追蹤的檔案（含未提交的修改）加上未被忽略的新檔，檔名帶 `-dirty` 表示含未提交的變更；`-Committed` 只打包 HEAD。
+- 排除文件、`.claude`、圖示與測試（測試裡的假帳密只會變成誤報，需要時加 `-IncludeTests`），保留 lockfile 供 SCA 使用。
