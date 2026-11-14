@@ -3,8 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   describeStep,
   newStep,
+  ruleDetail,
+  ruleSummary,
   sameSteps,
   stepProblem,
+  summarizeDraft,
   toDraft,
   toRequest,
 } from './flow-step-draft';
@@ -117,5 +120,23 @@ describe('flow step draft', () => {
         people,
       ),
     ).toEqual({ approver: '指定人員：林美華、（已移除的使用者）', condition: '權限是「寫入」時' });
+  });
+
+  it('summarizes an unfinished draft with the rule name only', () => {
+    expect(summarizeDraft({ ...newStep('users'), name: '審核' }, kind, rules)).toEqual({
+      approver: '指定人員',
+      condition: '每次都要',
+    });
+    expect(summarizeDraft({ ...newStep('applicant-manager'), levels: 2 }, kind, rules)).toEqual({
+      approver: '申請人的主管（往上 2 層）',
+      condition: '每次都要',
+    });
+  });
+
+  it('splits a rule description into the option summary and the field detail', () => {
+    const description = '申請人所屬單位往上的主管。\n1＝直屬主管。\n沒有主管的單位會跳過。';
+    expect(ruleSummary(description)).toBe('申請人所屬單位往上的主管。');
+    expect(ruleDetail(description)).toBe('1＝直屬主管。\n沒有主管的單位會跳過。');
+    expect(ruleDetail('只有一行。')).toBe('');
   });
 });

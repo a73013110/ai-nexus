@@ -23,7 +23,7 @@ import { positionPopover } from '../browser/popover-position';
 export interface SelectOption {
   value: string;
   label: string;
-  /** 第二行的識別資訊（帳號、代碼）；狀態放 `tags`。 */
+  /** 第二行：識別資訊（帳號、代碼）或一句短說明；細節放選定後的欄位說明，狀態放 `tags`。 */
   description?: string;
   /** 名稱旁的狀態標籤，已選時也顯示在觸發鈕；搜尋找得到標籤文字。 */
   tags?: readonly OptionTag[];

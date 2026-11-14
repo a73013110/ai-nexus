@@ -9,7 +9,7 @@ namespace AiNexus.Features.Work.Repositories.Access;
 internal sealed class RepositoryStewardsRule(AppDbContext db) : IApproverRule
 {
     public static readonly ApproverRuleDefinition Definition = new("repository-stewards", "儲存庫負責人",
-        "申請的儲存庫的負責人任一人審核；負責人由系統管理員在儲存庫權限頁指定。", ApproverArguments.None) { Kinds = [RepositoryAccessFlow.Kind] };
+        "申請的儲存庫負責人，任一人審核。\n負責人由系統管理員在儲存庫權限頁指定。", ApproverArguments.None) { Kinds = [RepositoryAccessFlow.Kind] };
 
     public Task<Error?> ValidateAsync(string? argument, CancellationToken ct) => Task.FromResult<Error?>(null);
 

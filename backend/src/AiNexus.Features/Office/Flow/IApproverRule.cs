@@ -23,6 +23,7 @@ public sealed record ApproverContext(string Kind, Guid SubjectId, Guid Applicant
 /// <summary>
 /// 審核人規則的宣告。<paramref name="Key"/> 寫進流程設定與申請快照，改名等於新規則；
 /// <paramref name="Argument"/> 是參數的形式（<see cref="ApproverArguments"/>），設定畫面據此選編輯器。
+/// <paramref name="Description"/> 以 <c>\n</c> 分行：第一行是一句摘要（下拉選項的第二行），其後每行一個細節（選定後列在欄位下方）。
 /// </summary>
 public sealed record ApproverRuleDefinition(string Key, string Name, string Description, string Argument)
 {

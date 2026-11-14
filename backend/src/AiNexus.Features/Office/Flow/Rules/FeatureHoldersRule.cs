@@ -7,7 +7,7 @@ namespace AiNexus.Features.Office.Flow.Rules;
 internal sealed class FeatureHoldersRule(AccessService access) : IApproverRule
 {
     public static readonly ApproverRuleDefinition Definition = new("feature-holders", "持有功能的人",
-        "目前持有指定功能（頁面或動作）的人任一人審核；授權異動後自動改變審核人。", ApproverArguments.Feature);
+        "持有指定功能的人，任一人審核。\n功能可以是頁面或動作。\n授權異動後，審核人自動跟著改變。", ApproverArguments.Feature);
 
     public Task<Error?> ValidateAsync(string? argument, CancellationToken ct)
         => Task.FromResult<Error?>(Feature(argument) is null ? FlowErrors.ArgumentInvalid : null);

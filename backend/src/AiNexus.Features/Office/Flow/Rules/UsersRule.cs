@@ -10,7 +10,7 @@ internal sealed class UsersRule(IActiveUsers activeUsers) : IApproverRule
     public const int MaxUsers = 20;
 
     public static readonly ApproverRuleDefinition Definition = new("users", "指定人員",
-        $"指定的人員任一人審核，最多 {MaxUsers} 位。", ApproverArguments.Users);
+        $"指定的人員，任一人審核。\n最多 {MaxUsers} 位。", ApproverArguments.Users);
 
     public async Task<Error?> ValidateAsync(string? argument, CancellationToken ct)
     {

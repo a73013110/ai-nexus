@@ -21,6 +21,7 @@
 | 頁面說明（`description`） | 一句 | 說這頁看什麼，不說怎麼操作 |
 | 說明面板（`InfoPopover`） | 每則 2～4 行 | 標題＝名詞，內文一行一個規則 |
 | 提示（`nx-notice`） | 一至兩句 | 只放會影響操作的事 |
+| 下拉選項說明（`SelectOption.description`） | 一句、約 20 字 | 說這個選項是什麼；規則與限制放選定後欄位下方的 `.form-note`，不塞進選單 |
 | 空狀態 | 一句＋一個動作 | 說現在沒有什麼、下一步做什麼 |
 | 錯誤訊息 | 一句原因＋一句怎麼辦 | 見 [error-contract](../architecture/error-contract.md) |
 

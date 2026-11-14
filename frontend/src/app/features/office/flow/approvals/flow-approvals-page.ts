@@ -9,14 +9,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { routeOf } from '@core/api/catalog';
+import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
 import { formatDate } from '@shared/browser/format';
 import { ViewScope } from '@shared/browser/view-scope';
 import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
-import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
@@ -45,8 +43,6 @@ const EMPTY: Record<FlowView, { title: string; text: string }> = {
     DataTableColumn,
     FeaturePage,
     FlowInstanceDrawer,
-    Icon,
-    RouterLink,
     Select,
     StatusBadge,
     TableHeader,
@@ -80,7 +76,6 @@ const EMPTY: Record<FlowView, { title: string; text: string }> = {
 })
 export class FlowApprovalsPage {
   readonly session = inject(WorkspaceSession);
-  readonly routeOf = routeOf;
   private readonly api = inject(FlowApi);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);

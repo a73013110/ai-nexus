@@ -4,14 +4,6 @@
   density="compact"
   layoutMode="data"
 >
-  @if (session.has('flow.definitions')) {
-    <div page-actions class="page-actions">
-      <a class="quiet-button" [routerLink]="routeOf('flow.definitions')"
-        ><nx-icon name="order" />{{ session.featureName('flow.definitions') }}</a
-      >
-    </div>
-  }
-
   <div class="page-toolbar">
     <nx-view-switch
       label="檢視"

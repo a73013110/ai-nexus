@@ -2,6 +2,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   output,
@@ -24,7 +26,6 @@ import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
-import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
 import { SortHandle, SortableRows, type RowMove } from '@shared/ui/sortable-rows';
@@ -42,8 +43,11 @@ import {
   argumentOf,
   conditionOptions,
   newStep,
+  ruleDetail,
+  ruleSummary,
   sameSteps,
   stepProblem,
+  summarizeDraft,
   toDraft,
   toRequest,
 } from './flow-step-draft';
@@ -69,7 +73,6 @@ interface Target {
     DialogSaveBar,
     Field,
     Icon,
-    InfoPopover,
     Notice,
     PersonPicker,
     Select,
@@ -83,20 +86,147 @@ interface Target {
       padding: 0;
       list-style: none;
     }
-    /* 段落標題列：把手、關卡序號、移除鈕排在同一列（共用樣式預設把標題以外的元素排到下一列）。 */
+    /* 一關一段：摘要列佔滿整寬，展開的欄位排在下面（不用共用段落夠寬時的左右兩欄）。 */
+    .flow-step {
+      grid-template-columns: minmax(0, 1fr);
+    }
     .flow-step-head {
+      display: grid;
       grid-template-columns: auto minmax(0, 1fr) auto;
-    }
-    .flow-step-head > * {
-      grid-column: auto;
-    }
-    .flow-levels {
-      max-width: 10rem;
-    }
-    .flow-step-add {
-      display: flex;
       align-items: center;
       gap: var(--p-space-2);
+      min-width: 0;
+    }
+    .flow-step-toggle {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      align-items: center;
+      gap: var(--p-space-3);
+      min-width: 0;
+      padding: var(--p-space-1) var(--p-space-2);
+      border: 0;
+      border-radius: var(--radius-item);
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+    .flow-step-toggle:hover {
+      background: var(--hover);
+    }
+    .flow-step-number {
+      display: grid;
+      place-items: center;
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: var(--radius-full);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: var(--text-caption);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .flow-step-title {
+      display: grid;
+      min-width: 0;
+    }
+    .flow-step-title h3 {
+      margin: 0;
+      font-size: var(--text-label);
+      font-weight: 600;
+      line-height: var(--line-ui);
+      overflow-wrap: anywhere;
+    }
+    .flow-step-title small {
+      color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
+    .flow-step-title small.field-error {
+      color: var(--error);
+    }
+    .flow-step-chevron {
+      --icon-size: var(--icon-md);
+      color: var(--text-muted);
+    }
+    .flow-step-toggle[aria-expanded='true'] .flow-step-chevron {
+      rotate: 180deg;
+    }
+    /* 欄位對齊摘要的文字左緣（序號圓點＋間距＋按鈕內距）。 */
+    .flow-step-body {
+      padding-inline-start: calc(1.5rem + var(--p-space-3) + var(--p-space-2));
+    }
+    /* 名稱、審核人、規則參數、何時需要排成一列（對話框夠寬時四欄），窄時依序換行；
+       欄寬固定不隨欄位數伸縮，切換規則時其他欄位不跳動。 */
+    .flow-step-fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+      gap: var(--p-space-3);
+      min-width: 0;
+    }
+    .flow-rule-detail {
+      white-space: pre-line;
+    }
+    .flow-step-users {
+      display: grid;
+      justify-items: start;
+      gap: var(--p-space-2);
+      min-width: 0;
+    }
+    .flow-step-users > nx-person-picker {
+      justify-self: stretch;
+      max-width: 24rem;
+    }
+    /* 新增關卡騎在分隔線上：兩關之間是只有＋的小圓鈕（插在下面那一關之前），清單最後是帶字的膠囊，
+       同一條線、同一種外觀。常駐顯示，觸控裝置沒有 hover 也找得到。 */
+    .flow-step {
+      position: relative;
+    }
+    .flow-step-insert,
+    .flow-step-append {
+      --icon-size: var(--icon-sm);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--p-space-1);
+      height: 1.5rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-full);
+      background: var(--surface);
+      color: var(--text-muted);
+      font: inherit;
+      font-size: var(--text-caption);
+      cursor: pointer;
+    }
+    .flow-step-insert {
+      position: absolute;
+      inset-block-start: 0;
+      inset-inline-start: 50%;
+      translate: -50% -50%;
+      width: 1.5rem;
+      padding: 0;
+    }
+    .flow-step-append {
+      padding: 0 var(--p-space-3) 0 var(--p-space-2);
+    }
+    :is(.flow-step-insert, .flow-step-append):hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+    :is(.flow-step-insert, .flow-step-append):disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+    .flow-step-end {
+      display: flex;
+      align-items: center;
+    }
+    .flow-step-end::before,
+    .flow-step-end::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--line);
     }
   `,
   template: `<dialog
@@ -126,19 +256,54 @@ interface Target {
             >
               @for (step of e.draft.steps; track step.key; let index = $index) {
                 <li
-                  class="form-section"
+                  class="form-section form-section-wide flow-step"
                   role="group"
                   [attr.data-sort-id]="step.key"
                   [attr.aria-labelledby]="id + '-' + step.key"
                 >
-                  <header class="form-section-head flow-step-head">
+                  @if (index > 0) {
+                    <button
+                      type="button"
+                      class="flow-step-insert"
+                      [attr.aria-label]="'在第 ' + (index + 1) + ' 關前插入關卡'"
+                      [attr.title]="'在第 ' + (index + 1) + ' 關前插入關卡'"
+                      [disabled]="e.draft.steps.length >= maxSteps || saving.pending()"
+                      (click)="addStep(index)"
+                    >
+                      <nx-icon name="plus" />
+                    </button>
+                  }
+                  <div class="flow-step-head">
                     <nx-sort-handle
                       [id]="step.key"
                       [name]="stepName(step.key)"
                       [position]="index + 1"
                       [count]="e.draft.steps.length"
                     />
-                    <h3 [id]="id + '-' + step.key">第 {{ index + 1 }} 關</h3>
+                    <button
+                      type="button"
+                      class="flow-step-toggle"
+                      [attr.aria-expanded]="expanded() === step.key"
+                      [attr.aria-controls]="id + '-' + step.key + '-body'"
+                      (click)="toggle(step.key)"
+                    >
+                      <span class="flow-step-number" aria-hidden="true">{{ index + 1 }}</span>
+                      <span class="flow-step-title">
+                        <h3 [id]="id + '-' + step.key">
+                          {{ step.name.trim() || '第 ' + (index + 1) + ' 關' }}
+                        </h3>
+                        @if (attempted() && problems()[step.key]) {
+                          <small class="field-error">{{ problems()[step.key] }}</small>
+                        } @else {
+                          <small
+                            >{{ summaries()[step.key]?.approver }}・{{
+                              summaries()[step.key]?.condition
+                            }}</small
+                          >
+                        }
+                      </span>
+                      <nx-icon class="flow-step-chevron" name="chevron-down" />
+                    </button>
                     <button
                       type="button"
                       class="icon-button flow-step-remove"
@@ -148,120 +313,124 @@ interface Target {
                     >
                       <nx-icon name="trash" />
                     </button>
-                  </header>
-                  <div class="form-section-body">
-                    <div class="form-row">
-                      <label
-                        >關卡名稱<input
-                          #name
-                          nxField
-                          autocomplete="off"
-                          [attr.maxlength]="nameMax"
-                          [value]="step.name"
-                          [readOnly]="saving.pending()"
-                          (input)="patchStep(step.key, { name: name.value })"
-                      /></label>
-                      <nx-select
-                        label="審核人"
-                        [options]="ruleOptions()"
-                        [value]="step.rule"
-                        [disabled]="saving.pending()"
-                        (valueChange)="chooseRule(step.key, $event)"
-                      />
-                    </div>
-                    @switch (argument(step.rule)) {
-                      @case ('levels') {
-                        <label class="flow-levels"
-                          >往上幾層<input
-                            #levels
-                            nxField
-                            type="number"
-                            min="1"
-                            [attr.max]="maxLevels"
-                            [value]="step.levels"
-                            [readOnly]="saving.pending()"
-                            (input)="patchStep(step.key, { levels: levels.valueAsNumber })"
-                        /></label>
-                        <p class="form-note">1＝直屬主管；沒有主管的單位會跳過。</p>
-                      }
-                      @case ('users') {
-                        @if (step.users.length) {
-                          <div class="form-chips">
-                            @for (user of step.users; track user.id) {
-                              <button
-                                type="button"
-                                class="form-chip"
-                                [attr.aria-label]="'移除審核人 ' + user.displayName"
-                                [disabled]="saving.pending()"
-                                (click)="removeUser(step.key, user.id)"
-                              >
-                                <span class="avatar" aria-hidden="true">{{
-                                  initial(user.displayName)
-                                }}</span
-                                >{{ user.displayName }}<nx-icon name="close" />
-                              </button>
-                            }
-                          </div>
-                        }
-                        @if (picking() === step.key) {
-                          <nx-person-picker
-                            label="加入審核人"
-                            [search]="people"
-                            [disabled]="saving.pending() || step.users.length >= maxUsers"
-                            (picked)="addUser(step.key, $event)"
-                          />
-                        } @else {
-                          <button
-                            type="button"
-                            class="quiet-button"
-                            [disabled]="saving.pending() || step.users.length >= maxUsers"
-                            (click)="pick(step.key)"
-                          >
-                            <nx-icon name="plus" />加入審核人
-                          </button>
-                        }
-                      }
-                      @case ('feature') {
-                        <nx-select
-                          label="持有這個功能的人"
-                          [options]="featureOptions"
-                          [value]="step.feature"
-                          [searchable]="true"
-                          [disabled]="saving.pending()"
-                          (valueChange)="patchStep(step.key, { feature: $event })"
-                        />
-                      }
-                    }
-                    @if (conditions().length > 1) {
-                      <nx-select
-                        label="何時需要這一關"
-                        [options]="conditions()"
-                        [value]="step.condition"
-                        [disabled]="saving.pending()"
-                        (valueChange)="patchStep(step.key, { condition: $event })"
-                      />
-                    }
-                    @if (attempted() && problems()[step.key]) {
-                      <p class="form-note field-error">{{ problems()[step.key] }}</p>
-                    }
                   </div>
+                  @if (expanded() === step.key) {
+                    <div
+                      class="form-section-body flow-step-body"
+                      [id]="id + '-' + step.key + '-body'"
+                    >
+                      <div class="flow-step-fields">
+                        <label
+                          >關卡名稱<input
+                            #name
+                            nxField
+                            autocomplete="off"
+                            [attr.maxlength]="nameMax"
+                            [value]="step.name"
+                            [readOnly]="saving.pending()"
+                            (input)="patchStep(step.key, { name: name.value })"
+                        /></label>
+                        <label
+                          >審核人<nx-select
+                            label="審核人"
+                            [options]="ruleOptions()"
+                            [value]="step.rule"
+                            [disabled]="saving.pending()"
+                            (valueChange)="chooseRule(step.key, $event)"
+                        /></label>
+                        @switch (argument(step.rule)) {
+                          @case ('levels') {
+                            <label
+                              >往上幾層<input
+                                #levels
+                                nxField
+                                type="number"
+                                min="1"
+                                [attr.max]="maxLevels"
+                                [value]="step.levels"
+                                [readOnly]="saving.pending()"
+                                (input)="patchStep(step.key, { levels: levels.valueAsNumber })"
+                            /></label>
+                          }
+                          @case ('feature') {
+                            <label
+                              >持有這個功能的人<nx-select
+                                label="持有這個功能的人"
+                                [options]="featureOptions"
+                                [value]="step.feature"
+                                [searchable]="true"
+                                [disabled]="saving.pending()"
+                                (valueChange)="patchStep(step.key, { feature: $event })"
+                            /></label>
+                          }
+                        }
+                        @if (conditions().length > 1) {
+                          <label
+                            >何時需要這一關<nx-select
+                              label="何時需要這一關"
+                              [options]="conditions()"
+                              [value]="step.condition"
+                              [disabled]="saving.pending()"
+                              (valueChange)="patchStep(step.key, { condition: $event })"
+                          /></label>
+                        }
+                      </div>
+                      @if (detailOf(step.rule); as detail) {
+                        <p class="form-note flow-rule-detail">{{ detail }}</p>
+                      }
+                      @if (argument(step.rule) === 'users') {
+                        <div class="flow-step-users">
+                          @if (step.users.length) {
+                            <div class="form-chips">
+                              @for (user of step.users; track user.id) {
+                                <button
+                                  type="button"
+                                  class="form-chip"
+                                  [attr.aria-label]="'移除審核人 ' + user.displayName"
+                                  [disabled]="saving.pending()"
+                                  (click)="removeUser(step.key, user.id)"
+                                >
+                                  <span class="avatar" aria-hidden="true">{{
+                                    initial(user.displayName)
+                                  }}</span
+                                  >{{ user.displayName }}<nx-icon name="close" />
+                                </button>
+                              }
+                            </div>
+                          }
+                          @if (picking() === step.key) {
+                            <nx-person-picker
+                              label="加入審核人"
+                              [search]="people"
+                              [disabled]="saving.pending() || step.users.length >= maxUsers"
+                              (picked)="addUser(step.key, $event)"
+                            />
+                          } @else {
+                            <button
+                              type="button"
+                              class="quiet-button"
+                              [disabled]="saving.pending() || step.users.length >= maxUsers"
+                              (click)="pick(step.key)"
+                            >
+                              <nx-icon name="plus" />加入審核人
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
                 </li>
               }
             </ol>
-            <div class="flow-step-add">
+            <div class="flow-step-end">
               <button
                 type="button"
-                class="secondary-button"
+                class="flow-step-append"
                 [disabled]="e.draft.steps.length >= maxSteps || saving.pending()"
                 (click)="addStep()"
               >
                 <nx-icon name="plus" />新增關卡
               </button>
-              <nx-info-popover
-                label="審核人規則說明"
-                heading="審核人規則"
-                [description]="rulesHelp()"
-              />
             </div>
           </div>
           <nx-dialog-save-bar
@@ -279,6 +448,7 @@ export class FlowDefinitionDialog {
   readonly id = uniqueId('nx-flow-definition');
   private readonly api = inject(FlowApi);
   private readonly toast = inject(ToastService);
+  private readonly injector = inject(Injector);
   /** 儲存成功：頁面重讀。 */
   readonly saved = output<void>();
   /** 版本已過期：對話框已關閉，由頁面顯示訊息並重讀。 */
@@ -298,6 +468,8 @@ export class FlowDefinitionDialog {
   readonly saving = action();
   /** 按過儲存才顯示各關的問題，剛新增的空白關卡不先標紅。 */
   readonly attempted = signal(false);
+  /** 展開編輯的那一關；同一時間只展開一關，其他關收成一行摘要。 */
+  readonly expanded = signal<string | null>(null);
   /** 正在搜尋人員的那一關。 */
   readonly picking = signal<string | null>(null);
   readonly people = directorySearch(
@@ -317,13 +489,20 @@ export class FlowDefinitionDialog {
     const used = new Set(this.steps().map((step) => step.rule));
     return this.rules()
       .filter((rule) => !rule.kinds.length || rule.kinds.includes(kind ?? '') || used.has(rule.key))
-      .map((rule) => ({ value: rule.key, label: rule.name, description: rule.description }));
+      .map((rule) => ({
+        value: rule.key,
+        label: rule.name,
+        description: ruleSummary(rule.description),
+      }));
   });
-  readonly rulesHelp = computed(() =>
-    this.ruleOptions()
-      .map((rule) => `${rule.label}：${rule.description}`)
-      .join('\n'),
-  );
+  /** 收合時每關的一句摘要（審核人・何時需要）。 */
+  readonly summaries = computed<Record<string, { approver: string; condition: string }>>(() => {
+    const kind = this.editor.current()?.kind;
+    if (!kind) return {};
+    return Object.fromEntries(
+      this.steps().map((step) => [step.key, summarizeDraft(step, kind, this.rules())]),
+    );
+  });
   readonly conditions = computed(() => {
     const kind = this.editor.current()?.kind;
     return kind ? conditionOptions(kind) : [];
@@ -341,6 +520,8 @@ export class FlowDefinitionDialog {
     kind: FlowDefinitionDto,
     rules: readonly ApproverRuleDto[],
     people: ReadonlyMap<string, FlowPersonDto>,
+    /** 從頁面點了某一關（從 0 起）：展開它並把焦點放在關卡名稱。 */
+    focus?: number,
   ) {
     this.rules.set(rules);
     this.saving.reset();
@@ -348,11 +529,30 @@ export class FlowDefinitionDialog {
     this.picking.set(null);
     this.people.clear();
     const steps = kind.steps.map((step) => toDraft(step, people));
-    this.editor.open(
-      { kind, rowVersion: kind.rowVersion },
-      { steps: steps.length ? steps : [newStep(this.defaultRule(kind))] },
-    );
+    const draft = steps.length ? steps : [newStep(this.defaultRule(kind))];
+    this.editor.open({ kind, rowVersion: kind.rowVersion }, { steps: draft });
+    // 指定了哪一關就展開它；否則只有一關（含還沒有流程）時直接展開，多關時先看整條順序。
+    const target = focus === undefined ? undefined : draft[focus];
+    this.expanded.set(target?.key ?? (draft.length === 1 ? (draft[0]?.key ?? null) : null));
     this.dialog().nativeElement.showModal();
+    // showModal 會把焦點交給第一個可聚焦元素（關閉鈕）；指定關卡時移到它的名稱欄。
+    if (target) this.focusName(target.key);
+  }
+  /** 等展開的欄位畫出來，再把焦點放到這一關的名稱欄（同時捲進視野）。 */
+  private focusName(key: string) {
+    afterNextRender(
+      () =>
+        this.dialog()
+          .nativeElement.querySelector<HTMLInputElement>(`[id="${this.id}-${key}-body"] input`)
+          ?.focus(),
+      { injector: this.injector },
+    );
+  }
+  toggle(key: string) {
+    this.expanded.update((current) => (current === key ? null : key));
+  }
+  detailOf(rule: string) {
+    return ruleDetail(this.rules().find((item) => item.key === rule)?.description ?? '');
   }
   argument(rule: string) {
     return argumentOf(this.rules(), rule);
@@ -368,6 +568,7 @@ export class FlowDefinitionDialog {
     if (this.argument(rule) === 'users') this.pick(key);
   }
   pick(key: string) {
+    this.expanded.set(key);
     this.people.clear();
     this.picking.set(key);
   }
@@ -383,12 +584,17 @@ export class FlowDefinitionDialog {
     const step = this.steps().find((item) => item.key === key);
     if (step) this.patchStep(key, { users: step.users.filter((user) => user.id !== userId) });
   }
-  addStep() {
+  /** `at` 是插入的位置（從 0 起，插在原本那一關之前）；不給就接在最後。新的一關展開並聚焦名稱。 */
+  addStep(at = this.steps().length) {
     const kind = this.editor.current()?.kind;
     if (!kind || this.steps().length >= MAX_STEPS) return;
     const step = newStep(this.defaultRule(kind));
-    this.editor.update('steps', [...this.steps(), step]);
+    const steps = [...this.steps()];
+    steps.splice(at, 0, step);
+    this.editor.update('steps', steps);
+    this.expanded.set(step.key);
     if (this.argument(step.rule) === 'users') this.pick(step.key);
+    this.focusName(step.key);
   }
   removeStep(key: string) {
     if (this.steps().length > 1)
@@ -407,6 +613,7 @@ export class FlowDefinitionDialog {
   }
   revert() {
     this.editor.revert();
+    this.expanded.set(null);
     this.attempted.set(false);
     this.picking.set(null);
   }
@@ -430,7 +637,12 @@ export class FlowDefinitionDialog {
     const editing = this.editor.current();
     if (!editing || this.saving.pending() || !this.editor.dirty()) return;
     this.attempted.set(true);
-    if (Object.values(this.problems()).some(Boolean)) return;
+    // 有問題時展開第一個有問題的關卡讓欄位就在眼前；其他關的問題寫在各自的摘要列。
+    const problem = this.steps().find((step) => this.problems()[step.key]);
+    if (problem) {
+      this.expanded.set(problem.key);
+      return;
+    }
     const body = {
       steps: editing.draft.steps.map((step) => toRequest(step, this.rules())),
       rowVersion: editing.rowVersion,

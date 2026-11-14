@@ -6,9 +6,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
-import { routeOf } from '@core/api/catalog';
 import type { FlowDefinitionDto } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { FeaturePage } from '@core/layout/feature-page';
@@ -27,7 +25,7 @@ import { describeStep } from './flow-step-draft';
  */
 @Component({
   selector: 'nx-flow-definitions-page',
-  imports: [FeaturePage, FlowDefinitionDialog, Icon, Notice, Panel, RouterLink],
+  imports: [FeaturePage, FlowDefinitionDialog, Icon, Notice, Panel],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -46,30 +44,75 @@ import { describeStep } from './flow-step-draft';
     .flow-kind-body p {
       margin: 0;
     }
-    .flow-kind-steps {
-      display: grid;
+    /* 流程線：申請人 → 各關 → 核准，由左到右，放不下就換行；箭頭跟在每一關前面，換行時不會落單在行尾。 */
+    .flow-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
       gap: var(--p-space-2);
       margin: 0;
       padding: 0;
       list-style: none;
     }
-    .flow-kind-steps li {
-      display: grid;
-      grid-template-columns: 1.5rem minmax(0, 1fr);
+    .flow-line li {
+      display: flex;
+      align-items: stretch;
       gap: var(--p-space-2);
-      align-items: baseline;
+      min-width: 0;
     }
-    .flow-kind-index {
+    .flow-line-arrow {
+      --icon-size: var(--icon-md);
+      align-self: center;
       color: var(--text-muted);
+    }
+    .flow-node {
+      display: grid;
+      align-content: start;
+      gap: 2px;
+      min-width: 8rem;
+      max-width: 16rem;
+      padding: var(--p-space-2) var(--p-space-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-block);
+      background: var(--surface-subtle);
+    }
+    /* 關卡可點：直接打開流程並展開這一關。 */
+    .flow-node.is-step {
+      color: inherit;
+      font: inherit;
+      text-align: start;
+      cursor: pointer;
+    }
+    .flow-node.is-step:hover {
+      border-color: var(--control-line);
+      background: var(--hover);
+    }
+    .flow-node-index {
+      color: var(--text-muted);
+      font-size: var(--text-caption);
       font-variant-numeric: tabular-nums;
-      text-align: end;
     }
-    .flow-kind-steps strong {
-      display: block;
+    .flow-node strong {
       font-weight: 600;
+      overflow-wrap: anywhere;
     }
-    .flow-kind-steps small {
+    .flow-node small {
       color: var(--text-muted);
+      overflow-wrap: anywhere;
+    }
+    /* 起點與終點只是標示，不是關卡：虛線、不填底。 */
+    .flow-node.is-end {
+      display: flex;
+      align-items: center;
+      gap: var(--p-space-1);
+      min-width: 0;
+      border-style: dashed;
+      background: none;
+      color: var(--text-muted);
+      font-size: var(--text-caption);
+    }
+    .flow-node.is-end nx-icon {
+      --icon-size: var(--icon-md);
     }
     .flow-skeleton {
       display: grid;
@@ -84,13 +127,6 @@ import { describeStep } from './flow-step-draft';
       description="每種申請要經過哪些關卡、由誰審核；修改只影響之後送出的申請。"
       density="compact"
     >
-      @if (session.has('flow.approvals')) {
-        <div page-actions class="page-actions">
-          <a class="quiet-button" [routerLink]="routeOf('flow.approvals')"
-            ><nx-icon name="check" />{{ session.featureName('flow.approvals') }}</a
-          >
-        </div>
-      }
       @if (notice()) {
         <nx-notice
           tone="warning"
@@ -115,7 +151,7 @@ import { describeStep } from './flow-step-draft';
       }
       <div class="flow-kinds">
         @for (item of kinds(); track item.kind.kind) {
-          <nx-panel [heading]="item.kind.name" icon="order">
+          <nx-panel [heading]="item.kind.name" icon="flow">
             <button
               panel-actions
               type="button"
@@ -128,16 +164,31 @@ import { describeStep } from './flow-step-draft';
             <div class="flow-kind-body">
               <p>{{ item.kind.description }}</p>
               @if (item.steps.length) {
-                <ol class="flow-kind-steps" [attr.aria-label]="item.kind.name + '的關卡'">
+                <ol class="flow-line" [attr.aria-label]="item.kind.name + '的關卡'">
+                  <li aria-hidden="true">
+                    <span class="flow-node is-end"><nx-icon name="user" />申請人</span>
+                  </li>
                   @for (step of item.steps; track step.index) {
                     <li>
-                      <span class="flow-kind-index">{{ step.index }}</span>
-                      <div>
+                      <nx-icon class="flow-line-arrow" name="chevron" aria-hidden="true" />
+                      <button
+                        type="button"
+                        class="flow-node is-step"
+                        [attr.aria-label]="
+                          '編輯第 ' + step.index + ' 關「' + step.name + '」：' + step.approver
+                        "
+                        (click)="edit(item.kind, step.index - 1)"
+                      >
+                        <span class="flow-node-index">第 {{ step.index }} 關</span>
                         <strong>{{ step.name }}</strong>
                         <small>{{ step.approver }}・{{ step.condition }}</small>
-                      </div>
+                      </button>
                     </li>
                   }
+                  <li aria-hidden="true">
+                    <nx-icon class="flow-line-arrow" name="chevron" />
+                    <span class="flow-node is-end"><nx-icon name="check" />核准</span>
+                  </li>
                 </ol>
               } @else {
                 <nx-notice
@@ -158,7 +209,6 @@ import { describeStep } from './flow-step-draft';
 })
 export class FlowDefinitionsPage {
   readonly session = inject(WorkspaceSession);
-  readonly routeOf = routeOf;
   private readonly api = inject(FlowApi);
   private readonly dialog = viewChild.required(FlowDefinitionDialog);
   readonly read = apiResource({
@@ -184,11 +234,12 @@ export class FlowDefinitionsPage {
     }));
   });
 
-  edit(kind: FlowDefinitionDto) {
+  /** `step` 是點了哪一關（從 0 起）；從「編輯流程」進來時不指定，先看整條順序。 */
+  edit(kind: FlowDefinitionDto, step?: number) {
     const data = this.read.value();
     if (!data) return;
     this.notice.set('');
-    this.dialog().open(kind, data.rules, this.people());
+    this.dialog().open(kind, data.rules, this.people(), step);
   }
   stale(message: string) {
     this.notice.set(message);

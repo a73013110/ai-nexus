@@ -134,6 +134,13 @@ export const sameSteps = (
   JSON.stringify(first.map((step) => toRequest(step, rules))) ===
   JSON.stringify(second.map((step) => toRequest(step, rules)));
 
+/** 規則說明的第一行：一句摘要，放在下拉選項的名稱下。 */
+export const ruleSummary = (description: string) => description.split('\n', 1)[0]?.trim() ?? '';
+
+/** 規則說明第一行之後的細節（每行一點），選定後列在欄位下方。 */
+export const ruleDetail = (description: string) =>
+  description.split('\n').slice(1).join('\n').trim();
+
 /** 「何時需要這一關」的選項：每次都要，或種類宣告的事實等於某個值時。 */
 export function conditionOptions(kind: FlowDefinitionDto) {
   return [
@@ -159,18 +166,29 @@ export function describeStep(
   rules: readonly ApproverRuleDto[],
   people: ReadonlyMap<string, FlowPersonDto>,
 ) {
-  const draft = toDraft(step, people);
-  const rule = rules.find((item) => item.key === step.approverRule);
+  return summarizeDraft(toDraft(step, people), kind, rules);
+}
+
+/** 編輯中的一關寫成一句話（收合時的摘要也用這個）；還沒選人、選功能時只寫規則名稱。 */
+export function summarizeDraft(
+  draft: StepDraft,
+  kind: FlowDefinitionDto,
+  rules: readonly ApproverRuleDto[],
+) {
+  const rule = rules.find((item) => item.key === draft.rule);
   const approver = (() => {
-    if (!rule) return step.approverRule;
+    if (!rule) return draft.rule;
     switch (rule.argument) {
       case 'levels':
         return draft.levels === 1
           ? `${rule.name}（直屬）`
           : `${rule.name}（往上 ${draft.levels} 層）`;
       case 'users':
-        return `${rule.name}：${draft.users.map((user) => user.displayName).join('、')}`;
+        return draft.users.length
+          ? `${rule.name}：${draft.users.map((user) => user.displayName).join('、')}`
+          : rule.name;
       case 'feature': {
+        if (!draft.feature) return rule.name;
         const feature = CATALOG_FEATURES.find((item) => item.id === draft.feature);
         return `${rule.name}：${feature?.name ?? draft.feature}`;
       }

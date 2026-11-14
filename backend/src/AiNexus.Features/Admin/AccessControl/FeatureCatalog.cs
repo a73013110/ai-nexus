@@ -158,7 +158,7 @@ public static class FeatureCatalog
         new(Jobs, FeatureKind.Page, JobsModule, "背景任務", "tasks"),
         new(Repositories, FeatureKind.Page, RepositoriesModule, "程式庫", "git"),
         // 申請、查看自己的授權與負責人直接授予都在這一頁；能不能授予看資料（儲存庫負責人），不是另一個授權（ADR 0037）。
-        new(RepositoriesAccess, FeatureKind.Page, RepositoriesModule, "儲存庫權限", "lock"),
+        new(RepositoriesAccess, FeatureKind.Page, RepositoriesModule, "儲存庫權限", "folder-access"),
         // 管理員：同步目錄、開放申請、指定負責人、授予 admin 與非人員帳號、處理未登記存取。
         new(RepositoriesAccessManage, FeatureKind.Action, RepositoriesModule, "管理所有儲存庫權限", "edit"),
         // 出勤紀錄是員工自助頁，管理頁（卡號對應、匯入紀錄、假日設定）給 HR；管理頁的網址仍在 /office/attendance，選單才放進系統管理（ADR 0018）。
@@ -172,10 +172,10 @@ public static class FeatureCatalog
         new(CalendarSync, FeatureKind.Page, CalendarSyncModule, "Google 日曆同步", "calendar"),
         new(CalendarSyncManage, FeatureKind.Action, CalendarSyncModule, "立即同步與測試連線", "refresh"),
         // 待我審核與我的申請給全員；審核權來自流程設定，不是這個授權（ADR 0036）。
-        new(FlowApprovals, FeatureKind.Page, FlowModule, "簽核", "check"),
+        new(FlowApprovals, FeatureKind.Page, FlowModule, "簽核", "approval"),
         // 代審、查看全部申請，也是規則算不出審核人時的備援審核人。
         new(FlowApprovalsManage, FeatureKind.Action, FlowModule, "代審與查看全部申請", "shield"),
-        new(FlowDefinitions, FeatureKind.Page, FlowModule, "簽核流程", "order"),
+        new(FlowDefinitions, FeatureKind.Page, FlowModule, "簽核流程", "flow"),
         new(IdentityUsers, FeatureKind.Page, IdentityModule, "使用者", "user"),
         // 匯入會建立帳號（取得 member 的工作區），更新只套用目錄資料；分開授予，讓協助維護資料的人不必能開帳號。
         new(IdentityUsersImport, FeatureKind.Action, IdentityModule, "從 AD 匯入使用者", "import"),

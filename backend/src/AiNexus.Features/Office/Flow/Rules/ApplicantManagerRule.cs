@@ -12,7 +12,7 @@ internal sealed class ApplicantManagerRule(OrganizationDirectory directory) : IA
     public const int MaxLevels = 5;
 
     public static readonly ApproverRuleDefinition Definition = new("applicant-manager", "申請人的主管",
-        "申請人主要所屬單位往上的主管；1＝直屬主管、2＝再上一層。沒有主管的單位會跳過，往上找到頂為止。", ApproverArguments.Levels);
+        "申請人主要所屬單位往上的主管。\n1＝直屬主管，2＝再上一層。\n沒有主管的單位會跳過，找到最上層為止。", ApproverArguments.Levels);
 
     public Task<Error?> ValidateAsync(string? argument, CancellationToken ct)
         => Task.FromResult<Error?>(Levels(argument) is null ? FlowErrors.ArgumentInvalid : null);
