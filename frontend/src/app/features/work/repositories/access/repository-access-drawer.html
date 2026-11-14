@@ -37,13 +37,15 @@
 
       <section aria-labelledby="access-mine-heading">
         <h3 class="ui-section-heading" id="access-mine-heading">我的權限</h3>
-        <div class="access-mine">
+        <div class="access-mine" [attr.data-tone]="item.mine.tone">
+          <span class="access-mine-icon" aria-hidden="true"
+            ><nx-icon
+              [name]="
+                item.repository.myGrant || item.repository.myDirectPermission ? 'check' : 'lock'
+              "
+          /></span>
           <div class="access-mine-text">
-            <span
-              ><nx-status-badge [tone]="item.mine.tone">{{
-                item.mine.label
-              }}</nx-status-badge></span
-            >
+            <strong>{{ item.mine.label }}</strong>
             @if (item.mine.note) {
               <small>{{ item.mine.note }}</small>
             }
@@ -82,8 +84,8 @@
             <dd>{{ item.stewards || '未指定' }}</dd>
           </div>
           <div>
-            <dt>開放申請</dt>
-            <dd>{{ item.repository.requestable ? '是' : '否' }}</dd>
+            <dt>申請</dt>
+            <dd>{{ item.repository.requestable ? '開放申請' : '不開放申請' }}</dd>
           </div>
           <div>
             <dt>可見度</dt>
@@ -99,38 +101,49 @@
       </section>
 
       @if (item.manager) {
-        <section aria-labelledby="access-requests-heading">
-          <h3 class="ui-section-heading" id="access-requests-heading">
-            審核中的申請（{{ item.requests.length }}）
-          </h3>
-          <ul class="person-list">
-            @for (entry of item.requests; track entry.request.instanceId) {
-              <li class="person-row">
-                <span class="avatar" aria-hidden="true">{{
-                  initial(entry.request.applicant.displayName)
-                }}</span>
-                <span class="person-row-text"
-                  ><strong>{{ entry.request.applicant.displayName }}</strong
-                  ><small>{{ entry.summary }}</small
-                  ><small class="access-reason">{{ entry.request.reason }}</small></span
-                >
-                <a
-                  class="quiet-button"
-                  [routerLink]="routeOf('flow.approvals')"
-                  [queryParams]="{ instance: entry.request.instanceId }"
-                  >審核</a
-                >
-              </li>
-            } @empty {
-              <li class="form-note">沒有審核中的申請。</li>
-            }
-          </ul>
-        </section>
+        <!-- 沒有審核中的申請時整段不出現；有的話放在名單前，先看到要處理的事。 -->
+        @if (item.requests.length) {
+          <section aria-labelledby="access-requests-heading">
+            <h3 class="ui-section-heading" id="access-requests-heading">
+              審核中的申請（{{ item.requests.length }}）
+            </h3>
+            <ul class="person-list">
+              @for (entry of item.requests; track entry.request.instanceId) {
+                <li class="person-row">
+                  <span class="avatar" aria-hidden="true">{{
+                    initial(entry.request.applicant.displayName)
+                  }}</span>
+                  <span class="person-row-text"
+                    ><strong>{{ entry.request.applicant.displayName }}</strong
+                    ><small>{{ entry.summary }}</small
+                    ><small class="access-reason">{{ entry.request.reason }}</small></span
+                  >
+                  <a
+                    class="quiet-button"
+                    [routerLink]="routeOf('flow.approvals')"
+                    [queryParams]="{ instance: entry.request.instanceId }"
+                    >審核</a
+                  >
+                </li>
+              }
+            </ul>
+          </section>
+        }
 
         <section aria-labelledby="access-grants-heading">
-          <h3 class="ui-section-heading" id="access-grants-heading">
-            授權名單（{{ item.grants.length }}）
-          </h3>
+          <div class="access-section-head">
+            <h3 class="ui-section-heading" id="access-grants-heading">
+              授權名單（{{ item.grants.length }}）
+            </h3>
+            <button
+              type="button"
+              class="quiet-button"
+              [disabled]="item.repository.missing || item.repository.isArchived"
+              (click)="grant()"
+            >
+              <nx-icon name="plus" />授予權限
+            </button>
+          </div>
           <ul class="person-list">
             @for (entry of item.grants; track entry.grant.id) {
               <li class="person-row" [class.is-inactive]="!entry.removable">
@@ -169,10 +182,10 @@
         @if (item.unregistered.length) {
           <section aria-labelledby="access-unregistered-heading">
             <h3 class="ui-section-heading" id="access-unregistered-heading">
-              Gitea 上直接加的協作者（{{ item.unregistered.length }}）
+              未納管的協作者（{{ item.unregistered.length }}）
             </h3>
-            <p class="form-note">
-              平台沒有這些授權的紀錄；轉成平台授權後才會出現在覆核與到期管理裡。
+            <p class="form-note access-lines">
+              {{ '在 Gitea 上直接加入，平台沒有紀錄。\n轉成授權後，才會納入覆核與到期管理。' }}
             </p>
             <ul class="person-list">
               @for (entry of item.unregistered; track entry.collaborator.login) {

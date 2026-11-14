@@ -7253,6 +7253,9 @@ export interface components {
             /** Format: uuid */
             pendingInstanceId: null | string;
             manager: components["schemas"]["RepositoryManager"];
+            myDirectPermission: null | string;
+            /** Format: int32 */
+            unregisteredCount: number;
         };
         ManagedRepositorySettingsRequest: {
             requestable: boolean;

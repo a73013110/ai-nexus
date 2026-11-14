@@ -48,8 +48,8 @@ export const expiryText = (expiresOn: string | null) =>
   expiresOn ? `到 ${formatDay(`${expiresOn}T00:00:00+08:00`)}` : '不限期';
 
 /**
- * 我在這個儲存庫的狀況：有授權寫權限與到期，審核中寫審核中，都沒有時看能不能申請。
- * 授權還沒寫到 Gitea 時附註，免得以為核准了卻打不開。
+ * 我在這個儲存庫的狀況：有授權寫權限與到期；在 Gitea 上被直接加入（平台沒有紀錄）時照實寫出權限並標成未納管；
+ * 審核中寫審核中，都沒有時看能不能申請。授權還沒寫到 Gitea 時附註，免得以為核准了卻打不開。
  */
 export function myAccess(repository: ManagedRepositoryDto): Presented & { note: string } {
   const grant = repository.myGrant;
@@ -63,6 +63,12 @@ export function myAccess(repository: ManagedRepositoryDto): Presented & { note: 
       ]
         .filter(Boolean)
         .join('・'),
+    };
+  if (repository.myDirectPermission)
+    return {
+      label: permissionName(repository.myDirectPermission),
+      tone: 'warning',
+      note: repository.pendingInstanceId ? '未納管・申請審核中' : '未納管：在 Gitea 上直接加入',
     };
   if (repository.pendingInstanceId) return { label: '審核中', tone: 'info', note: '' };
   return { label: '沒有權限', tone: 'neutral', note: canRequest(repository) ? '' : '不開放申請' };
@@ -84,7 +90,42 @@ export function repositoryTags(repository: ManagedRepositoryDto): Presented[] {
     ...(!repository.requestable && !repository.missing
       ? [{ label: '不開放申請', tone: 'neutral' as const }]
       : []),
+    // 只有負責人與管理員拿得到人數，其他人永遠是 0。
+    ...(repository.unregisteredCount
+      ? [{ label: `${repository.unregisteredCount} 位未納管`, tone: 'warning' as const }]
+      : []),
   ];
+}
+
+/** 狀態條件；「需要處理」給管理者找出要轉成授權或指定負責人的儲存庫。 */
+export type RepositoryState =
+  '' | 'unregistered' | 'unassigned' | 'closed' | 'public' | 'archived' | 'missing';
+export const REPOSITORY_STATES: readonly { value: RepositoryState; label: string }[] = [
+  { value: '', label: '全部' },
+  { value: 'unregistered', label: '有未納管協作者' },
+  { value: 'unassigned', label: '未指定負責人' },
+  { value: 'closed', label: '不開放申請' },
+  { value: 'public', label: '公開' },
+  { value: 'archived', label: '已封存' },
+  { value: 'missing', label: 'Gitea 已找不到' },
+];
+export function matchesState(repository: ManagedRepositoryDto, state: RepositoryState) {
+  switch (state) {
+    case 'unregistered':
+      return repository.unregisteredCount > 0;
+    case 'unassigned':
+      return !repository.stewards.length;
+    case 'closed':
+      return !repository.requestable;
+    case 'public':
+      return !repository.isPrivate;
+    case 'archived':
+      return repository.isArchived;
+    case 'missing':
+      return repository.missing;
+    default:
+      return true;
+  }
 }
 
 /** 授權列的說明：來源、授予人與時間。 */

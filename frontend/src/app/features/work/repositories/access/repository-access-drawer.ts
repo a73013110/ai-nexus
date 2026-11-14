@@ -65,21 +65,64 @@ import { RepositorySettingsDialog } from './repository-settings-dialog';
     :host {
       display: contents;
     }
+    /* 我的權限：一張狀態卡，圖示＋狀態＋附註在左、動作在右；有權限時用成功色，放不下時動作換到下一行。 */
     .access-mine {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: var(--p-space-2) var(--p-space-3);
+      padding: var(--p-space-3);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-block);
+      background: var(--surface-subtle);
+    }
+    .access-mine-icon {
+      --icon-size: var(--icon-md);
+      display: grid;
+      place-items: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: var(--radius-full);
+      background: var(--surface);
+      color: var(--text-muted);
+    }
+    .access-mine[data-tone='success'] .access-mine-icon {
+      background: color-mix(in srgb, var(--success) 14%, transparent);
+      color: var(--success);
+    }
+    .access-mine[data-tone='warning'] .access-mine-icon {
+      background: color-mix(in srgb, var(--warning) 16%, transparent);
+      color: var(--warning);
+    }
+    .access-mine[data-tone='danger'] .access-mine-icon {
+      background: var(--danger-surface);
+      color: var(--danger);
     }
     .access-mine-text {
       display: grid;
-      flex: 1 1 12rem;
-      gap: var(--p-space-1);
+      flex: 1 1 10rem;
       min-width: 0;
+    }
+    .access-mine-text strong {
+      font-weight: 600;
     }
     .access-mine-text small,
     .person-row-text small {
       color: var(--text-muted);
+    }
+    /* 段落標題右側放這一段的動作（授予權限）。 */
+    .access-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--p-space-2);
+      margin-bottom: var(--p-space-2);
+    }
+    .access-section-head .ui-section-heading {
+      margin: 0;
+    }
+    .access-lines {
+      white-space: pre-line;
     }
     .access-reason {
       overflow-wrap: anywhere;
@@ -155,15 +198,10 @@ export class RepositoryAccessDrawer {
       })),
     };
   });
-  readonly menu = computed<MenuAction[]>(() => {
-    const view = this.view();
-    if (!view?.manager) return [];
-    const unavailable = view.repository.missing || view.repository.isArchived;
-    return [
-      { id: 'grant', label: '授予權限', icon: 'plus', disabled: unavailable },
-      ...(view.administrator ? [{ id: 'settings', label: '儲存庫設定', icon: 'settings' }] : []),
-    ];
-  });
+  /** 授予權限放在授權名單的標題列；選單只剩系統管理員的儲存庫設定。 */
+  readonly menu = computed<MenuAction[]>(() =>
+    this.view()?.administrator ? [{ id: 'settings', label: '儲存庫設定', icon: 'settings' }] : [],
+  );
 
   open() {
     this.drawer().open();
@@ -174,11 +212,14 @@ export class RepositoryAccessDrawer {
   menuAction(id: string) {
     const view = this.view();
     if (!view) return;
-    if (id === 'grant') this.grantDialog().open(view.repository, view.administrator);
-    else if (id === 'settings') {
+    if (id === 'settings') {
       this.notice.set('');
       this.settingsDialog().open(view.detail);
     }
+  }
+  grant() {
+    const view = this.view();
+    if (view) this.grantDialog().open(view.repository, view.administrator);
   }
   request() {
     const repository = this.detail()?.repository;

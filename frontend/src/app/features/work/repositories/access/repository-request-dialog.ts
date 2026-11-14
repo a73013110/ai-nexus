@@ -96,13 +96,14 @@ const same = (a: Draft, b: Draft) =>
                 </header>
                 <div class="form-section-body">
                   <div class="form-row">
-                    <nx-select
-                      label="權限"
-                      [options]="permissions"
-                      [value]="e.draft.permission"
-                      [disabled]="sending.pending()"
-                      (valueChange)="editor.update('permission', $event)"
-                    />
+                    <label
+                      >權限<nx-select
+                        label="權限"
+                        [options]="permissions"
+                        [value]="e.draft.permission"
+                        [disabled]="sending.pending()"
+                        (valueChange)="editor.update('permission', $event)"
+                    /></label>
                     <nx-date-time-picker
                       label="到期日（選填）"
                       [withTime]="false"

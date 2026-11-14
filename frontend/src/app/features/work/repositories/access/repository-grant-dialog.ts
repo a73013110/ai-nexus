@@ -23,6 +23,7 @@ import { DraftEditor } from '@shared/ui/draft-editor';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 import { Select } from '@shared/ui/select';
+import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
 import { directorySearch } from '@features/work/collaboration/directory-search';
 import { PersonPicker } from '@features/work/collaboration/person-picker';
 import { RepositoriesApi } from '../repositories-api';
@@ -72,6 +73,7 @@ const same = (a: Draft, b: Draft) =>
     Notice,
     PersonPicker,
     Select,
+    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -93,18 +95,18 @@ const same = (a: Draft, b: Draft) =>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-who'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-who'">對象</h3>
-                  @if (e.administrator) {
-                    <button
-                      type="button"
-                      class="quiet-button"
-                      [disabled]="granting.pending()"
-                      (click)="toggleLogin()"
-                    >
-                      {{ e.draft.byLogin ? '改選平台上的人' : '改填 Gitea 帳號（服務帳號等）' }}
-                    </button>
-                  }
                 </header>
                 <div class="form-section-body">
+                  @if (e.administrator) {
+                    <nx-view-switch
+                      label="授予對象的種類"
+                      appearance="segment"
+                      [options]="targets"
+                      [value]="e.draft.byLogin ? 'login' : 'user'"
+                      [disabled]="granting.pending()"
+                      (valueChange)="chooseTarget($event)"
+                    />
+                  }
                   @if (e.draft.byLogin) {
                     <label
                       >Gitea 帳號<input
@@ -117,6 +119,7 @@ const same = (a: Draft, b: Draft) =>
                         [readOnly]="granting.pending()"
                         (input)="update('login', login.value)"
                     /></label>
+                    <p class="form-note">沒有平台帳號的 Gitea 帳號，例如部署用的服務帳號。</p>
                   } @else if (e.draft.user; as user) {
                     <div class="form-choice">
                       <span class="avatar" aria-hidden="true">{{ initial(user.displayName) }}</span>
@@ -153,13 +156,14 @@ const same = (a: Draft, b: Draft) =>
                 </header>
                 <div class="form-section-body">
                   <div class="form-row">
-                    <nx-select
-                      label="權限"
-                      [options]="permissions()"
-                      [value]="e.draft.permission"
-                      [disabled]="granting.pending()"
-                      (valueChange)="update('permission', $event)"
-                    />
+                    <label
+                      >權限<nx-select
+                        label="權限"
+                        [options]="permissions()"
+                        [value]="e.draft.permission"
+                        [disabled]="granting.pending()"
+                        (valueChange)="update('permission', $event)"
+                    /></label>
                     <nx-date-time-picker
                       label="到期日（選填）"
                       [withTime]="false"
@@ -207,6 +211,11 @@ export class RepositoryGrantDialog {
   readonly granted = output<void>();
   readonly loginMax = LOGIN_MAX;
   readonly reasonMax = REASON_MAX;
+  /** 只有系統管理員能切到 Gitea 帳號。 */
+  readonly targets: ViewOption[] = [
+    { value: 'user', label: '平台上的人' },
+    { value: 'login', label: 'Gitea 帳號' },
+  ];
   protected readonly initial = nameInitial;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('grantDialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
@@ -279,10 +288,11 @@ export class RepositoryGrantDialog {
     this.editor.update('user', null);
     afterNextRender(() => this.picker()?.focus(), { injector: this.injector });
   }
-  toggleLogin() {
+  chooseTarget(target: string) {
     const draft = this.editor.current()?.draft;
-    if (!draft) return;
-    this.editor.patch({ byLogin: !draft.byLogin, user: null, login: '' });
+    const byLogin = target === 'login';
+    if (!draft || draft.byLogin === byLogin) return;
+    this.editor.patch({ byLogin, user: null, login: '' });
     this.whoError.set('');
     this.reasonError.set('');
   }

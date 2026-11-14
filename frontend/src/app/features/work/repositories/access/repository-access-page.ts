@@ -20,7 +20,10 @@ import { DataTable, DataTableColumn, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { PendingButton } from '@shared/ui/pending-button';
-import { SearchField } from '@shared/ui/search-field';
+import { Field } from '@shared/ui/field';
+import { QueryBar, QueryField } from '@shared/ui/query-bar';
+import { queryState } from '@shared/ui/query-state';
+import { Select } from '@shared/ui/select';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { TableHeader } from '@shared/ui/table-header';
 import { localTable } from '@shared/ui/table-model';
@@ -28,14 +31,24 @@ import { ToastService } from '@shared/ui/toast-service';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { RepositoriesApi } from '../repositories-api';
 import { RepositoryAccessDrawer } from './repository-access-drawer';
-import { myAccess, repositoryTags, syncSummary } from './repository-access-presentation';
-
-type AccessView = 'all' | 'mine' | 'stewarded';
+import {
+  REPOSITORY_STATES,
+  myAccess,
+  repositoryTags,
+  syncSummary,
+} from './repository-access-presentation';
+import {
+  REPOSITORY_SEARCH_MAX,
+  REPOSITORY_VIEWS,
+  matchesRepository,
+  repositoryAccessQueryOptions,
+} from './repository-access-query';
 
 /**
  * 儲存庫權限（`repositories.access`）：Gitea 各組織的儲存庫，申請讀取或寫入，核准後由同步工作加為協作者。
  * 負責人看得到自己負責的儲存庫的名單並可直接授予；系統管理員看全部，另可設定負責人與立即同步。
- * 清單一次讀完（儲存庫數量有限），搜尋與檢視在本機篩；`?repository=` 是開著的儲存庫（通知連結帶入）。
+ * 清單一次讀完，條件用共用的 `QueryBar` 在本機篩（`repository-access-query.ts`）；`?repository=` 是開著的儲存庫（通知連結帶入）。
+ * 套用條件會以條件重寫網址、拿掉 `repository`，抽屜照樣開著，只是重新整理後不再自動打開。
  */
 @Component({
   selector: 'nx-repository-access-page',
@@ -43,11 +56,14 @@ type AccessView = 'all' | 'mine' | 'stewarded';
     DataTable,
     DataTableColumn,
     FeaturePage,
+    Field,
     Icon,
     Notice,
     PendingButton,
+    QueryBar,
+    QueryField,
     RepositoryAccessDrawer,
-    SearchField,
+    Select,
     StatusBadge,
     TableHeader,
     TableState,
@@ -115,30 +131,35 @@ export class RepositoryAccessPage {
   readonly sync = computed(() => syncSummary(this.data()?.sync ?? null));
   readonly syncing = action();
 
-  readonly views = computed(() => [
-    { value: 'all', label: '全部' },
-    { value: 'mine', label: '我的權限' },
-    ...(this.data()?.items.some((item) => item.manager === 'Steward')
-      ? [{ value: 'stewarded', label: '我負責的' }]
-      : []),
+  readonly query = queryState(repositoryAccessQueryOptions);
+  readonly draft = this.query.draft;
+  readonly searchMax = REPOSITORY_SEARCH_MAX;
+  /** 「我負責的」只給有負責儲存庫的人。 */
+  readonly views = computed(() =>
+    REPOSITORY_VIEWS.filter(
+      (view) =>
+        view.value !== 'stewarded' || this.data()?.items.some((item) => item.manager === 'Steward'),
+    ),
+  );
+  /** 組織從清單讀出；只有一個組織時這個條件沒有意義，但保留讓欄位位置固定。 */
+  readonly owners = computed(() => [
+    { value: '', label: '所有組織' },
+    ...[...new Set((this.data()?.items ?? []).map((item) => item.owner))]
+      .sort((a, b) => a.localeCompare(b))
+      .map((owner) => ({ value: owner, label: owner })),
   ]);
-  readonly view = signal<AccessView>('all');
-  readonly search = signal('');
+  /** 「有未納管協作者」「未指定負責人」是管理者要處理的事，一般使用者不列。 */
+  readonly states = computed(() =>
+    REPOSITORY_STATES.filter(
+      (state) =>
+        !['unregistered', 'unassigned'].includes(state.value) ||
+        this.data()?.items.some((item) => item.manager !== 'None'),
+    ),
+  );
   readonly table = localTable({
     rows: () => {
-      const items = this.data()?.items;
-      if (!items) return undefined;
-      const view = this.view();
-      const needle = this.search().trim().toLowerCase();
-      return items.filter(
-        (item) =>
-          (view === 'all' ||
-            (view === 'mine'
-              ? !!item.myGrant || !!item.pendingInstanceId
-              : item.manager === 'Steward')) &&
-          (!needle ||
-            `${item.owner}/${item.name} ${item.description ?? ''}`.toLowerCase().includes(needle)),
-      );
+      const query = this.query.applied();
+      return this.data()?.items.filter((item) => matchesRepository(item, query));
     },
     read: {
       loading: this.read.loading,
@@ -177,7 +198,7 @@ export class RepositoryAccessPage {
   );
   readonly empty = computed(() =>
     this.data()?.items.length
-      ? { title: '沒有符合條件的儲存庫', text: '換個檢視或搜尋條件再看看。' }
+      ? { title: '沒有符合條件的儲存庫', text: '換個檢視或查詢條件再看看。' }
       : {
           title: '還沒有儲存庫',
           text: this.administrator()
@@ -201,9 +222,6 @@ export class RepositoryAccessPage {
     });
   }
 
-  chooseView(value: string) {
-    this.view.set(value as AccessView);
-  }
   openRepository(id: string) {
     this.selectedId.set(id);
     this.drawer().open();

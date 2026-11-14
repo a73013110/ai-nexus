@@ -37,6 +37,21 @@ public sealed class RepositoryAccessSyncTaskTests
     }
 
     [Fact]
+    public async Task DirectCollaboratorsShowAsMyPermissionAndAreCountedForManagersOnly()
+    {
+        await using var session = await RepositoryAccessSession.StartAsync();
+        using var alice = await session.ClientAsync("alice"); using var bob = await session.ClientAsync("bob");
+        session.Gitea.AddCollaboratorDirectly(RepositoryAccessSession.Nexus, "bob", "read");
+
+        await session.SyncAsync();
+
+        var mine = (await bob.GetFromJsonAsync<ManagedRepositoriesDto>(RepositoryAccessSession.Repositories, RepositoryAccessSession.Json))!.Items.Single();
+        Assert.Equal(("read", 0, (RepositoryMyGrantDto?)null), (mine.MyDirectPermission, mine.UnregisteredCount, mine.MyGrant));
+        var managed = (await alice.GetFromJsonAsync<ManagedRepositoriesDto>(RepositoryAccessSession.Repositories, RepositoryAccessSession.Json))!.Items.Single(x => x.Name == "nexus");
+        Assert.Equal(((string?)null, 1), (managed.MyDirectPermission, managed.UnregisteredCount));
+    }
+
+    [Fact]
     public async Task ExpiredGrantsAreEndedAndRemovedAfterAnExpiryNotice()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);

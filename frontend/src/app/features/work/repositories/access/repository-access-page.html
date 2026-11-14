@@ -37,29 +37,58 @@
     <nx-notice tone="danger" [message]="syncing.error()" />
   }
 
-  <div class="page-toolbar">
+  <nx-query-bar label="儲存庫查詢條件" [state]="query" [table]="table" [busy]="read.refreshing()">
     <nx-view-switch
+      query-lead
       label="檢視"
-      appearance="segment"
       [options]="views()"
-      [value]="view()"
-      (valueChange)="chooseView($event)"
+      [value]="query.applied().view"
+      (valueChange)="query.commit({ view: $any($event) })"
     />
-    <nx-search-field
-      label="搜尋儲存庫"
-      placeholder="名稱或說明"
-      [value]="search()"
-      (valueChange)="search.set($event)"
-    />
-  </div>
+    <label class="ui-field ui-query-wide" nxQueryField="search"
+      >搜尋<input
+        nxField
+        type="search"
+        autocomplete="off"
+        placeholder="組織/名稱或說明"
+        [attr.maxlength]="searchMax"
+        [value]="draft().search"
+        (input)="query.set('search', $any($event.target).value)"
+    /></label>
+    <div class="ui-field" nxQueryField="owner">
+      <span aria-hidden="true">組織</span>
+      <nx-select
+        label="組織"
+        placeholder="所有組織"
+        [searchable]="true"
+        [searchFrom]="10"
+        [options]="owners()"
+        [loading]="read.loading()"
+        [value]="draft().owner"
+        (valueChange)="query.set('owner', $event)"
+      />
+    </div>
+    <div class="ui-field" nxQueryField="state">
+      <span aria-hidden="true">狀態</span>
+      <nx-select
+        label="狀態"
+        [options]="states()"
+        [value]="draft().state"
+        (valueChange)="query.set('state', $any($event))"
+      />
+    </div>
+  </nx-query-bar>
 
   <nx-data-table
     class="access-table"
-    label="儲存庫"
+    label="儲存庫列表"
     [table]="table"
     [stacked]="true"
     preferenceKey="work-repositories-access"
   >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>儲存庫</h2>
+    </div>
     <table>
       <caption class="sr-only">
         儲存庫、我的權限、負責人與狀態；選一列開啟權限詳情。
