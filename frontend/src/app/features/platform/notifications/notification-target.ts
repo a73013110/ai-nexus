@@ -11,6 +11,10 @@ const TARGETS = new Map<string, { feature: RoutedId; suffix: (id: string) => str
   ['schema-changes', { feature: 'releases', suffix: () => '' }],
   // 排程任務連續失敗：id 由任務 key 雜湊而來，頁面不必反查；失敗的任務在背景作業頁本來就排在最前面。
   ['scheduled-task', { feature: 'scheduling', suffix: () => '' }],
+  // 簽核的指派、提醒與結果：開啟申請詳情。
+  ['flow', { feature: 'flow.approvals', suffix: (id) => `?instance=${id}` }],
+  // 儲存庫權限的授予、移除與到期：開啟該儲存庫的權限詳情。
+  ['repository-access', { feature: 'repositories.access', suffix: (id) => `?repository=${id}` }],
 ]);
 
 /** 通知指向的功能；不認得的種類為 `null`。 */

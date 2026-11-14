@@ -46,7 +46,7 @@ public sealed class SendTestMailTests
         await using var factory = new AppFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var listed = (await admin.GetFromJsonAsync<MailSampleDto[]>(Samples))!;
-        Assert.Equal(["mail.test", "account.email-change-code", "account.reauthentication-code", "account.security-notice"], listed.Select(x => x.Category));
+        Assert.Equal(["mail.test", "account.email-change-code", "account.reauthentication-code", "account.security-notice", "flow.notice"], listed.Select(x => x.Category));
         Assert.Equal(("EmailChangeCodeMail", "VerificationCodeMailModel", "security", true), (listed[1].TemplateType, listed[1].ModelType, listed[1].Priority, listed[1].Sensitive));
         // 範例值不帶操作者或任何使用者的資料，人名與信箱一律虛構。
         Assert.All(listed.SelectMany(x => x.Parameters).Where(x => x.Name.EndsWith("Name", StringComparison.Ordinal) || x.Name == "RequestedBy"),

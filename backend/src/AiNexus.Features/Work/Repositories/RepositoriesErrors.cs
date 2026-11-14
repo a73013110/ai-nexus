@@ -49,4 +49,20 @@ internal static class RepositoriesErrors
     public static readonly Error InvalidToken = Error.Invalid("invalid_gitea_token");
     public static readonly Error ReviewRequestInvalid = Error.Invalid("review_request_invalid");
     public static readonly Error CommentInvalid = Error.Invalid("review_comment_invalid");
+
+    // 儲存庫權限（ADR 0037）
+    public static readonly Error AccessDisabled = Error.Unavailable("repository_access_disabled");
+    public static readonly Error ServiceUnauthorized = Error.Unavailable("gitea_service_unauthorized");
+    public static readonly Error ServiceForbidden = Error.Unavailable("gitea_service_forbidden");
+    public static readonly Error ManagedNotFound = Error.NotFound("managed_repository_not_found");
+    public static readonly Error NotRequestable = Error.Conflict("repository_not_requestable");
+    public static readonly Error AccessPending = Error.Conflict("repository_access_pending");
+    public static readonly Error AccessHeld = Error.Conflict("repository_access_held");
+    public static readonly Error AccessForbidden = Error.Forbidden("repository_access_forbidden");
+    public static readonly Error AccountMissing = Error.Conflict("gitea_account_missing");
+    public static readonly Error GrantNotFound = Error.NotFound("repository_grant_not_found");
+    public static readonly Error ExpiryInvalid = Error.Invalid("repository_access_expiry_invalid");
+    public static readonly Error GranteeInvalid = Error.Invalid("repository_grantee_invalid");
+    public static readonly Error StewardInvalid = Error.Invalid("repository_steward_invalid");
+    public static readonly Error AccessChanged = Error.Conflict("repository_access_changed");
 }

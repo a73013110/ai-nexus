@@ -16,5 +16,8 @@ export const officeRoutes: Routes = [
       (module) => module.calendarSyncRoutes,
     ),
   ),
+  moduleRoute('flow', () =>
+    import('@features/office/flow/flow.routes').then((module) => module.flowRoutes),
+  ),
   unavailableRoute,
 ];

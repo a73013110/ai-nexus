@@ -3,6 +3,9 @@ import { ApiClient } from '@core/api/api-client';
 import type {
   CreateRepositoryReviewRequest,
   ImportRepositoryFolderRequest,
+  ManagedRepositorySettingsRequest,
+  RepositoryAccessRequestBody,
+  RepositoryGrantRequest,
   StartRepositoryChatRequest,
 } from '@core/api/schema';
 
@@ -72,4 +75,23 @@ export class RepositoriesApi {
     this.api.get('/api/v1/repositories/{owner}/{name}/reviews', { path });
   createReview = (path: RepositoryKey, body: CreateRepositoryReviewRequest) =>
     this.api.post('/api/v1/repositories/{owner}/{name}/reviews', { path, body });
+
+  // 儲存庫權限（`repositories.access`）：以平台記錄的 ID 操作，不經使用者自己的 Gitea 連線。
+  managed = (signal?: AbortSignal) => this.api.get('/api/v1/managed-repositories', { signal });
+  managedDetail = (id: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/managed-repositories/{id}', { path: { id }, signal });
+  /** 送出申請，回傳簽核申請的 ID。 */
+  requestAccess = (id: string, body: RepositoryAccessRequestBody) =>
+    this.api.post('/api/v1/managed-repositories/{id}/requests', { path: { id }, body });
+  grantAccess = (id: string, body: RepositoryGrantRequest) =>
+    this.api.post('/api/v1/managed-repositories/{id}/grants', { path: { id }, body });
+  /** 移除一筆授權；本人移除自己的就是放棄權限。 */
+  revokeGrant = (id: string, grantId: string) =>
+    this.api.delete('/api/v1/managed-repositories/{id}/grants/{grantId}', {
+      path: { id, grantId },
+    });
+  saveAccessSettings = (id: string, body: ManagedRepositorySettingsRequest) =>
+    this.api.put('/api/v1/managed-repositories/{id}/settings', { path: { id }, body });
+  /** 不等排程立刻同步一次（排進背景，結果看清單的同步狀態）。 */
+  syncAccess = () => this.api.post('/api/v1/managed-repositories/sync');
 }

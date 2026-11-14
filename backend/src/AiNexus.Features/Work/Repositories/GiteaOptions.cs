@@ -19,6 +19,20 @@ public sealed class GiteaOptions
     [Range(1000, 256000)] public int MaxChatCharacters { get; set; } = 60000;
     /// <summary>單次資料夾匯入可加入知識庫的文字檔數。</summary>
     [Range(1, 1000)] public int MaxImportFiles { get; set; } = 200;
+
+    /// <summary>
+    /// 儲存庫權限（ADR 0037）的服務帳號權杖，只給 <c>write:repository</c>、<c>read:organization</c>、<c>read:user</c>，放在秘密設定。
+    /// 空白時儲存庫權限停用：不同步、不能申請或授予；瀏覽程式庫仍用每個人自己的權杖，不受影響。
+    /// </summary>
+    public string ServiceToken { get; set; } = "";
+
+    /// <summary>每隔幾小時把所有有效授權重新寫入一次，修正有人在 Gitea 手動改掉的權限。</summary>
+    [Range(1, 168)] public int ReapplyHours { get; set; } = 24;
+
+    /// <summary>授權到期前幾天通知本人與負責人。</summary>
+    [Range(1, 30)] public int ExpiryNoticeDays { get; set; } = 7;
+
+    public bool AccessEnabled => Enabled && ServiceToken.Length > 0;
 }
 
 [OptionsValidator]

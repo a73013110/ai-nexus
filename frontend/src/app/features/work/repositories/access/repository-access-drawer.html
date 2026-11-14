@@ -1,0 +1,224 @@
+<nx-detail-drawer title="儲存庫權限" preferenceKey="repository-access" (closed)="closed.emit()">
+  <nx-drawer-pager
+    drawer-actions
+    noun="儲存庫"
+    [index]="index()"
+    [count]="count()"
+    (move)="move.emit($event)"
+  />
+  @if (menu().length) {
+    <nx-action-menu
+      drawer-actions
+      label="儲存庫權限的管理操作"
+      [items]="menu()"
+      (action)="menuAction($event)"
+    />
+  }
+  @if (view(); as item) {
+    <nx-drawer-summary [heading]="item.fullName" [subtitle]="item.repository.description" mono>
+      @for (tag of item.tags; track tag.label) {
+        <nx-status-badge [tone]="tag.tone">{{ tag.label }}</nx-status-badge>
+      }
+    </nx-drawer-summary>
+  }
+  @if (view(); as item) {
+    <div class="ui-drawer-sections">
+      @if (acting.error()) {
+        <nx-notice tone="danger" [message]="acting.error()" />
+      }
+      @if (notice()) {
+        <nx-notice
+          tone="warning"
+          [message]="notice()"
+          [dismissible]="true"
+          (dismissed)="notice.set('')"
+        />
+      }
+
+      <section aria-labelledby="access-mine-heading">
+        <h3 class="ui-section-heading" id="access-mine-heading">我的權限</h3>
+        <div class="access-mine">
+          <div class="access-mine-text">
+            <span
+              ><nx-status-badge [tone]="item.mine.tone">{{
+                item.mine.label
+              }}</nx-status-badge></span
+            >
+            @if (item.mine.note) {
+              <small>{{ item.mine.note }}</small>
+            }
+          </div>
+          @if (item.repository.pendingInstanceId) {
+            <a
+              class="secondary-button"
+              [routerLink]="routeOf('flow.approvals')"
+              [queryParams]="{ instance: item.repository.pendingInstanceId }"
+              >查看申請進度</a
+            >
+          } @else if (item.canRequest) {
+            <button type="button" class="primary-button access-request" (click)="request()">
+              {{ item.repository.myGrant ? '申請變更' : '申請權限' }}
+            </button>
+          }
+          @if (item.repository.myGrant; as grant) {
+            <button
+              nxPending
+              type="button"
+              class="secondary-button access-release"
+              [pending]="acting.pendingFor(grant.id)"
+              (click)="revoke(grant.id, null)"
+            >
+              {{ acting.pendingFor(grant.id) ? '放棄中…' : '放棄權限' }}
+            </button>
+          }
+        </div>
+      </section>
+
+      <section aria-labelledby="access-info-heading">
+        <h3 class="ui-section-heading" id="access-info-heading">基本資訊</h3>
+        <dl class="ui-description-list">
+          <div>
+            <dt>負責人</dt>
+            <dd>{{ item.stewards || '未指定' }}</dd>
+          </div>
+          <div>
+            <dt>開放申請</dt>
+            <dd>{{ item.repository.requestable ? '是' : '否' }}</dd>
+          </div>
+          <div>
+            <dt>可見度</dt>
+            <dd>{{ item.repository.isPrivate ? '私有' : '公開' }}</dd>
+          </div>
+          @if (item.repository.grantingTeams) {
+            <div class="ui-description-wide">
+              <dt>另由團隊授權</dt>
+              <dd>{{ item.repository.grantingTeams }}</dd>
+            </div>
+          }
+        </dl>
+      </section>
+
+      @if (item.manager) {
+        <section aria-labelledby="access-requests-heading">
+          <h3 class="ui-section-heading" id="access-requests-heading">
+            審核中的申請（{{ item.requests.length }}）
+          </h3>
+          <ul class="person-list">
+            @for (entry of item.requests; track entry.request.instanceId) {
+              <li class="person-row">
+                <span class="avatar" aria-hidden="true">{{
+                  initial(entry.request.applicant.displayName)
+                }}</span>
+                <span class="person-row-text"
+                  ><strong>{{ entry.request.applicant.displayName }}</strong
+                  ><small>{{ entry.summary }}</small
+                  ><small class="access-reason">{{ entry.request.reason }}</small></span
+                >
+                <a
+                  class="quiet-button"
+                  [routerLink]="routeOf('flow.approvals')"
+                  [queryParams]="{ instance: entry.request.instanceId }"
+                  >審核</a
+                >
+              </li>
+            } @empty {
+              <li class="form-note">沒有審核中的申請。</li>
+            }
+          </ul>
+        </section>
+
+        <section aria-labelledby="access-grants-heading">
+          <h3 class="ui-section-heading" id="access-grants-heading">
+            授權名單（{{ item.grants.length }}）
+          </h3>
+          <ul class="person-list">
+            @for (entry of item.grants; track entry.grant.id) {
+              <li class="person-row" [class.is-inactive]="!entry.removable">
+                <span class="avatar" [class.is-name]="!entry.grant.user" aria-hidden="true">{{
+                  initial(entry.name)
+                }}</span>
+                <span class="person-row-text"
+                  ><strong>{{ entry.name }}</strong
+                  ><small>{{ entry.summary }}</small
+                  ><small [title]="entry.grant.reason ?? ''">{{ entry.origin }}</small></span
+                >
+                <nx-status-badge [tone]="entry.state.tone" [title]="entry.grant.syncError ?? ''">{{
+                  entry.state.label
+                }}</nx-status-badge>
+                @if (
+                  entry.removable &&
+                  (item.administrator || (entry.grant.user && entry.grant.permission !== 'admin'))
+                ) {
+                  <button
+                    type="button"
+                    class="icon-button"
+                    [attr.aria-label]="'移除權限：' + entry.name"
+                    [disabled]="acting.pendingFor(entry.grant.id)"
+                    (click)="revoke(entry.grant.id, entry.name)"
+                  >
+                    <nx-icon name="close" />
+                  </button>
+                }
+              </li>
+            } @empty {
+              <li class="form-note">還沒有人經平台取得權限。</li>
+            }
+          </ul>
+        </section>
+
+        @if (item.unregistered.length) {
+          <section aria-labelledby="access-unregistered-heading">
+            <h3 class="ui-section-heading" id="access-unregistered-heading">
+              Gitea 上直接加的協作者（{{ item.unregistered.length }}）
+            </h3>
+            <p class="form-note">
+              平台沒有這些授權的紀錄；轉成平台授權後才會出現在覆核與到期管理裡。
+            </p>
+            <ul class="person-list">
+              @for (entry of item.unregistered; track entry.collaborator.login) {
+                <li class="person-row">
+                  <span
+                    class="avatar"
+                    [class.is-name]="!entry.collaborator.user"
+                    aria-hidden="true"
+                    >{{ initial(entry.name) }}</span
+                  >
+                  <span class="person-row-text"
+                    ><strong>{{ entry.name }}</strong
+                    ><small>{{ entry.summary }}</small></span
+                  >
+                  @if (item.administrator || entry.collaborator.user) {
+                    <button type="button" class="quiet-button" (click)="adopt(entry.collaborator)">
+                      轉成授權
+                    </button>
+                  }
+                </li>
+              }
+            </ul>
+          </section>
+        }
+      }
+    </div>
+  } @else if (read.error()) {
+    <div class="ui-drawer-sections">
+      <nx-notice
+        tone="danger"
+        [message]="read.error()"
+        retryable
+        [retrying]="read.refreshing()"
+        (retry)="read.reload()"
+      />
+    </div>
+  } @else if (repositoryId()) {
+    <div class="ui-drawer-sections access-skeleton" role="status">
+      @for (width of skeleton; track $index) {
+        <span class="skeleton" [style.width.%]="width"></span>
+      }
+      <span class="sr-only">正在載入儲存庫權限…</span>
+    </div>
+  }
+</nx-detail-drawer>
+<nx-repository-request-dialog (requested)="requested()" />
+<nx-repository-grant-dialog (granted)="granted()" />
+<nx-repository-settings-dialog (saved)="settingsSaved()" (stale)="settingsStale($event)" />
+<nx-confirm-dialog />

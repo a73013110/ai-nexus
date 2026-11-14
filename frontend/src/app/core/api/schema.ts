@@ -2416,6 +2416,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/flow/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListFlowTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flow/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListFlowInstances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flow/instances/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFlowInstance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flow/instances/{id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DecideFlowInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/flow/instances/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CancelFlowInstance"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/flow-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListFlowDefinitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/flow-definitions/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SaveFlowDefinition"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -4760,6 +4872,118 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/managed-repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ListManagedRepositories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetManagedRepository"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/{id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["RequestRepositoryAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/{id}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["GrantRepositoryAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/{id}/grants/{grantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["RevokeRepositoryGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/{id}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SaveManagedRepositorySettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/managed-repositories/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SyncManagedRepositories"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shares": {
         parameters: {
             query?: never;
@@ -5234,6 +5458,13 @@ export interface components {
             enabled: boolean;
             /** Format: int64 */
             rowVersion: number;
+        };
+        ApproverRuleDto: {
+            key: string;
+            name: string;
+            description: string;
+            argument: string;
+            kinds: string[];
         };
         ArtifactDto: {
             resource: components["schemas"]["ResourceDto"];
@@ -6394,7 +6625,7 @@ export interface components {
             icon: string;
         };
         /** @enum {string} */
-        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "calendar-sync" | "calendar-sync.manage" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "scheduling" | "scheduling.manage" | "quality" | "quality.retrieval" | "design";
+        FeatureId: "dashboard" | "chat" | "projects" | "files" | "knowledge" | "knowledge.retrieval" | "artifacts" | "sharing" | "jobs" | "repositories" | "repositories.access" | "repositories.access.manage" | "attendance.records" | "attendance.cards" | "attendance.cards.maintain" | "attendance.imports" | "attendance.imports.reimport" | "attendance.calendar" | "attendance.calendar.maintain" | "calendar-sync" | "calendar-sync.manage" | "flow.approvals" | "flow.approvals.manage" | "flow.definitions" | "identity.users" | "identity.users.import" | "identity.users.sync" | "identity.api-clients" | "access-control.roles" | "access-control.groups" | "access-control.features" | "access-control.navigation" | "organization" | "organization.import" | "operations.usage" | "billing.prices" | "monitoring" | "audit" | "audit.usage" | "diagnostics.logs" | "diagnostics.logs.detail" | "diagnostics.logs.export" | "mail.messages" | "mail.messages.resend" | "releases" | "scheduling" | "scheduling.manage" | "quality" | "quality.retrieval" | "design";
         FeatureUpdateRequest: {
             name: null | string;
             enabled: boolean;
@@ -6491,6 +6722,119 @@ export interface components {
             /** Format: uuid */
             documentId: null | string;
             status: null | string;
+        };
+        FlowDecisionRequest: {
+            /** Format: int32 */
+            stepNumber: number;
+            approve: boolean;
+            comment: null | string;
+        };
+        FlowDefinitionDto: {
+            kind: string;
+            name: string;
+            description: string;
+            facts: components["schemas"]["FlowFact"][];
+            steps: components["schemas"]["FlowStepDefinitionDto"][];
+            /** Format: date-time */
+            updatedAt: null | string;
+            /** Format: int64 */
+            rowVersion: null | number;
+        };
+        FlowDefinitionRequest: {
+            steps: components["schemas"]["FlowStepRequest"][];
+            /** Format: int64 */
+            rowVersion: null | number;
+        };
+        FlowDefinitionsDto: {
+            kinds: components["schemas"]["FlowDefinitionDto"][];
+            rules: components["schemas"]["ApproverRuleDto"][];
+            people: components["schemas"]["FlowPersonDto"][];
+        };
+        FlowDetail: {
+            label: string;
+            value: string;
+        };
+        FlowFact: {
+            key: string;
+            name: string;
+            values: components["schemas"]["FlowFactValue"][];
+        };
+        FlowFactValue: {
+            value: string;
+            name: string;
+        };
+        FlowInstanceDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            kindName: string;
+            title: string;
+            details: components["schemas"]["FlowDetail"][];
+            applicant: components["schemas"]["FlowPersonDto"];
+            status: string;
+            /** Format: int32 */
+            currentStep: null | number;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            steps: components["schemas"]["FlowStepDto"][];
+            approvers: components["schemas"]["FlowPersonDto"][];
+            canDecide: boolean;
+            onBehalf: boolean;
+            canCancel: boolean;
+        };
+        FlowInstancePageDto: {
+            items: components["schemas"]["FlowInstanceSummaryDto"][];
+            hasMore: boolean;
+        };
+        FlowInstanceSummaryDto: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            kindName: string;
+            title: string;
+            applicant: components["schemas"]["FlowPersonDto"];
+            status: string;
+            currentStepName: null | string;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+        };
+        FlowPersonDto: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
+        };
+        FlowStepDefinitionDto: {
+            name: string;
+            approverRule: string;
+            approverArgument: null | string;
+            conditionFact: null | string;
+            conditionValue: null | string;
+        };
+        FlowStepDto: {
+            /** Format: int32 */
+            stepNumber: number;
+            name: string;
+            status: string;
+            note: null | string;
+            fallback: boolean;
+            /** Format: date-time */
+            activatedAt: null | string;
+            /** Format: date-time */
+            decidedAt: null | string;
+            decider: null | components["schemas"]["FlowPersonDto"];
+            onBehalf: boolean;
+            comment: null | string;
+        };
+        FlowStepRequest: {
+            name: string;
+            approverRule: string;
+            approverArgument: null | string;
+            conditionFact: null | string;
+            conditionValue: null | string;
         };
         /** @enum {unknown} */
         FormState: "None" | "Filed" | "Unavailable";
@@ -6878,6 +7222,43 @@ export interface components {
             parameters?: null | {
                 [key: string]: string;
             };
+        };
+        ManagedRepositoriesDto: {
+            enabled: boolean;
+            administrator: boolean;
+            items: components["schemas"]["ManagedRepositoryDto"][];
+            sync: null | components["schemas"]["RepositorySyncDto"];
+        };
+        ManagedRepositoryDetailDto: {
+            repository: components["schemas"]["ManagedRepositoryDto"];
+            /** Format: int64 */
+            rowVersion: number;
+            grants: components["schemas"]["RepositoryGrantDto"][];
+            requests: components["schemas"]["RepositoryPendingRequestDto"][];
+            unregistered: components["schemas"]["RepositoryCollaboratorDto"][];
+        };
+        ManagedRepositoryDto: {
+            /** Format: uuid */
+            id: string;
+            owner: string;
+            name: string;
+            description: null | string;
+            isPrivate: boolean;
+            isArchived: boolean;
+            missing: boolean;
+            requestable: boolean;
+            grantingTeams: null | string;
+            stewards: components["schemas"]["RepositoryPersonDto"][];
+            myGrant: null | components["schemas"]["RepositoryMyGrantDto"];
+            /** Format: uuid */
+            pendingInstanceId: null | string;
+            manager: components["schemas"]["RepositoryManager"];
+        };
+        ManagedRepositorySettingsRequest: {
+            requestable: boolean;
+            stewardIds: string[];
+            /** Format: int64 */
+            rowVersion: number;
         };
         MeDto: {
             /** Format: uuid */
@@ -7420,11 +7801,28 @@ export interface components {
             fileName: string;
             expectedFileName: string;
         };
+        RepositoryAccessRequestBody: {
+            permission: string;
+            /** Format: date */
+            expiresOn: null | string;
+            reason: string;
+        };
+        RepositoryAccessRequestedDto: {
+            /** Format: uuid */
+            instanceId: string;
+        };
         RepositoryChatDto: {
             conversation: components["schemas"]["ConversationDto"];
             attachment: components["schemas"]["AttachmentDto"];
             prompt: string;
             skipped: string[];
+        };
+        RepositoryCollaboratorDto: {
+            login: string;
+            permission: string;
+            /** Format: date-time */
+            observedAt: string;
+            user: null | components["schemas"]["RepositoryPersonDto"];
         };
         RepositoryCommentDto: {
             /** Format: int64 */
@@ -7505,6 +7903,33 @@ export interface components {
             files: number;
             job: components["schemas"]["JobDto"];
         };
+        RepositoryGrantDto: {
+            /** Format: uuid */
+            id: string;
+            user: null | components["schemas"]["RepositoryPersonDto"];
+            login: null | string;
+            permission: string;
+            /** Format: date */
+            expiresOn: null | string;
+            source: string;
+            grantedBy: null | components["schemas"]["RepositoryPersonDto"];
+            /** Format: date-time */
+            grantedAt: string;
+            reason: null | string;
+            syncState: string;
+            syncError: null | string;
+            /** Format: date-time */
+            endedAt: null | string;
+        };
+        RepositoryGrantRequest: {
+            /** Format: uuid */
+            userId: null | string;
+            login: null | string;
+            permission: string;
+            /** Format: date */
+            expiresOn: null | string;
+            reason: null | string;
+        };
         RepositoryIssueDetailDto: {
             issue: components["schemas"]["RepositoryIssueDto"];
             body: string;
@@ -7536,12 +7961,38 @@ export interface components {
             name: string;
             color: string;
         };
+        /** @enum {unknown} */
+        RepositoryManager: "None" | "Steward" | "Administrator";
+        RepositoryMyGrantDto: {
+            /** Format: uuid */
+            id: string;
+            permission: string;
+            /** Format: date */
+            expiresOn: null | string;
+            syncState: string;
+        };
         RepositoryPageDto: {
             items: components["schemas"]["RepositoryDto"][];
             pinned: components["schemas"]["RepositoryPinDto"][];
             /** Format: int32 */
             page: number;
             hasMore: boolean;
+        };
+        RepositoryPendingRequestDto: {
+            /** Format: uuid */
+            instanceId: string;
+            applicant: components["schemas"]["RepositoryPersonDto"];
+            permission: string;
+            /** Format: date */
+            expiresOn: null | string;
+            reason: string;
+            /** Format: date-time */
+            submittedAt: string;
+        };
+        RepositoryPersonDto: {
+            /** Format: uuid */
+            id: string;
+            displayName: string;
         };
         RepositoryPinDto: {
             fullName: string;
@@ -7640,6 +8091,14 @@ export interface components {
             login: null | string;
             /** Format: date-time */
             connectedAt: null | string;
+        };
+        RepositorySyncDto: {
+            running: boolean;
+            requested: boolean;
+            /** Format: date-time */
+            lastFinishedAt: null | string;
+            lastStatus: null | string;
+            lastSummary: null | string;
         };
         RepositoryTreeDto: {
             commit: string;
@@ -8732,6 +9191,7 @@ export type ApiClientCreateRequest = components['schemas']['ApiClientCreateReque
 export type ApiClientDto = components['schemas']['ApiClientDto'];
 export type ApiClientKeyRequest = components['schemas']['ApiClientKeyRequest'];
 export type ApiClientUpdateRequest = components['schemas']['ApiClientUpdateRequest'];
+export type ApproverRuleDto = components['schemas']['ApproverRuleDto'];
 export type ArtifactDto = components['schemas']['ArtifactDto'];
 export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
 export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
@@ -8864,6 +9324,20 @@ export type FeedbackRequest = components['schemas']['FeedbackRequest'];
 export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
 export type FilePreviewDto = components['schemas']['FilePreviewDto'];
 export type FileUsageDto = components['schemas']['FileUsageDto'];
+export type FlowDecisionRequest = components['schemas']['FlowDecisionRequest'];
+export type FlowDefinitionDto = components['schemas']['FlowDefinitionDto'];
+export type FlowDefinitionRequest = components['schemas']['FlowDefinitionRequest'];
+export type FlowDefinitionsDto = components['schemas']['FlowDefinitionsDto'];
+export type FlowDetail = components['schemas']['FlowDetail'];
+export type FlowFact = components['schemas']['FlowFact'];
+export type FlowFactValue = components['schemas']['FlowFactValue'];
+export type FlowInstanceDto = components['schemas']['FlowInstanceDto'];
+export type FlowInstancePageDto = components['schemas']['FlowInstancePageDto'];
+export type FlowInstanceSummaryDto = components['schemas']['FlowInstanceSummaryDto'];
+export type FlowPersonDto = components['schemas']['FlowPersonDto'];
+export type FlowStepDefinitionDto = components['schemas']['FlowStepDefinitionDto'];
+export type FlowStepDto = components['schemas']['FlowStepDto'];
+export type FlowStepRequest = components['schemas']['FlowStepRequest'];
 export type FormState = components['schemas']['FormState'];
 export type GapCoverage = components['schemas']['GapCoverage'];
 export type GdFlowStep = components['schemas']['GdFlowStep'];
@@ -8905,6 +9379,10 @@ export type MailSettingsDto = components['schemas']['MailSettingsDto'];
 export type MailSettingsRequest = components['schemas']['MailSettingsRequest'];
 export type MailStatusDto = components['schemas']['MailStatusDto'];
 export type MailTestRequest = components['schemas']['MailTestRequest'];
+export type ManagedRepositoriesDto = components['schemas']['ManagedRepositoriesDto'];
+export type ManagedRepositoryDetailDto = components['schemas']['ManagedRepositoryDetailDto'];
+export type ManagedRepositoryDto = components['schemas']['ManagedRepositoryDto'];
+export type ManagedRepositorySettingsRequest = components['schemas']['ManagedRepositorySettingsRequest'];
 export type MeDto = components['schemas']['MeDto'];
 export type MessageDto = components['schemas']['MessageDto'];
 export type ModelDto = components['schemas']['ModelDto'];
@@ -8955,7 +9433,10 @@ export type ReleaseStatusDto = components['schemas']['ReleaseStatusDto'];
 export type RemoteFileDto = components['schemas']['RemoteFileDto'];
 export type RenameConversationRequest = components['schemas']['RenameConversationRequest'];
 export type RenameLibraryFileRequest = components['schemas']['RenameLibraryFileRequest'];
+export type RepositoryAccessRequestBody = components['schemas']['RepositoryAccessRequestBody'];
+export type RepositoryAccessRequestedDto = components['schemas']['RepositoryAccessRequestedDto'];
 export type RepositoryChatDto = components['schemas']['RepositoryChatDto'];
+export type RepositoryCollaboratorDto = components['schemas']['RepositoryCollaboratorDto'];
 export type RepositoryCommentDto = components['schemas']['RepositoryCommentDto'];
 export type RepositoryCommitDto = components['schemas']['RepositoryCommitDto'];
 export type RepositoryCommitPageDto = components['schemas']['RepositoryCommitPageDto'];
@@ -8965,11 +9446,17 @@ export type RepositoryDto = components['schemas']['RepositoryDto'];
 export type RepositoryEntryDto = components['schemas']['RepositoryEntryDto'];
 export type RepositoryFileDto = components['schemas']['RepositoryFileDto'];
 export type RepositoryFolderImportDto = components['schemas']['RepositoryFolderImportDto'];
+export type RepositoryGrantDto = components['schemas']['RepositoryGrantDto'];
+export type RepositoryGrantRequest = components['schemas']['RepositoryGrantRequest'];
 export type RepositoryIssueDetailDto = components['schemas']['RepositoryIssueDetailDto'];
 export type RepositoryIssueDto = components['schemas']['RepositoryIssueDto'];
 export type RepositoryIssuePageDto = components['schemas']['RepositoryIssuePageDto'];
 export type RepositoryLabelDto = components['schemas']['RepositoryLabelDto'];
+export type RepositoryManager = components['schemas']['RepositoryManager'];
+export type RepositoryMyGrantDto = components['schemas']['RepositoryMyGrantDto'];
 export type RepositoryPageDto = components['schemas']['RepositoryPageDto'];
+export type RepositoryPendingRequestDto = components['schemas']['RepositoryPendingRequestDto'];
+export type RepositoryPersonDto = components['schemas']['RepositoryPersonDto'];
 export type RepositoryPinDto = components['schemas']['RepositoryPinDto'];
 export type RepositoryPullDetailDto = components['schemas']['RepositoryPullDetailDto'];
 export type RepositoryPullDto = components['schemas']['RepositoryPullDto'];
@@ -8980,6 +9467,7 @@ export type RepositoryReviewDto = components['schemas']['RepositoryReviewDto'];
 export type RepositoryReviewReportDto = components['schemas']['RepositoryReviewReportDto'];
 export type RepositoryReviewSectionDto = components['schemas']['RepositoryReviewSectionDto'];
 export type RepositoryStatusDto = components['schemas']['RepositoryStatusDto'];
+export type RepositorySyncDto = components['schemas']['RepositorySyncDto'];
 export type RepositoryTreeDto = components['schemas']['RepositoryTreeDto'];
 export type ResidentServiceBoardDto = components['schemas']['ResidentServiceBoardDto'];
 export type ResidentServiceDto = components['schemas']['ResidentServiceDto'];
@@ -12159,6 +12647,167 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CalendarSyncConnectionDto"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListFlowTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowInstanceSummaryDto"][];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListFlowInstances: {
+        parameters: {
+            query?: {
+                view?: string;
+                status?: string;
+                before?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowInstancePageDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetFlowInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowInstanceDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    DecideFlowInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowDecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    CancelFlowInstance: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListFlowDefinitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FlowDefinitionsDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    SaveFlowDefinition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowDefinitionRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -15370,6 +16019,168 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RepositoryReviewDto"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    ListManagedRepositories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedRepositoriesDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GetManagedRepository: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManagedRepositoryDetailDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    RequestRepositoryAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepositoryAccessRequestBody"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepositoryAccessRequestedDto"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    GrantRepositoryAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepositoryGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    RevokeRepositoryGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                grantId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    SaveManagedRepositorySettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManagedRepositorySettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    SyncManagedRepositories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

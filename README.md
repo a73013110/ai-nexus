@@ -62,6 +62,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 分享 | 具名收件人、版本快照、附件授權、到期與撤銷 | [分享](docs/features/sharing.md) |
 | 品質評測 | 私人回饋、固定題庫、模型與指令比較、人工評分 | [品質](docs/features/quality.md) |
 | 程式庫 | 用個人 Gitea 權限閱讀程式碼、提交、議題與 PR；帶入對話、資料夾匯入知識庫、AI 檢閱並可貼回 PR | [Gitea](docs/features/gitea.md)、[程式碼 review](docs/features/code-review.md) |
+| 儲存庫權限 | Gitea 儲存庫逐人授權：申請走簽核、負責人直接授予、到期與同步、未登記協作者 | [儲存庫權限](docs/features/repository-access.md) |
 | 連網搜尋 | 手動開啟、SearXNG／Brave、來源與時間、配額 | [網路搜尋](docs/features/web-search.md) |
 | 通知 | 共用通知中心、未讀、進度與分享事件、瀏覽器通知 | [通知](docs/features/notifications.md) |
 | 存取管理 | 帳號（含從 AD 匯入與更新）、角色／群組／功能、模型政策與配額、測試身分、個人用量與唯讀對話 | [存取管理](docs/features/administration.md)、[從 AD 匯入](docs/features/directory-import.md)、[模型政策](docs/features/model-policy.md)、[測試身分](docs/features/test-identity.md) |
@@ -69,6 +70,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 組織 | 部門樹、人員所屬與主管（可從公文系統匯入）；資料範圍的依據，不授予功能 | [組織](docs/features/organization.md) |
 | 出勤打卡 | 卡號持有期間、接手、待指派卡號、在出勤紀錄隱藏、刷卡匯入、假日設定、出勤紀錄、舊資料轉移 | [出勤打卡](docs/features/attendance.md) |
 | Google 日曆同步 | 假單與出差單同步到 Google 共用日曆、退避重試、安全閥、狀態與執行紀錄 | [日曆同步](docs/features/calendar-sync.md) |
+| 簽核 | 待我審核、我的申請、核准退回與代審；各種申請的流程與條件設定 | [簽核](docs/features/flow.md) |
 | 平台營運 | 全平台用量、知識檢索索引、模型與工具價格；與存取管理分開授權 | [平台營運](docs/features/operations.md)、[費用](docs/features/billing.md) |
 | 活動稽核 | 每個請求的登入、查閱、異動與拒絕紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/activity-audit.md) |
 | 功能使用量 | 依稽核統計各功能的使用人數、次數與失敗 | [功能使用量](docs/features/feature-usage.md) |

@@ -16,6 +16,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
 | 排程任務（`IScheduledTask`）、常駐服務（`IResidentService`）、定期清理與同步 | `docs/architecture/scheduled-tasks.md` |
 | 助理、助理工具（`IAssistantTool`）、事實種類（〈規則〉〈檢查〉） | `docs/architecture/assistant.md`；寫工具讀 `docs/architecture/assistant-tools.md` |
+| 簽核、申請種類（`IFlowKind`）、審核人規則（`IApproverRule`） | `docs/decisions/0036-approval-engine.md`、`docs/features/flow.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
 | 讀寫其他系統的資料庫（GD 等）、新增外部資料庫 | `docs/architecture/external-databases.md` |

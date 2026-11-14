@@ -1,0 +1,144 @@
+<nx-feature-page
+  [title]="session.featureName('repositories.access')"
+  description="申請儲存庫的讀取或寫入權限；核准後自動加入 Gitea 的協作者。"
+  density="compact"
+  layoutMode="data"
+>
+  @if (administrator()) {
+    <div page-actions class="page-actions">
+      <span class="access-sync" role="status" [title]="sync().title">{{ sync().label }}</span>
+      <button
+        nxPending
+        type="button"
+        class="secondary-button access-sync-start"
+        [pending]="syncing.pending()"
+        [disabled]="!data()?.enabled || !!data()?.sync?.running"
+        [title]="
+          data()?.enabled
+            ? '不等排程，立刻讀取 Gitea 的儲存庫並套用授權。'
+            : '這個站台還沒有設定 Gitea 服務帳號。'
+        "
+        (click)="startSync()"
+      >
+        <nx-icon name="refresh" />立即同步
+      </button>
+    </div>
+  }
+
+  @if (data(); as current) {
+    @if (!current.enabled) {
+      <nx-notice
+        tone="warning"
+        message="儲存庫權限管理還沒有啟用。\n系統管理員設定 Gitea 服務帳號後才能申請與同步。"
+      />
+    }
+  }
+  @if (syncing.error()) {
+    <nx-notice tone="danger" [message]="syncing.error()" />
+  }
+
+  <div class="page-toolbar">
+    <nx-view-switch
+      label="檢視"
+      appearance="segment"
+      [options]="views()"
+      [value]="view()"
+      (valueChange)="chooseView($event)"
+    />
+    <nx-search-field
+      label="搜尋儲存庫"
+      placeholder="名稱或說明"
+      [value]="search()"
+      (valueChange)="search.set($event)"
+    />
+  </div>
+
+  <nx-data-table
+    class="access-table"
+    label="儲存庫"
+    [table]="table"
+    [stacked]="true"
+    preferenceKey="work-repositories-access"
+  >
+    <table>
+      <caption class="sr-only">
+        儲存庫、我的權限、負責人與狀態；選一列開啟權限詳情。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="name" />
+        <col nxTableColumn="mine" class="access-mine-column" />
+        <col nxTableColumn="stewards" class="access-stewards-column" />
+        <col nxTableColumn="state" class="access-state-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th nxHeader="name"></th>
+          <th nxHeader="mine"></th>
+          <th nxHeader="stewards"></th>
+          <th nxHeader="state"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.item.id) {
+          <tr
+            nxTableRow
+            [class.is-selected]="selectedId() === row.item.id"
+            (rowActivate)="openRepository(row.item.id)"
+          >
+            <th scope="row" nxTableColumn="name">
+              <span class="access-name">
+                <button
+                  type="button"
+                  class="ui-table-link ui-truncate"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-controls]="drawer().drawerId()"
+                  [attr.aria-expanded]="selectedId() === row.item.id"
+                  (click)="openRepository(row.item.id)"
+                >
+                  {{ row.fullName }}
+                </button>
+                @if (row.item.description) {
+                  <small class="ui-truncate">{{ row.item.description }}</small>
+                }
+              </span>
+            </th>
+            <td nxTableColumn="mine" data-label="我的權限">
+              <span class="access-cell">
+                <nx-status-badge [tone]="row.mine.tone">{{ row.mine.label }}</nx-status-badge>
+                @if (row.mine.note) {
+                  <small class="ui-truncate">{{ row.mine.note }}</small>
+                }
+              </span>
+            </td>
+            <td nxTableColumn="stewards" data-label="負責人">
+              <span class="ui-truncate">{{ row.stewards || '未指定' }}</span>
+            </td>
+            <td nxTableColumn="state" data-label="狀態">
+              <span class="access-tags">
+                @for (tag of row.tags; track tag.label) {
+                  <nx-status-badge [tone]="tag.tone">{{ tag.label }}</nx-status-badge>
+                }
+              </span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      loadingText="正在載入儲存庫…"
+      errorTitle="無法取得儲存庫"
+      [emptyTitle]="empty().title"
+      [emptyText]="empty().text"
+    />
+  </nx-data-table>
+
+  <nx-repository-access-drawer
+    [repositoryId]="selectedId()"
+    [index]="selectedIndex()"
+    [count]="table.rows().length"
+    (move)="adjacent($event)"
+    (closed)="closeRepository()"
+    (changed)="read.reload()"
+  />
+</nx-feature-page>

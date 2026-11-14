@@ -7,6 +7,7 @@ using AiNexus.Data.App.CalendarSync;
 using AiNexus.Data.App.Collaboration;
 using AiNexus.Data.App.Conversations;
 using AiNexus.Data.App.Files;
+using AiNexus.Data.App.Flow;
 using AiNexus.Data.App.Identity;
 using AiNexus.Data.App.Inference;
 using AiNexus.Data.App.Jobs;
@@ -84,6 +85,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
     public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<ResourceAttachment> ResourceAttachments => Set<ResourceAttachment>();
 
+    public DbSet<FlowAssignment> FlowAssignments => Set<FlowAssignment>();
+    public DbSet<FlowDefinitionStep> FlowDefinitionSteps => Set<FlowDefinitionStep>();
+    public DbSet<FlowDefinition> FlowDefinitions => Set<FlowDefinition>();
+    public DbSet<FlowInstanceStep> FlowInstanceSteps => Set<FlowInstanceStep>();
+    public DbSet<FlowInstance> FlowInstances => Set<FlowInstance>();
+
     public DbSet<AdministratorBootstrap> AdministratorBootstraps => Set<AdministratorBootstrap>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
     public DbSet<User> Users => Set<User>();
@@ -130,12 +137,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, TimePro
 
     public DbSet<Deployment> Deployments => Set<Deployment>();
 
+    public DbSet<ManagedRepository> ManagedRepositories => Set<ManagedRepository>();
+    public DbSet<RepositoryAccessRequest> RepositoryAccessRequests => Set<RepositoryAccessRequest>();
+    public DbSet<RepositoryCollaborator> RepositoryCollaborators => Set<RepositoryCollaborator>();
     public DbSet<RepositoryConnection> RepositoryConnections => Set<RepositoryConnection>();
     public DbSet<RepositoryFolderImport> RepositoryFolderImports => Set<RepositoryFolderImport>();
+    public DbSet<RepositoryGrant> RepositoryGrants => Set<RepositoryGrant>();
     public DbSet<RepositoryImport> RepositoryImports => Set<RepositoryImport>();
     public DbSet<RepositoryPin> RepositoryPins => Set<RepositoryPin>();
     public DbSet<RepositoryReviewResult> RepositoryReviewResults => Set<RepositoryReviewResult>();
     public DbSet<RepositoryReview> RepositoryReviews => Set<RepositoryReview>();
+    public DbSet<RepositorySteward> RepositoryStewards => Set<RepositorySteward>();
 
     public DbSet<ScheduledTaskRun> ScheduledTaskRuns => Set<ScheduledTaskRun>();
     public DbSet<ScheduledTask> ScheduledTasks => Set<ScheduledTask>();

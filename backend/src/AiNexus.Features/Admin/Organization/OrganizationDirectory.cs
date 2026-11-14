@@ -54,6 +54,22 @@ public sealed class OrganizationDirectory(AppDbContext db, IActiveUsers activeUs
     }
 
     /// <summary>
+    /// 使用者往上的主管，由近到遠一層一組（簽核「申請人的主管」用）。起點是主要所屬（沒有時取任一個有效所屬），
+    /// 每一層是 <see cref="HeadUnits.ManagingUnits"/> 的一個單位裡生效的主管、不含使用者自己；沒有主管的單位不成一層，
+    /// 所以第一組就是實際的直屬主管。沒有有效所屬時回空清單。
+    /// </summary>
+    public async Task<IReadOnlyList<IReadOnlySet<Guid>>> ManagerChainAsync(Guid userId, CancellationToken ct)
+    {
+        var (active, led) = await ActiveUnitsAsync(ct);
+        var start = Memberships((active, led), await MemberRowsAsync(userId, ct)).OrderByDescending(x => x.IsPrimary).FirstOrDefault();
+        if (start is null) return [];
+        var units = HeadUnits.ManagingUnits(active, led, start.UnitId);
+        var managers = (await ActiveMembers().Where(x => x.IsManager && x.UserId != userId && units.Contains(x.UnitId))
+            .Select(x => new { x.UnitId, x.UserId }).ToListAsync(ct)).ToLookup(x => x.UnitId, x => x.UserId);
+        return [.. units.Select(x => (IReadOnlySet<Guid>)managers[x].ToHashSet()).Where(x => x.Count > 0)];
+    }
+
+    /// <summary>
     /// 沒有有效主管（帳號啟用且未刪除）的有效單位。被首長單位帶領的上層，只要有一個有效的首長單位有主管就不算空缺。
     /// 帳號待辦據此判斷停用的主管是否留下空缺。
     /// </summary>

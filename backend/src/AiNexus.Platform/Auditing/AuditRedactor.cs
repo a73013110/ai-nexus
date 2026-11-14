@@ -43,6 +43,10 @@ public static class AuditRedactor
         "calendarId", "events", "runs",
         // 排程任務（scheduling.task.*）：暫停狀態的前後快照。
         "paused",
+        // 簽核（flow.*，ADR 0036）：審核的關卡序號與是否代審；流程設定前後的關卡（名稱、規則鍵、規則參數 JSON、條件）。
+        "stepNumber", "onBehalf", "steps", "approverRule", "approverArgument", "conditionFact", "conditionValue",
+        // 儲存庫權限（repositories.access_*、managed_repository，ADR 0037）：申請對應的簽核、是否開放申請與負責人名單的前後值。
+        "instanceId", "requestable", "stewardIds",
         // 請求稽核自動記下的路由參數與查詢字串（AuditTrail.RequestDetails）：鍵是參數名稱，值已在寫入前換成安全的短字串。
         "route", "query"
     };

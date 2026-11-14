@@ -36,6 +36,8 @@
 | 3409 / 3410 | `attendance.calendar_write_failed` / `attendance.calendar_commit_failed` | `Attendance/Gd/GdCalendarWriter.cs` |
 | 3411 | `database.external_query_rejected` | 同上 |
 | 3500 / 3501 | `releases.schema_changes_read` / `releases.schema_changes_found` | `Releases/SchemaChanges/SchemaChangeReader.cs`、`SchemaChangeWatchTask.cs` |
+| 3600 / 3601 | `flow.rule_missing` / `flow.no_approver` | `Office/Flow/FlowEngine.cs` |
+| 3602 / 3603 | `repositories.access_grant_failed` / `repositories.access_repository_failed` | `Repositories/Access/RepositoryAccessSyncTask.cs` |
 | 3700 | `google.token_rejected` | `Platform/Google/GoogleAccessTokens.cs` |
 | 3701 / 3702 / 3703 / 3704 / 3705 | `calendar_sync.synced` / `calendar_sync.run_failed` / `calendar_sync.restored` / `calendar_sync.removals_held` / `calendar_sync.reset` | `CalendarSync/Sync/CalendarSyncRunner.cs` |
 | 3800 / 3801 | `scheduling.run_started` / `scheduling.run_finished` | `Scheduling/Engine/ScheduledTaskRunner.cs` |

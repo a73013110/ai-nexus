@@ -5617,6 +5617,236 @@
         }
       }
     },
+    "/api/v1/flow/tasks": {
+      "get": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "ListFlowTasks",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FlowInstanceSummaryDto"
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/flow/instances": {
+      "get": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "ListFlowInstances",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowInstancePageDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/flow/instances/{id}": {
+      "get": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "GetFlowInstance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowInstanceDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/flow/instances/{id}/decision": {
+      "post": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "DecideFlowInstance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/flow/instances/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "CancelFlowInstance",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/flow-definitions": {
+      "get": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "ListFlowDefinitions",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowDefinitionsDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/flow-definitions/{kind}": {
+      "put": {
+        "tags": [
+          "Flow"
+        ],
+        "operationId": "SaveFlowDefinition",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/me": {
       "get": {
         "tags": [
@@ -11056,6 +11286,233 @@
         }
       }
     },
+    "/api/v1/managed-repositories": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "ListManagedRepositories",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedRepositoriesDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/{id}": {
+      "get": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "GetManagedRepository",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManagedRepositoryDetailDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/{id}/requests": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "RequestRepositoryAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepositoryAccessRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepositoryAccessRequestedDto"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/{id}/grants": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "GrantRepositoryAccess",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RepositoryGrantRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/{id}/grants/{grantId}": {
+      "delete": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "RevokeRepositoryGrant",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "grantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/{id}/settings": {
+      "put": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "SaveManagedRepositorySettings",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManagedRepositorySettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/managed-repositories/sync": {
+      "post": {
+        "tags": [
+          "Repositories"
+        ],
+        "operationId": "SyncManagedRepositories",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
     "/api/v1/shares": {
       "get": {
         "tags": [
@@ -12369,6 +12826,36 @@
           }
         }
       },
+      "ApproverRuleDto": {
+        "required": [
+          "key",
+          "name",
+          "description",
+          "argument",
+          "kinds"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "argument": {
+            "type": "string"
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ArtifactDto": {
         "required": [
           "resource",
@@ -12581,7 +13068,7 @@
               "string"
             ]
           },
-          "view": { }
+          "view": {}
         }
       },
       "AssistantTurn": {
@@ -16980,6 +17467,8 @@
           "sharing",
           "jobs",
           "repositories",
+          "repositories.access",
+          "repositories.access.manage",
           "attendance.records",
           "attendance.cards",
           "attendance.cards.maintain",
@@ -16989,6 +17478,9 @@
           "attendance.calendar.maintain",
           "calendar-sync",
           "calendar-sync.manage",
+          "flow.approvals",
+          "flow.approvals.manage",
+          "flow.definitions",
           "identity.users",
           "identity.users.import",
           "identity.users.sync",
@@ -17329,6 +17821,493 @@
             "format": "uuid"
           },
           "status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FlowDecisionRequest": {
+        "required": [
+          "stepNumber",
+          "approve",
+          "comment"
+        ],
+        "type": "object",
+        "properties": {
+          "stepNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "approve": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FlowDefinitionDto": {
+        "required": [
+          "kind",
+          "name",
+          "description",
+          "facts",
+          "steps",
+          "updatedAt",
+          "rowVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowFact"
+            }
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowStepDefinitionDto"
+            }
+          },
+          "updatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "rowVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "FlowDefinitionRequest": {
+        "required": [
+          "steps",
+          "rowVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowStepRequest"
+            }
+          },
+          "rowVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "FlowDefinitionsDto": {
+        "required": [
+          "kinds",
+          "rules",
+          "people"
+        ],
+        "type": "object",
+        "properties": {
+          "kinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowDefinitionDto"
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApproverRuleDto"
+            }
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowPersonDto"
+            }
+          }
+        }
+      },
+      "FlowDetail": {
+        "required": [
+          "label",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "FlowFact": {
+        "required": [
+          "key",
+          "name",
+          "values"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowFactValue"
+            }
+          }
+        }
+      },
+      "FlowFactValue": {
+        "required": [
+          "value",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "FlowInstanceDto": {
+        "required": [
+          "id",
+          "kind",
+          "kindName",
+          "title",
+          "details",
+          "applicant",
+          "status",
+          "currentStep",
+          "submittedAt",
+          "completedAt",
+          "steps",
+          "approvers",
+          "canDecide",
+          "onBehalf",
+          "canCancel"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kindName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowDetail"
+            }
+          },
+          "applicant": {
+            "$ref": "#/components/schemas/FlowPersonDto"
+          },
+          "status": {
+            "type": "string"
+          },
+          "currentStep": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowStepDto"
+            }
+          },
+          "approvers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowPersonDto"
+            }
+          },
+          "canDecide": {
+            "type": "boolean"
+          },
+          "onBehalf": {
+            "type": "boolean"
+          },
+          "canCancel": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FlowInstancePageDto": {
+        "required": [
+          "items",
+          "hasMore"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlowInstanceSummaryDto"
+            }
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FlowInstanceSummaryDto": {
+        "required": [
+          "id",
+          "kind",
+          "kindName",
+          "title",
+          "applicant",
+          "status",
+          "currentStepName",
+          "submittedAt",
+          "completedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kindName": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "applicant": {
+            "$ref": "#/components/schemas/FlowPersonDto"
+          },
+          "status": {
+            "type": "string"
+          },
+          "currentStepName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "FlowPersonDto": {
+        "required": [
+          "id",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        }
+      },
+      "FlowStepDefinitionDto": {
+        "required": [
+          "name",
+          "approverRule",
+          "approverArgument",
+          "conditionFact",
+          "conditionValue"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "approverRule": {
+            "type": "string"
+          },
+          "approverArgument": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conditionFact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conditionValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FlowStepDto": {
+        "required": [
+          "stepNumber",
+          "name",
+          "status",
+          "note",
+          "fallback",
+          "activatedAt",
+          "decidedAt",
+          "decider",
+          "onBehalf",
+          "comment"
+        ],
+        "type": "object",
+        "properties": {
+          "stepNumber": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fallback": {
+            "type": "boolean"
+          },
+          "activatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decidedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decider": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FlowPersonDto"
+              }
+            ]
+          },
+          "onBehalf": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FlowStepRequest": {
+        "required": [
+          "name",
+          "approverRule",
+          "approverArgument",
+          "conditionFact",
+          "conditionValue"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "approverRule": {
+            "type": "string"
+          },
+          "approverArgument": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conditionFact": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "conditionValue": {
             "type": [
               "null",
               "string"
@@ -18857,6 +19836,180 @@
             "additionalProperties": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ManagedRepositoriesDto": {
+        "required": [
+          "enabled",
+          "administrator",
+          "items",
+          "sync"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "administrator": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManagedRepositoryDto"
+            }
+          },
+          "sync": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositorySyncDto"
+              }
+            ]
+          }
+        }
+      },
+      "ManagedRepositoryDetailDto": {
+        "required": [
+          "repository",
+          "rowVersion",
+          "grants",
+          "requests",
+          "unregistered"
+        ],
+        "type": "object",
+        "properties": {
+          "repository": {
+            "$ref": "#/components/schemas/ManagedRepositoryDto"
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepositoryGrantDto"
+            }
+          },
+          "requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepositoryPendingRequestDto"
+            }
+          },
+          "unregistered": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepositoryCollaboratorDto"
+            }
+          }
+        }
+      },
+      "ManagedRepositoryDto": {
+        "required": [
+          "id",
+          "owner",
+          "name",
+          "description",
+          "isPrivate",
+          "isArchived",
+          "missing",
+          "requestable",
+          "grantingTeams",
+          "stewards",
+          "myGrant",
+          "pendingInstanceId",
+          "manager"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isPrivate": {
+            "type": "boolean"
+          },
+          "isArchived": {
+            "type": "boolean"
+          },
+          "missing": {
+            "type": "boolean"
+          },
+          "requestable": {
+            "type": "boolean"
+          },
+          "grantingTeams": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stewards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RepositoryPersonDto"
+            }
+          },
+          "myGrant": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositoryMyGrantDto"
+              }
+            ]
+          },
+          "pendingInstanceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "manager": {
+            "$ref": "#/components/schemas/RepositoryManager"
+          }
+        }
+      },
+      "ManagedRepositorySettingsRequest": {
+        "required": [
+          "requestable",
+          "stewardIds",
+          "rowVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "requestable": {
+            "type": "boolean"
+          },
+          "stewardIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "rowVersion": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -20888,6 +22041,41 @@
           }
         }
       },
+      "RepositoryAccessRequestBody": {
+        "required": [
+          "permission",
+          "expiresOn",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "permission": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "RepositoryAccessRequestedDto": {
+        "required": [
+          "instanceId"
+        ],
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "RepositoryChatDto": {
         "required": [
           "conversation",
@@ -20911,6 +22099,37 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "RepositoryCollaboratorDto": {
+        "required": [
+          "login",
+          "permission",
+          "observedAt",
+          "user"
+        ],
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositoryPersonDto"
+              }
+            ]
           }
         }
       },
@@ -21213,6 +22432,135 @@
           }
         }
       },
+      "RepositoryGrantDto": {
+        "required": [
+          "id",
+          "user",
+          "login",
+          "permission",
+          "expiresOn",
+          "source",
+          "grantedBy",
+          "grantedAt",
+          "reason",
+          "syncState",
+          "syncError",
+          "endedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositoryPersonDto"
+              }
+            ]
+          },
+          "login": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "permission": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "source": {
+            "type": "string"
+          },
+          "grantedBy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositoryPersonDto"
+              }
+            ]
+          },
+          "grantedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncState": {
+            "type": "string"
+          },
+          "syncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "endedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "RepositoryGrantRequest": {
+        "required": [
+          "userId",
+          "login",
+          "permission",
+          "expiresOn",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "login": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "permission": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RepositoryIssueDetailDto": {
         "required": [
           "issue",
@@ -21336,6 +22684,41 @@
           }
         }
       },
+      "RepositoryManager": {
+        "enum": [
+          "None",
+          "Steward",
+          "Administrator"
+        ]
+      },
+      "RepositoryMyGrantDto": {
+        "required": [
+          "id",
+          "permission",
+          "expiresOn",
+          "syncState"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "syncState": {
+            "type": "string"
+          }
+        }
+      },
       "RepositoryPageDto": {
         "required": [
           "items",
@@ -21363,6 +22746,59 @@
           },
           "hasMore": {
             "type": "boolean"
+          }
+        }
+      },
+      "RepositoryPendingRequestDto": {
+        "required": [
+          "instanceId",
+          "applicant",
+          "permission",
+          "expiresOn",
+          "reason",
+          "submittedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "instanceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "applicant": {
+            "$ref": "#/components/schemas/RepositoryPersonDto"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RepositoryPersonDto": {
+        "required": [
+          "id",
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
           }
         }
       },
@@ -21752,6 +23188,43 @@
               "string"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "RepositorySyncDto": {
+        "required": [
+          "running",
+          "requested",
+          "lastFinishedAt",
+          "lastStatus",
+          "lastSummary"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "requested": {
+            "type": "boolean"
+          },
+          "lastFinishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastStatus": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastSummary": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -22313,11 +23786,11 @@
           },
           "refusalDefinition": {
             "type": "string",
-            "default": "無答案題未提供任何來源的比例；不評斷生成回答內容。"
+            "default": "\u7121\u7B54\u6848\u984C\u672A\u63D0\u4F9B\u4EFB\u4F55\u4F86\u6E90\u7684\u6BD4\u4F8B\uFF1B\u4E0D\u8A55\u65B7\u751F\u6210\u56DE\u7B54\u5167\u5BB9\u3002"
           },
           "latencyDefinition": {
             "type": "string",
-            "default": "依 vector、keyword、hybrid、hybrid+rerank 順序執行；共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。"
+            "default": "\u4F9D vector\u3001keyword\u3001hybrid\u3001hybrid\u002Brerank \u9806\u5E8F\u57F7\u884C\uFF1B\u5171\u7528\u6B63\u5E38\u67E5\u8A62\u5FEB\u53D6\uFF0C\u5EF6\u9072\u5305\u542B\u5FEB\u53D6\u547D\u4E2D\u3002\u76F8\u9130\u7247\u6BB5\u5408\u4F75\u5F8C\u4F9D\u76F8\u95DC\u6587\u4EF6\u53CA\u9801\u78BC\u8A55\u5206\u3002"
           }
         }
       },
@@ -24497,7 +25970,7 @@
           },
           "language": {
             "type": "string",
-            "default": "繁體中文"
+            "default": "\u7E41\u9AD4\u4E2D\u6587"
           }
         }
       },
@@ -25518,7 +26991,7 @@
       "Problem": {
         "description": "Problem details",
         "content": {
-          "application/problem+json": {
+          "application/problem\u002Bjson": {
             "schema": {
               "$ref": "#/components/schemas/SafeProblemDetails"
             }
@@ -25572,6 +27045,9 @@
     },
     {
       "name": "CalendarSync"
+    },
+    {
+      "name": "Flow"
     },
     {
       "name": "Account"
@@ -25632,137 +27108,142 @@
     "areas": [
       {
         "id": "work",
-        "name": "AI 工作台"
+        "name": "AI \u5DE5\u4F5C\u53F0"
       },
       {
         "id": "office",
-        "name": "公司事務"
+        "name": "\u516C\u53F8\u4E8B\u52D9"
       },
       {
         "id": "admin",
-        "name": "系統管理"
+        "name": "\u7CFB\u7D71\u7BA1\u7406"
       }
     ],
     "modules": [
       {
         "id": "dashboard",
         "area": "work",
-        "name": "總覽"
+        "name": "\u7E3D\u89BD"
       },
       {
         "id": "chat",
         "area": "work",
-        "name": "對話"
+        "name": "\u5C0D\u8A71"
       },
       {
         "id": "projects",
         "area": "work",
-        "name": "專案"
+        "name": "\u5C08\u6848"
       },
       {
         "id": "files",
         "area": "work",
-        "name": "檔案庫"
+        "name": "\u6A94\u6848\u5EAB"
       },
       {
         "id": "knowledge",
         "area": "work",
-        "name": "知識庫"
+        "name": "\u77E5\u8B58\u5EAB"
       },
       {
         "id": "artifacts",
         "area": "work",
-        "name": "成果文件"
+        "name": "\u6210\u679C\u6587\u4EF6"
       },
       {
         "id": "sharing",
         "area": "work",
-        "name": "分享"
+        "name": "\u5206\u4EAB"
       },
       {
         "id": "jobs",
         "area": "work",
-        "name": "背景任務"
+        "name": "\u80CC\u666F\u4EFB\u52D9"
       },
       {
         "id": "repositories",
         "area": "work",
-        "name": "程式庫"
+        "name": "\u7A0B\u5F0F\u5EAB"
       },
       {
         "id": "attendance",
         "area": "office",
-        "name": "出勤"
+        "name": "\u51FA\u52E4"
       },
       {
         "id": "calendar-sync",
         "area": "office",
-        "name": "日曆同步"
+        "name": "\u65E5\u66C6\u540C\u6B65"
+      },
+      {
+        "id": "flow",
+        "area": "office",
+        "name": "\u7C3D\u6838"
       },
       {
         "id": "identity",
         "area": "admin",
-        "name": "身分"
+        "name": "\u8EAB\u5206"
       },
       {
         "id": "access-control",
         "area": "admin",
-        "name": "存取控制"
+        "name": "\u5B58\u53D6\u63A7\u5236"
       },
       {
         "id": "organization",
         "area": "admin",
-        "name": "組織"
+        "name": "\u7D44\u7E54"
       },
       {
         "id": "operations",
         "area": "admin",
-        "name": "平台營運"
+        "name": "\u5E73\u53F0\u71DF\u904B"
       },
       {
         "id": "billing",
         "area": "admin",
-        "name": "計費"
+        "name": "\u8A08\u8CBB"
       },
       {
         "id": "monitoring",
         "area": "admin",
-        "name": "即時監控"
+        "name": "\u5373\u6642\u76E3\u63A7"
       },
       {
         "id": "audit",
         "area": "admin",
-        "name": "活動稽核"
+        "name": "\u6D3B\u52D5\u7A3D\u6838"
       },
       {
         "id": "diagnostics",
         "area": "admin",
-        "name": "診斷"
+        "name": "\u8A3A\u65B7"
       },
       {
         "id": "mail",
         "area": "admin",
-        "name": "郵件"
+        "name": "\u90F5\u4EF6"
       },
       {
         "id": "releases",
         "area": "admin",
-        "name": "版本"
+        "name": "\u7248\u672C"
       },
       {
         "id": "scheduling",
         "area": "admin",
-        "name": "背景作業"
+        "name": "\u80CC\u666F\u4F5C\u696D"
       },
       {
         "id": "quality",
         "area": "admin",
-        "name": "品質評測"
+        "name": "\u54C1\u8CEA\u8A55\u6E2C"
       },
       {
         "id": "design",
         "area": "admin",
-        "name": "介面元件"
+        "name": "\u4ECB\u9762\u5143\u4EF6"
       }
     ],
     "features": [
@@ -25770,137 +27251,157 @@
         "id": "dashboard",
         "kind": "page",
         "module": "dashboard",
-        "name": "總覽",
+        "name": "\u7E3D\u89BD",
         "icon": "dashboard",
         "route": "/work/dashboard",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "chat",
         "kind": "page",
         "module": "chat",
-        "name": "對話",
+        "name": "\u5C0D\u8A71",
         "icon": "chat",
         "route": "/work/chat",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "projects",
         "kind": "page",
         "module": "projects",
-        "name": "專案",
+        "name": "\u5C08\u6848",
         "icon": "projects",
         "route": "/work/projects",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "files",
         "kind": "page",
         "module": "files",
-        "name": "檔案庫",
+        "name": "\u6A94\u6848\u5EAB",
         "icon": "files",
         "route": "/work/files",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "files.reader",
         "kind": "reader",
         "module": "files",
-        "name": "檔案閱讀器",
+        "name": "\u6A94\u6848\u95B1\u8B80\u5668",
         "icon": "files",
         "route": "/work/files/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge",
         "kind": "page",
         "module": "knowledge",
-        "name": "知識庫",
+        "name": "\u77E5\u8B58\u5EAB",
         "icon": "library",
         "route": "/work/knowledge",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge.reader",
         "kind": "reader",
         "module": "knowledge",
-        "name": "文件閱讀器",
+        "name": "\u6587\u4EF6\u95B1\u8B80\u5668",
         "icon": "document",
         "route": "/work/knowledge/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "knowledge.retrieval",
         "kind": "page",
         "module": "knowledge",
-        "name": "檢索管理",
+        "name": "\u6AA2\u7D22\u7BA1\u7406",
         "icon": "database",
         "route": "/work/knowledge/retrieval",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "artifacts",
         "kind": "page",
         "module": "artifacts",
-        "name": "成果文件",
+        "name": "\u6210\u679C\u6587\u4EF6",
         "icon": "document",
         "route": "/work/artifacts",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "sharing",
         "kind": "page",
         "module": "sharing",
-        "name": "分享",
+        "name": "\u5206\u4EAB",
         "icon": "share",
         "route": "/work/sharing",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "sharing.reader",
         "kind": "reader",
         "module": "sharing",
-        "name": "分享閱讀器",
+        "name": "\u5206\u4EAB\u95B1\u8B80\u5668",
         "icon": "share",
         "route": "/work/sharing/reader",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "jobs",
         "kind": "page",
         "module": "jobs",
-        "name": "背景任務",
+        "name": "\u80CC\u666F\u4EFB\u52D9",
         "icon": "tasks",
         "route": "/work/jobs",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "repositories",
         "kind": "page",
         "module": "repositories",
-        "name": "程式庫",
+        "name": "\u7A0B\u5F0F\u5EAB",
         "icon": "git",
         "route": "/work/repositories",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
+      },
+      {
+        "id": "repositories.access",
+        "kind": "page",
+        "module": "repositories",
+        "name": "\u5132\u5B58\u5EAB\u6B0A\u9650",
+        "icon": "lock",
+        "route": "/work/repositories/access",
+        "scopes": [],
+        "managerScopes": []
+      },
+      {
+        "id": "repositories.access.manage",
+        "kind": "action",
+        "module": "repositories",
+        "name": "\u7BA1\u7406\u6240\u6709\u5132\u5B58\u5EAB\u6B0A\u9650",
+        "icon": "edit",
+        "route": null,
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.records",
         "kind": "page",
         "module": "attendance",
-        "name": "出勤紀錄",
+        "name": "\u51FA\u52E4\u7D00\u9304",
         "icon": "clock",
         "route": "/office/attendance/records",
         "scopes": [
@@ -25918,217 +27419,247 @@
         "id": "attendance.cards",
         "kind": "page",
         "module": "attendance",
-        "name": "卡號對應",
+        "name": "\u5361\u865F\u5C0D\u61C9",
         "icon": "tag",
         "route": "/office/attendance/cards",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.cards.maintain",
         "kind": "action",
         "module": "attendance",
-        "name": "維護卡片與持有期間",
+        "name": "\u7DAD\u8B77\u5361\u7247\u8207\u6301\u6709\u671F\u9593",
         "icon": "edit",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.imports",
         "kind": "page",
         "module": "attendance",
-        "name": "打卡匯入紀錄",
+        "name": "\u6253\u5361\u532F\u5165\u7D00\u9304",
         "icon": "import",
         "route": "/office/attendance/imports",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.imports.reimport",
         "kind": "action",
         "module": "attendance",
-        "name": "手動重匯打卡檔",
+        "name": "\u624B\u52D5\u91CD\u532F\u6253\u5361\u6A94",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.calendar",
         "kind": "page",
         "module": "attendance",
-        "name": "假日設定",
+        "name": "\u5047\u65E5\u8A2D\u5B9A",
         "icon": "calendar",
         "route": "/office/attendance/calendar",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "attendance.calendar.maintain",
         "kind": "action",
         "module": "attendance",
-        "name": "修改假日與彈性放假",
+        "name": "\u4FEE\u6539\u5047\u65E5\u8207\u5F48\u6027\u653E\u5047",
         "icon": "edit",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "calendar-sync",
         "kind": "page",
         "module": "calendar-sync",
-        "name": "Google 日曆同步",
+        "name": "Google \u65E5\u66C6\u540C\u6B65",
         "icon": "calendar",
         "route": "/office/calendar-sync",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "calendar-sync.manage",
         "kind": "action",
         "module": "calendar-sync",
-        "name": "立即同步與測試連線",
+        "name": "\u7ACB\u5373\u540C\u6B65\u8207\u6E2C\u8A66\u9023\u7DDA",
         "icon": "refresh",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
+      },
+      {
+        "id": "flow.approvals",
+        "kind": "page",
+        "module": "flow",
+        "name": "\u7C3D\u6838",
+        "icon": "check",
+        "route": "/office/flow/approvals",
+        "scopes": [],
+        "managerScopes": []
+      },
+      {
+        "id": "flow.approvals.manage",
+        "kind": "action",
+        "module": "flow",
+        "name": "\u4EE3\u5BE9\u8207\u67E5\u770B\u5168\u90E8\u7533\u8ACB",
+        "icon": "shield",
+        "route": null,
+        "scopes": [],
+        "managerScopes": []
+      },
+      {
+        "id": "flow.definitions",
+        "kind": "page",
+        "module": "flow",
+        "name": "\u7C3D\u6838\u6D41\u7A0B",
+        "icon": "order",
+        "route": "/office/flow/definitions",
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users",
         "kind": "page",
         "module": "identity",
-        "name": "使用者",
+        "name": "\u4F7F\u7528\u8005",
         "icon": "user",
         "route": "/admin/identity/users",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users.import",
         "kind": "action",
         "module": "identity",
-        "name": "從 AD 匯入使用者",
+        "name": "\u5F9E AD \u532F\u5165\u4F7F\u7528\u8005",
         "icon": "import",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.users.sync",
         "kind": "action",
         "module": "identity",
-        "name": "以 AD 資料更新使用者",
+        "name": "\u4EE5 AD \u8CC7\u6599\u66F4\u65B0\u4F7F\u7528\u8005",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "identity.api-clients",
         "kind": "page",
         "module": "identity",
-        "name": "外部系統",
+        "name": "\u5916\u90E8\u7CFB\u7D71",
         "icon": "integrations",
         "route": "/admin/identity/api-clients",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.roles",
         "kind": "page",
         "module": "access-control",
-        "name": "角色",
+        "name": "\u89D2\u8272",
         "icon": "lock",
         "route": "/admin/access-control/roles",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.groups",
         "kind": "page",
         "module": "access-control",
-        "name": "功能群組與模型",
+        "name": "\u529F\u80FD\u7FA4\u7D44\u8207\u6A21\u578B",
         "icon": "apps",
         "route": "/admin/access-control/groups",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.features",
         "kind": "page",
         "module": "access-control",
-        "name": "功能",
+        "name": "\u529F\u80FD",
         "icon": "list",
         "route": "/admin/access-control/features",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "access-control.navigation",
         "kind": "page",
         "module": "access-control",
-        "name": "選單",
+        "name": "\u9078\u55AE",
         "icon": "sidebar",
         "route": "/admin/access-control/navigation",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "organization",
         "kind": "page",
         "module": "organization",
-        "name": "組織單位",
+        "name": "\u7D44\u7E54\u55AE\u4F4D",
         "icon": "organization",
         "route": "/admin/organization",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "organization.import",
         "kind": "action",
         "module": "organization",
-        "name": "從公文系統匯入部門",
+        "name": "\u5F9E\u516C\u6587\u7CFB\u7D71\u532F\u5165\u90E8\u9580",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "operations.usage",
         "kind": "page",
         "module": "operations",
-        "name": "平台用量",
+        "name": "\u5E73\u53F0\u7528\u91CF",
         "icon": "chart",
         "route": "/admin/operations/usage",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "billing.prices",
         "kind": "page",
         "module": "billing",
-        "name": "模型與工具價格",
+        "name": "\u6A21\u578B\u8207\u5DE5\u5177\u50F9\u683C",
         "icon": "money",
         "route": "/admin/billing/prices",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "monitoring",
         "kind": "page",
         "module": "monitoring",
-        "name": "即時監控",
+        "name": "\u5373\u6642\u76E3\u63A7",
         "icon": "activity",
         "route": "/admin/monitoring",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "audit",
         "kind": "page",
         "module": "audit",
-        "name": "活動稽核",
+        "name": "\u6D3B\u52D5\u7A3D\u6838",
         "icon": "audit",
         "route": "/admin/audit",
         "scopes": [
@@ -26137,13 +27668,13 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": [ ]
+        "managerScopes": []
       },
       {
         "id": "audit.usage",
         "kind": "page",
         "module": "audit",
-        "name": "功能使用量",
+        "name": "\u529F\u80FD\u4F7F\u7528\u91CF",
         "icon": "chart",
         "route": "/admin/audit/usage",
         "scopes": [
@@ -26152,526 +27683,552 @@
           "unit-tree",
           "all"
         ],
-        "managerScopes": [ ]
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs",
         "kind": "page",
         "module": "diagnostics",
-        "name": "系統日誌",
+        "name": "\u7CFB\u7D71\u65E5\u8A8C",
         "icon": "logs",
         "route": "/admin/diagnostics/logs",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs.detail",
         "kind": "action",
         "module": "diagnostics",
-        "name": "日誌診斷詳情",
+        "name": "\u65E5\u8A8C\u8A3A\u65B7\u8A73\u60C5",
         "icon": "search",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "diagnostics.logs.export",
         "kind": "action",
         "module": "diagnostics",
-        "name": "日誌匯出",
+        "name": "\u65E5\u8A8C\u532F\u51FA",
         "icon": "download",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "mail.messages",
         "kind": "page",
         "module": "mail",
-        "name": "郵件寄送紀錄",
+        "name": "\u90F5\u4EF6\u5BC4\u9001\u7D00\u9304",
         "icon": "mail",
         "route": "/admin/mail/messages",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "mail.messages.resend",
         "kind": "action",
         "module": "mail",
-        "name": "重寄與重試郵件",
+        "name": "\u91CD\u5BC4\u8207\u91CD\u8A66\u90F5\u4EF6",
         "icon": "repeat",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "releases",
         "kind": "page",
         "module": "releases",
-        "name": "版本與結構異動",
+        "name": "\u7248\u672C\u8207\u7D50\u69CB\u7570\u52D5",
         "icon": "history",
         "route": "/admin/releases",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "scheduling",
         "kind": "page",
         "module": "scheduling",
-        "name": "背景作業",
+        "name": "\u80CC\u666F\u4F5C\u696D",
         "icon": "clock",
         "route": "/admin/scheduling",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "scheduling.manage",
         "kind": "action",
         "module": "scheduling",
-        "name": "執行、停止與暫停排程任務",
+        "name": "\u57F7\u884C\u3001\u505C\u6B62\u8207\u66AB\u505C\u6392\u7A0B\u4EFB\u52D9",
         "icon": "play",
         "route": null,
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "quality",
         "kind": "page",
         "module": "quality",
-        "name": "品質評測",
+        "name": "\u54C1\u8CEA\u8A55\u6E2C",
         "icon": "shield",
         "route": "/admin/quality",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "quality.retrieval",
         "kind": "page",
         "module": "quality",
-        "name": "檢索評測",
+        "name": "\u6AA2\u7D22\u8A55\u6E2C",
         "icon": "search",
         "route": "/admin/quality/retrieval",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       },
       {
         "id": "design",
         "kind": "page",
         "module": "design",
-        "name": "介面元件",
+        "name": "\u4ECB\u9762\u5143\u4EF6",
         "icon": "sliders",
         "route": "/admin/design",
-        "scopes": [ ],
-        "managerScopes": [ ]
+        "scopes": [],
+        "managerScopes": []
       }
     ],
     "scopes": [
       {
         "id": "own",
-        "name": "本人"
+        "name": "\u672C\u4EBA"
       },
       {
         "id": "assigned",
-        "name": "被指派"
+        "name": "\u88AB\u6307\u6D3E"
       },
       {
         "id": "unit",
-        "name": "所屬單位"
+        "name": "\u6240\u5C6C\u55AE\u4F4D"
       },
       {
         "id": "unit-tree",
-        "name": "所屬單位及下層"
+        "name": "\u6240\u5C6C\u55AE\u4F4D\u53CA\u4E0B\u5C64"
       },
       {
         "id": "all",
-        "name": "全部"
+        "name": "\u5168\u90E8"
       },
       {
         "id": "managed",
-        "name": "所管單位"
+        "name": "\u6240\u7BA1\u55AE\u4F4D"
       },
       {
         "id": "managed-tree",
-        "name": "所管單位及下層"
+        "name": "\u6240\u7BA1\u55AE\u4F4D\u53CA\u4E0B\u5C64"
       }
     ]
   },
   "x-public-errors": {
-    "access_denied": "沒有存取此資料的權限。",
-    "account_changed": "帳號設定已在其他地方變更，請重新整理後再試。",
-    "account_exists": "此登入帳號已由其他使用者使用或保留。",
-    "ad_binding_conflict": "AD 身分與已連結帳號不一致，請聯絡管理員。",
-    "ad_binding_immutable": "已連結的 AD 身分不能換綁其他帳號；請建立另一位使用者。",
-    "ad_binding_taken": "這個 AD 帳號已連結到其他使用者。",
-    "ad_invalid_credentials": "AD 帳號或密碼不正確，或此帳號無法登入。",
-    "ad_not_bound": "這位使用者沒有連結 AD 帳號，請重新整理後再試。",
-    "ad_sid_required": "AD 帳號缺少 SID，無法建立工作區。",
-    "admin_lockout": "此變更會撤銷你的管理權限。請先由另一位管理員處理。",
-    "admin_resource_not_found": "找不到此管理項目。",
-    "admin_write_busy": "另一筆管理變更還在處理中，請稍後再試。",
-    "admin_write_conflict": "這筆資料剛被其他操作變更，請重新整理後再試。",
-    "api_client_name_taken": "已經有同名的外部系統。",
-    "api_client_not_found": "找不到這個外部系統，可能已被刪除；請重新整理。",
-    "artifact_content_invalid": "成果內容需為 1 至 64,000 個字元，且不包含控制字元。",
-    "artifact_limit": "個人成果文件已達 200 份上限。",
-    "artifact_version_conflict": "此文件已被更新。你的編輯仍保留，請先查看最新版本再合併。",
-    "artifact_version_limit": "此文件最多保留 200 個版本；請建立副本繼續工作。",
-    "artifact_version_missing": "找不到此成果版本。",
-    "assistant_question_invalid": "提問不正確：請輸入 500 字以內的問題後再送出。",
-    "assistant_unavailable": "目前沒有可以用助理查詢的功能；需要時請聯絡系統管理員開通。",
-    "attachment_in_use": "已送出的附件由對話保留，無法單獨刪除。",
-    "attachment_limit": "附件數量超過單則訊息上限，或包含重複的附件。",
-    "attachment_not_found": "找不到這個附件。",
-    "attachment_quota": "附件容量不足，請刪除未引用的檔案，或聯絡管理員調整個人容量上限。",
-    "attachment_total_limit": "這次附件總大小超過上限。",
-    "attachment_upload_expired": "上傳已失效，請重新上傳。",
-    "attendance_assignment_not_found": "找不到這段持有期間，請重新整理。",
-    "attendance_assignment_overlap": "這段期間與同一張卡的其他持有期間重疊，請調整起迄時間。",
-    "attendance_assignment_starts_not_after_previous": "開始時間必須晚於前一段持有期間的開始時間。",
-    "attendance_calendar_day_not_found": "公文系統沒有這一天，只能修改既有的日期。",
-    "attendance_calendar_range_invalid": "查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。",
-    "attendance_calendar_remark_invalid": "備註公文系統存不下：太長，或含公文系統不支援的字（例如罕用字、表情符號）。",
-    "attendance_card_held": "這張卡目前仍有人持有，確認後可由新持有人接手。",
-    "attendance_card_in_use": "這張卡已有刷卡或持有期間，不能刪除；不想在出勤紀錄看到請改為隱藏。",
-    "attendance_card_not_found": "找不到這張卡，請重新整理。",
-    "attendance_card_number_duplicate": "這個卡號已經存在。",
-    "attendance_filter_invalid": "查詢條件不正確，請重新整理頁面。",
-    "attendance_gd_account_unmapped": "你的帳號對不到唯一的公文系統帳號，無法修改假日；請聯絡管理員。",
-    "attendance_gd_form_not_found": "找不到這張表單：可能已退回或銷單，或不在你可查看的範圍。",
-    "attendance_gd_read_only": "公文系統的連線設為唯讀，假日目前只能查詢；請聯絡管理員。",
-    "attendance_gd_unavailable": "公文系統暫時無法連線，請稍後再試。",
-    "attendance_import_file_not_found": "找不到指定日期的打卡檔，請確認打卡機是否已輸出。",
-    "attendance_import_filter_invalid": "查詢條件不正確，請檢查期間、檔案、狀態與分頁。",
-    "attendance_import_not_current": "這次匯入的刷卡已被之後的匯入取代，或這次匯入失敗，沒有可列出的刷卡。",
-    "attendance_import_not_found": "找不到這筆匯入紀錄，請重新整理。",
-    "attendance_import_source_unavailable": "讀不到打卡檔資料夾，請聯絡管理員確認網路共用與讀取權限。",
-    "attendance_record_not_found": "找不到這一天的出勤紀錄，請重新查詢。",
-    "attendance_records_filter_invalid": "查詢條件不正確，請重新選擇人員或重新整理頁面。",
-    "attendance_records_range_invalid": "查詢區間不正確：起訖日期必填，結束不能早於開始，最長一年。",
-    "attendance_user_not_found": "找不到這位使用者，帳號可能已刪除。",
-    "audit_export_limit": "匯出筆數超過上限，請縮小時間範圍或篩選條件。",
-    "audit_feature_not_found": "找不到這個功能頁面，可能已移除；請重新整理後再選擇。",
-    "authentication_mode": "此工作區未使用 Windows 整合驗證。",
-    "authentication_required": "請先登入工作區。",
-    "calendar_sync_calendar_not_configured": "還沒設定要同步的 Google 日曆 ID，請先在設定加上 CalendarSync:CalendarId。",
-    "calendar_sync_disabled": "這個站台沒有啟用 Google 日曆同步，無法手動同步。",
-    "calendar_sync_reset_mismatch": "本站設定的日曆已經換了，請重新整理頁面，確認日曆後再重設。",
-    "calendar_sync_run_not_found": "找不到這一輪同步紀錄，可能已超過保存期；請重新整理。",
-    "client_issue_invalid": "問題回報格式不正確。",
-    "collection_limit": "個人知識庫數量已達上限。",
-    "context_budget_exceeded": "提問超過此模型的上下文預算，請縮短內容或選擇較大上下文的模型。",
-    "conversation_archived": "請先還原封存對話，再繼續提問。",
-    "conversation_missing": "找不到此對話。",
-    "conversation_not_found": "找不到這個對話。",
-    "credentials_rejected": "AD 帳號或密碼不正確，或此帳號無法登入。",
-    "csrf_invalid": "安全驗證已失效，請重新載入頁面。",
-    "database_name": "本初始化指令只允許建立或更新 AiNexus 專用資料庫。",
-    "description_too_long": "知識庫說明最多 2000 個字元。",
-    "directory_changed": "預覽後使用者資料已有變動，這位使用者未寫入；請重新預覽。",
-    "directory_node_invalid": "這個目錄節點不在可瀏覽的範圍內。",
-    "directory_node_not_found": "AD 已找不到這個節點（可能已刪除或改名），請重新整理目錄。",
-    "directory_not_configured": "尚未設定 AD 服務帳號，無法查詢目錄；請聯絡系統管理員。",
-    "directory_person_not_found": "AD 已找不到這位人員（可能已刪除或移出可瀏覽的範圍），請重新整理清單。",
-    "directory_query_invalid": "搜尋文字最多 64 個字，且不能包含控制字元。",
-    "directory_unavailable": "目前無法連到公司 AD，請稍後重試或聯絡系統管理員。",
-    "directory_verification_required": "已有一段時間未用 AD 登入，本地密碼暫停使用；請先用 AD 帳號登入一次。",
-    "document_has_no_text": "文件沒有可讀文字。",
-    "document_limit": "此知識庫的文件數量已達上限。",
-    "document_not_editable_text": "只有以純文字建立的來源可以編輯。",
-    "document_not_found": "找不到此文件，或你已沒有存取權限。",
-    "document_not_indexed": "只有知識庫文件需要重新索引。",
-    "document_pages_missing": "文件尚無完整逐頁文字，請重新上傳資料後再重建。",
-    "document_processing": "來源仍在處理，請等待完成或停止處理後再編輯。",
-    "document_processing_required": "掃描 PDF 尚未完成文字辨識，請等待附件處理完成後再送出。",
-    "document_too_large": "文件文字超過處理上限，請拆分文件。",
-    "document_unreadable": "無法讀取文件。請使用未加密的 PDF、DOCX、XLSX、PPTX，或 UTF-8 文字檔。",
-    "email_in_use": "此信箱已由其他使用者驗證使用。",
-    "email_invalid": "請輸入單一 email 地址（例如 name@company.com）。",
-    "email_managed_by_directory": "此信箱由公司 AD 提供，請聯絡資訊管理人員修改。",
-    "email_not_verified": "尚未設定已驗證的信箱，請改用密碼確認身分。",
-    "embedding_daily_quota": "今日索引、語意查詢與重排次數已達系統上限，請稍後重試。",
-    "embedding_profile_changed": "檢索索引已切換，請重新送出提問。",
-    "embeddings_disabled": "目前採用全文檢索，未啟用語意向量。",
-    "evaluation_active": "你已有處理中的評測，請先完成或取消。",
-    "evaluation_cases_invalid": "題庫需有 1 至 20 題；問題與參考答案各最多 4,000 字元，關鍵字各最多 20 個、每個 80 字元。",
-    "evaluation_configuration_changed": "模型設定已變更；請建立新的任務，避免混用不同設定的結果。",
-    "evaluation_run_limit": "個人評測已達 500 次保留上限。",
-    "evaluation_run_missing": "找不到原始評測。",
-    "evaluation_set_conflict": "題庫已被其他人修改，請重新載入後合併。目前輸入仍保留。",
-    "evaluation_set_limit": "個人評測集已達 100 個。",
-    "evaluation_variants_invalid": "請設定 1 至 3 個名稱不同的比較方案，指令最多 4,000 字元。",
-    "export_format_invalid": "支援 Word、PDF 或 Markdown 匯出。",
-    "feature_forbidden": "你的角色目前沒有使用此功能的權限，請聯絡管理員。",
-    "feedback_answer_pending": "請等回答結束再提供回饋。",
-    "feedback_invalid": "回饋格式不正確，補充說明最多 2,000 字元。",
-    "file_extension_changed": "重新命名時請保留原副檔名，以維持正確的預覽與格式識別。",
-    "file_filter_invalid": "檔案查詢條件不正確。",
-    "file_name_changed": "檔名已被修改，請重新載入後再試。",
-    "file_name_invalid": "檔名需為 1 至 180 個字元，不可包含路徑、控制字元或特殊符號。",
-    "file_not_found": "找不到這份檔案。",
-    "file_required": "每次上傳請提供一個檔案。",
-    "file_size_limit": "檔案過大。",
-    "file_size_mismatch": "上傳檔案內容不完整，請重新上傳。",
-    "file_type_unsupported": "支援圖片、PDF、DOCX、XLSX、PPTX 與 UTF-8 文字文件；不支援巨集、舊版 Office 二進位格式與壓縮檔。",
-    "generation_active": "專案仍有正在生成的回答，請先完成或停止，再刪除。",
-    "gitea_diff_unsupported": "Gitea 未回傳完整的 diff。區間 review 需要支援 compare output=diff 的 Gitea 版本。",
-    "gitea_forbidden": "你的 Gitea 權杖沒有這項權限：閱讀需要 read:repository 與 read:issue，張貼留言需要 write:issue。",
-    "gitea_not_connected": "請先連線自己的 Gitea 帳號。",
-    "gitea_not_found": "Gitea 找不到這個項目，或你沒有讀取權限。",
-    "gitea_reconnect_required": "授權無法解密，請重新連線 Gitea。",
-    "gitea_timeout": "Gitea 回應逾時，請稍後重試。",
-    "gitea_unauthorized": "Gitea 拒絕這個權杖，請確認權杖仍有效，或更新授權。",
-    "gitea_unavailable": "目前無法連到 Gitea，請稍後重試或聯絡管理員。",
-    "google_quota_exceeded": "Google AI 額度或速率受限，請稍後重試。",
-    "google_response_blocked": "Google AI 未完成此回答，請調整提問後重試。",
-    "https_required": "此工作區需要 HTTPS 安全連線。",
-    "idempotency_conflict": "此提交識別碼已用於不同內容。",
-    "idempotency_key_required": "請提供 16 至 80 字元的 Idempotency-Key。",
-    "identity_changed": "測試身分已結束，請重新載入工作區。",
-    "identity_not_found": "找不到這個身分，請重新選擇。",
-    "index_source_changed": "文件或索引狀態已改變，請重新建立索引。",
-    "input_too_long": "訊息超過字數上限。",
-    "instruction_too_long": "對話指令最多 4,000 字元。",
-    "invalid_access_id": "識別碼使用小寫英文、數字、底線與連字號，最多 64 字元。",
-    "invalid_access_ids": "授權清單過長或有重複。",
-    "invalid_access_name": "請輸入 120 字元內的名稱。",
-    "invalid_account": "登入帳號需為 1–64 個字元，只能使用字母、數字、點、底線與連字號。AD 請填目錄中的帳號，不含網域。",
-    "invalid_appearance": "外觀設定不在可選範圍內，請重新選擇。",
-    "invalid_audit_filter": "稽核篩選條件不正確。",
-    "invalid_backup": "備份格式不正確或內容過大（最多 400 則訊息）。",
-    "invalid_commit": "請選擇固定的 commit 版本。",
-    "invalid_credentials": "帳號、密碼或登入方式不正確，或帳號暫時無法登入。",
-    "invalid_cursor": "事件序號不正確。",
-    "invalid_dashboard_scope": "檢視範圍不正確。",
-    "invalid_data_scope": "請為每個支援資料範圍的功能選擇一個它支援的範圍，主管範圍只能選該功能支援的值；其他功能不帶範圍。",
-    "invalid_file_name": "檔案名稱不正確或過長。",
-    "invalid_gitea_token": "請輸入有效的 Gitea 個人存取權杖。",
-    "invalid_history": "對話分支資料不完整。",
-    "invalid_image": "圖片內容與副檔名不符，請重新匯出圖片。",
-    "invalid_labels": "最多 5 個標籤，每個 1 至 24 字元。",
-    "invalid_login_methods": "請至少設定一種登入方式，並填寫對應的登入帳號。",
-    "invalid_model": "模型識別碼過長。",
-    "invalid_model_policy": "群組容量上限不正確。",
-    "invalid_order": "排序值必須介於 0 與 10000。",
-    "invalid_page": "分頁不正確。",
-    "invalid_parent": "上文必須是此對話中已結束的回答。",
-    "invalid_password": "本地密碼需為 12–128 個字元，可使用長句與密碼管理器。",
-    "invalid_price": "請檢查模型與工具價格、幣別、生效時間與計費方式。新價格只能由現在起生效。",
-    "invalid_prompt_template": "範本標題最多 80 字元，內容最多 12,000 字元，皆不可空白。",
-    "invalid_query": "搜尋條件不正確。",
-    "invalid_reauthentication": "請擇一確認身分：輸入密碼，或輸入寄到信箱的驗證碼。",
-    "invalid_repository": "程式庫名稱不正確。",
-    "invalid_repository_path": "檔案路徑不正確。",
-    "invalid_repository_ref": "分支、標籤或版本名稱不正確。",
-    "invalid_repository_state": "篩選條件不正確。",
-    "invalid_request": "請求格式不正確。",
-    "invalid_resource_acl": "成員清單重複、過長或角色不正確。",
-    "invalid_resource_name": "名稱需為 1 至 120 個字元。",
-    "invalid_roles": "選取的角色已不存在，請重新載入。",
-    "invalid_search": "搜尋條件不正確。",
-    "invalid_settings": "個人設定超出允許範圍，請重新選擇。",
-    "invalid_spend_period": "查詢期間需為 1 至 366 天，並提供有效的時區。",
-    "invalid_storage_limit": "容量上限需為 0 至 1,000,000 GB 的整數 bytes；留空則使用群組或預設容量。",
-    "invalid_table_query": "表格的排序或篩選條件不正確，請清除欄位篩選後再試。",
-    "invalid_title": "標題需為 1 至 120 個字元。",
-    "invalid_user": "請輸入姓名與有效角色。",
-    "invalid_user_order": "排序位置不正確，請輸入 1 以上的編號。",
-    "invalid_verification_request": "驗證碼的用途不正確，請重新整理後再試。",
-    "job_active": "此文件仍在處理中。",
-    "job_changed": "任務狀態已改變，請重新載入。",
-    "job_handler_missing": "此任務類型已停用。",
-    "job_not_found": "找不到這個背景任務。",
-    "job_not_retryable": "只有失敗或已取消的任務可以重試。",
-    "job_recovery_limit": "任務在執行中多次中斷，已停止自動接續。可再重試；仍失敗請聯絡管理員。",
-    "knowledge_collection_limit": "每次最多使用三個不同知識庫。",
-    "knowledge_query_invalid": "查詢需為 1 至 2000 個字元。",
-    "knowledge_selection_changed": "知識來源剛剛已變更，請重新送出提問。",
-    "knowledge_source_changed": "知識來源已改變，請重新送出提問。",
-    "local_login_required": "本地登入是此帳號唯一的登入方式，不能停用。",
-    "local_login_unavailable": "系統未開放自行設定本地登入，請聯絡管理員。",
-    "local_password_required": "首次啟用本地登入時，請設定密碼。",
-    "log_cursor_invalid": "分頁已失效，請重新查詢。",
-    "log_export_cursor": "匯出請使用完整時間範圍。",
-    "log_export_limit": "匯出資料量超過限制，請縮小範圍。",
-    "log_filter_invalid": "日誌篩選格式或範圍超過限制。",
-    "log_not_found": "找不到此日誌。",
-    "log_text_range": "文字搜尋限一天內。",
-    "login_method_disabled": "此使用者已停用，或未允許 AD 驗證。",
-    "login_rate_limited": "登入失敗次數過多，請幾分鐘後再試。",
-    "mail_address_invalid": "收件地址格式不正確，請輸入單一 email 地址（例如 name@company.com）。",
-    "mail_content_unavailable": "這封信是敏感信或內文已依保存期限刪除，不能重寄。",
-    "mail_cursor_invalid": "分頁已失效，請重新查詢。",
-    "mail_filter_invalid": "郵件篩選格式或範圍不正確。",
-    "mail_message_not_found": "找不到這封信，紀錄可能已依保存期限刪除。",
-    "mail_not_configured": "郵件寄送尚未設定，請聯絡系統管理員。",
-    "mail_not_retryable": "這封信已經寄出或結束，不能立即重試；需要時請用重寄建立新信。",
-    "mail_recipient_blocked": "收件地址的網域不在允許清單內。",
-    "mail_recipient_unavailable": "收件地址已依保存期限清除，不能重寄。",
-    "mail_sample_invalid": "參數不正確：數字要是整數、是否要是 true 或 false、時間要是 ISO 8601，必填欄位不可空白。",
-    "mail_sample_not_found": "找不到這種郵件範本，請重新整理後再選。",
-    "message_not_found": "找不到來源訊息。",
-    "model_group_forbidden": "此模型不在你的個人或群組授權範圍。",
-    "model_not_allowed": "偏好的模型未經伺服器核准。",
-    "model_selection_disabled": "目前不開放自選模型，請使用預設模型。",
-    "model_token_quota": "此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。",
-    "multipart_required": "請使用檔案上傳格式。",
-    "navigation_depth_exceeded": "選單最多四層，請把項目放到較淺的分群。",
-    "navigation_item_cycle": "不能把選單分群移到它自己或它的子分群底下。",
-    "navigation_item_not_empty": "選單分群仍有項目，請先移出或刪除後再刪除分群。",
-    "navigation_item_not_found": "找不到這個選單項目，請重新整理。",
-    "navigation_link_host_not_allowed": "外部連結的網站不在允許清單內，請聯絡系統管理員。",
-    "navigation_page_duplicate": "同一層已經有這個頁面。",
-    "navigation_parent_invalid": "上層必須是現有的選單分群。",
-    "not_found": "找不到資料。",
-    "notification_cursor_invalid": "通知清單已變更，請重新整理。",
-    "notification_cursor_required": "請提供本次通知清單的時間。",
-    "ocr_image_unsupported": "頁面圖片過大或格式不支援，無法辨識文字。",
-    "ocr_output_truncated": "單頁辨識文字超過上限，請拆分文件後重試。",
-    "ocr_page_layout_unsupported": "此頁的圖片數量無法進行文字辨識，每頁需含 1 至 4 張圖片。",
-    "office_archive_limit": "Office 文件解壓內容過大，請拆分後上傳。",
-    "office_macros_unsupported": "不接受巨集文件，請另存為不含巨集的格式。",
-    "organization_depth_exceeded": "組織最多八層，請把單位放到較淺的位置。",
-    "organization_head_rank_duplicate": "同一層已經有相同層級的首長單位，請改用其他層級。",
-    "organization_head_rank_invalid": "首長單位必須有上層，層級是 1 到 9。",
-    "organization_head_unit_nested": "首長單位底下不能再有首長單位。",
-    "organization_import_empty": "公文系統沒有任何部門，未匯入；請確認公文系統的連線設定。",
-    "organization_import_not_configured": "尚未設定公文系統的連線，無法匯入部門；請聯絡管理員。",
-    "organization_import_rejected": "公文系統拒絕讀取部門資料，請確認公文系統帳號有部門與帳號表的讀取權限。",
-    "organization_import_stale": "預覽之後公文系統或組織已有變更，請重新預覽後再匯入。",
-    "organization_import_unavailable": "公文系統暫時無法連線，請稍後再試。",
-    "organization_manager_by_head_unit": "這個單位的主管由首長單位的主管擔任，不能再勾選主管。",
-    "organization_member_not_found": "這位使用者已不在此單位，請重新整理。",
-    "organization_order_stale": "這一層的單位已有變更，請重新整理後再排序。",
-    "organization_parent_invalid": "上層必須是現有的組織單位。",
-    "organization_unit_cycle": "不能把單位移到它自己或它的下層單位底下。",
-    "organization_unit_disabled": "停用的單位不能加入新成員，請先啟用。",
-    "organization_unit_name_duplicate": "同一層已經有相同名稱的單位。",
-    "organization_unit_not_empty": "單位仍有下層單位或成員，請先移出後再刪除；不再使用的單位可改為停用。",
-    "organization_unit_not_found": "找不到這個組織單位，請重新整理。",
-    "organization_user_not_found": "找不到這位使用者，帳號可能已刪除。",
-    "owner_is_implicit": "擁有者已具有完整權限，不需加入成員清單。",
-    "password_weak": "密碼太常見或包含帳號名稱，請改用較長且不易猜的句子。",
-    "pdf_export_busy": "PDF 匯出正在忙碌，請稍後重試。",
-    "pdf_page_limit": "PDF 頁數超過處理上限，請先拆分文件。",
-    "presentation_slide_limit": "簡報需為 1 至 200 頁。",
-    "price_exists": "此生效時間已有價格版本，請選擇新的時間。",
-    "profile_incomplete": "索引覆蓋率未達 100%，或仍有處理中的文件，請先完成重建。",
-    "profile_not_building": "只能啟用重建中的索引。",
-    "profile_not_found": "找不到這個檢索索引。",
-    "profile_not_retired": "只能清除已退役索引的向量。",
-    "profile_retired": "已退役的索引無法重建。",
-    "project_archived": "請先還原封存專案，再進行此操作。",
-    "project_conflict": "專案設定已被修改，請重新載入後合併；目前輸入仍保留。",
-    "project_context_limit": "專案參考文字超過 12,000 字元或 100 頁，請精簡參考文件或改用知識庫檢索。",
-    "project_file_limit": "專案最多 50 份文件。",
-    "project_files_pending": "專案仍有文件待完成辨識，請到專案檢視進度或移除不需要的文件。",
-    "project_limit": "個人專案已達 100 個上限。",
-    "project_settings_invalid": "說明最多 2,000 字元，共用指示最多 4,000 字元。",
-    "project_template_invalid": "範本名稱最多 80 字元，內容最多 12,000 字元，皆不可空白。",
-    "prompt_required": "請輸入訊息。",
-    "quality_item_missing": "找不到此回饋或評測項目。",
-    "queue_full": "生成佇列已滿，請稍後再試。",
-    "rate_limited": "操作過於頻繁，請稍後再試。",
-    "reasoning_not_supported": "此模型不支援所選的思考強度。",
-    "reauthentication_failed": "密碼不正確，請重新輸入。",
-    "reauthentication_required": "此變更需要先確認身分，請輸入目前的密碼或驗證碼。",
-    "reauthentication_unavailable": "目前沒有可用的方式確認你的身分，請聯絡系統管理員。",
-    "remote_file_not_found": "找不到這個檔案，或預覽連結已過期；請重新開啟表單再試。",
-    "remote_file_too_large": "檔案超過預覽的大小上限，請到原系統下載。",
-    "remote_file_unavailable": "暫時無法從原系統取得這個檔案，請稍後再試。",
-    "repository_chat_source_invalid": "請選擇要帶入對話的檔案、議題或 Pull Request（一次一種）。",
-    "repository_chat_too_large": "選取的內容超過對話附件上限，請減少檔案，或改用匯入知識庫。",
-    "repository_diff_limit": "變更內容超過 256 KB，請縮小 commit 區間。",
-    "repository_diff_not_text": "變更內容不是 UTF-8 文字，無法 review。",
-    "repository_empty": "此程式庫尚無提交版本。",
-    "repository_file_limit": "僅支援上限內的文字檔案，不支援目錄、LFS 與二進位檔。",
-    "repository_import_empty": "這個資料夾沒有可匯入的文字檔。",
-    "repository_import_limit": "這個資料夾的文字檔超過單次匯入上限，請選擇較小的資料夾。",
-    "repository_not_directory": "請選擇資料夾。",
-    "repository_not_text": "此檔案不是可辨識的 UTF-8 文字檔。",
-    "repository_pin_limit": "最多釘選 30 個程式庫，請先取消部分釘選。",
-    "request_too_large": "上傳內容超過大小上限。",
-    "resource_busy": "這項資料正在被其他操作處理，請稍後再試。",
-    "resource_not_found": "找不到此項目，或你已沒有存取權限。",
-    "resource_read_only": "此項目目前只有檢視權限。",
-    "resource_tasks_active": "此項目仍有背景任務，請先完成或取消，再刪除。",
-    "retrieval_corpus_invalid": "相關文件必須已完成索引且位於選取的知識庫。",
-    "retrieval_evaluation_active": "已有處理中的檢索評測，請先完成或取消。",
-    "retrieval_evaluation_changed": "索引、文件版本或檢索設定已變更，請重新建立評測以取得可比較結果。",
-    "retrieval_evaluation_invalid": "請提供名稱、1 至 3 個知識庫及 1 至 20 題驗收集。",
-    "retrieval_evaluation_limit": "個人檢索評測已達 500 次保留上限。",
-    "retrieval_evaluation_missing": "找不到此檢索評測。",
-    "retrieval_mode_invalid": "檢索模式不正確。",
-    "retrieval_pages_invalid": "驗收集包含不存在的文件頁碼。",
-    "retrieval_provider_unavailable": "檢索模型服務忙碌或額度受限，請稍後重試。",
-    "review_brief_invalid": "模型未產生完整的精簡結果，請重試或改用其他模型。",
-    "review_comment_invalid": "留言內容需為 1 至 20,000 字元。",
-    "review_comment_posted": "這份 review 已貼到 Pull Request。",
-    "review_comment_unavailable": "只有已完成的 Pull Request review 可以貼成留言。",
-    "review_empty_range": "起點與終點必須是不同的 commit。",
-    "review_host_changed": "程式庫主機已變更，請在目前的連線建立新的 review。",
-    "review_invalid": "人工評分介於 1 至 5，說明最多 2,000 字元。",
-    "review_model_context_small": "此模型的上下文不足以檢閱並彙整變更，請選擇更大的模型或減少補充重點。",
-    "review_no_changes": "此 commit 或區間沒有可檢閱的變更。",
-    "review_not_found": "找不到這份 review。",
-    "review_purpose_invalid": "請選擇快速檢閱或變更摘要。",
-    "review_request_invalid": "Review 重點最多 2,000 字元，請使用有效的請求識別碼。",
-    "review_segment_limit": "變更需要超過 60 個區段，請縮小區間或選擇更大的模型。",
-    "review_snapshot_unsupported": "此 review 快照版本目前無法處理，請建立新的 review。",
-    "review_source_invalid": "請選擇一個 Pull Request，或指定 commit／區間。",
-    "review_summary_too_long": "中間彙整超過預算，請縮小區間或選擇更大的模型。",
-    "run_not_found": "找不到這次生成。",
-    "scheduled_task_not_found": "找不到這個排程任務，可能已在新版移除；請重新整理頁面。",
-    "scheduled_task_unavailable": "這個排程任務在本站沒有啟用，無法手動執行；原因見任務說明。",
-    "schema_object_not_found": "找不到這個物件，可能名稱有誤或已移除；請重新整理異動清單。",
-    "session_locked": "工作區已鎖定，請輸入密碼解鎖。",
-    "session_revoked": "登入已失效，請重新登入工作區。",
-    "share_content_limit": "分享內容過長，請改分享整理後的成果文件。",
-    "share_generation_active": "請先等待或停止回答，再分享完整內容。",
-    "share_history_invalid": "對話分支資料不完整。",
-    "share_history_limit": "單次分享最多 100 則訊息，請改分享整理後的成果文件。",
-    "share_invalid": "請選擇 1 至 20 位其他使用者，分享期限介於 1 小時與 30 天。",
-    "share_limit": "有效分享已達 100 個，請撤銷不再使用的分享。",
-    "share_recipient_unknown": "只能分享給已登入過平台的使用者。",
-    "share_unavailable": "分享不存在、已到期或撤銷，或你的帳號不在收件者清單中。",
-    "spreadsheet_cell_limit": "單一工作表最多 100,000 個非空儲存格。",
-    "spreadsheet_sheet_limit": "試算表需為 1 至 128 個工作表。",
-    "spreadsheet_string_limit": "試算表文字表過大，請拆分工作表。",
-    "stream_superseded": "已在其他視窗開啟即時監控，此視窗暫停更新；按「繼續更新」改在此視窗監控。",
-    "subscription_limit": "事件連線數已達上限，請關閉重複的分頁後重試。",
-    "table_row_too_long": "表格單列超過片段上限，請先拆分表格欄位。",
-    "task_input_too_long": "處理內容過長，請縮小選取範圍。",
-    "task_response_empty": "模型沒有產生任何內容，請調整內容或切換模型後重試。",
-    "template_limit": "個人範本最多 100 個。",
-    "template_missing": "找不到此範本。",
-    "template_not_found": "找不到這個範本。",
-    "test_account_security_locked": "測試身分期間不能變更該使用者的密碼與信箱；請返回管理者後從使用者管理調整。",
-    "test_identity_nested": "請先返回原管理者，再切換其他身分。",
-    "test_identity_same": "請選擇另一位使用者。",
-    "test_reason_required": "請填寫 4–240 字元的測試目的。",
-    "test_session_invalid": "測試登入已失效。",
-    "test_source_revoked": "原管理者登入或權限已失效，請重新登入。",
-    "text_content_invalid": "內容不可空白、超過長度上限或包含控制字元。",
-    "text_title_invalid": "來源名稱不可包含路徑或特殊符號。",
-    "text_version_changed": "來源已被其他人修改。請重新開啟編輯器，再合併你的內容。",
-    "transform_action_invalid": "此段落操作不支援。",
-    "transform_input_invalid": "請選取 1 至 8,000 個字元，並使用支援的語言。",
-    "unknown_access_id": "清單包含不存在的角色、群組或功能。",
-    "unknown_resource_member": "清單包含未登入過的帳號或停用的群組。",
-    "user_not_found": "找不到可測試的使用者。",
-    "user_order_stale": "名單剛被別人調整過，請重新整理後再排序。",
-    "validation_failed": "輸入內容不正確，請檢查標示的欄位後再試。",
-    "verification_code_invalid": "驗證碼不正確，請重新輸入。",
-    "verification_cooldown": "剛寄出驗證碼，請稍候一分鐘再重新寄送。",
-    "verification_expired": "驗證碼已失效或已使用，請重新索取。",
-    "verification_not_found": "找不到這組驗證碼，請重新索取。",
-    "verification_rate_limited": "驗證碼索取次數過多，請一小時後再試。",
-    "vision_not_supported": "目前模型不支援圖片，請切換支援圖片的模型，或移除圖片附件。",
-    "web_query_too_long": "網路搜尋提問最多 2000 個字元，請簡化查詢。",
-    "web_search_daily_quota": "今日網路搜尋已達上限。",
-    "web_search_pending_or_failed": "這次搜尋正在處理或未完成。請重新提交新的訊息。",
-    "web_search_unavailable": "網路搜尋服務忙碌或額度受限，請稍後重試。",
-    "windows_account_required": "Windows 帳號資料不完整。",
-    "windows_sid_required": "無法取得 AD SID，請確認登入設定。"
+    "access_denied": "\u6C92\u6709\u5B58\u53D6\u6B64\u8CC7\u6599\u7684\u6B0A\u9650\u3002",
+    "account_changed": "\u5E33\u865F\u8A2D\u5B9A\u5DF2\u5728\u5176\u4ED6\u5730\u65B9\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u8A66\u3002",
+    "account_exists": "\u6B64\u767B\u5165\u5E33\u865F\u5DF2\u7531\u5176\u4ED6\u4F7F\u7528\u8005\u4F7F\u7528\u6216\u4FDD\u7559\u3002",
+    "ad_binding_conflict": "AD \u8EAB\u5206\u8207\u5DF2\u9023\u7D50\u5E33\u865F\u4E0D\u4E00\u81F4\uFF0C\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "ad_binding_immutable": "\u5DF2\u9023\u7D50\u7684 AD \u8EAB\u5206\u4E0D\u80FD\u63DB\u7D81\u5176\u4ED6\u5E33\u865F\uFF1B\u8ACB\u5EFA\u7ACB\u53E6\u4E00\u4F4D\u4F7F\u7528\u8005\u3002",
+    "ad_binding_taken": "\u9019\u500B AD \u5E33\u865F\u5DF2\u9023\u7D50\u5230\u5176\u4ED6\u4F7F\u7528\u8005\u3002",
+    "ad_invalid_credentials": "AD \u5E33\u865F\u6216\u5BC6\u78BC\u4E0D\u6B63\u78BA\uFF0C\u6216\u6B64\u5E33\u865F\u7121\u6CD5\u767B\u5165\u3002",
+    "ad_not_bound": "\u9019\u4F4D\u4F7F\u7528\u8005\u6C92\u6709\u9023\u7D50 AD \u5E33\u865F\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u8A66\u3002",
+    "ad_sid_required": "AD \u5E33\u865F\u7F3A\u5C11 SID\uFF0C\u7121\u6CD5\u5EFA\u7ACB\u5DE5\u4F5C\u5340\u3002",
+    "admin_lockout": "\u6B64\u8B8A\u66F4\u6703\u64A4\u92B7\u4F60\u7684\u7BA1\u7406\u6B0A\u9650\u3002\u8ACB\u5148\u7531\u53E6\u4E00\u4F4D\u7BA1\u7406\u54E1\u8655\u7406\u3002",
+    "admin_resource_not_found": "\u627E\u4E0D\u5230\u6B64\u7BA1\u7406\u9805\u76EE\u3002",
+    "admin_write_busy": "\u53E6\u4E00\u7B46\u7BA1\u7406\u8B8A\u66F4\u9084\u5728\u8655\u7406\u4E2D\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "admin_write_conflict": "\u9019\u7B46\u8CC7\u6599\u525B\u88AB\u5176\u4ED6\u64CD\u4F5C\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u8A66\u3002",
+    "api_client_name_taken": "\u5DF2\u7D93\u6709\u540C\u540D\u7684\u5916\u90E8\u7CFB\u7D71\u3002",
+    "api_client_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u5916\u90E8\u7CFB\u7D71\uFF0C\u53EF\u80FD\u5DF2\u88AB\u522A\u9664\uFF1B\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "artifact_content_invalid": "\u6210\u679C\u5167\u5BB9\u9700\u70BA 1 \u81F3 64,000 \u500B\u5B57\u5143\uFF0C\u4E14\u4E0D\u5305\u542B\u63A7\u5236\u5B57\u5143\u3002",
+    "artifact_limit": "\u500B\u4EBA\u6210\u679C\u6587\u4EF6\u5DF2\u9054 200 \u4EFD\u4E0A\u9650\u3002",
+    "artifact_version_conflict": "\u6B64\u6587\u4EF6\u5DF2\u88AB\u66F4\u65B0\u3002\u4F60\u7684\u7DE8\u8F2F\u4ECD\u4FDD\u7559\uFF0C\u8ACB\u5148\u67E5\u770B\u6700\u65B0\u7248\u672C\u518D\u5408\u4F75\u3002",
+    "artifact_version_limit": "\u6B64\u6587\u4EF6\u6700\u591A\u4FDD\u7559 200 \u500B\u7248\u672C\uFF1B\u8ACB\u5EFA\u7ACB\u526F\u672C\u7E7C\u7E8C\u5DE5\u4F5C\u3002",
+    "artifact_version_missing": "\u627E\u4E0D\u5230\u6B64\u6210\u679C\u7248\u672C\u3002",
+    "assistant_question_invalid": "\u63D0\u554F\u4E0D\u6B63\u78BA\uFF1A\u8ACB\u8F38\u5165 500 \u5B57\u4EE5\u5167\u7684\u554F\u984C\u5F8C\u518D\u9001\u51FA\u3002",
+    "assistant_unavailable": "\u76EE\u524D\u6C92\u6709\u53EF\u4EE5\u7528\u52A9\u7406\u67E5\u8A62\u7684\u529F\u80FD\uFF1B\u9700\u8981\u6642\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u958B\u901A\u3002",
+    "attachment_in_use": "\u5DF2\u9001\u51FA\u7684\u9644\u4EF6\u7531\u5C0D\u8A71\u4FDD\u7559\uFF0C\u7121\u6CD5\u55AE\u7368\u522A\u9664\u3002",
+    "attachment_limit": "\u9644\u4EF6\u6578\u91CF\u8D85\u904E\u55AE\u5247\u8A0A\u606F\u4E0A\u9650\uFF0C\u6216\u5305\u542B\u91CD\u8907\u7684\u9644\u4EF6\u3002",
+    "attachment_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u9644\u4EF6\u3002",
+    "attachment_quota": "\u9644\u4EF6\u5BB9\u91CF\u4E0D\u8DB3\uFF0C\u8ACB\u522A\u9664\u672A\u5F15\u7528\u7684\u6A94\u6848\uFF0C\u6216\u806F\u7D61\u7BA1\u7406\u54E1\u8ABF\u6574\u500B\u4EBA\u5BB9\u91CF\u4E0A\u9650\u3002",
+    "attachment_total_limit": "\u9019\u6B21\u9644\u4EF6\u7E3D\u5927\u5C0F\u8D85\u904E\u4E0A\u9650\u3002",
+    "attachment_upload_expired": "\u4E0A\u50B3\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u4E0A\u50B3\u3002",
+    "attendance_assignment_not_found": "\u627E\u4E0D\u5230\u9019\u6BB5\u6301\u6709\u671F\u9593\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "attendance_assignment_overlap": "\u9019\u6BB5\u671F\u9593\u8207\u540C\u4E00\u5F35\u5361\u7684\u5176\u4ED6\u6301\u6709\u671F\u9593\u91CD\u758A\uFF0C\u8ACB\u8ABF\u6574\u8D77\u8FC4\u6642\u9593\u3002",
+    "attendance_assignment_starts_not_after_previous": "\u958B\u59CB\u6642\u9593\u5FC5\u9808\u665A\u65BC\u524D\u4E00\u6BB5\u6301\u6709\u671F\u9593\u7684\u958B\u59CB\u6642\u9593\u3002",
+    "attendance_calendar_day_not_found": "\u516C\u6587\u7CFB\u7D71\u6C92\u6709\u9019\u4E00\u5929\uFF0C\u53EA\u80FD\u4FEE\u6539\u65E2\u6709\u7684\u65E5\u671F\u3002",
+    "attendance_calendar_range_invalid": "\u67E5\u8A62\u5340\u9593\u4E0D\u6B63\u78BA\uFF1A\u8D77\u8A16\u65E5\u671F\u5FC5\u586B\uFF0C\u7D50\u675F\u4E0D\u80FD\u65E9\u65BC\u958B\u59CB\uFF0C\u6700\u9577\u4E00\u5E74\u3002",
+    "attendance_calendar_remark_invalid": "\u5099\u8A3B\u516C\u6587\u7CFB\u7D71\u5B58\u4E0D\u4E0B\uFF1A\u592A\u9577\uFF0C\u6216\u542B\u516C\u6587\u7CFB\u7D71\u4E0D\u652F\u63F4\u7684\u5B57\uFF08\u4F8B\u5982\u7F55\u7528\u5B57\u3001\u8868\u60C5\u7B26\u865F\uFF09\u3002",
+    "attendance_card_held": "\u9019\u5F35\u5361\u76EE\u524D\u4ECD\u6709\u4EBA\u6301\u6709\uFF0C\u78BA\u8A8D\u5F8C\u53EF\u7531\u65B0\u6301\u6709\u4EBA\u63A5\u624B\u3002",
+    "attendance_card_in_use": "\u9019\u5F35\u5361\u5DF2\u6709\u5237\u5361\u6216\u6301\u6709\u671F\u9593\uFF0C\u4E0D\u80FD\u522A\u9664\uFF1B\u4E0D\u60F3\u5728\u51FA\u52E4\u7D00\u9304\u770B\u5230\u8ACB\u6539\u70BA\u96B1\u85CF\u3002",
+    "attendance_card_not_found": "\u627E\u4E0D\u5230\u9019\u5F35\u5361\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "attendance_card_number_duplicate": "\u9019\u500B\u5361\u865F\u5DF2\u7D93\u5B58\u5728\u3002",
+    "attendance_filter_invalid": "\u67E5\u8A62\u689D\u4EF6\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u9801\u9762\u3002",
+    "attendance_gd_account_unmapped": "\u4F60\u7684\u5E33\u865F\u5C0D\u4E0D\u5230\u552F\u4E00\u7684\u516C\u6587\u7CFB\u7D71\u5E33\u865F\uFF0C\u7121\u6CD5\u4FEE\u6539\u5047\u65E5\uFF1B\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "attendance_gd_form_not_found": "\u627E\u4E0D\u5230\u9019\u5F35\u8868\u55AE\uFF1A\u53EF\u80FD\u5DF2\u9000\u56DE\u6216\u92B7\u55AE\uFF0C\u6216\u4E0D\u5728\u4F60\u53EF\u67E5\u770B\u7684\u7BC4\u570D\u3002",
+    "attendance_gd_read_only": "\u516C\u6587\u7CFB\u7D71\u7684\u9023\u7DDA\u8A2D\u70BA\u552F\u8B80\uFF0C\u5047\u65E5\u76EE\u524D\u53EA\u80FD\u67E5\u8A62\uFF1B\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "attendance_gd_unavailable": "\u516C\u6587\u7CFB\u7D71\u66AB\u6642\u7121\u6CD5\u9023\u7DDA\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "attendance_import_file_not_found": "\u627E\u4E0D\u5230\u6307\u5B9A\u65E5\u671F\u7684\u6253\u5361\u6A94\uFF0C\u8ACB\u78BA\u8A8D\u6253\u5361\u6A5F\u662F\u5426\u5DF2\u8F38\u51FA\u3002",
+    "attendance_import_filter_invalid": "\u67E5\u8A62\u689D\u4EF6\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u6AA2\u67E5\u671F\u9593\u3001\u6A94\u6848\u3001\u72C0\u614B\u8207\u5206\u9801\u3002",
+    "attendance_import_not_current": "\u9019\u6B21\u532F\u5165\u7684\u5237\u5361\u5DF2\u88AB\u4E4B\u5F8C\u7684\u532F\u5165\u53D6\u4EE3\uFF0C\u6216\u9019\u6B21\u532F\u5165\u5931\u6557\uFF0C\u6C92\u6709\u53EF\u5217\u51FA\u7684\u5237\u5361\u3002",
+    "attendance_import_not_found": "\u627E\u4E0D\u5230\u9019\u7B46\u532F\u5165\u7D00\u9304\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "attendance_import_source_unavailable": "\u8B80\u4E0D\u5230\u6253\u5361\u6A94\u8CC7\u6599\u593E\uFF0C\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u78BA\u8A8D\u7DB2\u8DEF\u5171\u7528\u8207\u8B80\u53D6\u6B0A\u9650\u3002",
+    "attendance_record_not_found": "\u627E\u4E0D\u5230\u9019\u4E00\u5929\u7684\u51FA\u52E4\u7D00\u9304\uFF0C\u8ACB\u91CD\u65B0\u67E5\u8A62\u3002",
+    "attendance_records_filter_invalid": "\u67E5\u8A62\u689D\u4EF6\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u91CD\u65B0\u9078\u64C7\u4EBA\u54E1\u6216\u91CD\u65B0\u6574\u7406\u9801\u9762\u3002",
+    "attendance_records_range_invalid": "\u67E5\u8A62\u5340\u9593\u4E0D\u6B63\u78BA\uFF1A\u8D77\u8A16\u65E5\u671F\u5FC5\u586B\uFF0C\u7D50\u675F\u4E0D\u80FD\u65E9\u65BC\u958B\u59CB\uFF0C\u6700\u9577\u4E00\u5E74\u3002",
+    "attendance_user_not_found": "\u627E\u4E0D\u5230\u9019\u4F4D\u4F7F\u7528\u8005\uFF0C\u5E33\u865F\u53EF\u80FD\u5DF2\u522A\u9664\u3002",
+    "audit_export_limit": "\u532F\u51FA\u7B46\u6578\u8D85\u904E\u4E0A\u9650\uFF0C\u8ACB\u7E2E\u5C0F\u6642\u9593\u7BC4\u570D\u6216\u7BE9\u9078\u689D\u4EF6\u3002",
+    "audit_feature_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u529F\u80FD\u9801\u9762\uFF0C\u53EF\u80FD\u5DF2\u79FB\u9664\uFF1B\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u9078\u64C7\u3002",
+    "authentication_mode": "\u6B64\u5DE5\u4F5C\u5340\u672A\u4F7F\u7528 Windows \u6574\u5408\u9A57\u8B49\u3002",
+    "authentication_required": "\u8ACB\u5148\u767B\u5165\u5DE5\u4F5C\u5340\u3002",
+    "calendar_sync_calendar_not_configured": "\u9084\u6C92\u8A2D\u5B9A\u8981\u540C\u6B65\u7684 Google \u65E5\u66C6 ID\uFF0C\u8ACB\u5148\u5728\u8A2D\u5B9A\u52A0\u4E0A CalendarSync:CalendarId\u3002",
+    "calendar_sync_disabled": "\u9019\u500B\u7AD9\u53F0\u6C92\u6709\u555F\u7528 Google \u65E5\u66C6\u540C\u6B65\uFF0C\u7121\u6CD5\u624B\u52D5\u540C\u6B65\u3002",
+    "calendar_sync_reset_mismatch": "\u672C\u7AD9\u8A2D\u5B9A\u7684\u65E5\u66C6\u5DF2\u7D93\u63DB\u4E86\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u9801\u9762\uFF0C\u78BA\u8A8D\u65E5\u66C6\u5F8C\u518D\u91CD\u8A2D\u3002",
+    "calendar_sync_run_not_found": "\u627E\u4E0D\u5230\u9019\u4E00\u8F2A\u540C\u6B65\u7D00\u9304\uFF0C\u53EF\u80FD\u5DF2\u8D85\u904E\u4FDD\u5B58\u671F\uFF1B\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "client_issue_invalid": "\u554F\u984C\u56DE\u5831\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002",
+    "collection_limit": "\u500B\u4EBA\u77E5\u8B58\u5EAB\u6578\u91CF\u5DF2\u9054\u4E0A\u9650\u3002",
+    "context_budget_exceeded": "\u63D0\u554F\u8D85\u904E\u6B64\u6A21\u578B\u7684\u4E0A\u4E0B\u6587\u9810\u7B97\uFF0C\u8ACB\u7E2E\u77ED\u5167\u5BB9\u6216\u9078\u64C7\u8F03\u5927\u4E0A\u4E0B\u6587\u7684\u6A21\u578B\u3002",
+    "conversation_archived": "\u8ACB\u5148\u9084\u539F\u5C01\u5B58\u5C0D\u8A71\uFF0C\u518D\u7E7C\u7E8C\u63D0\u554F\u3002",
+    "conversation_missing": "\u627E\u4E0D\u5230\u6B64\u5C0D\u8A71\u3002",
+    "conversation_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u5C0D\u8A71\u3002",
+    "credentials_rejected": "AD \u5E33\u865F\u6216\u5BC6\u78BC\u4E0D\u6B63\u78BA\uFF0C\u6216\u6B64\u5E33\u865F\u7121\u6CD5\u767B\u5165\u3002",
+    "csrf_invalid": "\u5B89\u5168\u9A57\u8B49\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u9801\u9762\u3002",
+    "database_name": "\u672C\u521D\u59CB\u5316\u6307\u4EE4\u53EA\u5141\u8A31\u5EFA\u7ACB\u6216\u66F4\u65B0 AiNexus \u5C08\u7528\u8CC7\u6599\u5EAB\u3002",
+    "description_too_long": "\u77E5\u8B58\u5EAB\u8AAA\u660E\u6700\u591A 2000 \u500B\u5B57\u5143\u3002",
+    "directory_changed": "\u9810\u89BD\u5F8C\u4F7F\u7528\u8005\u8CC7\u6599\u5DF2\u6709\u8B8A\u52D5\uFF0C\u9019\u4F4D\u4F7F\u7528\u8005\u672A\u5BEB\u5165\uFF1B\u8ACB\u91CD\u65B0\u9810\u89BD\u3002",
+    "directory_node_invalid": "\u9019\u500B\u76EE\u9304\u7BC0\u9EDE\u4E0D\u5728\u53EF\u700F\u89BD\u7684\u7BC4\u570D\u5167\u3002",
+    "directory_node_not_found": "AD \u5DF2\u627E\u4E0D\u5230\u9019\u500B\u7BC0\u9EDE\uFF08\u53EF\u80FD\u5DF2\u522A\u9664\u6216\u6539\u540D\uFF09\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u76EE\u9304\u3002",
+    "directory_not_configured": "\u5C1A\u672A\u8A2D\u5B9A AD \u670D\u52D9\u5E33\u865F\uFF0C\u7121\u6CD5\u67E5\u8A62\u76EE\u9304\uFF1B\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "directory_person_not_found": "AD \u5DF2\u627E\u4E0D\u5230\u9019\u4F4D\u4EBA\u54E1\uFF08\u53EF\u80FD\u5DF2\u522A\u9664\u6216\u79FB\u51FA\u53EF\u700F\u89BD\u7684\u7BC4\u570D\uFF09\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u6E05\u55AE\u3002",
+    "directory_query_invalid": "\u641C\u5C0B\u6587\u5B57\u6700\u591A 64 \u500B\u5B57\uFF0C\u4E14\u4E0D\u80FD\u5305\u542B\u63A7\u5236\u5B57\u5143\u3002",
+    "directory_unavailable": "\u76EE\u524D\u7121\u6CD5\u9023\u5230\u516C\u53F8 AD\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u6216\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "directory_verification_required": "\u5DF2\u6709\u4E00\u6BB5\u6642\u9593\u672A\u7528 AD \u767B\u5165\uFF0C\u672C\u5730\u5BC6\u78BC\u66AB\u505C\u4F7F\u7528\uFF1B\u8ACB\u5148\u7528 AD \u5E33\u865F\u767B\u5165\u4E00\u6B21\u3002",
+    "document_has_no_text": "\u6587\u4EF6\u6C92\u6709\u53EF\u8B80\u6587\u5B57\u3002",
+    "document_limit": "\u6B64\u77E5\u8B58\u5EAB\u7684\u6587\u4EF6\u6578\u91CF\u5DF2\u9054\u4E0A\u9650\u3002",
+    "document_not_editable_text": "\u53EA\u6709\u4EE5\u7D14\u6587\u5B57\u5EFA\u7ACB\u7684\u4F86\u6E90\u53EF\u4EE5\u7DE8\u8F2F\u3002",
+    "document_not_found": "\u627E\u4E0D\u5230\u6B64\u6587\u4EF6\uFF0C\u6216\u4F60\u5DF2\u6C92\u6709\u5B58\u53D6\u6B0A\u9650\u3002",
+    "document_not_indexed": "\u53EA\u6709\u77E5\u8B58\u5EAB\u6587\u4EF6\u9700\u8981\u91CD\u65B0\u7D22\u5F15\u3002",
+    "document_pages_missing": "\u6587\u4EF6\u5C1A\u7121\u5B8C\u6574\u9010\u9801\u6587\u5B57\uFF0C\u8ACB\u91CD\u65B0\u4E0A\u50B3\u8CC7\u6599\u5F8C\u518D\u91CD\u5EFA\u3002",
+    "document_processing": "\u4F86\u6E90\u4ECD\u5728\u8655\u7406\uFF0C\u8ACB\u7B49\u5F85\u5B8C\u6210\u6216\u505C\u6B62\u8655\u7406\u5F8C\u518D\u7DE8\u8F2F\u3002",
+    "document_processing_required": "\u6383\u63CF PDF \u5C1A\u672A\u5B8C\u6210\u6587\u5B57\u8FA8\u8B58\uFF0C\u8ACB\u7B49\u5F85\u9644\u4EF6\u8655\u7406\u5B8C\u6210\u5F8C\u518D\u9001\u51FA\u3002",
+    "document_too_large": "\u6587\u4EF6\u6587\u5B57\u8D85\u904E\u8655\u7406\u4E0A\u9650\uFF0C\u8ACB\u62C6\u5206\u6587\u4EF6\u3002",
+    "document_unreadable": "\u7121\u6CD5\u8B80\u53D6\u6587\u4EF6\u3002\u8ACB\u4F7F\u7528\u672A\u52A0\u5BC6\u7684 PDF\u3001DOCX\u3001XLSX\u3001PPTX\uFF0C\u6216 UTF-8 \u6587\u5B57\u6A94\u3002",
+    "email_in_use": "\u6B64\u4FE1\u7BB1\u5DF2\u7531\u5176\u4ED6\u4F7F\u7528\u8005\u9A57\u8B49\u4F7F\u7528\u3002",
+    "email_invalid": "\u8ACB\u8F38\u5165\u55AE\u4E00 email \u5730\u5740\uFF08\u4F8B\u5982 name@company.com\uFF09\u3002",
+    "email_managed_by_directory": "\u6B64\u4FE1\u7BB1\u7531\u516C\u53F8 AD \u63D0\u4F9B\uFF0C\u8ACB\u806F\u7D61\u8CC7\u8A0A\u7BA1\u7406\u4EBA\u54E1\u4FEE\u6539\u3002",
+    "email_not_verified": "\u5C1A\u672A\u8A2D\u5B9A\u5DF2\u9A57\u8B49\u7684\u4FE1\u7BB1\uFF0C\u8ACB\u6539\u7528\u5BC6\u78BC\u78BA\u8A8D\u8EAB\u5206\u3002",
+    "embedding_daily_quota": "\u4ECA\u65E5\u7D22\u5F15\u3001\u8A9E\u610F\u67E5\u8A62\u8207\u91CD\u6392\u6B21\u6578\u5DF2\u9054\u7CFB\u7D71\u4E0A\u9650\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "embedding_profile_changed": "\u6AA2\u7D22\u7D22\u5F15\u5DF2\u5207\u63DB\uFF0C\u8ACB\u91CD\u65B0\u9001\u51FA\u63D0\u554F\u3002",
+    "embeddings_disabled": "\u76EE\u524D\u63A1\u7528\u5168\u6587\u6AA2\u7D22\uFF0C\u672A\u555F\u7528\u8A9E\u610F\u5411\u91CF\u3002",
+    "evaluation_active": "\u4F60\u5DF2\u6709\u8655\u7406\u4E2D\u7684\u8A55\u6E2C\uFF0C\u8ACB\u5148\u5B8C\u6210\u6216\u53D6\u6D88\u3002",
+    "evaluation_cases_invalid": "\u984C\u5EAB\u9700\u6709 1 \u81F3 20 \u984C\uFF1B\u554F\u984C\u8207\u53C3\u8003\u7B54\u6848\u5404\u6700\u591A 4,000 \u5B57\u5143\uFF0C\u95DC\u9375\u5B57\u5404\u6700\u591A 20 \u500B\u3001\u6BCF\u500B 80 \u5B57\u5143\u3002",
+    "evaluation_configuration_changed": "\u6A21\u578B\u8A2D\u5B9A\u5DF2\u8B8A\u66F4\uFF1B\u8ACB\u5EFA\u7ACB\u65B0\u7684\u4EFB\u52D9\uFF0C\u907F\u514D\u6DF7\u7528\u4E0D\u540C\u8A2D\u5B9A\u7684\u7D50\u679C\u3002",
+    "evaluation_run_limit": "\u500B\u4EBA\u8A55\u6E2C\u5DF2\u9054 500 \u6B21\u4FDD\u7559\u4E0A\u9650\u3002",
+    "evaluation_run_missing": "\u627E\u4E0D\u5230\u539F\u59CB\u8A55\u6E2C\u3002",
+    "evaluation_set_conflict": "\u984C\u5EAB\u5DF2\u88AB\u5176\u4ED6\u4EBA\u4FEE\u6539\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u5F8C\u5408\u4F75\u3002\u76EE\u524D\u8F38\u5165\u4ECD\u4FDD\u7559\u3002",
+    "evaluation_set_limit": "\u500B\u4EBA\u8A55\u6E2C\u96C6\u5DF2\u9054 100 \u500B\u3002",
+    "evaluation_variants_invalid": "\u8ACB\u8A2D\u5B9A 1 \u81F3 3 \u500B\u540D\u7A31\u4E0D\u540C\u7684\u6BD4\u8F03\u65B9\u6848\uFF0C\u6307\u4EE4\u6700\u591A 4,000 \u5B57\u5143\u3002",
+    "export_format_invalid": "\u652F\u63F4 Word\u3001PDF \u6216 Markdown \u532F\u51FA\u3002",
+    "feature_forbidden": "\u4F60\u7684\u89D2\u8272\u76EE\u524D\u6C92\u6709\u4F7F\u7528\u6B64\u529F\u80FD\u7684\u6B0A\u9650\uFF0C\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "feedback_answer_pending": "\u8ACB\u7B49\u56DE\u7B54\u7D50\u675F\u518D\u63D0\u4F9B\u56DE\u994B\u3002",
+    "feedback_invalid": "\u56DE\u994B\u683C\u5F0F\u4E0D\u6B63\u78BA\uFF0C\u88DC\u5145\u8AAA\u660E\u6700\u591A 2,000 \u5B57\u5143\u3002",
+    "file_extension_changed": "\u91CD\u65B0\u547D\u540D\u6642\u8ACB\u4FDD\u7559\u539F\u526F\u6A94\u540D\uFF0C\u4EE5\u7DAD\u6301\u6B63\u78BA\u7684\u9810\u89BD\u8207\u683C\u5F0F\u8B58\u5225\u3002",
+    "file_filter_invalid": "\u6A94\u6848\u67E5\u8A62\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "file_name_changed": "\u6A94\u540D\u5DF2\u88AB\u4FEE\u6539\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u5F8C\u518D\u8A66\u3002",
+    "file_name_invalid": "\u6A94\u540D\u9700\u70BA 1 \u81F3 180 \u500B\u5B57\u5143\uFF0C\u4E0D\u53EF\u5305\u542B\u8DEF\u5F91\u3001\u63A7\u5236\u5B57\u5143\u6216\u7279\u6B8A\u7B26\u865F\u3002",
+    "file_not_found": "\u627E\u4E0D\u5230\u9019\u4EFD\u6A94\u6848\u3002",
+    "file_required": "\u6BCF\u6B21\u4E0A\u50B3\u8ACB\u63D0\u4F9B\u4E00\u500B\u6A94\u6848\u3002",
+    "file_size_limit": "\u6A94\u6848\u904E\u5927\u3002",
+    "file_size_mismatch": "\u4E0A\u50B3\u6A94\u6848\u5167\u5BB9\u4E0D\u5B8C\u6574\uFF0C\u8ACB\u91CD\u65B0\u4E0A\u50B3\u3002",
+    "file_type_unsupported": "\u652F\u63F4\u5716\u7247\u3001PDF\u3001DOCX\u3001XLSX\u3001PPTX \u8207 UTF-8 \u6587\u5B57\u6587\u4EF6\uFF1B\u4E0D\u652F\u63F4\u5DE8\u96C6\u3001\u820A\u7248 Office \u4E8C\u9032\u4F4D\u683C\u5F0F\u8207\u58D3\u7E2E\u6A94\u3002",
+    "flow_argument_invalid": "\u5BE9\u6838\u4EBA\u7684\u8A2D\u5B9A\u4E0D\u6B63\u78BA\uFF1A\u8ACB\u78BA\u8A8D\u5C64\u6578\u3001\u4EBA\u54E1\uFF08\u9808\u70BA\u555F\u7528\u4E2D\u7684\u5E33\u865F\uFF09\u6216\u529F\u80FD\u3002",
+    "flow_condition_invalid": "\u689D\u4EF6\u53EA\u80FD\u9078\u9019\u7A2E\u7533\u8ACB\u63D0\u4F9B\u7684\u9805\u76EE\u8207\u503C\u3002",
+    "flow_cursor_invalid": "\u6E05\u55AE\u5DF2\u6709\u8B8A\u52D5\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u5F80\u4E0B\u770B\u3002",
+    "flow_definition_missing": "\u9019\u7A2E\u7533\u8ACB\u9084\u6C92\u6709\u8A2D\u5B9A\u7C3D\u6838\u6D41\u7A0B\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "flow_instance_changed": "\u9019\u7B46\u7533\u8ACB\u525B\u7531\u5176\u4ED6\u4EBA\u8655\u7406\u904E\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u770B\u4E00\u6B21\u3002",
+    "flow_instance_closed": "\u9019\u7B46\u7533\u8ACB\u5DF2\u7D93\u7D50\u675F\uFF0C\u7121\u6CD5\u518D\u8B8A\u66F4\u3002",
+    "flow_instance_not_found": "\u627E\u4E0D\u5230\u9019\u7B46\u7533\u8ACB\uFF0C\u6216\u4F60\u6C92\u6709\u67E5\u770B\u7684\u6B0A\u9650\u3002",
+    "flow_kind_not_found": "\u627E\u4E0D\u5230\u9019\u7A2E\u7533\u8ACB\uFF0C\u53EF\u80FD\u5DF2\u7D93\u505C\u7528\u3002",
+    "flow_not_approver": "\u4F60\u4E0D\u662F\u9019\u4E00\u95DC\u7684\u5BE9\u6838\u4EBA\u3002",
+    "flow_own_request": "\u4E0D\u80FD\u5BE9\u6838\u81EA\u5DF1\u9001\u51FA\u7684\u7533\u8ACB\u3002",
+    "flow_rule_invalid": "\u5BE9\u6838\u4EBA\u898F\u5247\u4E0D\u5B58\u5728\uFF0C\u6216\u4E0D\u80FD\u7528\u5728\u9019\u7A2E\u7533\u8ACB\u3002",
+    "flow_view_invalid": "\u6E05\u55AE\u7684\u7BE9\u9078\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "generation_active": "\u5C08\u6848\u4ECD\u6709\u6B63\u5728\u751F\u6210\u7684\u56DE\u7B54\uFF0C\u8ACB\u5148\u5B8C\u6210\u6216\u505C\u6B62\uFF0C\u518D\u522A\u9664\u3002",
+    "gitea_account_missing": "Gitea \u627E\u4E0D\u5230\u9019\u500B\u5E33\u865F\uFF1A\u8ACB\u5148\u7528 AD \u5E33\u865F\u767B\u5165 Gitea \u4E00\u6B21\uFF0C\u6216\u78BA\u8A8D\u5E33\u865F\u6C92\u6709\u505C\u7528\u3002",
+    "gitea_diff_unsupported": "Gitea \u672A\u56DE\u50B3\u5B8C\u6574\u7684 diff\u3002\u5340\u9593 review \u9700\u8981\u652F\u63F4 compare output=diff \u7684 Gitea \u7248\u672C\u3002",
+    "gitea_forbidden": "\u4F60\u7684 Gitea \u6B0A\u6756\u6C92\u6709\u9019\u9805\u6B0A\u9650\uFF1A\u95B1\u8B80\u9700\u8981 read:repository \u8207 read:issue\uFF0C\u5F35\u8CBC\u7559\u8A00\u9700\u8981 write:issue\u3002",
+    "gitea_not_connected": "\u8ACB\u5148\u9023\u7DDA\u81EA\u5DF1\u7684 Gitea \u5E33\u865F\u3002",
+    "gitea_not_found": "Gitea \u627E\u4E0D\u5230\u9019\u500B\u9805\u76EE\uFF0C\u6216\u4F60\u6C92\u6709\u8B80\u53D6\u6B0A\u9650\u3002",
+    "gitea_reconnect_required": "\u6388\u6B0A\u7121\u6CD5\u89E3\u5BC6\uFF0C\u8ACB\u91CD\u65B0\u9023\u7DDA Gitea\u3002",
+    "gitea_service_forbidden": "Gitea \u670D\u52D9\u5E33\u865F\u6C92\u6709\u9019\u500B\u7D44\u7E54\u6216\u5132\u5B58\u5EAB\u7684\u7BA1\u7406\u6B0A\u9650\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "gitea_service_unauthorized": "Gitea \u62D2\u7D55\u670D\u52D9\u5E33\u865F\u7684\u6B0A\u6756\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u66F4\u65B0\u6B0A\u6756\u3002",
+    "gitea_timeout": "Gitea \u56DE\u61C9\u903E\u6642\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "gitea_unauthorized": "Gitea \u62D2\u7D55\u9019\u500B\u6B0A\u6756\uFF0C\u8ACB\u78BA\u8A8D\u6B0A\u6756\u4ECD\u6709\u6548\uFF0C\u6216\u66F4\u65B0\u6388\u6B0A\u3002",
+    "gitea_unavailable": "\u76EE\u524D\u7121\u6CD5\u9023\u5230 Gitea\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u6216\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "google_quota_exceeded": "Google AI \u984D\u5EA6\u6216\u901F\u7387\u53D7\u9650\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "google_response_blocked": "Google AI \u672A\u5B8C\u6210\u6B64\u56DE\u7B54\uFF0C\u8ACB\u8ABF\u6574\u63D0\u554F\u5F8C\u91CD\u8A66\u3002",
+    "https_required": "\u6B64\u5DE5\u4F5C\u5340\u9700\u8981 HTTPS \u5B89\u5168\u9023\u7DDA\u3002",
+    "idempotency_conflict": "\u6B64\u63D0\u4EA4\u8B58\u5225\u78BC\u5DF2\u7528\u65BC\u4E0D\u540C\u5167\u5BB9\u3002",
+    "idempotency_key_required": "\u8ACB\u63D0\u4F9B 16 \u81F3 80 \u5B57\u5143\u7684 Idempotency-Key\u3002",
+    "identity_changed": "\u6E2C\u8A66\u8EAB\u5206\u5DF2\u7D50\u675F\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u5DE5\u4F5C\u5340\u3002",
+    "identity_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u8EAB\u5206\uFF0C\u8ACB\u91CD\u65B0\u9078\u64C7\u3002",
+    "index_source_changed": "\u6587\u4EF6\u6216\u7D22\u5F15\u72C0\u614B\u5DF2\u6539\u8B8A\uFF0C\u8ACB\u91CD\u65B0\u5EFA\u7ACB\u7D22\u5F15\u3002",
+    "input_too_long": "\u8A0A\u606F\u8D85\u904E\u5B57\u6578\u4E0A\u9650\u3002",
+    "instruction_too_long": "\u5C0D\u8A71\u6307\u4EE4\u6700\u591A 4,000 \u5B57\u5143\u3002",
+    "invalid_access_id": "\u8B58\u5225\u78BC\u4F7F\u7528\u5C0F\u5BEB\u82F1\u6587\u3001\u6578\u5B57\u3001\u5E95\u7DDA\u8207\u9023\u5B57\u865F\uFF0C\u6700\u591A 64 \u5B57\u5143\u3002",
+    "invalid_access_ids": "\u6388\u6B0A\u6E05\u55AE\u904E\u9577\u6216\u6709\u91CD\u8907\u3002",
+    "invalid_access_name": "\u8ACB\u8F38\u5165 120 \u5B57\u5143\u5167\u7684\u540D\u7A31\u3002",
+    "invalid_account": "\u767B\u5165\u5E33\u865F\u9700\u70BA 1\u201364 \u500B\u5B57\u5143\uFF0C\u53EA\u80FD\u4F7F\u7528\u5B57\u6BCD\u3001\u6578\u5B57\u3001\u9EDE\u3001\u5E95\u7DDA\u8207\u9023\u5B57\u865F\u3002AD \u8ACB\u586B\u76EE\u9304\u4E2D\u7684\u5E33\u865F\uFF0C\u4E0D\u542B\u7DB2\u57DF\u3002",
+    "invalid_appearance": "\u5916\u89C0\u8A2D\u5B9A\u4E0D\u5728\u53EF\u9078\u7BC4\u570D\u5167\uFF0C\u8ACB\u91CD\u65B0\u9078\u64C7\u3002",
+    "invalid_audit_filter": "\u7A3D\u6838\u7BE9\u9078\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "invalid_backup": "\u5099\u4EFD\u683C\u5F0F\u4E0D\u6B63\u78BA\u6216\u5167\u5BB9\u904E\u5927\uFF08\u6700\u591A 400 \u5247\u8A0A\u606F\uFF09\u3002",
+    "invalid_commit": "\u8ACB\u9078\u64C7\u56FA\u5B9A\u7684 commit \u7248\u672C\u3002",
+    "invalid_credentials": "\u5E33\u865F\u3001\u5BC6\u78BC\u6216\u767B\u5165\u65B9\u5F0F\u4E0D\u6B63\u78BA\uFF0C\u6216\u5E33\u865F\u66AB\u6642\u7121\u6CD5\u767B\u5165\u3002",
+    "invalid_cursor": "\u4E8B\u4EF6\u5E8F\u865F\u4E0D\u6B63\u78BA\u3002",
+    "invalid_dashboard_scope": "\u6AA2\u8996\u7BC4\u570D\u4E0D\u6B63\u78BA\u3002",
+    "invalid_data_scope": "\u8ACB\u70BA\u6BCF\u500B\u652F\u63F4\u8CC7\u6599\u7BC4\u570D\u7684\u529F\u80FD\u9078\u64C7\u4E00\u500B\u5B83\u652F\u63F4\u7684\u7BC4\u570D\uFF0C\u4E3B\u7BA1\u7BC4\u570D\u53EA\u80FD\u9078\u8A72\u529F\u80FD\u652F\u63F4\u7684\u503C\uFF1B\u5176\u4ED6\u529F\u80FD\u4E0D\u5E36\u7BC4\u570D\u3002",
+    "invalid_file_name": "\u6A94\u6848\u540D\u7A31\u4E0D\u6B63\u78BA\u6216\u904E\u9577\u3002",
+    "invalid_gitea_token": "\u8ACB\u8F38\u5165\u6709\u6548\u7684 Gitea \u500B\u4EBA\u5B58\u53D6\u6B0A\u6756\u3002",
+    "invalid_history": "\u5C0D\u8A71\u5206\u652F\u8CC7\u6599\u4E0D\u5B8C\u6574\u3002",
+    "invalid_image": "\u5716\u7247\u5167\u5BB9\u8207\u526F\u6A94\u540D\u4E0D\u7B26\uFF0C\u8ACB\u91CD\u65B0\u532F\u51FA\u5716\u7247\u3002",
+    "invalid_labels": "\u6700\u591A 5 \u500B\u6A19\u7C64\uFF0C\u6BCF\u500B 1 \u81F3 24 \u5B57\u5143\u3002",
+    "invalid_login_methods": "\u8ACB\u81F3\u5C11\u8A2D\u5B9A\u4E00\u7A2E\u767B\u5165\u65B9\u5F0F\uFF0C\u4E26\u586B\u5BEB\u5C0D\u61C9\u7684\u767B\u5165\u5E33\u865F\u3002",
+    "invalid_model": "\u6A21\u578B\u8B58\u5225\u78BC\u904E\u9577\u3002",
+    "invalid_model_policy": "\u7FA4\u7D44\u5BB9\u91CF\u4E0A\u9650\u4E0D\u6B63\u78BA\u3002",
+    "invalid_order": "\u6392\u5E8F\u503C\u5FC5\u9808\u4ECB\u65BC 0 \u8207 10000\u3002",
+    "invalid_page": "\u5206\u9801\u4E0D\u6B63\u78BA\u3002",
+    "invalid_parent": "\u4E0A\u6587\u5FC5\u9808\u662F\u6B64\u5C0D\u8A71\u4E2D\u5DF2\u7D50\u675F\u7684\u56DE\u7B54\u3002",
+    "invalid_password": "\u672C\u5730\u5BC6\u78BC\u9700\u70BA 12\u2013128 \u500B\u5B57\u5143\uFF0C\u53EF\u4F7F\u7528\u9577\u53E5\u8207\u5BC6\u78BC\u7BA1\u7406\u5668\u3002",
+    "invalid_price": "\u8ACB\u6AA2\u67E5\u6A21\u578B\u8207\u5DE5\u5177\u50F9\u683C\u3001\u5E63\u5225\u3001\u751F\u6548\u6642\u9593\u8207\u8A08\u8CBB\u65B9\u5F0F\u3002\u65B0\u50F9\u683C\u53EA\u80FD\u7531\u73FE\u5728\u8D77\u751F\u6548\u3002",
+    "invalid_prompt_template": "\u7BC4\u672C\u6A19\u984C\u6700\u591A 80 \u5B57\u5143\uFF0C\u5167\u5BB9\u6700\u591A 12,000 \u5B57\u5143\uFF0C\u7686\u4E0D\u53EF\u7A7A\u767D\u3002",
+    "invalid_query": "\u641C\u5C0B\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "invalid_reauthentication": "\u8ACB\u64C7\u4E00\u78BA\u8A8D\u8EAB\u5206\uFF1A\u8F38\u5165\u5BC6\u78BC\uFF0C\u6216\u8F38\u5165\u5BC4\u5230\u4FE1\u7BB1\u7684\u9A57\u8B49\u78BC\u3002",
+    "invalid_repository": "\u7A0B\u5F0F\u5EAB\u540D\u7A31\u4E0D\u6B63\u78BA\u3002",
+    "invalid_repository_path": "\u6A94\u6848\u8DEF\u5F91\u4E0D\u6B63\u78BA\u3002",
+    "invalid_repository_ref": "\u5206\u652F\u3001\u6A19\u7C64\u6216\u7248\u672C\u540D\u7A31\u4E0D\u6B63\u78BA\u3002",
+    "invalid_repository_state": "\u7BE9\u9078\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "invalid_request": "\u8ACB\u6C42\u683C\u5F0F\u4E0D\u6B63\u78BA\u3002",
+    "invalid_resource_acl": "\u6210\u54E1\u6E05\u55AE\u91CD\u8907\u3001\u904E\u9577\u6216\u89D2\u8272\u4E0D\u6B63\u78BA\u3002",
+    "invalid_resource_name": "\u540D\u7A31\u9700\u70BA 1 \u81F3 120 \u500B\u5B57\u5143\u3002",
+    "invalid_roles": "\u9078\u53D6\u7684\u89D2\u8272\u5DF2\u4E0D\u5B58\u5728\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u3002",
+    "invalid_search": "\u641C\u5C0B\u689D\u4EF6\u4E0D\u6B63\u78BA\u3002",
+    "invalid_settings": "\u500B\u4EBA\u8A2D\u5B9A\u8D85\u51FA\u5141\u8A31\u7BC4\u570D\uFF0C\u8ACB\u91CD\u65B0\u9078\u64C7\u3002",
+    "invalid_spend_period": "\u67E5\u8A62\u671F\u9593\u9700\u70BA 1 \u81F3 366 \u5929\uFF0C\u4E26\u63D0\u4F9B\u6709\u6548\u7684\u6642\u5340\u3002",
+    "invalid_storage_limit": "\u5BB9\u91CF\u4E0A\u9650\u9700\u70BA 0 \u81F3 1,000,000 GB \u7684\u6574\u6578 bytes\uFF1B\u7559\u7A7A\u5247\u4F7F\u7528\u7FA4\u7D44\u6216\u9810\u8A2D\u5BB9\u91CF\u3002",
+    "invalid_table_query": "\u8868\u683C\u7684\u6392\u5E8F\u6216\u7BE9\u9078\u689D\u4EF6\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u6E05\u9664\u6B04\u4F4D\u7BE9\u9078\u5F8C\u518D\u8A66\u3002",
+    "invalid_title": "\u6A19\u984C\u9700\u70BA 1 \u81F3 120 \u500B\u5B57\u5143\u3002",
+    "invalid_user": "\u8ACB\u8F38\u5165\u59D3\u540D\u8207\u6709\u6548\u89D2\u8272\u3002",
+    "invalid_user_order": "\u6392\u5E8F\u4F4D\u7F6E\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u8F38\u5165 1 \u4EE5\u4E0A\u7684\u7DE8\u865F\u3002",
+    "invalid_verification_request": "\u9A57\u8B49\u78BC\u7684\u7528\u9014\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u8A66\u3002",
+    "job_active": "\u6B64\u6587\u4EF6\u4ECD\u5728\u8655\u7406\u4E2D\u3002",
+    "job_changed": "\u4EFB\u52D9\u72C0\u614B\u5DF2\u6539\u8B8A\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u3002",
+    "job_handler_missing": "\u6B64\u4EFB\u52D9\u985E\u578B\u5DF2\u505C\u7528\u3002",
+    "job_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u80CC\u666F\u4EFB\u52D9\u3002",
+    "job_not_retryable": "\u53EA\u6709\u5931\u6557\u6216\u5DF2\u53D6\u6D88\u7684\u4EFB\u52D9\u53EF\u4EE5\u91CD\u8A66\u3002",
+    "job_recovery_limit": "\u4EFB\u52D9\u5728\u57F7\u884C\u4E2D\u591A\u6B21\u4E2D\u65B7\uFF0C\u5DF2\u505C\u6B62\u81EA\u52D5\u63A5\u7E8C\u3002\u53EF\u518D\u91CD\u8A66\uFF1B\u4ECD\u5931\u6557\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "knowledge_collection_limit": "\u6BCF\u6B21\u6700\u591A\u4F7F\u7528\u4E09\u500B\u4E0D\u540C\u77E5\u8B58\u5EAB\u3002",
+    "knowledge_query_invalid": "\u67E5\u8A62\u9700\u70BA 1 \u81F3 2000 \u500B\u5B57\u5143\u3002",
+    "knowledge_selection_changed": "\u77E5\u8B58\u4F86\u6E90\u525B\u525B\u5DF2\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u9001\u51FA\u63D0\u554F\u3002",
+    "knowledge_source_changed": "\u77E5\u8B58\u4F86\u6E90\u5DF2\u6539\u8B8A\uFF0C\u8ACB\u91CD\u65B0\u9001\u51FA\u63D0\u554F\u3002",
+    "local_login_required": "\u672C\u5730\u767B\u5165\u662F\u6B64\u5E33\u865F\u552F\u4E00\u7684\u767B\u5165\u65B9\u5F0F\uFF0C\u4E0D\u80FD\u505C\u7528\u3002",
+    "local_login_unavailable": "\u7CFB\u7D71\u672A\u958B\u653E\u81EA\u884C\u8A2D\u5B9A\u672C\u5730\u767B\u5165\uFF0C\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "local_password_required": "\u9996\u6B21\u555F\u7528\u672C\u5730\u767B\u5165\u6642\uFF0C\u8ACB\u8A2D\u5B9A\u5BC6\u78BC\u3002",
+    "log_cursor_invalid": "\u5206\u9801\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u67E5\u8A62\u3002",
+    "log_export_cursor": "\u532F\u51FA\u8ACB\u4F7F\u7528\u5B8C\u6574\u6642\u9593\u7BC4\u570D\u3002",
+    "log_export_limit": "\u532F\u51FA\u8CC7\u6599\u91CF\u8D85\u904E\u9650\u5236\uFF0C\u8ACB\u7E2E\u5C0F\u7BC4\u570D\u3002",
+    "log_filter_invalid": "\u65E5\u8A8C\u7BE9\u9078\u683C\u5F0F\u6216\u7BC4\u570D\u8D85\u904E\u9650\u5236\u3002",
+    "log_not_found": "\u627E\u4E0D\u5230\u6B64\u65E5\u8A8C\u3002",
+    "log_text_range": "\u6587\u5B57\u641C\u5C0B\u9650\u4E00\u5929\u5167\u3002",
+    "login_method_disabled": "\u6B64\u4F7F\u7528\u8005\u5DF2\u505C\u7528\uFF0C\u6216\u672A\u5141\u8A31 AD \u9A57\u8B49\u3002",
+    "login_rate_limited": "\u767B\u5165\u5931\u6557\u6B21\u6578\u904E\u591A\uFF0C\u8ACB\u5E7E\u5206\u9418\u5F8C\u518D\u8A66\u3002",
+    "mail_address_invalid": "\u6536\u4EF6\u5730\u5740\u683C\u5F0F\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u8F38\u5165\u55AE\u4E00 email \u5730\u5740\uFF08\u4F8B\u5982 name@company.com\uFF09\u3002",
+    "mail_content_unavailable": "\u9019\u5C01\u4FE1\u662F\u654F\u611F\u4FE1\u6216\u5167\u6587\u5DF2\u4F9D\u4FDD\u5B58\u671F\u9650\u522A\u9664\uFF0C\u4E0D\u80FD\u91CD\u5BC4\u3002",
+    "mail_cursor_invalid": "\u5206\u9801\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u67E5\u8A62\u3002",
+    "mail_filter_invalid": "\u90F5\u4EF6\u7BE9\u9078\u683C\u5F0F\u6216\u7BC4\u570D\u4E0D\u6B63\u78BA\u3002",
+    "mail_message_not_found": "\u627E\u4E0D\u5230\u9019\u5C01\u4FE1\uFF0C\u7D00\u9304\u53EF\u80FD\u5DF2\u4F9D\u4FDD\u5B58\u671F\u9650\u522A\u9664\u3002",
+    "mail_not_configured": "\u90F5\u4EF6\u5BC4\u9001\u5C1A\u672A\u8A2D\u5B9A\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "mail_not_retryable": "\u9019\u5C01\u4FE1\u5DF2\u7D93\u5BC4\u51FA\u6216\u7D50\u675F\uFF0C\u4E0D\u80FD\u7ACB\u5373\u91CD\u8A66\uFF1B\u9700\u8981\u6642\u8ACB\u7528\u91CD\u5BC4\u5EFA\u7ACB\u65B0\u4FE1\u3002",
+    "mail_recipient_blocked": "\u6536\u4EF6\u5730\u5740\u7684\u7DB2\u57DF\u4E0D\u5728\u5141\u8A31\u6E05\u55AE\u5167\u3002",
+    "mail_recipient_unavailable": "\u6536\u4EF6\u5730\u5740\u5DF2\u4F9D\u4FDD\u5B58\u671F\u9650\u6E05\u9664\uFF0C\u4E0D\u80FD\u91CD\u5BC4\u3002",
+    "mail_sample_invalid": "\u53C3\u6578\u4E0D\u6B63\u78BA\uFF1A\u6578\u5B57\u8981\u662F\u6574\u6578\u3001\u662F\u5426\u8981\u662F true \u6216 false\u3001\u6642\u9593\u8981\u662F ISO 8601\uFF0C\u5FC5\u586B\u6B04\u4F4D\u4E0D\u53EF\u7A7A\u767D\u3002",
+    "mail_sample_not_found": "\u627E\u4E0D\u5230\u9019\u7A2E\u90F5\u4EF6\u7BC4\u672C\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u9078\u3002",
+    "managed_repository_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u5132\u5B58\u5EAB\uFF0C\u53EF\u80FD\u5DF2\u5F9E Gitea \u79FB\u9664\uFF0C\u6216\u4F60\u6C92\u6709\u67E5\u770B\u7684\u6B0A\u9650\u3002",
+    "message_not_found": "\u627E\u4E0D\u5230\u4F86\u6E90\u8A0A\u606F\u3002",
+    "model_group_forbidden": "\u6B64\u6A21\u578B\u4E0D\u5728\u4F60\u7684\u500B\u4EBA\u6216\u7FA4\u7D44\u6388\u6B0A\u7BC4\u570D\u3002",
+    "model_not_allowed": "\u504F\u597D\u7684\u6A21\u578B\u672A\u7D93\u4F3A\u670D\u5668\u6838\u51C6\u3002",
+    "model_selection_disabled": "\u76EE\u524D\u4E0D\u958B\u653E\u81EA\u9078\u6A21\u578B\uFF0C\u8ACB\u4F7F\u7528\u9810\u8A2D\u6A21\u578B\u3002",
+    "model_token_quota": "\u6B64\u6A21\u578B\u4ECA\u65E5\u53EF\u7528 token \u4E0D\u8DB3\uFF08\u5305\u542B\u8F38\u5165\u3001\u8F38\u51FA\u8207\u5F85\u7D50\u7B97\u9810\u7559\uFF09\u3002\u8ACB\u7E2E\u77ED\u63D0\u554F\u3001\u5207\u63DB\u6A21\u578B\u6216\u806F\u7D61\u7BA1\u7406\u54E1\uFF1B\u53F0\u5317\u6642\u9593\u6BCF\u65E5 08:00 \u91CD\u8A2D\u3002",
+    "multipart_required": "\u8ACB\u4F7F\u7528\u6A94\u6848\u4E0A\u50B3\u683C\u5F0F\u3002",
+    "navigation_depth_exceeded": "\u9078\u55AE\u6700\u591A\u56DB\u5C64\uFF0C\u8ACB\u628A\u9805\u76EE\u653E\u5230\u8F03\u6DFA\u7684\u5206\u7FA4\u3002",
+    "navigation_item_cycle": "\u4E0D\u80FD\u628A\u9078\u55AE\u5206\u7FA4\u79FB\u5230\u5B83\u81EA\u5DF1\u6216\u5B83\u7684\u5B50\u5206\u7FA4\u5E95\u4E0B\u3002",
+    "navigation_item_not_empty": "\u9078\u55AE\u5206\u7FA4\u4ECD\u6709\u9805\u76EE\uFF0C\u8ACB\u5148\u79FB\u51FA\u6216\u522A\u9664\u5F8C\u518D\u522A\u9664\u5206\u7FA4\u3002",
+    "navigation_item_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u9078\u55AE\u9805\u76EE\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "navigation_link_host_not_allowed": "\u5916\u90E8\u9023\u7D50\u7684\u7DB2\u7AD9\u4E0D\u5728\u5141\u8A31\u6E05\u55AE\u5167\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "navigation_page_duplicate": "\u540C\u4E00\u5C64\u5DF2\u7D93\u6709\u9019\u500B\u9801\u9762\u3002",
+    "navigation_parent_invalid": "\u4E0A\u5C64\u5FC5\u9808\u662F\u73FE\u6709\u7684\u9078\u55AE\u5206\u7FA4\u3002",
+    "not_found": "\u627E\u4E0D\u5230\u8CC7\u6599\u3002",
+    "notification_cursor_invalid": "\u901A\u77E5\u6E05\u55AE\u5DF2\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "notification_cursor_required": "\u8ACB\u63D0\u4F9B\u672C\u6B21\u901A\u77E5\u6E05\u55AE\u7684\u6642\u9593\u3002",
+    "ocr_image_unsupported": "\u9801\u9762\u5716\u7247\u904E\u5927\u6216\u683C\u5F0F\u4E0D\u652F\u63F4\uFF0C\u7121\u6CD5\u8FA8\u8B58\u6587\u5B57\u3002",
+    "ocr_output_truncated": "\u55AE\u9801\u8FA8\u8B58\u6587\u5B57\u8D85\u904E\u4E0A\u9650\uFF0C\u8ACB\u62C6\u5206\u6587\u4EF6\u5F8C\u91CD\u8A66\u3002",
+    "ocr_page_layout_unsupported": "\u6B64\u9801\u7684\u5716\u7247\u6578\u91CF\u7121\u6CD5\u9032\u884C\u6587\u5B57\u8FA8\u8B58\uFF0C\u6BCF\u9801\u9700\u542B 1 \u81F3 4 \u5F35\u5716\u7247\u3002",
+    "office_archive_limit": "Office \u6587\u4EF6\u89E3\u58D3\u5167\u5BB9\u904E\u5927\uFF0C\u8ACB\u62C6\u5206\u5F8C\u4E0A\u50B3\u3002",
+    "office_macros_unsupported": "\u4E0D\u63A5\u53D7\u5DE8\u96C6\u6587\u4EF6\uFF0C\u8ACB\u53E6\u5B58\u70BA\u4E0D\u542B\u5DE8\u96C6\u7684\u683C\u5F0F\u3002",
+    "organization_depth_exceeded": "\u7D44\u7E54\u6700\u591A\u516B\u5C64\uFF0C\u8ACB\u628A\u55AE\u4F4D\u653E\u5230\u8F03\u6DFA\u7684\u4F4D\u7F6E\u3002",
+    "organization_head_rank_duplicate": "\u540C\u4E00\u5C64\u5DF2\u7D93\u6709\u76F8\u540C\u5C64\u7D1A\u7684\u9996\u9577\u55AE\u4F4D\uFF0C\u8ACB\u6539\u7528\u5176\u4ED6\u5C64\u7D1A\u3002",
+    "organization_head_rank_invalid": "\u9996\u9577\u55AE\u4F4D\u5FC5\u9808\u6709\u4E0A\u5C64\uFF0C\u5C64\u7D1A\u662F 1 \u5230 9\u3002",
+    "organization_head_unit_nested": "\u9996\u9577\u55AE\u4F4D\u5E95\u4E0B\u4E0D\u80FD\u518D\u6709\u9996\u9577\u55AE\u4F4D\u3002",
+    "organization_import_empty": "\u516C\u6587\u7CFB\u7D71\u6C92\u6709\u4EFB\u4F55\u90E8\u9580\uFF0C\u672A\u532F\u5165\uFF1B\u8ACB\u78BA\u8A8D\u516C\u6587\u7CFB\u7D71\u7684\u9023\u7DDA\u8A2D\u5B9A\u3002",
+    "organization_import_not_configured": "\u5C1A\u672A\u8A2D\u5B9A\u516C\u6587\u7CFB\u7D71\u7684\u9023\u7DDA\uFF0C\u7121\u6CD5\u532F\u5165\u90E8\u9580\uFF1B\u8ACB\u806F\u7D61\u7BA1\u7406\u54E1\u3002",
+    "organization_import_rejected": "\u516C\u6587\u7CFB\u7D71\u62D2\u7D55\u8B80\u53D6\u90E8\u9580\u8CC7\u6599\uFF0C\u8ACB\u78BA\u8A8D\u516C\u6587\u7CFB\u7D71\u5E33\u865F\u6709\u90E8\u9580\u8207\u5E33\u865F\u8868\u7684\u8B80\u53D6\u6B0A\u9650\u3002",
+    "organization_import_stale": "\u9810\u89BD\u4E4B\u5F8C\u516C\u6587\u7CFB\u7D71\u6216\u7D44\u7E54\u5DF2\u6709\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u9810\u89BD\u5F8C\u518D\u532F\u5165\u3002",
+    "organization_import_unavailable": "\u516C\u6587\u7CFB\u7D71\u66AB\u6642\u7121\u6CD5\u9023\u7DDA\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "organization_manager_by_head_unit": "\u9019\u500B\u55AE\u4F4D\u7684\u4E3B\u7BA1\u7531\u9996\u9577\u55AE\u4F4D\u7684\u4E3B\u7BA1\u64D4\u4EFB\uFF0C\u4E0D\u80FD\u518D\u52FE\u9078\u4E3B\u7BA1\u3002",
+    "organization_member_not_found": "\u9019\u4F4D\u4F7F\u7528\u8005\u5DF2\u4E0D\u5728\u6B64\u55AE\u4F4D\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "organization_order_stale": "\u9019\u4E00\u5C64\u7684\u55AE\u4F4D\u5DF2\u6709\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u6392\u5E8F\u3002",
+    "organization_parent_invalid": "\u4E0A\u5C64\u5FC5\u9808\u662F\u73FE\u6709\u7684\u7D44\u7E54\u55AE\u4F4D\u3002",
+    "organization_unit_cycle": "\u4E0D\u80FD\u628A\u55AE\u4F4D\u79FB\u5230\u5B83\u81EA\u5DF1\u6216\u5B83\u7684\u4E0B\u5C64\u55AE\u4F4D\u5E95\u4E0B\u3002",
+    "organization_unit_disabled": "\u505C\u7528\u7684\u55AE\u4F4D\u4E0D\u80FD\u52A0\u5165\u65B0\u6210\u54E1\uFF0C\u8ACB\u5148\u555F\u7528\u3002",
+    "organization_unit_name_duplicate": "\u540C\u4E00\u5C64\u5DF2\u7D93\u6709\u76F8\u540C\u540D\u7A31\u7684\u55AE\u4F4D\u3002",
+    "organization_unit_not_empty": "\u55AE\u4F4D\u4ECD\u6709\u4E0B\u5C64\u55AE\u4F4D\u6216\u6210\u54E1\uFF0C\u8ACB\u5148\u79FB\u51FA\u5F8C\u518D\u522A\u9664\uFF1B\u4E0D\u518D\u4F7F\u7528\u7684\u55AE\u4F4D\u53EF\u6539\u70BA\u505C\u7528\u3002",
+    "organization_unit_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u7D44\u7E54\u55AE\u4F4D\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "organization_user_not_found": "\u627E\u4E0D\u5230\u9019\u4F4D\u4F7F\u7528\u8005\uFF0C\u5E33\u865F\u53EF\u80FD\u5DF2\u522A\u9664\u3002",
+    "owner_is_implicit": "\u64C1\u6709\u8005\u5DF2\u5177\u6709\u5B8C\u6574\u6B0A\u9650\uFF0C\u4E0D\u9700\u52A0\u5165\u6210\u54E1\u6E05\u55AE\u3002",
+    "password_weak": "\u5BC6\u78BC\u592A\u5E38\u898B\u6216\u5305\u542B\u5E33\u865F\u540D\u7A31\uFF0C\u8ACB\u6539\u7528\u8F03\u9577\u4E14\u4E0D\u6613\u731C\u7684\u53E5\u5B50\u3002",
+    "pdf_export_busy": "PDF \u532F\u51FA\u6B63\u5728\u5FD9\u788C\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "pdf_page_limit": "PDF \u9801\u6578\u8D85\u904E\u8655\u7406\u4E0A\u9650\uFF0C\u8ACB\u5148\u62C6\u5206\u6587\u4EF6\u3002",
+    "presentation_slide_limit": "\u7C21\u5831\u9700\u70BA 1 \u81F3 200 \u9801\u3002",
+    "price_exists": "\u6B64\u751F\u6548\u6642\u9593\u5DF2\u6709\u50F9\u683C\u7248\u672C\uFF0C\u8ACB\u9078\u64C7\u65B0\u7684\u6642\u9593\u3002",
+    "profile_incomplete": "\u7D22\u5F15\u8986\u84CB\u7387\u672A\u9054 100%\uFF0C\u6216\u4ECD\u6709\u8655\u7406\u4E2D\u7684\u6587\u4EF6\uFF0C\u8ACB\u5148\u5B8C\u6210\u91CD\u5EFA\u3002",
+    "profile_not_building": "\u53EA\u80FD\u555F\u7528\u91CD\u5EFA\u4E2D\u7684\u7D22\u5F15\u3002",
+    "profile_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u6AA2\u7D22\u7D22\u5F15\u3002",
+    "profile_not_retired": "\u53EA\u80FD\u6E05\u9664\u5DF2\u9000\u5F79\u7D22\u5F15\u7684\u5411\u91CF\u3002",
+    "profile_retired": "\u5DF2\u9000\u5F79\u7684\u7D22\u5F15\u7121\u6CD5\u91CD\u5EFA\u3002",
+    "project_archived": "\u8ACB\u5148\u9084\u539F\u5C01\u5B58\u5C08\u6848\uFF0C\u518D\u9032\u884C\u6B64\u64CD\u4F5C\u3002",
+    "project_conflict": "\u5C08\u6848\u8A2D\u5B9A\u5DF2\u88AB\u4FEE\u6539\uFF0C\u8ACB\u91CD\u65B0\u8F09\u5165\u5F8C\u5408\u4F75\uFF1B\u76EE\u524D\u8F38\u5165\u4ECD\u4FDD\u7559\u3002",
+    "project_context_limit": "\u5C08\u6848\u53C3\u8003\u6587\u5B57\u8D85\u904E 12,000 \u5B57\u5143\u6216 100 \u9801\uFF0C\u8ACB\u7CBE\u7C21\u53C3\u8003\u6587\u4EF6\u6216\u6539\u7528\u77E5\u8B58\u5EAB\u6AA2\u7D22\u3002",
+    "project_file_limit": "\u5C08\u6848\u6700\u591A 50 \u4EFD\u6587\u4EF6\u3002",
+    "project_files_pending": "\u5C08\u6848\u4ECD\u6709\u6587\u4EF6\u5F85\u5B8C\u6210\u8FA8\u8B58\uFF0C\u8ACB\u5230\u5C08\u6848\u6AA2\u8996\u9032\u5EA6\u6216\u79FB\u9664\u4E0D\u9700\u8981\u7684\u6587\u4EF6\u3002",
+    "project_limit": "\u500B\u4EBA\u5C08\u6848\u5DF2\u9054 100 \u500B\u4E0A\u9650\u3002",
+    "project_settings_invalid": "\u8AAA\u660E\u6700\u591A 2,000 \u5B57\u5143\uFF0C\u5171\u7528\u6307\u793A\u6700\u591A 4,000 \u5B57\u5143\u3002",
+    "project_template_invalid": "\u7BC4\u672C\u540D\u7A31\u6700\u591A 80 \u5B57\u5143\uFF0C\u5167\u5BB9\u6700\u591A 12,000 \u5B57\u5143\uFF0C\u7686\u4E0D\u53EF\u7A7A\u767D\u3002",
+    "prompt_required": "\u8ACB\u8F38\u5165\u8A0A\u606F\u3002",
+    "quality_item_missing": "\u627E\u4E0D\u5230\u6B64\u56DE\u994B\u6216\u8A55\u6E2C\u9805\u76EE\u3002",
+    "queue_full": "\u751F\u6210\u4F47\u5217\u5DF2\u6EFF\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "rate_limited": "\u64CD\u4F5C\u904E\u65BC\u983B\u7E41\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "reasoning_not_supported": "\u6B64\u6A21\u578B\u4E0D\u652F\u63F4\u6240\u9078\u7684\u601D\u8003\u5F37\u5EA6\u3002",
+    "reauthentication_failed": "\u5BC6\u78BC\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u91CD\u65B0\u8F38\u5165\u3002",
+    "reauthentication_required": "\u6B64\u8B8A\u66F4\u9700\u8981\u5148\u78BA\u8A8D\u8EAB\u5206\uFF0C\u8ACB\u8F38\u5165\u76EE\u524D\u7684\u5BC6\u78BC\u6216\u9A57\u8B49\u78BC\u3002",
+    "reauthentication_unavailable": "\u76EE\u524D\u6C92\u6709\u53EF\u7528\u7684\u65B9\u5F0F\u78BA\u8A8D\u4F60\u7684\u8EAB\u5206\uFF0C\u8ACB\u806F\u7D61\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "remote_file_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u6A94\u6848\uFF0C\u6216\u9810\u89BD\u9023\u7D50\u5DF2\u904E\u671F\uFF1B\u8ACB\u91CD\u65B0\u958B\u555F\u8868\u55AE\u518D\u8A66\u3002",
+    "remote_file_too_large": "\u6A94\u6848\u8D85\u904E\u9810\u89BD\u7684\u5927\u5C0F\u4E0A\u9650\uFF0C\u8ACB\u5230\u539F\u7CFB\u7D71\u4E0B\u8F09\u3002",
+    "remote_file_unavailable": "\u66AB\u6642\u7121\u6CD5\u5F9E\u539F\u7CFB\u7D71\u53D6\u5F97\u9019\u500B\u6A94\u6848\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "repository_access_changed": "\u9019\u7B46\u6B0A\u9650\u525B\u88AB\u5176\u4ED6\u64CD\u4F5C\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u8A66\u3002",
+    "repository_access_disabled": "\u5C1A\u672A\u8A2D\u5B9A Gitea \u670D\u52D9\u5E33\u865F\uFF0C\u66AB\u6642\u4E0D\u80FD\u7533\u8ACB\u6216\u6388\u4E88\u5132\u5B58\u5EAB\u6B0A\u9650\u3002",
+    "repository_access_expiry_invalid": "\u5230\u671F\u65E5\u5FC5\u9808\u662F\u4ECA\u5929\u6216\u4E4B\u5F8C\u7684\u65E5\u671F\u3002",
+    "repository_access_forbidden": "\u4F60\u4E0D\u80FD\u505A\u9019\u9805\u6388\u6B0A\uFF1A\u8CA0\u8CAC\u4EBA\u53EA\u80FD\u7D66\u4EBA\u54E1\u8B80\u53D6\u6216\u5BEB\u5165\uFF0C\u7BA1\u7406\u6B0A\u9650\u8207\u670D\u52D9\u5E33\u865F\u7531\u7CFB\u7D71\u7BA1\u7406\u54E1\u8655\u7406\u3002",
+    "repository_access_held": "\u4F60\u5DF2\u7D93\u6709\u9019\u500B\u5132\u5B58\u5EAB\u76F8\u540C\u6216\u66F4\u9AD8\u7684\u6B0A\u9650\u3002",
+    "repository_access_pending": "\u4F60\u5C0D\u9019\u500B\u5132\u5B58\u5EAB\u5DF2\u6709\u5BE9\u6838\u4E2D\u7684\u7533\u8ACB\uFF0C\u8ACB\u7B49\u5BE9\u6838\u7D50\u675F\u6216\u5148\u53D6\u6D88\u3002",
+    "repository_chat_source_invalid": "\u8ACB\u9078\u64C7\u8981\u5E36\u5165\u5C0D\u8A71\u7684\u6A94\u6848\u3001\u8B70\u984C\u6216 Pull Request\uFF08\u4E00\u6B21\u4E00\u7A2E\uFF09\u3002",
+    "repository_chat_too_large": "\u9078\u53D6\u7684\u5167\u5BB9\u8D85\u904E\u5C0D\u8A71\u9644\u4EF6\u4E0A\u9650\uFF0C\u8ACB\u6E1B\u5C11\u6A94\u6848\uFF0C\u6216\u6539\u7528\u532F\u5165\u77E5\u8B58\u5EAB\u3002",
+    "repository_diff_limit": "\u8B8A\u66F4\u5167\u5BB9\u8D85\u904E 256 KB\uFF0C\u8ACB\u7E2E\u5C0F commit \u5340\u9593\u3002",
+    "repository_diff_not_text": "\u8B8A\u66F4\u5167\u5BB9\u4E0D\u662F UTF-8 \u6587\u5B57\uFF0C\u7121\u6CD5 review\u3002",
+    "repository_empty": "\u6B64\u7A0B\u5F0F\u5EAB\u5C1A\u7121\u63D0\u4EA4\u7248\u672C\u3002",
+    "repository_file_limit": "\u50C5\u652F\u63F4\u4E0A\u9650\u5167\u7684\u6587\u5B57\u6A94\u6848\uFF0C\u4E0D\u652F\u63F4\u76EE\u9304\u3001LFS \u8207\u4E8C\u9032\u4F4D\u6A94\u3002",
+    "repository_grant_not_found": "\u627E\u4E0D\u5230\u9019\u7B46\u6B0A\u9650\uFF0C\u53EF\u80FD\u5DF2\u88AB\u64A4\u92B7\u6216\u5230\u671F\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u3002",
+    "repository_grantee_invalid": "\u6388\u6B0A\u5C0D\u8C61\u4E0D\u6B63\u78BA\uFF1A\u4EBA\u54E1\u9808\u70BA\u5728\u8077\u4E14\u6709 AD \u5E33\u865F\uFF1B\u670D\u52D9\u5E33\u865F\u9808\u586B\u7406\u7531\uFF0C\u4E14\u4E0D\u80FD\u662F\u4EBA\u54E1\u7684\u5E33\u865F\u3002",
+    "repository_import_empty": "\u9019\u500B\u8CC7\u6599\u593E\u6C92\u6709\u53EF\u532F\u5165\u7684\u6587\u5B57\u6A94\u3002",
+    "repository_import_limit": "\u9019\u500B\u8CC7\u6599\u593E\u7684\u6587\u5B57\u6A94\u8D85\u904E\u55AE\u6B21\u532F\u5165\u4E0A\u9650\uFF0C\u8ACB\u9078\u64C7\u8F03\u5C0F\u7684\u8CC7\u6599\u593E\u3002",
+    "repository_not_directory": "\u8ACB\u9078\u64C7\u8CC7\u6599\u593E\u3002",
+    "repository_not_requestable": "\u9019\u500B\u5132\u5B58\u5EAB\u76EE\u524D\u4E0D\u958B\u653E\u7533\u8ACB\uFF0C\u8ACB\u806F\u7D61\u8CA0\u8CAC\u4EBA\u6216\u7CFB\u7D71\u7BA1\u7406\u54E1\u3002",
+    "repository_not_text": "\u6B64\u6A94\u6848\u4E0D\u662F\u53EF\u8FA8\u8B58\u7684 UTF-8 \u6587\u5B57\u6A94\u3002",
+    "repository_pin_limit": "\u6700\u591A\u91D8\u9078 30 \u500B\u7A0B\u5F0F\u5EAB\uFF0C\u8ACB\u5148\u53D6\u6D88\u90E8\u5206\u91D8\u9078\u3002",
+    "repository_steward_invalid": "\u8CA0\u8CAC\u4EBA\u5FC5\u9808\u662F\u555F\u7528\u4E2D\u7684\u5E33\u865F\u3002",
+    "request_too_large": "\u4E0A\u50B3\u5167\u5BB9\u8D85\u904E\u5927\u5C0F\u4E0A\u9650\u3002",
+    "resource_busy": "\u9019\u9805\u8CC7\u6599\u6B63\u5728\u88AB\u5176\u4ED6\u64CD\u4F5C\u8655\u7406\uFF0C\u8ACB\u7A0D\u5F8C\u518D\u8A66\u3002",
+    "resource_not_found": "\u627E\u4E0D\u5230\u6B64\u9805\u76EE\uFF0C\u6216\u4F60\u5DF2\u6C92\u6709\u5B58\u53D6\u6B0A\u9650\u3002",
+    "resource_read_only": "\u6B64\u9805\u76EE\u76EE\u524D\u53EA\u6709\u6AA2\u8996\u6B0A\u9650\u3002",
+    "resource_tasks_active": "\u6B64\u9805\u76EE\u4ECD\u6709\u80CC\u666F\u4EFB\u52D9\uFF0C\u8ACB\u5148\u5B8C\u6210\u6216\u53D6\u6D88\uFF0C\u518D\u522A\u9664\u3002",
+    "retrieval_corpus_invalid": "\u76F8\u95DC\u6587\u4EF6\u5FC5\u9808\u5DF2\u5B8C\u6210\u7D22\u5F15\u4E14\u4F4D\u65BC\u9078\u53D6\u7684\u77E5\u8B58\u5EAB\u3002",
+    "retrieval_evaluation_active": "\u5DF2\u6709\u8655\u7406\u4E2D\u7684\u6AA2\u7D22\u8A55\u6E2C\uFF0C\u8ACB\u5148\u5B8C\u6210\u6216\u53D6\u6D88\u3002",
+    "retrieval_evaluation_changed": "\u7D22\u5F15\u3001\u6587\u4EF6\u7248\u672C\u6216\u6AA2\u7D22\u8A2D\u5B9A\u5DF2\u8B8A\u66F4\uFF0C\u8ACB\u91CD\u65B0\u5EFA\u7ACB\u8A55\u6E2C\u4EE5\u53D6\u5F97\u53EF\u6BD4\u8F03\u7D50\u679C\u3002",
+    "retrieval_evaluation_invalid": "\u8ACB\u63D0\u4F9B\u540D\u7A31\u30011 \u81F3 3 \u500B\u77E5\u8B58\u5EAB\u53CA 1 \u81F3 20 \u984C\u9A57\u6536\u96C6\u3002",
+    "retrieval_evaluation_limit": "\u500B\u4EBA\u6AA2\u7D22\u8A55\u6E2C\u5DF2\u9054 500 \u6B21\u4FDD\u7559\u4E0A\u9650\u3002",
+    "retrieval_evaluation_missing": "\u627E\u4E0D\u5230\u6B64\u6AA2\u7D22\u8A55\u6E2C\u3002",
+    "retrieval_mode_invalid": "\u6AA2\u7D22\u6A21\u5F0F\u4E0D\u6B63\u78BA\u3002",
+    "retrieval_pages_invalid": "\u9A57\u6536\u96C6\u5305\u542B\u4E0D\u5B58\u5728\u7684\u6587\u4EF6\u9801\u78BC\u3002",
+    "retrieval_provider_unavailable": "\u6AA2\u7D22\u6A21\u578B\u670D\u52D9\u5FD9\u788C\u6216\u984D\u5EA6\u53D7\u9650\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "review_brief_invalid": "\u6A21\u578B\u672A\u7522\u751F\u5B8C\u6574\u7684\u7CBE\u7C21\u7D50\u679C\uFF0C\u8ACB\u91CD\u8A66\u6216\u6539\u7528\u5176\u4ED6\u6A21\u578B\u3002",
+    "review_comment_invalid": "\u7559\u8A00\u5167\u5BB9\u9700\u70BA 1 \u81F3 20,000 \u5B57\u5143\u3002",
+    "review_comment_posted": "\u9019\u4EFD review \u5DF2\u8CBC\u5230 Pull Request\u3002",
+    "review_comment_unavailable": "\u53EA\u6709\u5DF2\u5B8C\u6210\u7684 Pull Request review \u53EF\u4EE5\u8CBC\u6210\u7559\u8A00\u3002",
+    "review_empty_range": "\u8D77\u9EDE\u8207\u7D42\u9EDE\u5FC5\u9808\u662F\u4E0D\u540C\u7684 commit\u3002",
+    "review_host_changed": "\u7A0B\u5F0F\u5EAB\u4E3B\u6A5F\u5DF2\u8B8A\u66F4\uFF0C\u8ACB\u5728\u76EE\u524D\u7684\u9023\u7DDA\u5EFA\u7ACB\u65B0\u7684 review\u3002",
+    "review_invalid": "\u4EBA\u5DE5\u8A55\u5206\u4ECB\u65BC 1 \u81F3 5\uFF0C\u8AAA\u660E\u6700\u591A 2,000 \u5B57\u5143\u3002",
+    "review_model_context_small": "\u6B64\u6A21\u578B\u7684\u4E0A\u4E0B\u6587\u4E0D\u8DB3\u4EE5\u6AA2\u95B1\u4E26\u5F59\u6574\u8B8A\u66F4\uFF0C\u8ACB\u9078\u64C7\u66F4\u5927\u7684\u6A21\u578B\u6216\u6E1B\u5C11\u88DC\u5145\u91CD\u9EDE\u3002",
+    "review_no_changes": "\u6B64 commit \u6216\u5340\u9593\u6C92\u6709\u53EF\u6AA2\u95B1\u7684\u8B8A\u66F4\u3002",
+    "review_not_found": "\u627E\u4E0D\u5230\u9019\u4EFD review\u3002",
+    "review_purpose_invalid": "\u8ACB\u9078\u64C7\u5FEB\u901F\u6AA2\u95B1\u6216\u8B8A\u66F4\u6458\u8981\u3002",
+    "review_request_invalid": "Review \u91CD\u9EDE\u6700\u591A 2,000 \u5B57\u5143\uFF0C\u8ACB\u4F7F\u7528\u6709\u6548\u7684\u8ACB\u6C42\u8B58\u5225\u78BC\u3002",
+    "review_segment_limit": "\u8B8A\u66F4\u9700\u8981\u8D85\u904E 60 \u500B\u5340\u6BB5\uFF0C\u8ACB\u7E2E\u5C0F\u5340\u9593\u6216\u9078\u64C7\u66F4\u5927\u7684\u6A21\u578B\u3002",
+    "review_snapshot_unsupported": "\u6B64 review \u5FEB\u7167\u7248\u672C\u76EE\u524D\u7121\u6CD5\u8655\u7406\uFF0C\u8ACB\u5EFA\u7ACB\u65B0\u7684 review\u3002",
+    "review_source_invalid": "\u8ACB\u9078\u64C7\u4E00\u500B Pull Request\uFF0C\u6216\u6307\u5B9A commit\uFF0F\u5340\u9593\u3002",
+    "review_summary_too_long": "\u4E2D\u9593\u5F59\u6574\u8D85\u904E\u9810\u7B97\uFF0C\u8ACB\u7E2E\u5C0F\u5340\u9593\u6216\u9078\u64C7\u66F4\u5927\u7684\u6A21\u578B\u3002",
+    "run_not_found": "\u627E\u4E0D\u5230\u9019\u6B21\u751F\u6210\u3002",
+    "scheduled_task_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u6392\u7A0B\u4EFB\u52D9\uFF0C\u53EF\u80FD\u5DF2\u5728\u65B0\u7248\u79FB\u9664\uFF1B\u8ACB\u91CD\u65B0\u6574\u7406\u9801\u9762\u3002",
+    "scheduled_task_unavailable": "\u9019\u500B\u6392\u7A0B\u4EFB\u52D9\u5728\u672C\u7AD9\u6C92\u6709\u555F\u7528\uFF0C\u7121\u6CD5\u624B\u52D5\u57F7\u884C\uFF1B\u539F\u56E0\u898B\u4EFB\u52D9\u8AAA\u660E\u3002",
+    "schema_object_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u7269\u4EF6\uFF0C\u53EF\u80FD\u540D\u7A31\u6709\u8AA4\u6216\u5DF2\u79FB\u9664\uFF1B\u8ACB\u91CD\u65B0\u6574\u7406\u7570\u52D5\u6E05\u55AE\u3002",
+    "session_locked": "\u5DE5\u4F5C\u5340\u5DF2\u9396\u5B9A\uFF0C\u8ACB\u8F38\u5165\u5BC6\u78BC\u89E3\u9396\u3002",
+    "session_revoked": "\u767B\u5165\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u767B\u5165\u5DE5\u4F5C\u5340\u3002",
+    "share_content_limit": "\u5206\u4EAB\u5167\u5BB9\u904E\u9577\uFF0C\u8ACB\u6539\u5206\u4EAB\u6574\u7406\u5F8C\u7684\u6210\u679C\u6587\u4EF6\u3002",
+    "share_generation_active": "\u8ACB\u5148\u7B49\u5F85\u6216\u505C\u6B62\u56DE\u7B54\uFF0C\u518D\u5206\u4EAB\u5B8C\u6574\u5167\u5BB9\u3002",
+    "share_history_invalid": "\u5C0D\u8A71\u5206\u652F\u8CC7\u6599\u4E0D\u5B8C\u6574\u3002",
+    "share_history_limit": "\u55AE\u6B21\u5206\u4EAB\u6700\u591A 100 \u5247\u8A0A\u606F\uFF0C\u8ACB\u6539\u5206\u4EAB\u6574\u7406\u5F8C\u7684\u6210\u679C\u6587\u4EF6\u3002",
+    "share_invalid": "\u8ACB\u9078\u64C7 1 \u81F3 20 \u4F4D\u5176\u4ED6\u4F7F\u7528\u8005\uFF0C\u5206\u4EAB\u671F\u9650\u4ECB\u65BC 1 \u5C0F\u6642\u8207 30 \u5929\u3002",
+    "share_limit": "\u6709\u6548\u5206\u4EAB\u5DF2\u9054 100 \u500B\uFF0C\u8ACB\u64A4\u92B7\u4E0D\u518D\u4F7F\u7528\u7684\u5206\u4EAB\u3002",
+    "share_recipient_unknown": "\u53EA\u80FD\u5206\u4EAB\u7D66\u5DF2\u767B\u5165\u904E\u5E73\u53F0\u7684\u4F7F\u7528\u8005\u3002",
+    "share_unavailable": "\u5206\u4EAB\u4E0D\u5B58\u5728\u3001\u5DF2\u5230\u671F\u6216\u64A4\u92B7\uFF0C\u6216\u4F60\u7684\u5E33\u865F\u4E0D\u5728\u6536\u4EF6\u8005\u6E05\u55AE\u4E2D\u3002",
+    "spreadsheet_cell_limit": "\u55AE\u4E00\u5DE5\u4F5C\u8868\u6700\u591A 100,000 \u500B\u975E\u7A7A\u5132\u5B58\u683C\u3002",
+    "spreadsheet_sheet_limit": "\u8A66\u7B97\u8868\u9700\u70BA 1 \u81F3 128 \u500B\u5DE5\u4F5C\u8868\u3002",
+    "spreadsheet_string_limit": "\u8A66\u7B97\u8868\u6587\u5B57\u8868\u904E\u5927\uFF0C\u8ACB\u62C6\u5206\u5DE5\u4F5C\u8868\u3002",
+    "stream_superseded": "\u5DF2\u5728\u5176\u4ED6\u8996\u7A97\u958B\u555F\u5373\u6642\u76E3\u63A7\uFF0C\u6B64\u8996\u7A97\u66AB\u505C\u66F4\u65B0\uFF1B\u6309\u300C\u7E7C\u7E8C\u66F4\u65B0\u300D\u6539\u5728\u6B64\u8996\u7A97\u76E3\u63A7\u3002",
+    "subscription_limit": "\u4E8B\u4EF6\u9023\u7DDA\u6578\u5DF2\u9054\u4E0A\u9650\uFF0C\u8ACB\u95DC\u9589\u91CD\u8907\u7684\u5206\u9801\u5F8C\u91CD\u8A66\u3002",
+    "table_row_too_long": "\u8868\u683C\u55AE\u5217\u8D85\u904E\u7247\u6BB5\u4E0A\u9650\uFF0C\u8ACB\u5148\u62C6\u5206\u8868\u683C\u6B04\u4F4D\u3002",
+    "task_input_too_long": "\u8655\u7406\u5167\u5BB9\u904E\u9577\uFF0C\u8ACB\u7E2E\u5C0F\u9078\u53D6\u7BC4\u570D\u3002",
+    "task_response_empty": "\u6A21\u578B\u6C92\u6709\u7522\u751F\u4EFB\u4F55\u5167\u5BB9\uFF0C\u8ACB\u8ABF\u6574\u5167\u5BB9\u6216\u5207\u63DB\u6A21\u578B\u5F8C\u91CD\u8A66\u3002",
+    "template_limit": "\u500B\u4EBA\u7BC4\u672C\u6700\u591A 100 \u500B\u3002",
+    "template_missing": "\u627E\u4E0D\u5230\u6B64\u7BC4\u672C\u3002",
+    "template_not_found": "\u627E\u4E0D\u5230\u9019\u500B\u7BC4\u672C\u3002",
+    "test_account_security_locked": "\u6E2C\u8A66\u8EAB\u5206\u671F\u9593\u4E0D\u80FD\u8B8A\u66F4\u8A72\u4F7F\u7528\u8005\u7684\u5BC6\u78BC\u8207\u4FE1\u7BB1\uFF1B\u8ACB\u8FD4\u56DE\u7BA1\u7406\u8005\u5F8C\u5F9E\u4F7F\u7528\u8005\u7BA1\u7406\u8ABF\u6574\u3002",
+    "test_identity_nested": "\u8ACB\u5148\u8FD4\u56DE\u539F\u7BA1\u7406\u8005\uFF0C\u518D\u5207\u63DB\u5176\u4ED6\u8EAB\u5206\u3002",
+    "test_identity_same": "\u8ACB\u9078\u64C7\u53E6\u4E00\u4F4D\u4F7F\u7528\u8005\u3002",
+    "test_reason_required": "\u8ACB\u586B\u5BEB 4\u2013240 \u5B57\u5143\u7684\u6E2C\u8A66\u76EE\u7684\u3002",
+    "test_session_invalid": "\u6E2C\u8A66\u767B\u5165\u5DF2\u5931\u6548\u3002",
+    "test_source_revoked": "\u539F\u7BA1\u7406\u8005\u767B\u5165\u6216\u6B0A\u9650\u5DF2\u5931\u6548\uFF0C\u8ACB\u91CD\u65B0\u767B\u5165\u3002",
+    "text_content_invalid": "\u5167\u5BB9\u4E0D\u53EF\u7A7A\u767D\u3001\u8D85\u904E\u9577\u5EA6\u4E0A\u9650\u6216\u5305\u542B\u63A7\u5236\u5B57\u5143\u3002",
+    "text_title_invalid": "\u4F86\u6E90\u540D\u7A31\u4E0D\u53EF\u5305\u542B\u8DEF\u5F91\u6216\u7279\u6B8A\u7B26\u865F\u3002",
+    "text_version_changed": "\u4F86\u6E90\u5DF2\u88AB\u5176\u4ED6\u4EBA\u4FEE\u6539\u3002\u8ACB\u91CD\u65B0\u958B\u555F\u7DE8\u8F2F\u5668\uFF0C\u518D\u5408\u4F75\u4F60\u7684\u5167\u5BB9\u3002",
+    "transform_action_invalid": "\u6B64\u6BB5\u843D\u64CD\u4F5C\u4E0D\u652F\u63F4\u3002",
+    "transform_input_invalid": "\u8ACB\u9078\u53D6 1 \u81F3 8,000 \u500B\u5B57\u5143\uFF0C\u4E26\u4F7F\u7528\u652F\u63F4\u7684\u8A9E\u8A00\u3002",
+    "unknown_access_id": "\u6E05\u55AE\u5305\u542B\u4E0D\u5B58\u5728\u7684\u89D2\u8272\u3001\u7FA4\u7D44\u6216\u529F\u80FD\u3002",
+    "unknown_resource_member": "\u6E05\u55AE\u5305\u542B\u672A\u767B\u5165\u904E\u7684\u5E33\u865F\u6216\u505C\u7528\u7684\u7FA4\u7D44\u3002",
+    "user_not_found": "\u627E\u4E0D\u5230\u53EF\u6E2C\u8A66\u7684\u4F7F\u7528\u8005\u3002",
+    "user_order_stale": "\u540D\u55AE\u525B\u88AB\u5225\u4EBA\u8ABF\u6574\u904E\uFF0C\u8ACB\u91CD\u65B0\u6574\u7406\u5F8C\u518D\u6392\u5E8F\u3002",
+    "validation_failed": "\u8F38\u5165\u5167\u5BB9\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u6AA2\u67E5\u6A19\u793A\u7684\u6B04\u4F4D\u5F8C\u518D\u8A66\u3002",
+    "verification_code_invalid": "\u9A57\u8B49\u78BC\u4E0D\u6B63\u78BA\uFF0C\u8ACB\u91CD\u65B0\u8F38\u5165\u3002",
+    "verification_cooldown": "\u525B\u5BC4\u51FA\u9A57\u8B49\u78BC\uFF0C\u8ACB\u7A0D\u5019\u4E00\u5206\u9418\u518D\u91CD\u65B0\u5BC4\u9001\u3002",
+    "verification_expired": "\u9A57\u8B49\u78BC\u5DF2\u5931\u6548\u6216\u5DF2\u4F7F\u7528\uFF0C\u8ACB\u91CD\u65B0\u7D22\u53D6\u3002",
+    "verification_not_found": "\u627E\u4E0D\u5230\u9019\u7D44\u9A57\u8B49\u78BC\uFF0C\u8ACB\u91CD\u65B0\u7D22\u53D6\u3002",
+    "verification_rate_limited": "\u9A57\u8B49\u78BC\u7D22\u53D6\u6B21\u6578\u904E\u591A\uFF0C\u8ACB\u4E00\u5C0F\u6642\u5F8C\u518D\u8A66\u3002",
+    "vision_not_supported": "\u76EE\u524D\u6A21\u578B\u4E0D\u652F\u63F4\u5716\u7247\uFF0C\u8ACB\u5207\u63DB\u652F\u63F4\u5716\u7247\u7684\u6A21\u578B\uFF0C\u6216\u79FB\u9664\u5716\u7247\u9644\u4EF6\u3002",
+    "web_query_too_long": "\u7DB2\u8DEF\u641C\u5C0B\u63D0\u554F\u6700\u591A 2000 \u500B\u5B57\u5143\uFF0C\u8ACB\u7C21\u5316\u67E5\u8A62\u3002",
+    "web_search_daily_quota": "\u4ECA\u65E5\u7DB2\u8DEF\u641C\u5C0B\u5DF2\u9054\u4E0A\u9650\u3002",
+    "web_search_pending_or_failed": "\u9019\u6B21\u641C\u5C0B\u6B63\u5728\u8655\u7406\u6216\u672A\u5B8C\u6210\u3002\u8ACB\u91CD\u65B0\u63D0\u4EA4\u65B0\u7684\u8A0A\u606F\u3002",
+    "web_search_unavailable": "\u7DB2\u8DEF\u641C\u5C0B\u670D\u52D9\u5FD9\u788C\u6216\u984D\u5EA6\u53D7\u9650\uFF0C\u8ACB\u7A0D\u5F8C\u91CD\u8A66\u3002",
+    "windows_account_required": "Windows \u5E33\u865F\u8CC7\u6599\u4E0D\u5B8C\u6574\u3002",
+    "windows_sid_required": "\u7121\u6CD5\u53D6\u5F97 AD SID\uFF0C\u8ACB\u78BA\u8A8D\u767B\u5165\u8A2D\u5B9A\u3002"
   }
 }

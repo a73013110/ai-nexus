@@ -1,0 +1,116 @@
+<nx-detail-drawer title="申請詳情" preferenceKey="flow-instance" (closed)="closed.emit()">
+  <nx-drawer-pager
+    drawer-actions
+    noun="申請"
+    [index]="index()"
+    [count]="count()"
+    (move)="move.emit($event)"
+  />
+  @if (view(); as item) {
+    <nx-drawer-summary [heading]="item.instance.title" [subtitle]="item.subtitle">
+      <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
+    </nx-drawer-summary>
+  }
+  @if (view(); as item) {
+    <div class="ui-drawer-sections">
+      @if (acting.error()) {
+        <nx-notice tone="danger" [message]="acting.error()" />
+      }
+      <section aria-labelledby="flow-instance-content">
+        <h3 class="ui-section-heading" id="flow-instance-content">申請內容</h3>
+        <dl class="ui-description-list">
+          @for (detail of item.instance.details; track $index) {
+            <div [class.ui-description-wide]="detail.value.length > 24">
+              <dt>{{ detail.label }}</dt>
+              <dd>{{ detail.value }}</dd>
+            </div>
+          }
+          <div>
+            <dt>送出時間</dt>
+            <dd>
+              <time [attr.datetime]="item.instance.submittedAt">{{ item.submitted }}</time>
+            </dd>
+          </div>
+          @if (item.completed) {
+            <div>
+              <dt>結束時間</dt>
+              <dd>
+                <time [attr.datetime]="item.instance.completedAt">{{ item.completed }}</time>
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
+      <nx-approval-timeline [steps]="item.timeline" [summary]="item.progress" />
+      @if (item.instance.canDecide) {
+        <section aria-labelledby="flow-instance-decision">
+          <h3 class="ui-section-heading" id="flow-instance-decision">審核意見</h3>
+          <label
+            >意見（選填，退回時建議填寫）<textarea
+              nxField
+              rows="3"
+              [attr.maxlength]="commentMax"
+              [value]="comment()"
+              [readOnly]="acting.pending()"
+              (input)="comment.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        </section>
+      }
+    </div>
+  } @else if (read.error()) {
+    <div class="ui-drawer-sections">
+      <nx-notice
+        tone="danger"
+        [message]="read.error()"
+        retryable
+        [retrying]="read.refreshing()"
+        (retry)="read.reload()"
+      />
+    </div>
+  } @else if (instanceId()) {
+    <div class="ui-drawer-sections flow-instance-skeleton" role="status">
+      @for (width of skeleton; track $index) {
+        <span class="skeleton" [style.width.%]="width"></span>
+      }
+      <span class="sr-only">正在載入申請詳情…</span>
+    </div>
+  }
+  @if (foot(); as current) {
+    <nx-drawer-foot [note]="current.note">
+      @if (current.decide) {
+        <button
+          nxPending
+          type="button"
+          class="danger-button flow-reject"
+          [pending]="acting.pendingFor('reject')"
+          [disabled]="acting.pending() && !acting.pendingFor('reject')"
+          (click)="decide(false)"
+        >
+          {{ acting.pendingFor('reject') ? '退回中…' : '退回' }}
+        </button>
+        <button
+          nxPending
+          type="button"
+          class="primary-button flow-approve"
+          [pending]="acting.pendingFor('approve')"
+          [disabled]="acting.pending() && !acting.pendingFor('approve')"
+          (click)="decide(true)"
+        >
+          {{ acting.pendingFor('approve') ? '核准中…' : '核准' }}
+        </button>
+      } @else {
+        <button
+          nxPending
+          type="button"
+          class="secondary-button flow-withdraw"
+          [pending]="acting.pending()"
+          (click)="withdraw()"
+        >
+          {{ acting.pending() ? '撤回中…' : '撤回申請' }}
+        </button>
+      }
+    </nx-drawer-foot>
+  }
+</nx-detail-drawer>
+<nx-confirm-dialog />

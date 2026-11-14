@@ -49,6 +49,25 @@ internal static class HeadUnits
         return (managed, tree);
     }
 
+    /// <summary>
+    /// 由近到遠、主管會管轄 <paramref name="start"/> 的單位（主管鏈），與 <see cref="Govern"/> 同一套判斷：一般單位是自己；
+    /// 有首長單位帶領的上層換成它的首長單位，層級低的在前（總經理在董事會之前），從首長單位往上時只留層級比它高的。
+    /// 只帶領著停用首長單位的上層沒有主管（勾選不生效，失敗即拒絕），呼叫端跳過即可。
+    /// </summary>
+    public static List<Guid> ManagingUnits(IReadOnlyDictionary<Guid, Unit> active, IReadOnlySet<Guid> led, Guid start)
+    {
+        var heads = active.Values.Where(x => x is { HeadRank: not null, ParentId: not null }).ToLookup(x => x.ParentId!.Value);
+        var result = new List<Guid>();
+        Unit? previous = null;
+        foreach (var unit in UnitRules.SelfAndAncestors(active, start))
+        {
+            if (!led.Contains(unit.Id)) result.Add(unit.Id);
+            else result.AddRange(heads[unit.Id].Where(x => previous?.HeadRank is not { } rank || x.HeadRank < rank).OrderByDescending(x => x.HeadRank).Select(x => x.Id));
+            previous = unit;
+        }
+        return result;
+    }
+
     /// <summary>指定單位與其所有下層；<paramref name="children"/> 只含有效單位，所以停用的單位連同下層都不會出現。</summary>
     public static HashSet<Guid> Subtree(ILookup<Guid, Unit> children, IEnumerable<Guid> roots)
     {

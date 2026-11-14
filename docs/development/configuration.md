@@ -9,14 +9,14 @@
 
 | 用途 | 本機開發 | IIS | 範本 |
 | --- | --- | --- | --- |
-| 全部預設值 | `backend/src/AiNexus.Host/appsettings.json` | `app/appsettings.json`（來自發版） | — |
+| 全部預設值 | `backend/src/AiNexus.Host/appsettings.json` | `app/appsettings.json` | — |
 | 此機器的一般設定 | `.local/config/appsettings.Local.json` | `config/appsettings.Production.json` | `appsettings.Local.example.json`、`appsettings.Production.example.json` |
 | 密碼與 key | `.local/secrets/appsettings.Secrets.json` | `config/appsettings.Secrets.json` | `appsettings.Secrets.example.json` |
 | 登入 cookie 加密金鑰 | `.local/keys` | `keys`（保留，不隨發版覆蓋） | — |
 
 後面的來源優先：`appsettings.json` → 一般設定 → 秘密 → 環境變數 → 命令列。環境變數用 `__` 表示階層，例如 `Databases__App__Password`。密碼不可放在命令列或前端。
 
-Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗，避免悄悄用錯環境。載入邏輯在 [`AppConfiguration`](../../backend/src/AiNexus.Platform/Configuration/AppConfiguration.cs)。
+Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗。載入邏輯在 [`AppConfiguration`](../../backend/src/AiNexus.Platform/Configuration/AppConfiguration.cs)。
 
 ## 區段與模組
 
@@ -34,7 +34,8 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Work/Knowledge/KnowledgeOptions.cs) | — |
 | `WebSearches` | [`WebSearchesOptions`](../../backend/src/AiNexus.Features/Platform/WebSearches/WebSearchesOptions.cs) | `ApiKey`（Brave） |
 | `AccessControl` | [`AccessControlOptions`](../../backend/src/AiNexus.Features/Admin/AccessControl/AccessControlOptions.cs) | — |
-| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | — |
+| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Work/Repositories/GiteaOptions.cs) | `ServiceToken` |
+| `Flow` | [`FlowOptions`](../../backend/src/AiNexus.Features/Office/Flow/FlowOptions.cs) | — |
 | `Gd` | [`GdOptions`](../../backend/src/AiNexus.Features/Platform/Gd/GdOptions.cs) | — |
 | `Google`、`CalendarSync` | 見[日曆同步](../features/calendar-sync.md) | 服務帳戶金鑰檔 |
 | `RemoteFiles` | [`RemoteFilesOptions`](../../backend/src/AiNexus.Features/Platform/RemoteFiles/RemoteFilesOptions.cs) | — |
@@ -64,7 +65,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 ## 程式碼表達不了的注意事項
 
 - **SQL 連線**：只有分項欄位，沒有完整連線字串；一律加密，`ReadOnly=true` 加唯讀意圖（`Gd` 選用）。`CommandTimeoutSeconds` 寫進連線字串，所有命令沒有另外指定時都用它；外部系統（`Gd`）設短，讓頁面早點降級。有 `Server`、`Name` 且帳密齊全或 `IntegratedSecurity=true`（以集區／gMSA 身分、帳密留空）才算已設定，否則視為停用。`TrustServerCertificate=true` 只略過憑證鏈驗證，連線仍加密，Production 可用。
-- **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。停用的 provider 不列入模型清單。
+- **模型清單**：`Inference.Providers.<Google|Ollama>.Models` 是以別名為 key 的物件，不是陣列；設定來源依別名合併，所以要改預設模型就改 `default` 項目的欄位，新增模型用新的別名。公開路由是 `google/<原生Id>`、`ollama/<原生Id>`，`Inference.DefaultModelId` 與群組白名單都用路由。
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不同台時，`Inference.Providers.Ollama.Endpoint` 要改成 GPU 主機位址（localhost 指 IIS 主機）。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
 - **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（只用全文檢索）。

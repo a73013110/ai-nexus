@@ -1,6 +1,6 @@
 # Gitea 程式庫工作區
 
-用每個人自己的 Gitea 權杖閱讀程式碼、提交紀錄、議題與 Pull Request，帶入對話、匯入知識庫或交給 [AI 檢閱](code-review.md)。對 Gitea 的唯一寫入是「把 AI 檢閱貼成 PR 留言」，需要使用者另外授予 `write:issue` 並逐次確認；其餘都是 GET，不建立 commit、議題或 PR。AI Nexus 管理員不會因此取得任何人的私人程式庫。
+用每個人自己的 Gitea 權杖閱讀程式碼、提交紀錄、議題與 Pull Request，帶入對話、匯入知識庫或交給 [AI 檢閱](code-review.md)。以個人權杖對 Gitea 的唯一寫入是「把 AI 檢閱貼成 PR 留言」，需要使用者另外授予 `write:issue` 並逐次確認；其餘都是 GET，不建立 commit、議題或 PR。AI Nexus 管理員不會因此取得任何人的私人程式庫。誰能存取哪個儲存庫由[儲存庫權限](repository-access.md)以服務帳號管理協作者，與這裡的閱讀分開。
 
 ## 管理員設定
 

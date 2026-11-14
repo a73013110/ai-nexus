@@ -1,0 +1,116 @@
+<nx-feature-page
+  [title]="session.featureName('flow.approvals')"
+  description="等你審核與你送出的申請；點開可看進度並核准或退回。"
+  density="compact"
+  layoutMode="data"
+>
+  @if (session.has('flow.definitions')) {
+    <div page-actions class="page-actions">
+      <a class="quiet-button" [routerLink]="routeOf('flow.definitions')"
+        ><nx-icon name="order" />{{ session.featureName('flow.definitions') }}</a
+      >
+    </div>
+  }
+
+  <div class="page-toolbar">
+    <nx-view-switch
+      label="檢視"
+      appearance="segment"
+      [options]="views()"
+      [value]="view()"
+      (valueChange)="chooseView($event)"
+    />
+    @if (view() !== 'tasks') {
+      <nx-select
+        label="狀態"
+        appearance="pill"
+        [options]="statusOptions"
+        [value]="status()"
+        (valueChange)="status.set($event)"
+      />
+    }
+  </div>
+
+  <nx-data-table
+    class="flow-table"
+    label="申請"
+    [table]="table"
+    [stacked]="true"
+    preferenceKey="office-flow-approvals"
+  >
+    <table>
+      <caption class="sr-only">
+        申請的種類、申請人、狀態與目前關卡；選一列開啟詳情。
+      </caption>
+      <colgroup>
+        <col nxTableColumn="title" />
+        <col nxTableColumn="kind" class="flow-kind-column" />
+        <col nxTableColumn="applicant" class="flow-person-column" />
+        <col nxTableColumn="status" class="flow-status-column" />
+        <col nxTableColumn="step" class="flow-step-column" />
+        <col nxTableColumn="submittedAt" class="flow-time-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th nxHeader="title"></th>
+          <th nxHeader="kind"></th>
+          <th nxHeader="applicant"></th>
+          <th nxHeader="status"></th>
+          <th nxHeader="step"></th>
+          <th nxHeader="submittedAt"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of rows(); track item.row.id) {
+          <tr
+            nxTableRow
+            [class.is-selected]="selectedId() === item.row.id"
+            (rowActivate)="openInstance(item.row.id)"
+          >
+            <th scope="row" nxTableColumn="title">
+              <button
+                type="button"
+                class="ui-table-link ui-truncate"
+                data-row-action
+                aria-haspopup="dialog"
+                [attr.aria-controls]="drawer().drawerId()"
+                [attr.aria-expanded]="selectedId() === item.row.id"
+                (click)="openInstance(item.row.id)"
+              >
+                {{ item.row.title }}
+              </button>
+            </th>
+            <td nxTableColumn="kind" data-label="種類">{{ item.row.kindName }}</td>
+            <td nxTableColumn="applicant" data-label="申請人">
+              <span class="ui-truncate">{{ item.row.applicant.displayName }}</span>
+            </td>
+            <td nxTableColumn="status">
+              <nx-status-badge [tone]="item.status.tone">{{ item.status.label }}</nx-status-badge>
+            </td>
+            <td nxTableColumn="step" data-label="目前關卡">
+              <span class="ui-truncate">{{ item.row.currentStepName }}</span>
+            </td>
+            <td nxTableColumn="submittedAt" data-label="送出時間">
+              <time [attr.datetime]="item.row.submittedAt">{{ item.submitted }}</time>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    <nx-table-state
+      loadingText="正在載入申請…"
+      errorTitle="無法取得申請"
+      [emptyTitle]="empty().title"
+      [emptyText]="empty().text"
+    />
+  </nx-data-table>
+
+  <nx-flow-instance-drawer
+    [instanceId]="selectedId()"
+    [index]="selectedIndex()"
+    [count]="table.rows().length"
+    (move)="adjacent($event)"
+    (closed)="closeInstance()"
+    (changed)="table.reload()"
+  />
+</nx-feature-page>

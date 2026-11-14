@@ -20,6 +20,10 @@ internal static class NotificationDisplay
         "share" => FeatureCatalog.RouteOf(FeatureCatalog.Sharing) + "/" + id,
         "task" => FeatureCatalog.RouteOf(FeatureCatalog.Jobs) + "?job=" + id,
         "repository-review" => FeatureCatalog.RouteOf(FeatureCatalog.Repositories) + "?review=" + id,
+        // 儲存庫授權的授予、撤銷與到期提醒：id 是儲存庫，頁面打開那個儲存庫的權限。
+        "repository-access" => FeatureCatalog.RouteOf(FeatureCatalog.RepositoriesAccess) + "?repository=" + id,
+        // 簽核申請：id 是申請（流程實例），與 FlowNotices.Path 相同。
+        "flow" => FeatureCatalog.RouteOf(FeatureCatalog.FlowApprovals) + "?instance=" + id,
         // 結構異動是整個資料庫的狀態，沒有單一資料列可指，id 不使用。
         "schema-changes" => FeatureCatalog.RouteOf(FeatureCatalog.Releases),
         // 排程任務以 Key 識別，id 是 Key 的雜湊，只用來讓同一任務的提醒互相取代，跳轉不使用。

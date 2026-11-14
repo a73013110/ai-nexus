@@ -21,4 +21,10 @@ public static class RepositoriesAudit
     public static readonly AuditAction ReviewCancelled = AuditAction.Activity("repositories.review.cancelled", "停止程式碼檢查");
     public static readonly AuditAction ReviewRetried = AuditAction.Activity("repositories.review.retried", "重試程式碼檢查");
     public static readonly AuditAction ReviewCommented = AuditAction.Activity("repositories.review.commented", "回貼程式碼檢查意見");
+    public static readonly AuditAction AccessRead = AuditAction.Access("repositories.access.read", "查詢儲存庫權限");
+    public static readonly AuditAction AccessRequested = AuditAction.Activity("repositories.access_request.requested", "申請儲存庫權限");
+    public static readonly AuditAction GrantGranted = AuditAction.Activity("repositories.access_grant.granted", "授予儲存庫權限");
+    public static readonly AuditAction GrantRevoked = AuditAction.Activity("repositories.access_grant.revoked", "撤銷儲存庫權限");
+    public static readonly AuditAction ManagedRepositoryUpdated = AuditAction.Administration("repositories.managed_repository.updated", "修改儲存庫權限設定");
+    public static readonly AuditAction ManagedRepositorySynced = AuditAction.Administration("repositories.managed_repository.synced", "要求同步儲存庫權限");
 }

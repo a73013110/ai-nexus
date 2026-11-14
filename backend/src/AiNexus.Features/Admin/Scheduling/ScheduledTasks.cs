@@ -16,8 +16,19 @@ public sealed record ScheduledTaskState(bool Running, bool Requested, DateTimeOf
 
 /// <summary>其他模組使用排程任務的入口：要求執行一輪、讀取狀態。管理頁的操作也經過這裡。</summary>
 [Scoped]
-public sealed class ScheduledTasks(AppDbContext db, ScheduledTaskCatalog catalog, ScheduledTaskSignal signal, IServiceProvider services, TimeProvider clock)
+public sealed class ScheduledTasks(AppDbContext db, ScheduledTaskCatalog catalog, ScheduledTaskSignal signal, IServiceProvider services, TimeProvider clock) : IDisposable
 {
+    private bool queued;
+
+    /// <summary>
+    /// <see cref="QueueRunAsync"/> 的要求要等呼叫端提交才看得到，所以等範圍結束（請求或背景工作收尾、交易已提交）才叫醒排程。
+    /// 呼叫端回滾時多叫醒一次，排程查不到要求就繼續睡，沒有副作用。
+    /// </summary>
+    public void Dispose()
+    {
+        if (queued) signal.Wake();
+    }
+
     /// <summary>
     /// 要求盡快執行一輪；正在執行時排在這一輪之後。<paramref name="parameters"/> 由任務以 <c>ScheduledTaskContext.Parameters&lt;T&gt;</c> 讀回。
     /// 連續要求只會執行一次，參數以最後一次為準。交易由這裡提交。
@@ -40,6 +51,23 @@ public sealed class ScheduledTasks(AppDbContext db, ScheduledTaskCatalog catalog
         await db.SaveChangesAsync(ct);
         signal.Wake();
         return Result.Success;
+    }
+
+    /// <summary>
+    /// 同 <see cref="RequestRunAsync"/>，但不儲存：只加進 ChangeTracker，與呼叫端的業務變更同一個交易提交（例：授權寫入後立刻同步一輪）。
+    /// 任務目前不能執行（設定關閉）時什麼也不做，資料等它恢復後的排程處理。不帶參數；未登記的任務是程式錯誤。
+    /// </summary>
+    public async Task QueueRunAsync(string key, Guid? actor, CancellationToken ct)
+    {
+        var plan = catalog.Find(key) ?? throw new ArgumentException($"Scheduled task '{key}' is not registered.", nameof(key));
+        if (plan.UnavailableReason(services) is not null) return;
+        var now = clock.GetUtcNow();
+        var task = await RowAsync(plan, now, ct);
+        task.RunRequestedAt = now;
+        task.RunRequestedById = actor;
+        task.RunParameters = null;
+        task.UpdatedAt = now;
+        queued = true;
     }
 
     /// <summary>要求停止執行中的這一輪，並撤回還沒開始的手動要求；沒有在執行時什麼也不做。</summary>

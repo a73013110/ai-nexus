@@ -10,6 +10,10 @@ describe('typed notification destinations', () => {
     expect(notificationUrl({ kind: 'repository-review', id })).toBe(
       `/work/repositories?review=${id}`,
     );
+    expect(notificationUrl({ kind: 'flow', id })).toBe(`/office/flow/approvals?instance=${id}`);
+    expect(notificationUrl({ kind: 'repository-access', id })).toBe(
+      `/work/repositories/access?repository=${id}`,
+    );
   });
   it('names the feature a target belongs to for the sidebar badges', () => {
     expect(notificationFeature({ kind: 'conversation', id })).toBe('chat');
