@@ -8247,9 +8247,9 @@ export interface components {
             run: components["schemas"]["RetrievalEvaluationDto"];
             summary: components["schemas"]["RetrievalSummaryDto"][];
             results: components["schemas"]["RetrievalMetricDto"][];
-            /** @default 無答案題未提供任何來源的比例；不評斷生成回答內容。 */
+            /** @default 無答案題未提供任何來源的比例。不評斷生成回答內容。 */
             refusalDefinition: string;
-            /** @default 依 vector、keyword、hybrid、hybrid+rerank 順序執行；共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。 */
+            /** @default 依 vector、keyword、hybrid、hybrid+rerank 順序執行。共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。 */
             latencyDefinition: string;
         };
         RetrievalSummaryDto: {

@@ -54,7 +54,7 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
   const latency = { p50: 12, p95: 21 };
   const report = {
     run,
-    refusalDefinition: "無答案題未提供任何來源的比例；不評斷生成回答內容。",
+    refusalDefinition: "無答案題未提供任何來源的比例。不評斷生成回答內容。",
     latencyDefinition: "共用正常查詢快取。",
     summary: modes.map((mode) => ({
       mode,

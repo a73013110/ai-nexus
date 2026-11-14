@@ -250,7 +250,7 @@ describe('attendance presentation', () => {
 
   it('explains document-system outages instead of the generic contact-admin message', () => {
     expect(attendanceProblem(new ApiError(503, 'attendance_gd_read_only', undefined, ISSUE))).toBe(
-      `公文系統的連線設為唯讀，假日目前只能查詢；請聯絡管理員。 查證代碼：${ISSUE}`,
+      `公文系統的連線設為唯讀，假日目前只能查詢。請聯絡管理員。 查證代碼：${ISSUE}`,
     );
     expect(
       attendanceProblem(new ApiError(503, 'attendance_gd_unavailable', undefined, ISSUE)),
