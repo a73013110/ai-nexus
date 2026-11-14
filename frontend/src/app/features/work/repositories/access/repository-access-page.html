@@ -6,7 +6,13 @@
 >
   @if (administrator()) {
     <div page-actions class="page-actions">
-      <span class="access-sync" role="status" [title]="sync().title">{{ sync().label }}</span>
+      <span
+        class="access-sync"
+        role="status"
+        [attr.data-tone]="sync().tone"
+        [title]="sync().title"
+        >{{ sync().label }}</span
+      >
       <button
         nxPending
         type="button"
@@ -115,36 +121,34 @@
             (rowActivate)="openRepository(row.item.id)"
           >
             <th scope="row" nxTableColumn="name">
-              <span class="access-name">
-                <button
-                  type="button"
-                  class="ui-table-link ui-truncate"
-                  data-row-action
-                  aria-haspopup="dialog"
-                  [attr.aria-controls]="drawer().drawerId()"
-                  [attr.aria-expanded]="selectedId() === row.item.id"
-                  (click)="openRepository(row.item.id)"
-                >
-                  {{ row.fullName }}
-                </button>
-                @if (row.item.description) {
-                  <small class="ui-truncate">{{ row.item.description }}</small>
-                }
-              </span>
+              <button
+                type="button"
+                class="ui-table-link ui-truncate"
+                data-row-action
+                aria-haspopup="dialog"
+                [attr.aria-controls]="drawer().drawerId()"
+                [attr.aria-expanded]="selectedId() === row.item.id"
+                (click)="openRepository(row.item.id)"
+              >
+                {{ row.fullName }}
+              </button>
+              @if (row.item.description) {
+                <small class="ui-truncate" [title]="row.item.description">{{
+                  row.item.description
+                }}</small>
+              }
             </th>
             <td nxTableColumn="mine" data-label="我的權限">
-              <span class="access-cell">
-                <nx-status-badge [tone]="row.mine.tone">{{ row.mine.label }}</nx-status-badge>
-                @if (row.mine.note) {
-                  <small class="ui-truncate">{{ row.mine.note }}</small>
-                }
-              </span>
+              <nx-status-badge [tone]="row.mine.tone">{{ row.mine.label }}</nx-status-badge>
+              @if (row.mine.note) {
+                <small class="ui-truncate" [title]="row.mine.note">{{ row.mine.note }}</small>
+              }
             </td>
             <td nxTableColumn="stewards" data-label="負責人">
               <span class="ui-truncate">{{ row.stewards || '未指定' }}</span>
             </td>
             <td nxTableColumn="state" data-label="狀態">
-              <span class="access-tags">
+              <span class="access-tags" [title]="row.tagText">
                 @for (tag of row.tags; track tag.label) {
                   <nx-status-badge [tone]="tag.tone">{{ tag.label }}</nx-status-badge>
                 }

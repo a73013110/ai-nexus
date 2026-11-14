@@ -542,7 +542,8 @@ col {
 .ui-data-table td time {
   font-variant-numeric: tabular-nums;
 }
-:where(.ui-table-scroll) td small {
+// 列標題（`th[scope=row]`）的名稱下方常放說明，和儲存格的小字同一種呈現。
+:where(.ui-table-scroll) :is(td, th[scope='row']) small {
   display: block;
   color: var(--secondary);
   font-size: var(--p-font-xs);

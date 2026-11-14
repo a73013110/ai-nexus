@@ -106,9 +106,10 @@ import { RepositorySettingsDialog } from './repository-settings-dialog';
     .access-mine-text strong {
       font-weight: 600;
     }
-    .access-mine-text small,
-    .person-row-text small {
-      color: var(--text-muted);
+    /* 與共用 \`.person-row-text small\` 同一種次要文字。 */
+    .access-mine-text small {
+      color: var(--secondary);
+      font-size: var(--text-caption);
     }
     /* 段落標題右側放這一段的動作（授予權限）。 */
     .access-section-head {

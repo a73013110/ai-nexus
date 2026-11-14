@@ -118,13 +118,6 @@ nx-stat-grid {
 .scheduling-service-name {
   font-weight: 600;
 }
-// 共用規則只給 td 的小字；這裡的說明放在列標題裡，補上同樣的呈現。
-.scheduling-services th small {
-  display: block;
-  margin-top: 0.125rem;
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
-}
 .scheduling-service-state {
   display: inline-flex;
   align-items: center;

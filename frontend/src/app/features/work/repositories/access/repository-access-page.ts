@@ -76,24 +76,11 @@ import {
       display: block;
       min-width: 0;
     }
-    .access-name {
-      display: grid;
-      min-width: 0;
-    }
-    .access-name small,
-    .access-cell small {
-      color: var(--text-muted);
-    }
-    .access-cell {
-      display: grid;
-      justify-items: start;
-      gap: var(--p-space-1);
-      min-width: 0;
-    }
+    /* 標籤排成一行，列高才不因標籤數量不同而參差；放不下的由 title 與詳情補上。 */
     .access-tags {
       display: flex;
-      flex-wrap: wrap;
       gap: var(--p-space-1);
+      overflow: hidden;
     }
     .access-mine-column {
       --column-width: 10rem;
@@ -102,11 +89,14 @@ import {
       --column-width: 10rem;
     }
     .access-state-column {
-      --column-width: 9rem;
+      --column-width: 12rem;
     }
     .access-sync {
       color: var(--text-muted);
       font-size: var(--text-small);
+    }
+    .access-sync[data-tone='danger'] {
+      color: var(--danger);
     }
   `,
   templateUrl: './repository-access-page.html',
@@ -188,13 +178,17 @@ export class RepositoryAccessPage {
     unit: '個',
   });
   readonly rows = computed(() =>
-    this.table.rows().map((item) => ({
-      item,
-      fullName: `${item.owner}/${item.name}`,
-      mine: myAccess(item),
-      stewards: item.stewards.map((person) => person.displayName).join('、'),
-      tags: repositoryTags(item),
-    })),
+    this.table.rows().map((item) => {
+      const tags = repositoryTags(item);
+      return {
+        item,
+        fullName: `${item.owner}/${item.name}`,
+        mine: myAccess(item),
+        stewards: item.stewards.map((person) => person.displayName).join('、'),
+        tags,
+        tagText: tags.map((tag) => tag.label).join('、'),
+      };
+    }),
   );
   readonly empty = computed(() =>
     this.data()?.items.length
