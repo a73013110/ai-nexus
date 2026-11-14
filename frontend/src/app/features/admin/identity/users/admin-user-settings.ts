@@ -108,7 +108,7 @@ export class AdminUserSettings {
       const confirmed = await this.confirmation()?.ask({
         title: `停用使用者：${user.displayName}`,
         message:
-          '停用後無法登入，既有工作階段立即失效；角色、對話與稽核紀錄都保留，之後可以再啟用。',
+          '停用後無法登入，既有工作階段立即失效。角色、對話與稽核紀錄都保留，之後可以再啟用。',
         confirm: '停用',
         danger: true,
       });

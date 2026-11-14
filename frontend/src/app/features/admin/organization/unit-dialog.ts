@@ -94,7 +94,7 @@ const sameDraft = (a: Draft, b: Draft) =>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-place'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-place'">名稱與位置</h3>
-                  <p class="form-note">同一個上層底下名稱不可重複；組織最多八層。</p>
+                  <p class="form-note">同一個上層底下名稱不可重複。組織最多八層。</p>
                 </header>
                 <div class="form-section-body">
                   <label class="form-field-short unit-name-field"
@@ -132,14 +132,14 @@ const sameDraft = (a: Draft, b: Draft) =>
                   <nx-info-popover label="首長單位的規則" [width]="320">
                     <ul class="form-note-list">
                       <li>
-                        主管另外管轄上層，以及上層底下層級不比它高的單位與下層；數字越小層級越高，例如董事會
+                        主管另外管轄上層，以及上層底下層級不比它高的單位與下層。數字越小層級越高，例如董事會
                         1、總經理室 2。
                       </li>
                       <li>
                         上層的主管改由首長單位擔任：儲存後取消上層的主管勾選，之後也不能再勾選。
                       </li>
-                      <li>只影響主管範圍；成員的「所屬單位及下層」仍照單位樹。</li>
-                      <li>本地設定，公文系統匯入不會覆蓋；單位被匯入搬到別的上層時清除。</li>
+                      <li>只影響主管範圍。成員的「所屬單位及下層」仍照單位樹。</li>
+                      <li>本地設定，公文系統匯入不會覆蓋。單位被匯入搬到別的上層時清除。</li>
                     </ul>
                   </nx-info-popover>
                 </header>

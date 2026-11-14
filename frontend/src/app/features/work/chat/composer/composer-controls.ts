@@ -132,13 +132,13 @@ const EFFORT_LABELS: Record<string, string> = {
               </p>
             }
             @if (context.droppedMessages) {
-              <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
+              <p>這次會略過最早 {{ context.droppedMessages }} 則上文。原始歷史仍保留。</p>
             }
             @if (context.budgetExceeded) {
               <nx-notice tone="danger">本次提問超出可用預算，請縮短內容。</nx-notice>
             }
             <p class="context-explanation">
-              包含系統指令、目前分支與草稿，以保守 UTF-8 預算估算；實際 token 數依模型而異。
+              包含系統指令、目前分支與草稿，以保守 UTF-8 預算估算。實際 token 數依模型而異。
             </p>
           } @else {
             <p>選定可用模型後會取得預估用量。</p>

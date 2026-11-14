@@ -24,6 +24,6 @@ public sealed class AccountNoticeMail : MailTemplate<AccountNoticeMailModel>
         if (model.Detail is { } detail) body.Paragraph(detail);
         body.Note(model.ByAdministrator
             ? "此變更由系統管理員執行。如果你沒有提出這項需求，請立即聯絡系統管理員。"
-            : "如果這不是你本人的操作，請立即聯絡系統管理員；此變更已登出你在其他裝置的工作階段。");
+            : "如果這不是你本人的操作，請立即聯絡系統管理員。此變更已登出你在其他裝置的工作階段。");
     }
 }

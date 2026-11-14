@@ -1,6 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('attendance.cards')"
-  description="指派打卡卡號的持有人；刷卡依持有期間歸戶到人。打卡檔出現的新卡號會自動列入無人持有。"
+  description="指派打卡卡號的持有人。刷卡依持有期間歸戶到人。打卡檔出現的新卡號會自動列入無人持有。"
   density="compact"
   layoutMode="data"
   [tour]="tour()"
@@ -57,7 +57,7 @@
     </div>
     <table>
       <caption class="sr-only">
-        打卡卡號，預設依卡號排序；欄位標題可排序與篩選。
+        打卡卡號，預設依卡號排序。欄位標題可排序與篩選。
       </caption>
       <colgroup>
         <col nxTableColumn="number" class="cards-number-column" />
@@ -245,7 +245,7 @@
         <nx-setting-row
           class="cards-visibility"
           label="在出勤紀錄顯示"
-          description="關閉後 HR 看全公司出勤時不列出這張卡；本人與主管照常看得到。"
+          description="關閉後 HR 看全公司出勤時不列出這張卡。本人與主管照常看得到。"
           [checked]="!card.hiddenFromRecords"
           [disabled]="!store.canMaintain()"
           [pending]="store.working('hidden:' + card.id)"

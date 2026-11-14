@@ -38,7 +38,7 @@ import { nearViewport } from '../browser/near-viewport';
     #canvas
     class="mermaid-canvas"
     role="region"
-    aria-label="圖表畫布；可捲動或拖曳，使用加減鍵縮放、0 重設"
+    aria-label="圖表畫布。可捲動或拖曳，使用加減鍵縮放、0 重設"
     tabindex="0"
     [style.height.px]="expanded() ? null : canvasHeight()"
     (keydown)="key($event)"
@@ -418,7 +418,7 @@ export class MermaidDiagram implements OnInit {
       this.show(view);
     } catch {
       if (active()) {
-        this.error.set('無法繪製這段 Mermaid；請檢查語法，原始碼仍可複製。');
+        this.error.set('無法繪製這段 Mermaid。請檢查語法，原始碼仍可複製。');
         this.view.set('source');
       }
     } finally {

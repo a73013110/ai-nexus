@@ -109,7 +109,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       id="design-dialog"
       title="對話框尺寸"
       api="nxCompactDialog size · nx-dialog-header · .dialog-body · nx-dialog-actions · .dialog-foot · .dialog-note"
-      description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。對話框從開啟它的按鈕長出來、關閉縮回去。檢視器（nxIdleChrome）的標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，放大只改外框。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
+      description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線。lg、full 以分隔線切開三區。對話框從開啟它的按鈕長出來、關閉縮回去。檢視器（nxIdleChrome）的標題列不佔版面，標題與視窗動作各成一顆膠囊浮在內容上，放大只改外框。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
     >
       <nx-design-example label="sm · 確認或單一欄位">
         <button type="button" class="secondary-button" (click)="show(small)">開啟 sm</button>
@@ -137,7 +137,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       id="design-save-bar"
       title="儲存列"
       api="nx-dialog-save-bar · TabItem.dirty"
-      description="編輯已儲存內容的頁尾：說明｜還原｜儲存，按鈕位置固定。未變更時兩鈕停用；有變更時說明轉色，所在頁籤加圓點（名稱加「有未儲存的變更」）；note 可取代說明（例如儲存結果）；disabled 只停用儲存，還原仍可用。"
+      description="編輯已儲存內容的頁尾：說明｜還原｜儲存，按鈕位置固定。未變更時兩鈕停用。有變更時說明轉色，所在頁籤加圓點（名稱加「有未儲存的變更」）。note 可取代說明（例如儲存結果）。disabled 只停用儲存，還原仍可用。"
     >
       <nx-design-example label="未變更 → 有變更">
         <form class="design-save-frame" (submit)="save($event)">
@@ -206,7 +206,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
         </p>
       </nx-dialog-header>
       <div class="dialog-body">
-        <p>標題列左側是種類圖示，第二行寫種類、單號（可複製）與時間；工具與關閉鈕對齊第一行。</p>
+        <p>標題列左側是種類圖示，第二行寫種類、單號（可複製）與時間。工具與關閉鈕對齊第一行。</p>
       </div>
     </dialog>
     <dialog nxCompactDialog nxIdleChrome size="full" #viewer class="platform-dialog">
@@ -228,7 +228,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
         </nx-floating-toolbar>
         <p>
           標題與視窗動作是浮在內容上的兩顆膠囊，與工具列一起在閒置約 1.5 秒後淡出，指標移近上緣、Tab
-          或觸控點一下內容再出現。寬螢幕上三者同一列，視窗較窄時工具列排到下一列；放大只改外框，版面不變。
+          或觸控點一下內容再出現。寬螢幕上三者同一列，視窗較窄時工具列排到下一列。放大只改外框，版面不變。
         </p>
       </div>
     </dialog>

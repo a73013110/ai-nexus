@@ -24,7 +24,7 @@ export const PROJECTS_TOUR: ProductTourDefinition = {
     {
       target: 'nx-projects-page .resource-card',
       title: '打開專案',
-      description: '卡片顯示你的權限與最後更新時間；點選進入專案頁開始工作。',
+      description: '卡片顯示你的權限與最後更新時間。\n點選進入專案頁開始工作。',
     },
     {
       target: 'nx-projects-page .project-create',
@@ -53,7 +53,7 @@ export function projectTour(options: {
     options.chat && {
       target: 'nx-projects-page .project-start',
       title: '從專案開始對話',
-      description: '新對話自動帶入共用指示與已辨識的參考文件；專案封存後無法開始。',
+      description: '新對話自動帶入共用指示與已辨識的參考文件。\n專案封存後無法開始。',
       side: 'bottom',
     },
     {
@@ -65,7 +65,7 @@ export function projectTour(options: {
     options.chat && {
       target: 'nx-projects-page .project-conversations',
       title: '只有你看得到的對話',
-      description: '這裡列出你在專案中的提問；需要同事閱讀時，在對話建立具名分享。',
+      description: '這裡列出你在專案中的提問。\n需要同事閱讀時，在對話建立具名分享。',
     },
     {
       target: 'nx-projects-page .project-guidance',
@@ -86,7 +86,7 @@ export function projectTour(options: {
     options.manage && {
       target: 'nx-projects-page nx-action-menu',
       title: '管理專案',
-      description: '「專案操作」可編輯、封存或還原；擁有者另可設定成員與權限、刪除專案。',
+      description: '「專案操作」可編輯、封存或還原。\n擁有者另可設定成員與權限、刪除專案。',
       side: 'bottom',
     },
   ];

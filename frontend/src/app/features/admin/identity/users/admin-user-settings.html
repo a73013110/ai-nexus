@@ -26,7 +26,7 @@
                 @if (!store.emailEditable()) {
                   由公司 AD 提供，每次登入時同步，請在 AD 修改。
                 } @else if (store.current()?.email) {
-                  {{ emailState(store.current()!) }}；本人驗證前不會用來寄驗證碼，留空即清除。
+                  {{ emailState(store.current()!) }}。本人驗證前不會用來寄驗證碼，留空即清除。
                 } @else {
                   本人驗證前不會用來寄驗證碼。
                 }
@@ -154,7 +154,7 @@
           <section class="form-section" role="group" aria-labelledby="user-ai-usage">
             <header class="form-section-head">
               <h3 id="user-ai-usage">最近 30 天</h3>
-              <p class="form-note">tokens 只計模型回報的值；對話含封存與已刪除。</p>
+              <p class="form-note">tokens 只計模型回報的值。對話含封存與已刪除。</p>
             </header>
             <div class="form-section-body">
               <nx-stat-grid
@@ -218,7 +218,7 @@
                   (input)="store.storage.set($any($event.target).value)"
               /></label>
               <p id="user-storage-hint" class="form-note">
-                留空套用群組或預設 5 GB，0 禁止新增上傳；降低上限只阻擋新的上傳，既有檔案仍保留。
+                留空套用群組或預設 5 GB，0 禁止新增上傳。降低上限只阻擋新的上傳，既有檔案仍保留。
               </p>
             </div>
           </section>

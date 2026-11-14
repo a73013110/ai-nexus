@@ -89,7 +89,7 @@ import { DIRECTORY_BATCH_LIMIT, summarize } from './directory-outcomes';
             <button type="button" class="primary-button" (click)="dialog.close()">完成</button>
           } @else {
             <p class="dialog-note">
-              一次最多 {{ limit }} 人；沒有綁定 AD 的人會標示「未綁定 AD」。
+              一次最多 {{ limit }} 人。沒有綁定 AD 的人會標示「未綁定 AD」。
             </p>
             <button
               type="button"

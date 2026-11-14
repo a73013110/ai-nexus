@@ -11,7 +11,7 @@ import { DesignSection } from './design-section';
       id="design-colors"
       title="色彩"
       api="tokens.scss"
-      description="中性表面與文字層級為主；顏色只用於選取、焦點與真實狀態。"
+      description="中性表面與文字層級為主。顏色只用於選取、焦點與真實狀態。"
       [stacked]="true"
     >
       @for (group of colors; track group.name) {
@@ -37,7 +37,7 @@ import { DesignSection } from './design-section';
       id="design-type"
       title="字級"
       api="--text-*"
-      description="操作尺度固定；只有閱讀正文跟隨個人設定。"
+      description="操作尺度固定。只有閱讀正文跟隨個人設定。"
       [stacked]="true"
     >
       <dl class="design-scale">
@@ -58,7 +58,7 @@ import { DesignSection } from './design-section';
       id="design-space"
       title="間距、圓角與面積"
       api="--p-space-* · --radius-*"
-      description="4px 基準；桌面控制項 34px，觸控與窄螢幕 44px。圓角依元件類型取角色，不依所在頁面。"
+      description="4px 基準。桌面控制項 34px，觸控與窄螢幕 44px。圓角依元件類型取角色，不依所在頁面。"
     >
       <div class="design-spacing" aria-label="間距 4 到 32 像素">
         @for (space of spaces; track space) {
@@ -77,7 +77,7 @@ import { DesignSection } from './design-section';
       id="design-motion"
       title="動效"
       api="motion.scss"
-      description="交代東西從哪來、變成什麼；彈簧用於形狀與選取，減少動態時直接到位。"
+      description="交代東西從哪來、變成什麼。彈簧用於形狀與選取，減少動態時直接到位。"
     >
       @for (curve of motion; track curve.token) {
         <button

@@ -38,7 +38,7 @@ import { AdminUserStore } from './admin-user-store';
       <div class="form-choice">
         <span class="form-choice-text"
           ><strong>{{ store.current()?.account }}</strong
-          ><small>已以 SID 綁定；AD 改名請用「改綁」。</small></span
+          ><small>已以 SID 綁定。AD 改名請用「改綁」。</small></span
         >
         <button
           type="button"
@@ -118,7 +118,7 @@ export class DirectoryBinding {
   readonly hint = computed(() => {
     if (this.store.dirty().account) return '請先儲存或還原帳號變更，再調整 AD 綁定。';
     if (this.editing())
-      return '依 AD 短帳號查出 SID 後立即綁定，使用者 ID、角色與歷史資料沿用；目前的工作階段會失效。';
+      return '依 AD 短帳號查出 SID 後立即綁定，使用者 ID、角色與歷史資料沿用。目前的工作階段會失效。';
     if (this.bound()) return '';
     return this.savedAccount()
       ? `尚未綁定：下次以「${this.savedAccount()}」驗證或從 AD 匯入時綁定，也可以立即綁定。`
@@ -136,7 +136,7 @@ export class DirectoryBinding {
     if (!user || !account || this.blocked()) return;
     const confirmed = await this.confirmation().ask({
       title: `${this.bound() ? '改綁' : '綁定'} AD 帳號：${user.displayName}`,
-      message: `改以 AD 帳號「${account}」登入此使用者，使用者 ID、角色與歷史資料沿用；原本綁定的 AD 帳號無法再登入此使用者。`,
+      message: `改以 AD 帳號「${account}」登入此使用者，使用者 ID、角色與歷史資料沿用。原本綁定的 AD 帳號無法再登入此使用者。`,
       confirm: this.bound() ? '改綁' : '綁定',
     });
     if (confirmed && (await this.store.rebind(account))) this.cancel();
@@ -148,7 +148,7 @@ export class DirectoryBinding {
     const adAccount = user.authentication?.adAccount ?? '';
     const confirmed = await this.confirmation().ask({
       title: `解除 AD 綁定：${user.displayName}`,
-      message: `回到預建狀態，下次有人以 AD 帳號「${adAccount}」驗證或從 AD 匯入時綁定該帳號。用於 AD 重建同名帳號；換成不同帳號名請改用「改綁」。`,
+      message: `回到預建狀態，下次有人以 AD 帳號「${adAccount}」驗證或從 AD 匯入時綁定該帳號。用於 AD 重建同名帳號。換成不同帳號名請改用「改綁」。`,
       confirm: '解除綁定',
       danger: true,
     });

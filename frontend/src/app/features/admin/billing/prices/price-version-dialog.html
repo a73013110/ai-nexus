@@ -26,7 +26,7 @@
           >
             <header class="form-section-head">
               <h3 [id]="id + '-target'">計費對象</h3>
-              <p class="form-note">依名稱選擇；計費以供應商與原生識別碼對應。</p>
+              <p class="form-note">依名稱選擇。計費以供應商與原生識別碼對應。</p>
             </header>
             <div class="form-section-body form-row">
               <label
@@ -55,7 +55,7 @@
                   <li>API 計費估算：依對外 API 方案估算。</li>
                   <li>內部成本估算：自行制定的本機成本，例如每次處理成本。</li>
                   <li>免費：明確標示免費，費率固定為 0。</li>
-                  <li>系統不預填價格，也不推定本機模型為零成本；請依實際方案與折扣填寫。</li>
+                  <li>系統不預填價格，也不推定本機模型為零成本。請依實際方案與折扣填寫。</li>
                 </ul>
               </nx-info-popover>
               <p class="form-note">token 單價以每百萬 tokens 計，最多 8 位小數。</p>
@@ -116,7 +116,7 @@
                   [value]="e.draft.requestCharge"
                   (valueChange)="field('requestCharge', $event)"
               /></label>
-              <p class="form-note">只決定每次固定費用；token 費依有效用量計算。</p>
+              <p class="form-note">只決定每次固定費用。token 費依有效用量計算。</p>
             </div>
           </section>
           <section class="form-section" role="group" [attr.aria-labelledby]="id + '-effective'">
@@ -132,7 +132,7 @@
                 [value]="effective()"
                 (valueChange)="effective.set($event)"
               />
-              <p class="form-note">台北時區；留空即儲存時生效，可排定未來版本。</p>
+              <p class="form-note">台北時區。留空即儲存時生效，可排定未來版本。</p>
               <label class="price-note-field"
                 >價格依據或備註<textarea
                   nxField

@@ -101,7 +101,7 @@ const STAGES: Stage[] = [
       <small class="flow-meta">{{ stage.meta }}</small>
     </ng-template>
     @if (store.scope() === 'platform') {
-      <p class="flow-note">數字是所選範圍的統計；入口開啟目前帳號有權限的工作區。</p>
+      <p class="flow-note">數字是所選範圍的統計。入口開啟目前帳號有權限的工作區。</p>
     }`,
 })
 export class FlowWidget {

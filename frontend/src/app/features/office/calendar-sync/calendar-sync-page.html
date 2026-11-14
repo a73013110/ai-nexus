@@ -24,7 +24,7 @@
         [disabled]="!status()?.enabled || status()?.running"
         [title]="
           status()?.enabled
-            ? '不等排程，立刻比對並推送；失敗的事件也會立即重試。'
+            ? '不等排程，立刻比對並推送。失敗的事件也會立即重試。'
             : '這個站台沒有啟用同步。'
         "
         (click)="start()"
@@ -200,7 +200,7 @@
       </div>
       <table>
         <caption class="sr-only">
-          同步到 Google 日曆的請假與出差期間；欄位標題可排序與篩選。
+          同步到 Google 日曆的請假與出差期間。欄位標題可排序與篩選。
         </caption>
         <colgroup>
           <col nxTableColumn="startsAt" class="calendar-sync-time-column" />
@@ -320,7 +320,7 @@
       </div>
       <table>
         <caption class="sr-only">
-          有異動、失敗或手動執行的同步；欄位標題可排序與篩選。
+          有異動、失敗或手動執行的同步。欄位標題可排序與篩選。
         </caption>
         <colgroup>
           <col nxTableColumn="startedAt" class="calendar-sync-time-column" />
@@ -424,7 +424,7 @@
         loadingText="正在載入執行紀錄…"
         errorTitle="無法取得執行紀錄"
         emptyTitle="沒有符合條件的執行紀錄"
-        emptyText="沒有異動的排程輪不留紀錄；按「立即同步」會留下一筆。"
+        emptyText="沒有異動的排程輪不留紀錄。按「立即同步」會留下一筆。"
       />
     </nx-data-table>
   }

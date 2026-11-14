@@ -41,7 +41,7 @@ internal sealed class DirectoryAccountReview(AppDbContext db, IAdDirectory direc
         var items = new List<AccountReviewItem>();
         foreach (var user in users)
         {
-            var detail = user.LocalEnabled ? "仍可用本地密碼登入平台。" : "AD 登入已被擋下；平台帳號停用後各項資料仍保留。";
+            var detail = user.LocalEnabled ? "仍可用本地密碼登入平台。" : "AD 登入已被擋下。平台帳號停用後各項資料仍保留。";
             if (found.TryGetValue(user.Sid, out var person))
             {
                 if (person.Disabled) items.Add(new(user.Id, Disabled, "AD 帳號已停用，平台帳號仍啟用", detail));

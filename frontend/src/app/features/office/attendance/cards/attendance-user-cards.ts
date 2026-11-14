@@ -62,7 +62,7 @@ import { covers } from './attendance-cards-store';
       <section class="form-section" role="group" [attr.aria-labelledby]="headingId">
         <header class="form-section-head">
           <h3 [id]="headingId">出勤卡號</h3>
-          <p class="form-note">刷卡依持有期間歸戶到此人；指派與結束持有在卡號對應頁。</p>
+          <p class="form-note">刷卡依持有期間歸戶到此人。指派與結束持有在卡號對應頁。</p>
         </header>
         <div class="form-section-body">
           @if (read.error()) {

@@ -86,7 +86,7 @@ export function punchTable<P>(options: {
         <caption class="sr-only">
           {{
             title()
-          }}；欄位標題可排序與篩選。
+          }}。欄位標題可排序與篩選。
         </caption>
         <colgroup>
           <col nxTableColumn="punchedAt" class="punch-table-time-column" />

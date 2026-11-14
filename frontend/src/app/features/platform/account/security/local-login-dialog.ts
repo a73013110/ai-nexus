@@ -41,7 +41,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
       <nx-dialog-header [heading]="heading()" closeLabel="關閉本地登入設定" />
       <div class="dialog-body">
         <p class="form-note">
-          本地密碼與 AD 密碼分開管理，可在 AD 無法使用時登入；AD 使用者需定期（預設 30 天內）用 AD
+          本地密碼與 AD 密碼分開管理，可在 AD 無法使用時登入。AD 使用者需定期（預設 30 天內）用 AD
           登入一次，本地密碼才會持續有效。儲存後其他裝置上的登入會登出。
         </p>
         @if (saving.error()) {
@@ -80,7 +80,7 @@ export function localPasswordProblem(password: string, confirmation: string) {
             [readOnly]="saving.pending()"
             (input)="confirmation.set($any($event.target).value)"
         /></label>
-        <p class="form-note">12–128 個字元，建議用一句好記的長句；不可包含帳號名稱或常見密碼。</p>
+        <p class="form-note">12–128 個字元，建議用一句好記的長句。不可包含帳號名稱或常見密碼。</p>
       </div>
       <nx-dialog-actions
         label="儲存"

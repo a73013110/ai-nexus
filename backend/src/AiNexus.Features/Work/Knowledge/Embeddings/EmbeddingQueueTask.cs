@@ -16,7 +16,7 @@ namespace AiNexus.Features.Work.Knowledge.Embeddings;
 internal sealed class EmbeddingQueueTask(AppDbContext db, EmbeddingProfiles profiles, JobService jobs, IOptions<KnowledgeOptions> options) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "knowledge.embedding-queue", "索引排入", "知識庫", "把等待重建索引的文件排進背景工作；換模型時視設定排入整批重建。");
+        "knowledge.embedding-queue", "索引排入", "知識庫", "把等待重建索引的文件排進背景工作。換模型時視設定排入整批重建。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
     {

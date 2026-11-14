@@ -53,7 +53,7 @@ const METHODS = [
     <form class="dialog-form" (submit)="submit($event)">
       <nx-dialog-header heading="確認是你本人" closeLabel="關閉確認身分" />
       <div class="dialog-body">
-        <p class="form-note">變更信箱或登入方式前請再確認一次身分；確認後幾分鐘內不必重複輸入。</p>
+        <p class="form-note">變更信箱或登入方式前請再確認一次身分。確認後幾分鐘內不必重複輸入。</p>
         @if (working.error()) {
           <nx-notice tone="danger" [message]="working.error()" />
         }

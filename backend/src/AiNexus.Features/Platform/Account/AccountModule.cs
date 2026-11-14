@@ -24,15 +24,15 @@ public sealed class AccountModule : IFeatureModule
     {
         static VerificationCodeMailModel Code(MailSampleValues x) => new(
             x.Text(nameof(VerificationCodeMailModel.DisplayName), "收件者顯示名稱", MailSampleContext.ExampleName),
-            x.Text(nameof(VerificationCodeMailModel.Code), "驗證碼（實際流程由伺服器產生；測試請勿填真的驗證碼）", "123456"),
+            x.Text(nameof(VerificationCodeMailModel.Code), "驗證碼（實際流程由伺服器產生，測試請勿填真的驗證碼）", "123456"),
             x.Number(nameof(VerificationCodeMailModel.Minutes), "有效分鐘數（實際流程取 Identity:SelfService:CodeMinutes）", 15));
-        services.AddMailSample(new EmailChangeCodeMail(), "通知信箱驗證碼", "使用者設定通知信箱時寄到新信箱的驗證碼；敏感信，寄出後內文即刪除。", Code);
-        services.AddMailSample(new ReauthenticationCodeMail(), "步升驗證碼", "變更帳號安全設定前寄到已驗證信箱的驗證碼；敏感信，寄出後內文即刪除。", Code);
+        services.AddMailSample(new EmailChangeCodeMail(), "通知信箱驗證碼", "使用者設定通知信箱時寄到新信箱的驗證碼。敏感信，寄出後內文即刪除。", Code);
+        services.AddMailSample(new ReauthenticationCodeMail(), "步升驗證碼", "變更帳號安全設定前寄到已驗證信箱的驗證碼。敏感信，寄出後內文即刪除。", Code);
         services.AddMailSample(new AccountNoticeMail(), "帳號安全通知", "通知信箱或本地登入變更後，寄到變更前已驗證的信箱。",
             x => new AccountNoticeMailModel(
                 x.Text(nameof(AccountNoticeMailModel.DisplayName), "收件者顯示名稱", MailSampleContext.ExampleName),
                 x.Text(nameof(AccountNoticeMailModel.Change), "接在「你的帳號剛剛」後面的變更描述", "變更了通知信箱"),
-                x.OptionalText(nameof(AccountNoticeMailModel.Detail), "補充說明，只放遮罩後的值；空白＝不顯示", $"新的通知信箱：{MailSampleContext.ExampleMaskedEmail}"),
+                x.OptionalText(nameof(AccountNoticeMailModel.Detail), "補充說明，只放遮罩後的值。空白＝不顯示", $"新的通知信箱：{MailSampleContext.ExampleMaskedEmail}"),
                 x.Flag(nameof(AccountNoticeMailModel.ByAdministrator), "由管理員變更（結語改為請本人確認）", false)));
     }
 

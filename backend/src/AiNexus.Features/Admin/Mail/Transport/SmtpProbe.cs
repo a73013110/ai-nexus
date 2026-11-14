@@ -168,19 +168,19 @@ public sealed class SmtpProbe(MailSmtpOptions smtp, TimeProvider clock) : IDispo
             case SmtpCertificateVerdicts.Valid:
                 var expiring = current.NotAfter - clock.GetUtcNow() < TimeSpan.FromDays(30);
                 Add(MailDiagnosisSteps.Certificate, expiring ? MailDiagnosisStatuses.Warning : MailDiagnosisStatuses.Passed,
-                    expiring ? $"{identity}；30 天內到期，記得換憑證（有釘選指紋時要一併更新）。" : $"{identity}；驗證通過。", at);
+                    expiring ? $"{identity}。30 天內到期，記得換憑證（有釘選指紋時要一併更新）。" : $"{identity}。驗證通過。", at);
                 break;
             case SmtpCertificateVerdicts.RevocationUnknown:
                 Add(MailDiagnosisSteps.Certificate, MailDiagnosisStatuses.Warning,
-                    $"{identity}；撤銷狀態無法確認（簽發者沒有提供 CRL／OCSP，或連不到），其餘驗證通過，已容忍。", at);
+                    $"{identity}。撤銷狀態無法確認（簽發者沒有提供 CRL／OCSP，或連不到），其餘驗證通過，已容忍。", at);
                 break;
             case SmtpCertificateVerdicts.Pinned:
                 Add(MailDiagnosisSteps.Certificate, MailDiagnosisStatuses.Warning,
-                    $"{identity}；驗證不過（{problems}），但指紋與 ServerCertificateThumbprint 相符，換憑證後要更新指紋。", at);
+                    $"{identity}。驗證不過（{problems}），但指紋與 ServerCertificateThumbprint 相符，換憑證後要更新指紋。", at);
                 break;
             default:
                 Add(MailDiagnosisSteps.Certificate, MailDiagnosisStatuses.Failed,
-                    $"{identity}；不被接受（{problems}）。名稱不符要改 Host；自簽或內部 CA 未受信任時，可把 SHA-256 指紋設為 ServerCertificateThumbprint。", at);
+                    $"{identity}。不被接受（{problems}）。名稱不符要改 Host。自簽或內部 CA 未受信任時，可把 SHA-256 指紋設為 ServerCertificateThumbprint。", at);
                 break;
         }
     }

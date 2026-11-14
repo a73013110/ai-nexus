@@ -34,21 +34,21 @@ export function documentReaderTour(options: {
         target: 'nx-document-viewer .viewer-body nx-view-switch',
         title: options.image ? '原始圖片與辨識文字' : '原始頁面與擷取文字',
         description: options.image
-          ? '原始圖片顯示上傳的檔案；辨識文字列出 AI 從圖片讀出的文字，請與原圖核對。'
-          : '・原始頁面：顯示 PDF 原樣。\n・擷取文字：檢索與引用實際讀到的逐頁文字；AI 辨識出的會標示「請核對原文」。',
+          ? '原始圖片顯示上傳的檔案。\n辨識文字列出 AI 從圖片讀出的文字，請與原圖核對。'
+          : '・原始頁面：顯示 PDF 原樣。\n・擷取文字：檢索與引用實際讀到的逐頁文字。\nAI 辨識出的會標示「請核對原文」。',
         side: 'bottom',
       },
       options.view === 'rich' && {
         target: 'nx-document-viewer .viewer-body nx-view-switch',
         title: '預覽與原始碼',
         description:
-          'Markdown 與 HTML 可在預覽、原始碼與並排之間切換（並排需要較寬的畫面）；含指令碼的 HTML 預設不執行，確認後才在隔離環境執行。',
+          'Markdown 與 HTML 可在預覽、原始碼與並排之間切換（並排需要較寬的畫面）。\n含指令碼的 HTML 預設不執行，確認後才在隔離環境執行。',
         side: 'bottom',
       },
       options.paged && {
         target: 'nx-document-viewer .reader-pagination',
         title: '切換頁面',
-        description: '用前後鈕或頁碼選單跳到指定頁；擷取文字也逐頁對應原始頁面。',
+        description: '用前後鈕或頁碼選單跳到指定頁。\n擷取文字也逐頁對應原始頁面。',
         side: 'bottom',
       },
       original && {
@@ -89,7 +89,7 @@ export function documentReaderTour(options: {
       !options.embedded && {
         target: 'nx-document-reader .reader-return',
         title: '回到來源頁',
-        description: '回到開啟文件前的頁面；直接開啟網址時回到所屬的檔案庫、知識庫或分享頁。',
+        description: '回到開啟文件前的頁面。\n直接開啟網址時回到所屬的檔案庫、知識庫或分享頁。',
         side: 'bottom',
       },
     ],

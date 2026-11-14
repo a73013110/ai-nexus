@@ -34,7 +34,7 @@ import { compactNumber, figureMoney, metricFormatter } from '@shared/browser/for
       }
     </div>
     <p class="kpi-note">
-      統計範圍：{{ store.scopeLabel() }}。費用、呼叫與 Token 依查詢期間；工作狀態與數量是目前狀況。
+      統計範圍：{{ store.scopeLabel() }}。費用、呼叫與 Token 依查詢期間。工作狀態與數量是目前狀況。
     </p>`,
 })
 export class OverviewWidget {

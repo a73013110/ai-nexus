@@ -23,15 +23,15 @@ export function systemLogsTour(options: {
         target: `${PAGE} .feature-title`,
         title: '日誌回答什麼',
         description: `查證為什麼失敗、HTTP 狀態與耗時、例外與執行流程${
-          options.audit ? `；誰在何時做了什麼請看「${options.audit}」` : ''
-        }。每次查詢、詳情與匯出都會留下讀取紀錄。`,
+          options.audit ? `。\n誰在何時做了什麼請看「${options.audit}」` : ''
+        }。\n每次查詢、詳情與匯出都會留下讀取紀錄。`,
         side: 'bottom',
       },
       options.degraded && {
         target: `${PAGE} .log-degraded`,
         title: '結果可能不完整',
         description: `日誌管線降級時，部分事件可能延遲寫入或遺失${
-          options.monitoring ? `；佇列與遺失情形在「${options.monitoring}」的日誌管線卡` : ''
+          options.monitoring ? `。\n佇列與遺失情形在「${options.monitoring}」的日誌管線卡` : ''
         }。`,
         side: 'bottom',
       },
@@ -43,13 +43,13 @@ export function systemLogsTour(options: {
         target: `${PAGE} .log-search`,
         title: '一個搜尋框查各種識別',
         description:
-          '依格式判斷：NX- 開頭是查證代碼、32 碼 hex 是 TraceId、GUID 可切換比對 RunId／JobId／OperationId，其餘當訊息模板文字（最多 72 字、限一天內）。追查使用者回報時貼上查證代碼即可。',
+          '追查使用者回報時，貼上查證代碼即可。\n依格式判斷：NX- 開頭是查證代碼、32 碼 hex 是 TraceId，GUID 可切換比對 RunId／JobId／OperationId。\n其餘當訊息模板文字（最多 72 字、限一天內）。',
         side: 'bottom',
       },
       {
         target: `${PAGE} .log-table thead`,
         title: '事件列表',
-        description: `時間依你的時區顯示，點時間表頭切換新舊順序；「查證／關聯」欄可複製查證代碼並看到 Trace、Job 或 Run 識別，「欄位」可隱藏次要欄。${
+        description: `時間依你的時區顯示，點時間表頭切換新舊順序，「欄位」可隱藏次要欄。\n「查證／關聯」欄可複製查證代碼，並看到 Trace、Job 或 Run 識別。\n${
           options.detail
             ? '點事件名稱或整列開啟診斷詳情。'
             : '沒有詳情權限時只看得到摘要，看不到屬性與例外堆疊。'
@@ -60,7 +60,7 @@ export function systemLogsTour(options: {
         target: `${PAGE} .log-export`,
         title: '匯出 CSV',
         description:
-          '由伺服器匯出整個已套用的查詢（只含摘要欄位）；預設區間在按下時重算。\n超過範圍或筆數上限會拒絕，不截斷。',
+          '由伺服器匯出整個已套用的查詢（只含摘要欄位）。\n預設區間在按下時重算。\n超過範圍或筆數上限會拒絕，不截斷。',
         side: 'bottom',
       },
       cursorPaginationStep(PAGE),
@@ -88,14 +88,14 @@ export function logDetailTour(options: {
       {
         target: `${DRAWER} .ui-message-box`,
         title: '事件訊息',
-        description: `由訊息模板展開；你的權限看不到的參數顯示 [omitted]。${
+        description: `由訊息模板展開。\n你的權限看不到的參數顯示 [omitted]。${
           options.exception ? '下方的例外型別可直接跳到例外堆疊。' : ''
         }`,
       },
       {
         target: `${DRAWER} nx-tabs`,
         title: '屬性、例外與流程',
-        description: `「受控屬性」列出模板欄位與遮罩後的屬性 JSON，秘密不會出現；「例外堆疊」顯示型別與堆疊。${
+        description: `「受控屬性」列出模板欄位與遮罩後的屬性 JSON，秘密不會出現。\n「例外堆疊」顯示型別與堆疊。${
           options.flow
             ? '「關聯流程」依 Trace、Job 或 Run 列出本次查詢範圍內同一流程的事件，由舊到新最多 50 筆，更長的流程請用篩選繼續查。'
             : '這筆事件沒有 Trace、Job 或 Run 識別，「關聯流程」只列出它自己。'
@@ -106,7 +106,7 @@ export function logDetailTour(options: {
         target: `${DRAWER} .log-identifiers`,
         title: '關聯識別',
         description: `查證代碼、TraceId、JobId 等可直接複製，貼回搜尋框就能查同一流程${
-          options.audit ? `；「查閱同一流程的活動稽核」開啟${options.audit}` : ''
+          options.audit ? `。\n「查閱同一流程的活動稽核」開啟${options.audit}` : ''
         }。`,
       },
       {

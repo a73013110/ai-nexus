@@ -18,7 +18,7 @@ export function filesTour(options: { knowledge: boolean }): ProductTourDefinitio
       {
         target: 'nx-files-page .file-upload',
         title: '先保存，再決定用途',
-        description: '上傳或直接把檔案拖曳到頁面上；每批最多十份，進度顯示在通知中。',
+        description: '上傳或直接把檔案拖曳到頁面上。\n每批最多十份，進度顯示在通知中。',
         side: 'bottom',
       },
       {
@@ -48,13 +48,13 @@ export function filesTour(options: { knowledge: boolean }): ProductTourDefinitio
       {
         target: 'nx-files-page .file-menu',
         title: '檔案操作',
-        description: `「⋯」可${options.knowledge ? '加入知識庫、' : ''}重新命名、下載原檔或刪除；仍被引用的檔案要先移除引用才能刪除。`,
+        description: `「⋯」可${options.knowledge ? '加入知識庫、' : ''}重新命名、下載原檔或刪除。\n仍被引用的檔案要先移除引用才能刪除。`,
         side: 'left',
       },
       {
         target: 'nx-files-page .storage-usage',
         title: '留意原檔容量',
-        description: '包含草稿，同一份原檔多處引用只計一次；刪除檔案才會釋放容量。',
+        description: '包含草稿，同一份原檔多處引用只計一次。\n刪除檔案才會釋放容量。',
       },
     ],
   };

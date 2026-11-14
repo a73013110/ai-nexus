@@ -28,7 +28,7 @@ export function reviewScope(review: RepositoryReviewDto) {
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-reviews.scss',
   template: `<div class="intro">
-      <p>從提交、區間或 Pull Request 交給 AI，在背景產生檢閱或摘要；完成時會通知你。</p>
+      <p>從提交、區間或 Pull Request 交給 AI，在背景產生檢閱或摘要。完成時會通知你。</p>
       <button
         type="button"
         class="primary-button"

@@ -25,7 +25,7 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
     {
       target: 'nx-knowledge-page .resource-card',
       title: '打開知識庫',
-      description: '卡片顯示可查詢的文件數與你的權限；點選進入，管理來源與測試檢索。',
+      description: '卡片顯示可查詢的文件數與你的權限。\n點選進入，管理來源與測試檢索。',
     },
     {
       target: 'nx-knowledge-page .knowledge-create',
@@ -52,13 +52,13 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
       target: 'nx-knowledge-page .knowledge-upload',
       title: '上傳文件',
       description:
-        '支援 PDF、Word、Excel、PowerPoint、圖片與文字，也可把檔案拖曳到來源區；每批最多十份，掃描 PDF 與圖片會自動辨識文字。',
+        '支援 PDF、Word、Excel、PowerPoint、圖片與文字，也可把檔案拖曳到來源區。\n每批最多十份，掃描 PDF 與圖片會自動辨識文字。',
       side: 'bottom',
     },
     options.edit && {
       target: 'nx-knowledge-page .knowledge-sources .panel-actions',
       title: '貼上文字或從檔案庫加入',
-      description: '沒有檔案時可直接貼上純文字建立來源；已在檔案庫的原檔不必重新上傳。',
+      description: '沒有檔案時可直接貼上純文字建立來源。\n已在檔案庫的原檔不必重新上傳。',
       side: 'bottom',
     },
     {
@@ -83,19 +83,19 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
       target: 'nx-knowledge-page .document-row nx-action-menu',
       title: '文件操作',
       description:
-        '「⋯」可重新索引或移除文件；貼上建立的來源另可編輯純文字。移除後原檔仍保留在檔案庫。',
+        '「⋯」可重新索引或移除文件。\n貼上建立的來源另可編輯純文字。移除後原檔仍保留在檔案庫。',
       side: 'left',
     },
     {
       target: 'nx-knowledge-page .knowledge-query',
       title: '檢索測試',
       description:
-        '輸入問題，檢查會找到哪些段落與頁碼；結果列出檢索模式與分數。\n要讓 AI 引用，請在對話輸入框旁選取知識庫。',
+        '輸入問題，檢查會找到哪些段落與頁碼。\n結果列出檢索模式與分數。\n要讓 AI 引用，請在對話輸入框旁選取知識庫。',
     },
     options.manage && {
       target: 'nx-knowledge-page .page-actions nx-action-menu',
       title: '知識庫操作',
-      description: '「⋯」可修改名稱與說明；擁有者另可設定存取權限、移除整個知識庫。',
+      description: '「⋯」可修改名稱與說明。\n擁有者另可設定存取權限、移除整個知識庫。',
       side: 'bottom',
     },
   ];

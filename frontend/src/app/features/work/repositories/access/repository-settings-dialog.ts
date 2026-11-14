@@ -84,7 +84,7 @@ const same = (a: Draft, b: Draft) =>
                 <div class="form-section-body">
                   <nx-checkbox
                     label="開放申請"
-                    description="關閉後清單上只有已持有權限的人與負責人看得到；已核准的權限不受影響。"
+                    description="關閉後清單上只有已持有權限的人與負責人看得到。已核准的權限不受影響。"
                     [checked]="e.draft.requestable"
                     [disabled]="saving.pending()"
                     (checkedChange)="editor.update('requestable', $event)"

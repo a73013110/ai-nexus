@@ -75,7 +75,7 @@ import { DesignExample, DesignSection } from './design-section';
       id="design-search"
       title="工具列的搜尋與篩選"
       api='SearchField · Select appearance="pill" · ViewSwitch appearance="segment"'
-      description="立即改變畫面的工具（搜尋、篩選、切換）是膠囊，並排時同高同形；填好才送出的值是 6px 欄位（見「表單」）。外框、焦點與停用和欄位共用。打字即搜尋時傳 busy：放大鏡換成轉圈，仍可輸入。"
+      description="立即改變畫面的工具（搜尋、篩選、切換）是膠囊，並排時同高同形。填好才送出的值是 6px 欄位（見「表單」）。外框、焦點與停用和欄位共用。打字即搜尋時傳 busy：放大鏡換成轉圈，仍可輸入。"
     >
       <div class="design-toolbar">
         <nx-view-switch

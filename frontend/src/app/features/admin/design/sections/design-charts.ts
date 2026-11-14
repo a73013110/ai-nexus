@@ -108,7 +108,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-ticker"
       title="數字滾動與迷你走勢"
       api="NumberTicker · Sparkline"
-      description="數字從前一個值滾到新值，報讀器與減少動態直接取得結果；未知值顯示「—」而不是 0。走勢線是裝飾，意義由旁邊的數字承載。"
+      description="數字從前一個值滾到新值，報讀器與減少動態直接取得結果。未知值顯示「—」而不是 0。走勢線是裝飾，意義由旁邊的數字承載。"
     >
       <nx-design-example label="NumberTicker">
         <span class="design-ticker"><nx-number-ticker [value]="count()" /></span>
@@ -133,7 +133,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-stat"
       title="頭條數字"
       api="StatGrid · StatTile"
-      description="管理頁摘要的一列數字：標籤、表格數字與一句脈絡，字級隨卡片寬度縮放；手機兩欄。首次載入（loading）保留同高的骨架；值為 null 是未知、顯示「—」；已有數字時重讀由 StatGrid 的 busy 淡化。只有真實的警告或危險才上色。"
+      description="管理頁摘要的一列數字：標籤、表格數字與一句脈絡，字級隨卡片寬度縮放。手機兩欄。首次載入（loading）保留同高的骨架。值為 null 是未知、顯示「—」。已有數字時重讀由 StatGrid 的 busy 淡化。只有真實的警告或危險才上色。"
     >
       <nx-stat-grid label="示範摘要">
         <nx-stat-tile label="生成次數" value="18,452" unit="次" hint="完成 17,980 · 失敗 312" />
@@ -146,7 +146,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-donut"
       title="環狀分布"
       api="DonutChart"
-      description="依序使用 --series-1～7；滑過或聚焦圖例時中央改顯示該部分。圖例即是可讀的數值清單。圖表首次載入（loading）畫同形狀的骨架，讀取中不顯示「此期間尚無資料」；已有資料時重讀（busy）淡化。"
+      description="依序使用 --series-1～7。滑過或聚焦圖例時中央改顯示該部分。圖例即是可讀的數值清單。圖表首次載入（loading）畫同形狀的骨架，讀取中不顯示「此期間尚無資料」。已有資料時重讀（busy）淡化。"
     >
       <nx-design-example label="分布">
         <nx-donut-chart
@@ -169,7 +169,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-heatmap"
       title="日曆熱圖"
       api="HeatmapCalendar"
-      description="每週一欄、週一在上，依最忙的一天分五階（--heat）；每一天可聚焦讀出數值。載入中以同比例的骨架佔位。"
+      description="每週一欄、週一在上，依最忙的一天分五階（--heat）。每一天可聚焦讀出數值。載入中以同比例的骨架佔位。"
       [stacked]="true"
     >
       <nx-view-switch
@@ -192,7 +192,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-calendar"
       title="月曆"
       api="MonthCalendar · nxCalendarDay"
-      description="月檢視：今天、選取、週末與前後月淡化；每天的內容由呼叫端提供（marks 的圓點與數量，或 nxCalendarDay 範本）。方向鍵移動、PageUp／PageDown 換月、Enter 選取；容器窄時格子變矮、只留圓點。"
+      description="月檢視：今天、選取、週末與前後月淡化。每天的內容由呼叫端提供（marks 的圓點與數量，或 nxCalendarDay 範本）。方向鍵移動、PageUp／PageDown 換月、Enter 選取。容器窄時格子變矮、只留圓點。"
     >
       <nx-design-example label="每日標記（當日出缺勤）">
         <nx-month-calendar
@@ -224,7 +224,7 @@ const HOLIDAYS: (CalendarDay & { text: string })[] = [
       id="design-spotlight"
       title="聚光"
       api="nxSpotlight"
-      description="指標移動時寫入 --spot-x／--spot-y；外觀由宿主決定，觸控不顯示。"
+      description="指標移動時寫入 --spot-x／--spot-y。外觀由宿主決定，觸控不顯示。"
     >
       <div class="design-spot" nxSpotlight>移動指標看光線</div>
     </nx-design-section>`,

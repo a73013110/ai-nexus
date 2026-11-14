@@ -35,7 +35,7 @@ import { ApiClientSamples } from './api-client-samples';
         <div class="dialog-body">
           <nx-notice
             tone="warning"
-            message="金鑰只顯示這一次，關閉後無法再查看；遺失時請重新產生。"
+            message="金鑰只顯示這一次，關閉後無法再查看。遺失時請重新產生。"
           />
           <nx-copy-value
             class="api-client-key"

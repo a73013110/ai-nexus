@@ -17,7 +17,7 @@ import { NavigationItemDialog } from './navigation/navigation-item-dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.navigation')"
-      description="安排側欄的分群、頁面與外部連結；每個人只看到自己有權限的項目。"
+      description="安排側欄的分群、頁面與外部連結。每個人只看到自己有權限的項目。"
       layoutMode="data"
       [tour]="tour()"
     >

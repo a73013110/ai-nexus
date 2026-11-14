@@ -14,7 +14,7 @@ namespace AiNexus.Features.Admin.Diagnostics;
 public sealed class DiagnosticRetentionTask(AppDbContext db, IOptions<DiagnosticOptions> options, TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "diagnostics.retention", "系統日誌清理", "系統日誌", "刪除超過保存期的系統日誌；本機日誌檔由各站台自行清理。");
+        "diagnostics.retention", "系統日誌清理", "系統日誌", "刪除超過保存期的系統日誌。本機日誌檔由各站台自行清理。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
         => TaskOutcome.Count(await DeleteExpiredAsync(ct), total => $"刪除 {total:N0} 筆日誌");

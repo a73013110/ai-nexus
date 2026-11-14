@@ -10,7 +10,7 @@ const connection = (): TourStep => ({
   target: 'nx-repositories-page .repository-account',
   title: '你的 Gitea 連線',
   description:
-    '所有內容都以你自己的權杖讀取。\n・更新授權：換新權杖。\n・中斷連線：刪除保存的權杖；已匯入的文件與檢閱紀錄會保留。',
+    '所有內容都以你自己的權杖讀取。\n・更新授權：換新權杖。\n・中斷連線：刪除保存的權杖。\n已匯入的文件與檢閱紀錄會保留。',
   side: 'bottom',
 });
 
@@ -29,7 +29,7 @@ export function repositoriesTour(options: {
       {
         target: 'nx-repositories-page .feature-title',
         title: '用你的 Gitea 權限閱讀程式',
-        description: `只列出你的 Gitea 帳號能讀的程式庫；閱讀程式碼、提交紀錄、議題與 Pull Request 後，可以${handoffs}。`,
+        description: `只列出你的 Gitea 帳號能讀的程式庫。\n閱讀程式碼、提交紀錄、議題與 Pull Request 後，可以${handoffs}。`,
         side: 'bottom',
       },
       {
@@ -48,7 +48,7 @@ export function repositoriesTour(options: {
         target: 'nx-repository-list .resource-card',
         title: '打開程式庫',
         description:
-          '卡片顯示語言、開啟中的 Pull Request 與議題數和更新時間，私人程式庫以鎖頭標示。',
+          '卡片顯示語言、開啟中的 Pull Request 與議題數和更新時間。\n私人程式庫以鎖頭標示。',
       },
       connection(),
     ],
@@ -71,7 +71,7 @@ function sectionSteps(options: {
               target: 'nx-repository-change .actions',
               title: '交給 AI 初檢',
               description:
-                '「AI 變更摘要」說明改了什麼，「AI 檢閱」找有證據的重大缺陷；在背景執行，完成時會通知你。',
+                '「AI 變更摘要」說明改了什麼，「AI 檢閱」找有證據的重大缺陷。\n在背景執行，完成時會通知你。',
               side: 'bottom',
             },
           ]
@@ -92,8 +92,8 @@ function sectionSteps(options: {
               {
                 target: 'nx-repository-thread .actions',
                 title: '檢閱這個 Pull Request',
-                description: `「AI 檢閱」或「AI 變更摘要」會比較合併基準到 head；完成後可預覽，並貼回 PR 留言。
-「查看變更」看完整差異。${chat ? '\n「帶入對話」把說明與留言放進新對話的草稿；長度允許時附上差異。' : ''}`,
+                description: `「AI 檢閱」或「AI 變更摘要」會比較合併基準到 head。\n完成後可預覽，並貼回 PR 留言。
+「查看變更」看完整差異。${chat ? '\n「帶入對話」把說明與留言放進新對話的草稿。\n長度允許時附上差異。' : ''}`,
                 side: 'bottom',
               },
             ]
@@ -103,7 +103,7 @@ function sectionSteps(options: {
                 title: chat ? '把議題帶入對話' : '到 Gitea 回覆',
                 description: chat
                   ? '「帶入對話」把議題內文與留言打包成附件，放進新對話的草稿，確認後再送出。'
-                  : '這裡只供閱讀；要留言或變更狀態，請在 Gitea 開啟。',
+                  : '這裡只供閱讀。\n要留言或變更狀態，請在 Gitea 開啟。',
                 side: 'bottom',
               },
             ];
@@ -132,7 +132,7 @@ function sectionSteps(options: {
               target: 'nx-repository-review .report',
               title: '整體報告',
               description:
-                '繁體中文結論、變更重點與有證據的問題；這是靜態初檢，仍需核對上下文並執行測試。',
+                '繁體中文結論、變更重點與有證據的問題。\n這是靜態初檢，仍需核對上下文並執行測試。',
             },
           ]
         : [
@@ -145,7 +145,7 @@ function sectionSteps(options: {
             {
               target: 'nx-repository-reviews .row',
               title: '你的檢閱',
-              description: '這裡只列出你建立的檢閱與狀態；點選看報告與分段明細。',
+              description: '這裡只列出你建立的檢閱與狀態。\n點選看報告與分段明細。',
             },
           ];
     default:
@@ -161,13 +161,14 @@ function sectionSteps(options: {
             {
               target: 'nx-repository-code .entries',
               title: '瀏覽資料夾與檔案',
-              description: '點資料夾往下、點檔案看行號與語法上色；資料夾的 README 顯示在清單下方。',
+              description:
+                '點資料夾往下、點檔案看行號與語法上色。\n資料夾的 README 顯示在清單下方。',
             },
             chat && {
               target: 'nx-repository-code nx-checkbox.pick',
               title: '勾選檔案帶入對話',
               description:
-                '可跨資料夾勾選最多 20 個檔案，打包成一個附件放進新對話的草稿，不會自動送出。',
+                '可跨資料夾勾選最多 20 個檔案，打包成一個附件放進新對話的草稿。\n草稿不會自動送出。',
               side: 'bottom',
             },
             knowledge && {
@@ -200,7 +201,7 @@ export function repositoryTour(options: {
         target: 'nx-repository-detail .sections',
         title: '程式碼、紀錄與討論',
         description:
-          '在程式碼、提交紀錄、Pull Request、議題與 AI 檢閱之間切換；標籤上的數字是開啟中的數量。',
+          '在程式碼、提交紀錄、Pull Request、議題與 AI 檢閱之間切換。\n標籤上的數字是開啟中的數量。',
         side: 'bottom',
       },
       !options.empty && {

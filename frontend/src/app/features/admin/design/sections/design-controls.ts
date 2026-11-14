@@ -92,7 +92,7 @@ import { DesignSearch } from './design-search';
       id="design-buttons"
       title="按鈕"
       api=".primary-button · .secondary-button · .quiet-button · .icon-button · button[nxPending]"
-      description="一個區域只有一個主要操作；危險操作一律經過確認。按下時微縮，完成回饋以右下角通知呈現。送出中（nxPending）前導圖示換成轉圈、文字改成「動詞＋中…」，不淡化、焦點留在原處，再按也不會重複送出。"
+      description="一個區域只有一個主要操作。危險操作一律經過確認。按下時微縮，完成回饋以右下角通知呈現。送出中（nxPending）前導圖示換成轉圈、文字改成「動詞＋中…」，不淡化、焦點留在原處，再按也不會重複送出。"
     >
       <div class="design-buttons">
         <button type="button" class="primary-button" (click)="toast.success('主要操作示範')">
@@ -137,7 +137,7 @@ import { DesignSearch } from './design-search';
       id="design-dialogs"
       title="對話框"
       api=".platform-dialog · ConfirmDialog · NameDialog"
-      description="同一套外框：細線、模態陰影、18px 圓角，後方頁面壓暗並模糊；從開啟它的按鈕長出來，關閉縮回原處。初始焦點在取消，Esc 視為取消並還原焦點。不能復原、波及整批資料的動作給 typed，照打對象的識別才能確認。"
+      description="同一套外框：細線、模態陰影、18px 圓角，後方頁面壓暗並模糊。從開啟它的按鈕長出來，關閉縮回原處。初始焦點在取消，Esc 視為取消並還原焦點。不能復原、波及整批資料的動作給 typed，照打對象的識別才能確認。"
     >
       <div class="design-buttons">
         <button type="button" class="secondary-button" (click)="confirmPlain()">一般確認</button
@@ -152,7 +152,7 @@ import { DesignSearch } from './design-search';
       id="design-menus"
       title="選單與下拉"
       api="ActionMenu · Select · OptionTags"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項的狀態（停用、已隱藏）用 tags（optionTags()）標在名稱旁，已選時觸發鈕也標，不接進名稱或說明。長清單給選項 group 分組（標題不可選），搜尋也比對組名與只供搜尋的 keywords（代碼）。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
+      description="浮層在 top layer，跨越捲動區。Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。選項的狀態（停用、已隱藏）用 tags（optionTags()）標在名稱旁，已選時觸發鈕也標，不接進名稱或說明。長清單給選項 group 分組（標題不可選），搜尋也比對組名與只供搜尋的 keywords（代碼）。階層選項（單位）改用 TreeSelect。選項來自 API 時傳 loading：觸發鈕轉圈、顯示「正在載入…」而不是 placeholder，打開是「正在載入選項…」。從選單發起的動作進行中，觸發鈕（busy）轉圈並暫不開啟。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -206,7 +206,7 @@ import { DesignSearch } from './design-search';
       id="design-menu-check"
       title="核取選單項目"
       api="MenuPanel · MenuAction.checked"
-      description="設定 checked 的項目成為 menuitemcheckbox（aria-checked），左欄是方框、不放圖示，與 Select 多選相同；選取後選單關閉，狀態由頁面切換。未設定 checked 的項目仍是一般操作。"
+      description="設定 checked 的項目成為 menuitemcheckbox（aria-checked），左欄是方框、不放圖示，與 Select 多選相同。選取後選單關閉，狀態由頁面切換。未設定 checked 的項目仍是一般操作。"
     >
       <nx-action-menu label="示範檢視選項" [items]="toggles()" (action)="toggle($event)" />
     </nx-design-section>
@@ -214,7 +214,7 @@ import { DesignSearch } from './design-search';
       id="design-switches"
       title="切換與頁籤"
       api="ViewSwitch · Tabs"
-      description="同組只有一個選取 chip，以彈簧滑到新選項；連結 tabpanel 的內容才用 Tabs。"
+      description="同組只有一個選取 chip，以彈簧滑到新選項。連結 tabpanel 的內容才用 Tabs。"
     >
       <nx-design-example label="segment · fill（側欄篩選）">
         <nx-view-switch
@@ -276,7 +276,7 @@ import { DesignSearch } from './design-search';
       id="design-floating-toolbar"
       title="浮動工具列"
       api="FloatingToolbar"
-      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 1.5 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。檢視器標題列的兩顆膠囊遵循同一規則（見「對話框」）。"
+      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面。範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 1.5 秒或 Esc 淡出。鍵盤焦點在內、下拉展開或 pinned 時保留。檢視器標題列的兩顆膠囊遵循同一規則（見「對話框」）。"
     >
       <div
         class="design-floating"
@@ -301,14 +301,14 @@ import { DesignSearch } from './design-search';
             (valueChange)="zoom.set($event)"
           />
         </nx-floating-toolbar>
-        在內容上移動指標不會喚回工具列；移到上緣附近、觸控點一下或用 Tab 進入才會出現。
+        在內容上移動指標不會喚回工具列。移到上緣附近、觸控點一下或用 Tab 進入才會出現。
       </div>
     </nx-design-section>
     <nx-design-section
       id="design-checkbox"
       title="核取方塊"
       api="Checkbox"
-      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。方框對齊標題那一行的字中線（optical），說明再長也不會把方框往下拉。緊湊清單以 --selection-control-height 與 --selection-control-padding-block／-inline 調列高與內距；要對齊段落或表格欄的左緣用 flush（hover 底色往外伸），不要把內距設成 0。立即儲存又不可還原的勾選用 pending：旁邊轉圈、暫不接受切換。"
+      description="整列可點選，保留原生鍵盤操作。勾選只由方框表示，列不填色，清單只有 hover 一種底色。方框對齊標題那一行的字中線（optical），說明再長也不會把方框往下拉。緊湊清單以 --selection-control-height 與 --selection-control-padding-block／-inline 調列高與內距。要對齊段落或表格欄的左緣用 flush（hover 底色往外伸），不要把內距設成 0。立即儲存又不可還原的勾選用 pending：旁邊轉圈、暫不接受切換。"
     >
       <nx-checkbox label="只有標題" [checked]="checked()" (checkedChange)="checked.set($event)" />
       <nx-checkbox
@@ -343,7 +343,7 @@ import { DesignSearch } from './design-search';
       id="design-choice-groups"
       title="分組多選"
       api="ChoiceGroups"
-      description="依分類分組的多選清單：每類一張有框卡片，標題旁是已選數與全選／全不選；寬處兩欄、窄處一欄，不再包一層總 fieldset。"
+      description="依分類分組的多選清單：每類一張有框卡片，標題旁是已選數與全選／全不選。寬處兩欄、窄處一欄，不再包一層總 fieldset。"
     >
       <nx-choice-groups
         label="示範授權"

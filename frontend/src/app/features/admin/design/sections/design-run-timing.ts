@@ -62,7 +62,7 @@ function rhythm(now: number, from: number, to: number, step: number, past: TimeM
     title="執行與計時"
     api="TimeLanes · TimeLane · RunState · TickingTime"
     [stacked]="true"
-    description="排程與背景工作的狀態。泳道把過去的結果與未來的預定放在同一條時間上，刻度、底色與現在線只畫一份；滑過記號看詳情，軌道另給報讀器一句摘要。"
+    description="排程與背景工作的狀態。泳道把過去的結果與未來的預定放在同一條時間上，刻度、底色與現在線只畫一份。滑過記號看詳情，軌道另給報讀器一句摘要。"
   >
     <nx-design-example label="TimeLanes">
       <nx-time-lanes

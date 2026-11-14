@@ -36,7 +36,7 @@ import { DialogActions } from '@shared/ui/dialog-actions';
         />
         <div class="dialog-body">
           <p class="form-note">
-            接下來會使用此使用者的實際權限與私人資料範圍。操作會生效並記錄管理者來源；15
+            接下來會使用此使用者的實際權限與私人資料範圍。操作會生效並記錄管理者來源。15
             分鐘後返回原管理者，亦可隨時提前返回。
           </p>
           @if (error()) {

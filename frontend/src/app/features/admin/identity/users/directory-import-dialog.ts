@@ -104,8 +104,8 @@ export class DirectoryImportDialog {
   readonly footNote = computed(() => {
     const size = this.store.selection().size;
     return size
-      ? `已選 ${size} 人，來自 ${this.store.sources()} 個節點；可切換節點繼續勾選。`
-      : `一次最多 ${this.store.limit} 人；切換節點時已選的人會保留。`;
+      ? `已選 ${size} 人，來自 ${this.store.sources()} 個節點。可切換節點繼續勾選。`
+      : `一次最多 ${this.store.limit} 人。切換節點時已選的人會保留。`;
   });
 
   open() {

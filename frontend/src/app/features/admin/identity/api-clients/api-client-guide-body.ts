@@ -30,18 +30,18 @@ interface ResponseGroup {
 const GUIDE = {
   title: 'AD 帳密驗證串接說明',
   intro:
-    '你的系統以金鑰呼叫驗證服務，確認使用者輸入的 AD 帳號與密碼。\n服務只回答帳密屬於誰；能否登入、有哪些權限，由你的系統決定。',
+    '你的系統以金鑰呼叫驗證服務，確認使用者輸入的 AD 帳號與密碼。\n服務只回答帳密屬於誰。能否登入、有哪些權限，由你的系統決定。',
   key: '請管理員在「外部系統」新增你的系統，金鑰只會顯示一次。\n金鑰存進設定檔或秘密庫，不要寫進程式碼或版控。',
-  call: '以 POST 送出帳號與密碼，Authorization 標頭帶 Bearer 金鑰。\n一律走 HTTPS 並驗證伺服器憑證；密碼與金鑰不要寫進日誌。',
+  call: '以 POST 送出帳號與密碼，Authorization 標頭帶 Bearer 金鑰。\n一律走 HTTPS 並驗證伺服器憑證。密碼與金鑰不要寫進日誌。',
   fields: [
-    { name: 'account', description: 'AD 帳號，例如 bob；也可寫成 網域\\帳號。' },
+    { name: 'account', description: 'AD 帳號，例如 bob。也可寫成 網域\\帳號。' },
     { name: 'password', description: '使用者輸入的密碼，原樣送出。' },
   ],
-  responses: '依狀態碼分成三類處理。\n帳密問題告訴使用者；系統問題記下查證代碼，不要當成密碼錯。',
+  responses: '依狀態碼分成三類處理。\n帳密問題告訴使用者。系統問題記下查證代碼，不要當成密碼錯。',
   problem:
-    '錯誤回應是 application/problem+json。\n以狀態碼判斷；code 與 issueCode 寫進日誌供管理員查詢。',
+    '錯誤回應是 application/problem+json。\n以狀態碼判斷。code 與 issueCode 寫進日誌供管理員查詢。',
   samples:
-    '範例已處理上面每一種回應，複製後改 package 或 namespace 即可使用。\n服務網址已帶入；金鑰從設定讀取，不寫在程式碼裡。',
+    '範例已處理上面每一種回應，複製後改 package 或 namespace 即可使用。\n服務網址已帶入。金鑰從設定讀取，不寫在程式碼裡。',
 } as const;
 
 const RESPONSE_GROUPS: readonly ResponseGroup[] = [
@@ -72,7 +72,7 @@ const RESPONSE_GROUPS: readonly ResponseGroup[] = [
         code: 'login_rate_limited',
         meaning: '同一帳號失敗太多次',
         action:
-          '請使用者依 Retry-After 的秒數後再試。\n失敗次數與網站登入共用；每個系統每分鐘超過 300 次也會回 429。',
+          '請使用者依 Retry-After 的秒數後再試。\n失敗次數與網站登入共用。每個系統每分鐘超過 300 次也會回 429。',
       },
     ],
   },
@@ -84,7 +84,7 @@ const RESPONSE_GROUPS: readonly ResponseGroup[] = [
         status: 401,
         code: 'authentication_required',
         meaning: '金鑰缺少、錯誤、已重新產生，或系統已停用',
-        action: '檢查設定的金鑰；不要讓使用者重試密碼。',
+        action: '檢查設定的金鑰。不要讓使用者重試密碼。',
       },
       {
         status: 503,

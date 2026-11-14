@@ -63,7 +63,7 @@ describe('unit import presentation', () => {
       ['1', 'Managers', false],
     ]);
     expect(departments[1].description).toBe(
-      '這裡已停用，套用會重新啟用；啟用狀態依公文系統更新；王小明 設為主管並加入為成員',
+      '這裡已停用，套用會重新啟用。啟用狀態依公文系統更新。王小明 設為主管並加入為成員',
     );
     expect(departments[3].description).toBe('王小明 取消主管（保留成員）');
     expect(importChoices(departments).map((group) => [group.name, group.options.length])).toEqual([
@@ -120,14 +120,14 @@ describe('unit import presentation', () => {
   it('explains the changed fields and where a moved unit was', () => {
     expect(
       changeNote(change({ fields: ['Name', 'Parent'], previousPath: ['總公司', '業務部'] })),
-    ).toBe('名稱、上層依公文系統更新；原為 總公司 › 業務部');
+    ).toBe('名稱、上層依公文系統更新。原為 總公司 › 業務部');
     expect(changeNote(change({ action: 'Disable', fields: ['Enabled'], enabled: false }))).toBe(
       '公文系統已沒有此部門，保留成員與歷史',
     );
     expect(changeNote(change({ action: 'Create' }))).toBe('');
     // 首長單位層級不是公文系統的欄位：搬移時清除，另外說明。
     expect(changeNote(change({ fields: ['Parent', 'HeadRank'] }))).toBe(
-      '上層依公文系統更新；搬到別的上層，取消首長單位',
+      '上層依公文系統更新。搬到別的上層，取消首長單位',
     );
   });
 

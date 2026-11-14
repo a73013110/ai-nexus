@@ -133,7 +133,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
                   } @else {
                     <nx-person-picker
                       label="尋找持有人"
-                      emptyText="沒有符合的帳號；新進員工可直接使用姓名。"
+                      emptyText="沒有符合的帳號。新進員工可直接使用姓名。"
                       nameHint="尚無帳號時只記姓名，之後可再綁定帳號"
                       [search]="people"
                       [disabled]="store.busy()"
@@ -156,7 +156,7 @@ const same = (a: AssignmentDraft, b: AssignmentDraft) =>
               <section class="form-section" role="group" [attr.aria-labelledby]="id + '-period'">
                 <header class="form-section-head">
                   <h3 [id]="id + '-period'">期間</h3>
-                  <p class="form-note">台北時間；開始時間之後的刷卡才歸戶給這位持有人。</p>
+                  <p class="form-note">台北時間。開始時間之後的刷卡才歸戶給這位持有人。</p>
                 </header>
                 <div class="form-section-body">
                   <div class="form-row">

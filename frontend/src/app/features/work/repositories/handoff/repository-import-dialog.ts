@@ -36,7 +36,7 @@ import { DialogActions } from '@shared/ui/dialog-actions';
     <div class="dialog-body">
       <p class="form-note">
         匯入 <strong>{{ folder() || store.fullName() }}</strong> 底下的文字檔（版本
-        {{ short(commit()) }}），在背景逐一建立檢索索引；二進位與過大的檔案會略過。
+        {{ short(commit()) }}），在背景逐一建立檢索索引。二進位與過大的檔案會略過。
       </p>
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
@@ -130,7 +130,7 @@ export class RepositoryImportDialog {
       this.jobs.track(result.job);
       this.toast.info(
         `開始匯入 ${result.files} 個檔案`,
-        `完成後可在「${collection.label}」查詢；可以先離開這個頁面。`,
+        `完成後可在「${collection.label}」查詢。可以先離開這個頁面。`,
       );
     });
     if (outcome.ok) this.dialog().nativeElement.close();

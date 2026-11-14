@@ -150,7 +150,7 @@ export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraf
         }
         <nx-checkbox
           label="本地密碼"
-          description="以 Argon2id 加鹽雜湊保存；重設後舊登入會失效。"
+          description="以 Argon2id 加鹽雜湊保存。重設後舊登入會失效。"
           [checked]="value().localEnabled"
           [disabled]="disabled()"
           (checkedChange)="change('localEnabled', $event)"

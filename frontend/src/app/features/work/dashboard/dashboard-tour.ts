@@ -10,26 +10,26 @@ export const DASHBOARD_TOUR: ProductTourDefinition = {
       target: 'nx-dashboard-page .feature-title',
       title: '一句話掌握現況',
       description:
-        '問候下方會說明目前有幾件工作處理中，或哪些功能需要留意。「我的工作」每 60 秒自動更新。',
+        '問候下方會說明目前有幾件工作處理中，或哪些功能需要留意。\n「我的工作」每 60 秒自動更新。',
       side: 'bottom',
     },
     {
       target: 'nx-dashboard-page .dashboard-scope',
       title: '切換總覽範圍',
       description:
-        '選「整個平台」查看所有人的用量與使用者區間費用；這個範圍每次讀取都會留下稽核紀錄。',
+        '選「整個平台」查看所有人的用量與使用者區間費用。\n這個範圍每次讀取都會留下稽核紀錄。',
       side: 'bottom',
     },
     {
       target: 'nx-dashboard-toolbar nx-view-switch',
       title: '選擇查詢期間',
-      description: '選了就套用，不必按查詢；選「自訂」再輸入開始與結束日期。',
+      description: '選了就套用，不必按查詢。\n選「自訂」再輸入開始與結束日期。',
       side: 'bottom',
     },
     {
       target: 'nx-dashboard-toolbar .toolbar-unit',
       title: '幣別與費用類型分開看',
-      description: '不同幣別與費用類型不會相加；在這裡切換卡片顯示的幣別與類型。',
+      description: '不同幣別與費用類型不會相加。\n在這裡切換卡片顯示的幣別與類型。',
       side: 'bottom',
     },
     {

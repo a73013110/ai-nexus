@@ -103,7 +103,7 @@ export class DirectoryPeopleTable {
     if (!this.store.all().length && !this.store.subtree())
       return {
         title: '這一層沒有直屬人員',
-        text: '人員都在下層 OU；打開左下的「包含子 OU」一起列出。',
+        text: '人員都在下層 OU。打開左下的「包含子 OU」一起列出。',
       };
     return { title: '沒有符合的人員', text: '換個關鍵字，或清除篩選與「隱藏 AD 停用」。' };
   });

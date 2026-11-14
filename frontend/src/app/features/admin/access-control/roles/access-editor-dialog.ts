@@ -127,7 +127,7 @@ export function scopeReach(scope: string, managerScope: string | null, managed: 
   const members = MEMBER_REACH[scope] ?? scopeName(scope);
   if (managed && scope === 'all') return members + '，已包含主管所管的單位。';
   if (!managerScope) return members + '。';
-  return `${members}；擔任主管的人另外看得到${MANAGER_REACH[managerScope] ?? scopeName(managerScope)}的資料。`;
+  return `${members}。擔任主管的人另外看得到${MANAGER_REACH[managerScope] ?? scopeName(managerScope)}的資料。`;
 }
 
 /**

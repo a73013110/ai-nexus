@@ -144,7 +144,7 @@
           <nx-checkbox
             class="directory-include-disabled"
             label="仍要匯入 AD 已停用的帳號"
-            description="例如帳號先建好、到職才啟用的人；匯入後仍無法以 AD 登入，直到 AD 啟用。"
+            description="例如帳號先建好、到職才啟用的人。匯入後仍無法以 AD 登入，直到 AD 啟用。"
             [checked]="includeDisabled()"
             [disabled]="working.pendingFor('import')"
             [pending]="working.pendingFor('preview')"

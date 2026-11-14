@@ -179,7 +179,7 @@ export class ApiClientsPage {
     if (
       !(await this.confirmation().ask({
         title: `停用「${client.name}」？`,
-        message: '停用後這把金鑰的驗證一律被拒，直到重新啟用；金鑰不變，啟用後對方不必改設定。',
+        message: '停用後這把金鑰的驗證一律被拒，直到重新啟用。金鑰不變，啟用後對方不必改設定。',
         confirm: '停用',
       }))
     )
@@ -207,7 +207,7 @@ export class ApiClientsPage {
     if (
       !(await this.confirmation().ask({
         title: `刪除外部系統「${client.name}」？`,
-        message: '金鑰會立即失效，對方無法再驗證帳密。刪除後無法復原；只想暫停時改用停用。',
+        message: '金鑰會立即失效，對方無法再驗證帳密。刪除後無法復原。只想暫停時改用停用。',
         confirm: '刪除',
         danger: true,
       }))

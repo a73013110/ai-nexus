@@ -44,7 +44,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
           <section class="form-section" role="group" [attr.aria-labelledby]="id + '-answer'">
             <header class="form-section-head">
               <h3 [id]="id + '-answer'">回答方式</h3>
-              <p class="form-note">套用至這段對話之後的提問；已生成的回答與其他對話保留原樣。</p>
+              <p class="form-note">套用至這段對話之後的提問。已生成的回答與其他對話保留原樣。</p>
             </header>
             <div class="form-section-body">
               <label
@@ -52,7 +52,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
                   nxField
                   [formField]="fields.instruction"
                   rows="5"
-                  placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
+                  placeholder="例如：先提供摘要，再列出待辦事項。專有名詞保留英文。"
                 ></textarea>
               </label>
             </div>
@@ -81,7 +81,7 @@ const LABEL_RULE = `最多 ${MAX_LABELS} 個標籤，每個最多 ${MAX_LABEL_LE
                     (valueChange)="chooseProject($event)"
                 /></label>
                 <p class="form-note">
-                  選擇後立即儲存；加入專案後，之後的提問會使用專案的共用指示與參考文件。
+                  選擇後立即儲存。加入專案後，之後的提問會使用專案的共用指示與參考文件。
                 </p>
                 @if (moving()) {
                   <span class="sr-only" role="status">正在儲存所屬專案…</span>

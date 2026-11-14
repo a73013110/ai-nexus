@@ -187,8 +187,8 @@ describe('lanes', () => {
 
   it('summarises a lane for screen readers', () => {
     const lane = task({ timelineRuns: [timeline('succeeded'), timeline('failed', -30 * MINUTE)] });
-    expect(laneSummary(lane, [NOW + HOUR])).toBe('區間內 2 輪：成功 1、失敗 1；下次 15:00');
-    expect(laneSummary(task(), [])).toBe('區間內沒有執行紀錄；區間內沒有預定');
+    expect(laneSummary(lane, [NOW + HOUR])).toBe('區間內 2 輪：成功 1、失敗 1。下次 15:00');
+    expect(laneSummary(task(), [])).toBe('區間內沒有執行紀錄。區間內沒有預定');
   });
 
   it('explains why a lane has no plan', () => {

@@ -233,12 +233,12 @@ const workKey = (profile: EmbeddingProfileDto, kind: ProfileAction) => `${kind}:
 const confirmations: Record<ProfileAction, (profile: EmbeddingProfileDto) => Confirmation> = {
   rebuild: (profile) => ({
     title: '重建檢索索引',
-    message: `在背景為 ${profile.model} 重新向量化知識片段，會呼叫向量模型並計入用量；進度顯示在索引列。`,
+    message: `在背景為 ${profile.model} 重新向量化知識片段，會呼叫向量模型並計入用量。進度顯示在索引列。`,
     confirm: '開始重建',
   }),
   activate: (profile) => ({
     title: '切換使用中索引',
-    message: `之後的知識檢索改用 ${profile.model}；目前使用中的索引會退役，保留到清除向量為止。`,
+    message: `之後的知識檢索改用 ${profile.model}。目前使用中的索引會退役，保留到清除向量為止。`,
     confirm: '啟用索引',
   }),
   clear: (profile) => ({

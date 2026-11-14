@@ -116,7 +116,7 @@ export function outcomeName(
 export function outcomeNote(item: DirectoryOutcomeDto) {
   if (item.outcome === 'failed') return '資料在預覽後有變動，請重新預覽。';
   if (item.directoryDisabled && item.enabled)
-    return 'AD 帳號已停用，但平台帳號仍啟用（含本地密碼）；需要時請在使用者詳情停用。';
+    return 'AD 帳號已停用，但平台帳號仍啟用（含本地密碼）。需要時請在使用者詳情停用。';
   if (item.outcome === 'not_found' && item.enabled)
     return 'AD 已找不到（可能已刪除或不在瀏覽範圍），平台帳號仍啟用。';
   return '';

@@ -42,7 +42,7 @@ export function userFeatures(catalog: AdminCatalogDto | null, roleIds: string[],
     <section class="form-section" role="group" [attr.aria-labelledby]="id + '-roles'">
       <header class="form-section-head">
         <h3 [id]="id + '-roles'">角色</h3>
-        <p class="form-note">可複選；可用功能取各角色的聯集。</p>
+        <p class="form-note">可複選。可用功能取各角色的聯集。</p>
       </header>
       <div class="form-section-body">
         <nx-choice-groups

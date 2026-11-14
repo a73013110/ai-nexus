@@ -322,7 +322,7 @@ export class SortHandle {
   /** 整份清單的筆數；不知道（例如搜尋中）時給 null。 */
   readonly count = input.required<number | null>();
   readonly locked = input(false);
-  readonly lockedHint = input('清除搜尋後可拖曳；或按編號輸入位置');
+  readonly lockedHint = input('清除搜尋後可拖曳，或按編號輸入位置');
   readonly hint = KEY_HINT;
 }
 

@@ -216,7 +216,7 @@ export class MailMessagesPage {
     if (message.status === 'queued')
       return {
         action: 'retry' as const,
-        note: '不等下次嘗試時間，現在就寄這一封；暫停寄送中也會一併恢復。',
+        note: '不等下次嘗試時間，現在就寄這一封。暫停寄送中也會一併恢復。',
       };
     if (canResend) return { action: 'resend' as const, note: '以原內容建立一封新信，原紀錄不變。' };
     return view.blocked ? { action: null, note: view.blocked } : null;

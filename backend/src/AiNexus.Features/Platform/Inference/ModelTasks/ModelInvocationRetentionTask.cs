@@ -14,7 +14,7 @@ namespace AiNexus.Features.Platform.Inference.ModelTasks;
 public sealed class ModelInvocationRetentionTask(AppDbContext db, IOptions<InferenceOptions> options, TimeProvider clock) : IScheduledTask
 {
     public static ScheduledTaskDefinition Definition { get; } = new(
-        "inference.invocation-retention", "模型呼叫紀錄清理", "模型", "刪除超過保存期的模型工作呼叫紀錄；費用紀錄不受影響。");
+        "inference.invocation-retention", "模型呼叫紀錄清理", "模型", "刪除超過保存期的模型工作呼叫紀錄。費用紀錄不受影響。");
 
     public async Task<TaskOutcome> RunAsync(ScheduledTaskContext context, CancellationToken ct)
         => TaskOutcome.Count(await DeleteExpiredAsync(ct), total => $"刪除 {total:N0} 筆紀錄");

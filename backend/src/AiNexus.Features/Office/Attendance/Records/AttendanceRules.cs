@@ -61,8 +61,8 @@ public static class AttendanceRules
             [AttendanceScheduleDto.Of(AttendanceDayType.FullDay, full), AttendanceScheduleDto.Of(AttendanceDayType.MorningOff, options.MorningOff),
                 AttendanceScheduleDto.Of(AttendanceDayType.AfternoonOff, options.AfternoonOff)],
             [
-                new(Titles.Punches, "當天最早一筆刷卡是上班，最晚一筆是下班，中間的刷卡不影響判定。\n出勤日依刷卡時間的日期，不看打卡檔的檔名；過了午夜的刷卡算隔天。"),
-                new(Titles.Flex, "在彈性時段內上班不算遲到。\n應下班＝上班時間＋規定時數（含午休）；早於彈性起點上班，以起點計。\n" +
+                new(Titles.Punches, "當天最早一筆刷卡是上班，最晚一筆是下班，中間的刷卡不影響判定。\n出勤日依刷卡時間的日期，不看打卡檔的檔名。\n過了午夜的刷卡算隔天。"),
+                new(Titles.Flex, "在彈性時段內上班不算遲到。\n應下班＝上班時間＋規定時數（含午休）。\n早於彈性起點上班，以起點計。\n" +
                     $"例：上班日 {Time(full.FlexStart)} 前到，應下班 {Time(ExpectedClockOut(earlyArrival, options))}。\n" +
                     $"例：{Time(full.ScheduledStart)} 到，應下班 {Time(ExpectedClockOut(full.ScheduledStart, options))}。"),
                 new(Titles.Late, "晚於彈性終點上班就是遲到，從彈性終點起算。\n遲到時，應下班改為表定下班。\n" +
@@ -72,9 +72,9 @@ public static class AttendanceRules
                     : "遲到與早退都以秒計，彈性時段以外沒有寬限。")),
                 new(Titles.SinglePunch, "判為異常。\n分不出缺的是上班還是下班，所以不算遲到或早退。"),
                 new(Titles.NoPunch, "核准的假單或出差單補足當天工時：算請假。\n沒有表單、只請了部分時段，或表單還在流程中：算異常。"),
-                new(Titles.Forms, "取公文系統已核准與流程中的表單；與當天有交集就列在當天，跨日、半天都一樣。\n暫存、退回、銷單與退回結案不算。\n退回結案是承辦人把退回的單結案存查，不是核准。"),
+                new(Titles.Forms, "取公文系統已核准與流程中的表單。\n與當天有交集就列在當天，跨日、半天都一樣。\n暫存、退回、銷單與退回結案不算。\n退回結案是承辦人把退回的單結案存查，不是核准。"),
                 new(Titles.Coverage, "表單只比時數，不比時段。\n" +
-                    $"核准表單的時數，從當天工時（上班日 {Hours(netHours)} 小時）扣掉；剩下的不多於實際上班的時數，就算補足。\n" +
+                    $"核准表單的時數，從當天工時（上班日 {Hours(netHours)} 小時）扣掉。\n剩下的不多於實際上班的時數，就算補足。\n" +
                     $"遲到時，表單至少要抵掉遲到的部分，晚走不抵遲到。\n{lunch}只算彈性起點到最晚應下班之間，重疊的表單只算一次。\n" +
                     $"例：上班日 {Seconds(slightlyLate)} 到、請 {Time(full.ScheduledStart)}～{Time(halfHour)} 的假，" +
                     $"扣表單後應下班 {Seconds(AdjustedClockOut(slightlyLate, full.ScheduledStart, halfHour, options))}。\n" +
@@ -85,9 +85,9 @@ public static class AttendanceRules
                     $"・{Label(GapCoverage.Unexplained)}：都不夠，並寫出還差多少\n" +
                     "遲到、早退的時間與小計照原本的判定，不因表單改變。"),
                 new(Titles.DayType, "上班日、上午放假、下午放假與放假，依公文系統的假日行事曆。\n放假整天不判定，刷卡照樣列出。\n行事曆沒有這一天時：週末當放假，平日無法判定。"),
-                new(Titles.Undetermined, "公文系統連不上或對不到公文帳號時，表單無法取得；沒刷卡的日子列為無法判定，不算異常。\n" +
+                new(Titles.Undetermined, "公文系統連不上或對不到公文帳號時，表單無法取得。\n沒刷卡的日子列為無法判定，不算異常。\n" +
                     "今天還沒結束時，出勤與異常一律先列為無法判定，也不算遲到。\n" +
-                    "今天的刷卡中午先更新，看得到幾點到，應下班依上班時間先算出來；下班晚上才更新。"),
+                    "今天的刷卡中午先更新，看得到幾點到，應下班依上班時間先算出來。\n下班的刷卡晚上才更新。"),
                 new(Titles.ListedDays, "只列持有卡的日子。\n到職前、換卡空窗、離職後與未來的日子都不列。"),
             ]);
     }

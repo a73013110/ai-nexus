@@ -17,19 +17,20 @@ export function organizationTour(options: {
       target: 'nx-organization-page .organization-import',
       title: '從公文系統匯入',
       description:
-        '部門與主管以公文系統為準時使用。\n開啟時只預覽：新增、綁定同名手建單位、更新與停用。\n確認後才套用；手建的單位不受影響。',
+        '部門與主管以公文系統為準時使用。\n開啟時只預覽：新增、綁定同名手建單位、更新與停用。\n確認後才套用，手建的單位不受影響。',
       side: 'bottom',
     },
     {
       target: 'nx-organization-page .organization-create',
       title: '新增單位',
-      description: '從最上層（例如公司）開始，逐層加入處、部、課；組織最多八層。',
+      description: '從最上層（例如公司）開始，逐層加入處、部、課。\n組織最多八層。',
       side: 'bottom',
     },
     {
       target: 'nx-organization-page .organization-tree .unit-name',
       title: '瀏覽部門樹',
-      description: '點單位查看它的直屬成員，箭頭可展開或收合下層；停用的單位與它的下層以灰字標示。',
+      description:
+        '點單位查看它的直屬成員，箭頭可展開或收合下層。\n停用的單位與它的下層以灰字標示。',
       side: 'right',
     },
     {
@@ -43,7 +44,7 @@ export function organizationTour(options: {
       target: 'nx-organization-page .organization-tree .unit-menu',
       title: '單位操作',
       description:
-        '可編輯、新增下層，或在同層上移、下移。\n刪除只限沒有下層與成員的單位；不再使用的，建議改為停用。',
+        '可編輯、新增下層，或在同層上移、下移。\n刪除只限沒有下層與成員的單位。\n不再使用的，建議改為停用。',
       side: 'right',
     },
     {
@@ -57,13 +58,13 @@ export function organizationTour(options: {
       target: 'nx-organization-page .organization-add-members',
       title: '加入成員',
       description:
-        '開啟全部在職使用者的名單，依主要所屬分組，可篩選。\n勾選多人，一次加入。\n尚未分派部門的人排在最前面；停用的單位不能加入。',
+        '開啟全部在職使用者的名單，依主要所屬分組，可篩選。\n勾選多人，一次加入，尚未分派部門的人排在最前面。\n停用的單位不能加入。',
       side: 'bottom',
     },
     {
       target: 'nx-organization-page .organization-members .person-list',
       title: '主要所屬與主管',
-      description: '一人可屬多個單位但只有一個主要所屬；主管只看直屬單位，不延伸到下層。',
+      description: '一人可屬多個單位但只有一個主要所屬。\n主管只看直屬單位，不延伸到下層。',
       side: 'top',
     },
   ];
@@ -96,7 +97,7 @@ export function unitDialogTour(options: {
         target: 'nx-unit-dialog .unit-parent-field',
         title: options.editing ? '搬到其他上層' : '放在哪個上層',
         description: options.editing
-          ? '換上層時整棵下層跟著搬、成員不變；選單不列出自己、下層與搬過去會超過八層的單位。'
+          ? '換上層時整棵下層跟著搬、成員不變。\n選單不列出自己、下層與搬過去會超過八層的單位。'
           : '新單位排到所選上層的最後，可之後在列表用上移、下移調整順序。',
         side: 'bottom',
       },
@@ -104,13 +105,13 @@ export function unitDialogTour(options: {
         target: 'nx-unit-dialog .unit-head-field',
         title: '首長單位',
         description:
-          '董事會、總經理室等與各處同層的單位，設為首長單位。\n主管管轄上層與層級不比它高的單位；上層不再勾選主管。',
+          '董事會、總經理室等與各處同層的單位，設為首長單位。\n主管管轄上層與層級不比它高的單位。\n上層不再勾選主管。',
         side: 'bottom',
       },
       {
         target: 'nx-unit-dialog .unit-enabled',
         title: '啟用與停用',
-        description: '停用的單位保留成員與歷史，但它與所有下層都不參與資料範圍，也不能再加入成員。',
+        description: '停用的單位保留成員與歷史。\n它與所有下層都不參與資料範圍，也不能再加入成員。',
         side: 'top',
       },
     ],

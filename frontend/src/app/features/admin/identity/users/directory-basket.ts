@@ -83,7 +83,7 @@ const groups = [
       <nx-empty-state>
         <nx-icon name="user" />
         <strong>還沒有選人</strong>
-        <span>在中間的清單勾選人員；切換節點後，已選的人會留在這裡。</span>
+        <span>在中間的清單勾選人員。切換節點後，已選的人會留在這裡。</span>
       </nx-empty-state>
     }`,
 })

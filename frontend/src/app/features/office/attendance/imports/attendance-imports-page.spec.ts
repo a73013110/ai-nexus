@@ -263,7 +263,7 @@ describe('AttendanceImportsPage', () => {
     expect(api.reimport).toHaveBeenCalledWith('2026-10-01', '2026-10-22');
     expect(toast.success).toHaveBeenCalledWith(
       '已重匯 2 個檔案',
-      '1,234 筆刷卡；找不到 20261003.txt。',
+      '1,234 筆刷卡。找不到 20261003.txt。',
     );
     expect(root.querySelector('.imports-failure')).toBeNull();
     expect(api.imports).toHaveBeenCalledTimes(2);

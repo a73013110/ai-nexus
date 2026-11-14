@@ -382,7 +382,7 @@ export class CalendarSyncPage {
       title: '重設 Google 日曆？',
       message: `將從 Google 日曆刪除本系統建立的全部事件，並清除這本日曆的事件與同步紀錄，無法復原。
 手動在 Google 建立的事件不受影響。
-下一輪同步會依公文系統重新建立事件；要讓日曆保持空的，請先關閉同步。`,
+下一輪同步會依公文系統重新建立事件。要讓日曆保持空的，請先關閉同步。`,
       confirm: '重設日曆',
       danger: true,
       typed: calendarId.slice(0, 8),

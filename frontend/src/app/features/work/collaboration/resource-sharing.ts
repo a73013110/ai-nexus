@@ -81,7 +81,7 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
           <section class="form-section" role="group" [attr.aria-labelledby]="id + '-members'">
             <header class="form-section-head">
               <h3 [id]="id + '-members'">具名成員</h3>
-              <p class="form-note">可檢視只能閱讀；可編輯還能修改內容。</p>
+              <p class="form-note">可檢視只能閱讀。可編輯還能修改內容。</p>
             </header>
             <div class="form-section-body">
               <nx-person-picker
@@ -126,7 +126,7 @@ const kindLabels: Record<SharedResourceKind, { noun: string; feature: string }> 
             >
               <header class="form-section-head">
                 <h3 [id]="id + '-groups'">群組</h3>
-                <p class="form-note">群組授權只允許閱讀；協作編輯請加入具名成員。</p>
+                <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
               </header>
               <div class="form-section-body">
                 <nx-choice-groups

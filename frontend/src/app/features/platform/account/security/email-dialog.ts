@@ -38,7 +38,7 @@ import { VerificationCodeField } from './verification-code-field';
       <nx-dialog-header heading="通知信箱" closeLabel="關閉通知信箱" />
       <div class="dialog-body">
         <p class="form-note">
-          驗證碼與帳號安全通知會寄到這裡。新地址要輸入寄到該信箱的驗證碼才會生效；變更後其他裝置上的登入會登出。
+          驗證碼與帳號安全通知會寄到這裡。新地址要輸入寄到該信箱的驗證碼才會生效。變更後其他裝置上的登入會登出。
         </p>
         @if (working.error()) {
           <nx-notice tone="danger" [message]="working.error()" />

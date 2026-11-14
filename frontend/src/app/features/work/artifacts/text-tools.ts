@@ -166,7 +166,7 @@ import { routeOf } from '@core/api/catalog';
             }
             @if (truncated()) {
               <nx-notice tone="warning">
-                模型輸出已達上限，結果可能不完整；請核對或縮小選取範圍後重試。
+                模型輸出已達上限，結果可能不完整。請核對或縮小選取範圍後重試。
               </nx-notice>
             }
           </div>

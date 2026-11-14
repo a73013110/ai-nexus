@@ -28,7 +28,7 @@ export const LOGIN_METHODS: Readonly<Record<LoginMethod, LoginMethodSpec>> = {
     description: '使用管理者設定的本地帳號與密碼。',
     credentials: {
       placeholder: '管理者設定的登入帳號',
-      hint: '使用本地密碼；與 AD 密碼分開管理。',
+      hint: '使用本地密碼。與 AD 密碼分開管理。',
     },
   },
   windows: {

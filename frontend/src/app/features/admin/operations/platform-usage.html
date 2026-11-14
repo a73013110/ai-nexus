@@ -42,7 +42,7 @@
     [class.is-refreshing]="read.refreshing()"
     [attr.aria-busy]="read.refreshing() || null"
   >
-    {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；{{
+    {{ format(stats.requestsWithUsage) }} 次請求回報完整用量。{{
       format(stats.requests - stats.requestsWithUsage)
     }}
     次未完整回報，不估算其用量。累計處理 {{ duration(stats.totalDurationMilliseconds) }}（{{

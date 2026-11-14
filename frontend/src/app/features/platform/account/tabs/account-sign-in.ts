@@ -69,7 +69,7 @@ import { AccountSecurityStore } from '../security/account-security-store';
       @if (session.testing()) {
         <nx-setting-row
           label="測試身分"
-          description="你正以其他使用者的身分檢視工作區；要返回管理者請使用登入者選單。"
+          description="你正以其他使用者的身分檢視工作區。要返回管理者請使用登入者選單。"
         />
       }
     </nx-setting-group>
@@ -89,14 +89,14 @@ export class AccountSignIn {
     const changed = login.passwordChangedAt
       ? `，密碼最後變更 ${formatDate(login.passwordChangedAt)}`
       : '';
-    const only = login.required ? '；這是此帳號唯一的登入方式，不能停用' : '';
+    const only = login.required ? '。這是此帳號唯一的登入方式，不能停用' : '';
     return `本地帳號 ${login.account}${changed}${only}。`;
   });
 
   async disable() {
     const confirmed = await this.confirm().ask({
       title: '停用本地登入',
-      message: '停用後本地密碼會被清除，之後只能用 AD 登入；其他裝置上的登入會登出。',
+      message: '停用後本地密碼會被清除，之後只能用 AD 登入。其他裝置上的登入會登出。',
       confirm: '停用本地登入',
       danger: true,
     });

@@ -79,8 +79,8 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
         label="限制可用模型"
         [description]="
           personal()
-            ? '只能限縮群組授權；勾選的模型仍需群組與平台授權。'
-            : '只授予勾選的模型；未限制時授予所有平台可用模型。'
+            ? '只能限縮群組授權。勾選的模型仍需群組與平台授權。'
+            : '只授予勾選的模型。未限制時授予所有平台可用模型。'
         "
         [checked]="value().restricted"
         [disabled]="disabled()"
@@ -89,13 +89,13 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
       <nx-info-popover label="額度規則" panelLabel="模型授權與額度規則" align="right" [width]="340">
         <ul class="form-note-list">
           @if (personal()) {
-            <li>個人 token 上限優先於群組，可提高或降低；個人模型清單只能限縮群組授權。</li>
+            <li>個人 token 上限優先於群組，可提高或降低。個人模型清單只能限縮群組授權。</li>
           } @else {
             <li>使用者的模型授權取所有有效群組的聯集。</li>
-            <li>各模型只合併有授權的有效群組額度，取最高值，無上限優先；依每位使用者計算。</li>
+            <li>各模型只合併有授權的有效群組額度，取最高值，無上限優先。依每位使用者計算。</li>
           }
           <li>聊天、OCR、文字工具與評測共用預算。</li>
-          <li>執行中及未回報完整用量的請求保留預估額度；實際用量只計模型回報。</li>
+          <li>執行中及未回報完整用量的請求保留預估額度。實際用量只計模型回報。</li>
         </ul>
       </nx-info-popover>
     </div>
@@ -200,13 +200,13 @@ export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraf
         tone="danger"
         [message]="
           personal()
-            ? '尚未勾選模型；儲存後將禁止此帳號使用所有模型。'
-            : '尚未勾選模型；此群組不授予模型，使用者仍可由其他群組取得授權。'
+            ? '尚未勾選模型。儲存後將禁止此帳號使用所有模型。'
+            : '尚未勾選模型。此群組不授予模型，使用者仍可由其他群組取得授權。'
         "
       />
     }
     <p class="form-note">
-      每日上限合計輸入與輸出 tokens，台北時間 08:00 重設；{{
+      每日上限合計輸入與輸出 tokens，台北時間 08:00 重設。{{
         personal()
           ? '0 禁止此帳號生成，留空繼承群組。'
           : '0 表示此群組不提供額度，留空表示此群組不限額度。'

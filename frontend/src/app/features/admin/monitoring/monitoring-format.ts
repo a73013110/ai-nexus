@@ -167,7 +167,7 @@ export function healthHeadline(view: HealthView): HealthHeadline {
     return {
       key: 'stale',
       title: `連線中斷，顯示 ${monitoringTime(view.at)} 的資料`,
-      detail: '正在重新連線；恢復後自動更新。',
+      detail: '正在重新連線。恢復後自動更新。',
       tone: 'warning',
     };
   switch (view.health.status) {
@@ -180,7 +180,7 @@ export function healthHeadline(view: HealthView): HealthHeadline {
         title: `${Math.max(1, critical.length)} 項嚴重問題`,
         detail:
           (first ? `請優先處理：${first.title}` : '請檢查下方的問題清單。') +
-          (others > 0 ? `；另有 ${others} 項需要注意` : ''),
+          (others > 0 ? `。另有 ${others} 項需要注意` : ''),
         tone: 'danger',
       };
     }

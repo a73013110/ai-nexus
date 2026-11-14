@@ -285,7 +285,7 @@ describe('AccessEditorDialog', () => {
     dialog.updateScope('attendance.records', 'managed-tree', 'managerScopes');
     expect(dialog.scopedGrants()[1].manager?.value).toBe('managed-tree');
     expect(dialog.scopedGrants()[1].reach).toBe(
-      '成員只看得到自己的資料；擔任主管的人另外看得到所管單位及所有下層單位的資料。',
+      '成員只看得到自己的資料。擔任主管的人另外看得到所管單位及所有下層單位的資料。',
     );
     // 所有成員選全部時已含主管可看的範圍：改說明已含，也不送出；先前的選擇留著。
     dialog.updateScope('attendance.records', 'all');

@@ -124,7 +124,7 @@ import { describeStep } from './flow-step-draft';
   `,
   template: `<nx-feature-page
       [title]="session.featureName('flow.definitions')"
-      description="每種申請要經過哪些關卡、由誰審核；修改只影響之後送出的申請。"
+      description="每種申請要經過哪些關卡、由誰審核。修改只影響之後送出的申請。"
       density="compact"
     >
       @if (notice()) {

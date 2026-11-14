@@ -77,7 +77,7 @@ describe('monitoring format', () => {
       ),
     ).toMatchObject({
       title: '1 項嚴重問題',
-      detail: '請優先處理：Gitea 呼叫全部失敗；另有 1 項需要注意',
+      detail: '請優先處理：Gitea 呼叫全部失敗。另有 1 項需要注意',
       tone: 'danger',
     });
     expect(healthHeadline(view({ status: 'unobserved', issues: [] }))).toMatchObject({

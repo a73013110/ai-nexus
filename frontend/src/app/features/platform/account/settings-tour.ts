@@ -40,20 +40,20 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-conversation-tab .conversation-input`,
           title: '送出與跟隨',
           description:
-            '關閉「按 Enter 送出」後改用 Ctrl／⌘ + Enter 送出；自動跟隨在你往上閱讀時暫停，不會把畫面拉走。',
+            '關閉「按 Enter 送出」後改用 Ctrl／⌘ + Enter 送出。\n自動跟隨在你往上閱讀時暫停，不會把畫面拉走。',
           side: 'bottom',
         },
         {
           target: `${host} nx-conversation-tab .conversation-defaults`,
           title: '新對話的預設',
           description:
-            '預設模型只列出管理員允許你使用的模型；政策不開放選擇時，由系統指定。\n模型不支援所選思考強度時，改用模型預設。',
+            '預設模型只列出管理員允許你使用的模型。\n政策不開放選擇時，由系統指定。\n模型不支援所選思考強度時，改用模型預設。',
         },
         {
           target: `${host} nx-conversation-tab .conversation-web-search`,
           title: '網路搜尋是否可用',
           description:
-            '啟用時預設關閉；在輸入區按「搜尋網路」，才把該次提問送往搜尋服務。\n未啟用時，輸入區不顯示按鈕，原因寫在這裡。',
+            '啟用時預設關閉。\n在輸入區按「搜尋網路」，才把該次提問送往搜尋服務。\n未啟用時，輸入區不顯示按鈕，原因寫在這裡。',
         },
       ];
     case 'notifications':
@@ -78,7 +78,8 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
         {
           target: `${host} nx-data-tab .data-clear`,
           title: '清除本機草稿',
-          description: '確認後移除這個瀏覽器中你所有未送出的草稿，無法復原；已送出的對話不受影響。',
+          description:
+            '確認後移除這個瀏覽器中你所有未送出的草稿，無法復原。\n已送出的對話不受影響。',
         },
       ];
     case 'account':
@@ -87,21 +88,22 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-account-tab nx-account-profile`,
           title: '個人資料與通知信箱',
           description: options.testing
-            ? '姓名與帳號由公司目錄提供；測試身分期間只能查看，不能變更信箱。'
-            : '姓名與帳號由公司目錄提供。\n通知信箱用來收驗證碼與安全通知；AD 提供的由目錄維護，其他可自行設定，並以驗證碼確認。',
+            ? '姓名與帳號由公司目錄提供。\n測試身分期間只能查看，不能變更信箱。'
+            : '姓名與帳號由公司目錄提供。\n通知信箱用來收驗證碼與安全通知。\nAD 提供的由目錄維護，其他可自行設定，並以驗證碼確認。',
           side: 'bottom',
         },
         {
           target: `${host} nx-account-tab nx-account-sign-in`,
           title: '登入方式',
           description: options.testing
-            ? '顯示目前的登入方式與本地登入狀態；要返回管理者請使用登入者選單。'
-            : '顯示這次的登入方式。\n系統開放時，可另設本地帳號與密碼當備援。\n變更前可能要先確認身分；完成後，其他裝置的登入會登出。',
+            ? '顯示目前的登入方式與本地登入狀態。\n要返回管理者請使用登入者選單。'
+            : '顯示這次的登入方式。\n系統開放時，可另設本地帳號與密碼當備援。\n變更前可能要先確認身分。\n完成後，其他裝置的登入會登出。',
         },
         {
           target: `${host} nx-account-tab nx-account-access`,
           title: '角色與可用功能',
-          description: '依你自己的側欄分組列出角色開放的功能，只供查看；需要更多權限請聯絡管理員。',
+          description:
+            '依你自己的側欄分組列出角色開放的功能，只供查看。\n需要更多權限請聯絡管理員。',
         },
       ];
     case 'usage':
@@ -109,19 +111,19 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
         {
           target: `${host} nx-usage-tab .usage-budget`,
           title: '今日 token 預算',
-          description: '各模型今天還能用多少，輸入與輸出合計，進行中的回覆會先預留；每天重設。',
+          description: '各模型今天還能用多少，輸入與輸出合計，進行中的回覆會先預留。\n每天重設。',
           side: 'bottom',
         },
         {
           target: `${host} nx-usage-tab nx-stat-grid`,
           title: '最近 30 天用量',
-          description: '生成次數、平均耗時與 tokens；tokens 只計模型有回報的紀錄，不估算。',
+          description: '生成次數、平均耗時與 tokens。\ntokens 只計模型有回報的紀錄，不估算。',
           side: 'bottom',
         },
         {
           target: `${host} nx-usage-tab .usage-storage`,
           title: '原檔容量',
-          description: '草稿也計入，同一原檔被多處引用只計一次；群組有給附件空間上限時一併列出。',
+          description: '草稿也計入，同一原檔被多處引用只計一次。\n群組有給附件空間上限時一併列出。',
         },
       ];
     case 'shortcuts':
@@ -130,7 +132,7 @@ function tabSteps(options: SettingsTourOptions): TourSteps {
           target: `${host} nx-shortcuts-tab nx-setting-group`,
           title: '常用按鍵',
           description:
-            '清單與實際綁定的按鍵同一份，依作業系統顯示 ⌘ 或 Ctrl；送出與換行跟著「對話」分頁的 Enter 設定。',
+            '清單與實際綁定的按鍵同一份，依作業系統顯示 ⌘ 或 Ctrl。\n送出與換行跟著「對話」分頁的 Enter 設定。',
           side: 'bottom',
         },
       ];
@@ -150,7 +152,7 @@ export function settingsTour(options: SettingsTourOptions): ProductTourDefinitio
         target: `${host} .settings-sidebar`,
         title: '切換設定分類',
         description:
-          '從左側切換分類，也可用關鍵字（例如「深色」、「Enter」）搜尋；導覽只介紹目前分類，換分類後可再開一次。',
+          '從左側切換分類，也可用關鍵字（例如「深色」、「Enter」）搜尋。\n導覽只介紹目前分類，換分類後可再開一次。',
         side: 'right',
       },
       ...tabSteps(options),

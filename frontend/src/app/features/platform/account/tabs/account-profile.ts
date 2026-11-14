@@ -56,7 +56,7 @@ import { AccountSecurityStore, emailBadge } from '../security/account-security-s
   `,
   template: `<nx-setting-group
     heading="個人資料"
-    description="姓名與帳號由公司目錄提供；需要更正時請聯絡資訊管理人員。"
+    description="姓名與帳號由公司目錄提供。需要更正時請聯絡資訊管理人員。"
   >
     @if (session.me(); as me) {
       <div class="account-identity">
@@ -106,7 +106,7 @@ export class AccountProfile {
   readonly emailDescription = computed(() => {
     const security = this.store.security();
     if (!security) return '';
-    const address = security.email ?? '尚未設定；驗證碼與帳號安全通知會寄到這裡。';
+    const address = security.email ?? '尚未設定。驗證碼與帳號安全通知會寄到這裡。';
     if (security.emailSource === 'directory')
       return `${address}（由公司 AD 提供，需更正請聯絡資訊管理人員）`;
     if (!security.mailAvailable) return `${address}（系統尚未設定寄信，暫時無法驗證）`;

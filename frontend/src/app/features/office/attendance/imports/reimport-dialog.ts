@@ -77,7 +77,7 @@ export function reimportOutcome(result: PunchReimportResult): {
           succeeded.length === 1
             ? `已重匯 ${succeeded[0].fileName}`
             : `已重匯 ${succeeded.length} 個檔案`,
-        description: `${punches} 筆刷卡` + (missing ? `；${missing}` : ''),
+        description: `${punches} 筆刷卡` + (missing ? `。${missing}` : ''),
       }
     : undefined;
   if (!failed.length) return { toast };
@@ -172,7 +172,7 @@ export function reimportOutcome(result: PunchReimportResult): {
         </div>
         <p class="form-note reimport-note">
           <span aria-live="polite">{{ summary() }}</span>
-          檔名日期不是出勤日，檔案可能含前一天深夜的刷卡；不論檔案有沒有變都會重新匯入。
+          檔名日期不是出勤日，檔案可能含前一天深夜的刷卡。不論檔案有沒有變都會重新匯入。
         </p>
       </div>
       <nx-dialog-actions

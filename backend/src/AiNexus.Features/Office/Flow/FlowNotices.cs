@@ -52,7 +52,7 @@ public sealed class FlowNotices(AppDbContext db, FlowCatalog catalog, Notificati
         {
             FlowStatuses.Approved => ("success", $"已核准：{instance.Title}", "你的申請已核准。"),
             FlowStatuses.Rejected => ("info", $"已退回：{instance.Title}", Rejection(flow)),
-            FlowStatuses.Expired => ("info", $"已逾期：{instance.Title}", $"申請超過 {options.Value.ExpireAfterDays} 天沒有完成，已自動結束；需要時請重新申請。"),
+            FlowStatuses.Expired => ("info", $"已逾期：{instance.Title}", $"申請超過 {options.Value.ExpireAfterDays} 天沒有完成，已自動結束。需要時請重新申請。"),
             _ => default((string Severity, string Title, string Message)?),
         };
         if (notice is not { } value) return;
@@ -93,5 +93,5 @@ public sealed class FlowMail : MailTemplate<FlowMailModel>
 
     public override void Body(FlowMailModel model, MailBody body)
         => body.Heading(model.Subject).Paragraph($"{model.DisplayName} 您好，{model.Message}").Button("開啟申請", model.Path)
-            .Note("申請內容請登入 AI Nexus 查看；這封信由系統自動寄出，請勿直接回覆。");
+            .Note("申請內容請登入 AI Nexus 查看。這封信由系統自動寄出，請勿直接回覆。");
 }

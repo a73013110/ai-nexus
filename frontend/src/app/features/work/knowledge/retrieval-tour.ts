@@ -8,7 +8,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .feature-title',
         title: 'AI 回答的依據從這裡找',
         description:
-          '知識庫檢索只用「使用中」索引；這頁管理索引、檢查檢索依賴的服務，並可直接試查結果。',
+          '知識庫檢索只用「使用中」索引。\n這頁管理索引、檢查檢索依賴的服務，並可直接試查結果。',
         side: 'bottom',
       },
       {
@@ -20,7 +20,7 @@ export function retrievalTour(): ProductTourDefinition {
       {
         target: 'nx-retrieval-page .retrieval-rebuild',
         title: '重建索引',
-        description: '在背景重新向量化知識片段，會呼叫向量模型並計入用量；確認後才開始。',
+        description: '在背景重新向量化知識片段，會呼叫向量模型並計入用量。\n確認後才開始。',
         side: 'left',
       },
       {
@@ -34,7 +34,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-clear',
         title: '清除退役向量',
         description:
-          '退役索引的向量保留到清除為止；清除前會確認，原始檔、逐頁文字與索引紀錄都保留。',
+          '退役索引的向量保留到清除為止。\n清除前會確認，原始檔、逐頁文字與索引紀錄都保留。',
         side: 'left',
       },
       {
@@ -54,7 +54,7 @@ export function retrievalTour(): ProductTourDefinition {
         target: 'nx-retrieval-page .retrieval-bench',
         title: '檢索測試台',
         description:
-          '選最多三個你有權限的知識庫、檢索模式與是否重排，輸入問題即可用使用中索引試查。',
+          '選最多三個你有權限的知識庫、檢索模式與是否重排。\n輸入問題，即可用使用中的索引試查。',
       },
       {
         target: 'nx-retrieval-page .retrieval-result',

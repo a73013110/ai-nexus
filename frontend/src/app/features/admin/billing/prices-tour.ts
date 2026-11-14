@@ -19,14 +19,14 @@ export function pricesTour(options: {
         target: 'nx-prices-page .price-view',
         title: '目前價格與價格歷史',
         description:
-          '「目前價格」列出每個已設定的模型與工具適用中的版本，「價格歷史」列出最新 500 個版本與狀態。',
+          '「目前價格」列出每個模型與工具適用中的版本。\n「價格歷史」列出最新 500 個版本與狀態。',
         side: 'bottom',
       },
       {
         target: 'nx-prices-page .price-add',
         title: '新增價格版本',
         description:
-          '版本不可修改；調價就新增下一個版本。\n系統不預填價格，也不推定本機模型為零成本，請依實際方案填寫。',
+          '版本不可修改。\n調價就新增下一個版本。\n系統不預填價格，也不推定本機模型為零成本，請依實際方案填寫。',
         side: 'bottom',
       },
       current && {
@@ -38,12 +38,12 @@ export function pricesTour(options: {
       current && {
         target: 'nx-prices-page .price-current .price-time',
         title: '生效時間',
-        description: '顯示目前版本從何時開始適用；已排定未來版本時，下方註明哪天起改用新版本。',
+        description: '顯示目前版本從何時開始適用。\n已排定未來版本時，下方註明哪天起改用新版本。',
       },
       current && {
         target: 'nx-prices-page .price-current .price-adjust',
         title: '調整某一項',
-        description: '從列開啟對話框，以目前價格為起點；未定價的項目會直接選好該模型或工具。',
+        description: '從列開啟對話框，以目前價格為起點。\n未定價的項目會直接選好該模型或工具。',
         side: 'left',
       },
       !current && {
@@ -68,8 +68,8 @@ export function priceVersionTour(options: {
   copied: boolean;
 }): ProductTourDefinition {
   const target = options.copied
-    ? '已帶入既有版本的欄位；儲存會建立新版本，原版本保持原樣。'
-    : '依名稱選擇已設定或曾定價的模型、知識向量模型或網路搜尋；計費以供應商與原生識別碼對應。';
+    ? '已帶入既有版本的欄位。\n儲存會建立新版本，原版本保持原樣。'
+    : '依名稱選擇已設定或曾定價的模型、知識向量模型或網路搜尋。\n計費以供應商與原生識別碼對應。';
   return {
     steps: [
       {
@@ -82,28 +82,28 @@ export function priceVersionTour(options: {
         target: 'nx-price-version-dialog .price-basis',
         title: '幣別與費用類型',
         description:
-          'API 計費估算依對外方案；內部成本估算是自行制定的本機成本，免費會把費率固定為 0。\n不同幣別分開統計，不換算。',
+          'API 計費估算依對外方案。\n內部成本估算是自行制定的本機成本，免費會把費率固定為 0。\n不同幣別分開統計，不換算。',
         side: 'bottom',
       },
       {
         target: 'nx-price-version-dialog .price-rates',
         title: '費率的單位',
         description:
-          '輸入、快取輸入與輸出以每百萬 tokens 計，最多 8 位小數，快取輸入不得高於一般輸入；每次固定費用另外加計。',
+          '輸入、快取輸入與輸出以每百萬 tokens 計，最多 8 位小數。\n快取輸入不得高於一般輸入。\n每次固定費用另外加計。',
         side: 'bottom',
       },
       {
         target: 'nx-price-version-dialog .price-trigger',
         title: '單次計費時機',
         description:
-          '只決定每次固定費用在成功完成時才計，或開始呼叫就計（包含失敗）；token 費一律依有效用量計算。',
+          '只決定每次固定費用在成功完成時才計，或開始呼叫就計（包含失敗）。\ntoken 費一律依有效用量計算。',
         side: 'top',
       },
       {
         target: 'nx-price-version-dialog .price-effective',
         title: '生效時間',
         description:
-          '以台北時區輸入；留空表示儲存時生效，也可排定未來版本。\n只影響之後的呼叫，已記錄的費用不重算。',
+          '以台北時區輸入。\n留空表示儲存時生效，也可排定未來版本。\n只影響之後的呼叫，已記錄的費用不重算。',
         side: 'top',
       },
       {

@@ -27,7 +27,7 @@ public sealed partial class BackgroundJobWorker(
     TimeProvider clock) : BackgroundService, IResidentService
 {
     public static ResidentServiceDefinition Definition { get; } = new(
-        "jobs.worker", "佇列工作處理", "背景工作", "執行使用者送出的文件辨識、評測、程式碼 Review 等工作。", "有工作就立即處理；每 5 秒檢查其他站台排入的工作");
+        "jobs.worker", "佇列工作處理", "背景工作", "執行使用者送出的文件辨識、評測、程式碼 Review 等工作。", "有工作就立即處理，每 5 秒檢查其他站台排入的工作");
 
     // 同程序排入的工作靠 JobQueueSignal 立即開始；輪詢只負責其他程序排入的工作與到期的租約。
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(5);

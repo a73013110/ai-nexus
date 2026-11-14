@@ -29,7 +29,7 @@ export class AppUpdateNotice {
           id: 'app-update',
           tone: 'info',
           title: `已更新到 v${server}`,
-          description: '重新整理後使用新版；尚未送出的內容請先儲存。',
+          description: '重新整理後使用新版。尚未送出的內容請先儲存。',
           action: { label: '重新整理', run: () => window.location.reload() },
           duration: 0,
         }),

@@ -374,7 +374,7 @@ export class ProjectsPage {
       !(await this.confirm().ask({
         title: `刪除「${current.resource.name}」？`,
         message:
-          '專案與繼承的成員權限將移除。對話、文件與成果會保留在各自擁有者的工作區；既有的直接分享權限會保留。若只是暫停工作，可選擇封存專案。',
+          '專案與繼承的成員權限將移除。對話、文件與成果會保留在各自擁有者的工作區。既有的直接分享權限會保留。若只是暫停工作，可選擇封存專案。',
         confirm: '刪除專案',
         danger: true,
       })) ||

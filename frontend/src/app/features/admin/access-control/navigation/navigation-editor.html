@@ -1,6 +1,6 @@
 <div class="page-toolbar">
   <p class="form-note">
-    側欄依這裡的順序與層級顯示（最多四層），每個人只看到有權限的頁面與可見的外部連結；空分群不顯示，只要有一項就照常顯示分群。拖曳把手或在把手上按方向鍵調整位置。
+    側欄依這裡的順序與層級顯示（最多四層），每個人只看到有權限的頁面與可見的外部連結。空分群不顯示，只要有一項就照常顯示分群。拖曳把手或在把手上按方向鍵調整位置。
   </p>
   <nx-action-menu
     label="新增選單項目"
@@ -163,7 +163,7 @@
             [value]="m.parentId"
             (valueChange)="moving.set({ row: m.row, parentId: $event })"
         /></label>
-        <p class="form-note">放在該層的最後；分群最多四層，同一層不能重複同一頁面。</p>
+        <p class="form-note">放在該層的最後。分群最多四層，同一層不能重複同一頁面。</p>
       </div>
       <nx-dialog-actions
         label="移動"

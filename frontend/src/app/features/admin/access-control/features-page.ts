@@ -16,7 +16,7 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.features')"
-      description="調整功能名稱與開關；停用的功能不授予任何人。"
+      description="調整功能名稱與開關。停用的功能不授予任何人。"
       layoutMode="data"
       [tour]="tour()"
     >

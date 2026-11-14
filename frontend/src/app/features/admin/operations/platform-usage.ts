@@ -115,7 +115,7 @@ export class PlatformUsage {
         name: providerName(provider.id),
         tone: (provider.available ? 'success' : 'danger') as BadgeTone,
         status: provider.available ? '已連線' : '無法連線',
-        notice: provider.notice || '模型目錄可正常讀取；圖片能力依各模型實際回報判定。',
+        notice: provider.notice || '模型目錄可正常讀取。圖片能力依各模型實際回報判定。',
       })),
       {
         id: 'web-search',

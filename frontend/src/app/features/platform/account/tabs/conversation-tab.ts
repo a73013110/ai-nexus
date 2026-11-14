@@ -76,7 +76,7 @@ import { SettingsStore } from '../settings-store';
           [label]="'網路搜尋 · ' + (search.available ? '已啟用' : '尚未啟用')"
           [description]="
             search.available
-              ? '預設關閉；在輸入區按「搜尋網路」後，只把該次提問送往搜尋服務。'
+              ? '預設關閉。在輸入區按「搜尋網路」後，只把該次提問送往搜尋服務。'
               : search.notice
           "
         >

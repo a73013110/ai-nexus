@@ -16,16 +16,16 @@ export function mailMessagesTour(options: {
       {
         target: `${PAGE} .feature-title`,
         title: '寄送紀錄回答什麼',
-        description: `系統信都先排入佇列再由背景寄出，這裡逐封記下等待、寄送中、已寄出或失敗與每次嘗試；「已寄出」只代表郵件伺服器已接受，不代表已進收件匣${
+        description: `系統信先排入佇列再由背景寄出，這裡逐封記下狀態與每次嘗試。\n「已寄出」只代表郵件伺服器已接受，不代表已進收件匣${
           options.logs ? `。非預期失敗的查證代碼可到「${options.logs}」查` : ''
-        }。有進行中的信時自動更新，不必重新整理。`,
+        }。\n有進行中的信時自動更新，不必重新整理。`,
         side: 'bottom',
       },
       {
         target: `${PAGE} .mail-diagnose`,
         title: '連線診斷',
         description:
-          '寄不出時先查這裡。\n以目前設定跑一次 SMTP 對話但不寄信，逐步標出連線、TLS、憑證或帳密在哪一步失敗。\n傳輸未啟用時不能使用。',
+          '寄不出時先查這裡。\n以目前設定跑一次 SMTP 對話但不寄信，標出連線、TLS、憑證或帳密哪一步失敗。\n傳輸未啟用時不能使用。',
         side: 'bottom',
       },
       options.resend && {
@@ -39,13 +39,13 @@ export function mailMessagesTour(options: {
         target: `${PAGE} .mail-test`,
         title: '寄信測試',
         description:
-          '選一封已登記的系統信，參數預填範例值，照常排隊寄出，主旨加上「[測試]」；結果出現在第一筆紀錄。',
+          '選一封已登記的系統信，參數預填範例值，照常排隊寄出，主旨加上「[測試]」。\n結果出現在第一筆紀錄。',
         side: 'bottom',
       },
       {
         target: `${PAGE} nx-view-switch`,
         title: '依狀態切換',
-        description: '等待中、寄送中、已寄出、失敗與已取消；點選立即套用，不必按「查詢」。',
+        description: '等待中、寄送中、已寄出、失敗與已取消。\n點選立即套用，不必按「查詢」。',
         side: 'bottom',
       },
       queryBarStep(PAGE, {
@@ -54,7 +54,7 @@ export function mailMessagesTour(options: {
       {
         target: `${PAGE} .mail-table thead`,
         title: '寄送紀錄',
-        description: `由新到舊列出狀態、遮罩後的收件者、主旨與嘗試次數；「等待重試」是失敗過、等下次嘗試的信，失敗會附原因。點主旨或整列開啟詳情${
+        description: `由新到舊列出狀態、遮罩後的收件者、主旨與嘗試次數。\n「等待重試」是失敗過、等下次嘗試的信，失敗會附原因。\n點主旨或整列開啟詳情${
           options.resend ? '，可立即重試或重寄' : ''
         }。`,
         side: 'bottom',
@@ -85,33 +85,33 @@ export function mailDetailTour(options: {
         target: `${DRAWER} .mail-retry`,
         title: '立即重試',
         description:
-          '不等下次嘗試時間，現在就寄同一封（Message-ID 不變）；郵件伺服器暫停寄送中也會一併恢復。',
+          '不等下次嘗試時間，現在就寄同一封（Message-ID 不變）。\n郵件伺服器暫停寄送中也會一併恢復。',
         side: 'top',
       },
       options.action === 'resend' && {
         target: `${DRAWER} .mail-resend`,
         title: '重寄',
-        description: '以原內容建立一封新信，原紀錄不變，新信記下重寄來源；連點也只會建立一封。',
+        description: '以原內容建立一封新信，原紀錄不變，新信記下重寄來源。\n連點也只會建立一封。',
         side: 'top',
       },
       options.attempts && {
         target: `${DRAWER} .mail-attempts`,
         title: '寄送嘗試',
         description: `每次嘗試的結果、SMTP 狀態碼、失敗在哪一步與遮罩後的伺服器回應${
-          options.logs ? `；非預期失敗附查證代碼，可到「${options.logs}」查` : ''
+          options.logs ? `。\n非預期失敗附查證代碼，可到「${options.logs}」查` : ''
         }。`,
       },
       {
         target: `${DRAWER} .mail-body-heading`,
         title: '內文與保存期限',
         description:
-          '一般信可檢視寄出的內文；驗證碼等敏感信不保存可檢視的內文。\n內文、收件原址與紀錄，依保存期限分別清除。',
+          '一般信可檢視寄出的內文。\n驗證碼等敏感信不保存可檢視的內文。\n內文、收件原址與紀錄，依保存期限分別清除。',
       },
       {
         target: `${DRAWER} .mail-relations`,
         title: '關聯識別',
         description:
-          '訊息 ID、Message-ID、批次與 TraceId 可直接複製；Message-ID 就是信件標頭的值，可拿去郵件伺服器查投遞結果。',
+          '訊息 ID、Message-ID、批次與 TraceId 可直接複製。\nMessage-ID 就是信件標頭的值，可拿去郵件伺服器查投遞結果。',
       },
       {
         target: `${DRAWER} nx-drawer-pager`,

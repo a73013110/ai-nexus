@@ -118,7 +118,7 @@ public sealed class PdfRenderer(IOptions<PdfOptions> options) : IAsyncDisposable
 
     private static ExternalServiceException Unavailable(Exception? error) => new(
         PdfRendererUnavailable,
-        "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。",
+        "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限。可先匯出 Word。",
         error);
 
     private static async Task CloseAsync(IBrowser target)

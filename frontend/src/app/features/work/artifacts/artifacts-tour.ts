@@ -28,7 +28,7 @@ export function artifactsTour(options: { chat: boolean }): ProductTourDefinition
       {
         target: 'nx-artifacts-page .resource-card',
         title: '打開成果',
-        description: '卡片顯示目前版本、你的權限與最後更新時間；點選進入成果頁閱讀、編輯或匯出。',
+        description: '卡片顯示目前版本、你的權限與最後更新時間。\n點選進入成果頁閱讀、編輯或匯出。',
       },
       {
         target: 'nx-artifacts-page .artifact-create',
@@ -65,7 +65,7 @@ export function artifactTour(options: {
       target: 'nx-artifacts-page .artifact-version',
       title: '切換版本',
       description:
-        '每次儲存都建立新版本，舊版本保持不變。\n檢視舊版本時，可「將此版帶入編輯」；儲存後成為最新版本。',
+        '每次儲存都建立新版本，舊版本保持不變。\n檢視舊版本時，可「將此版帶入編輯」。\n儲存後成為最新版本。',
       side: 'bottom',
     },
     options.editable
@@ -73,14 +73,15 @@ export function artifactTour(options: {
           target: 'nx-artifacts-page .artifact-toolbar nx-view-switch',
           title: '閱讀、編輯或並排預覽',
           description: options.editing
-            ? '在閱讀、編輯與並排預覽之間切換；並排預覽一邊修改 Markdown、一邊看排版結果。'
-            : '切到「編輯」或「並排預覽」即可修改；在編輯區選取文字，可交給 AI 改寫、摘要、解釋或翻譯。',
+            ? '在閱讀、編輯與並排預覽之間切換。\n並排預覽一邊修改 Markdown、一邊看排版結果。'
+            : '切到「編輯」或「並排預覽」即可修改。\n在編輯區選取文字，可交給 AI 改寫、摘要、解釋或翻譯。',
           side: 'bottom',
         }
       : {
           target: 'nx-artifacts-page .artifact-toolbar nx-view-switch',
           title: '閱讀成果',
-          description: '你目前只能閱讀這個版本；具編輯權限的成員在最新版本可切換到編輯或並排預覽。',
+          description:
+            '你目前只能閱讀這個版本。\n具編輯權限的成員在最新版本可切換到編輯或並排預覽。',
           side: 'bottom',
         },
     options.editing && {
@@ -98,13 +99,13 @@ export function artifactTour(options: {
     {
       target: 'nx-artifacts-page .artifact-export',
       title: '匯出已儲存的版本',
-      description: '匯出目前檢視的版本為 Word、PDF 或 Markdown；尚未儲存的修改不會包含在內。',
+      description: '匯出目前檢視的版本為 Word、PDF 或 Markdown。\n尚未儲存的修改不會包含在內。',
       side: 'bottom',
     },
     options.manage && {
       target: 'nx-artifacts-page .artifact-menu',
       title: '分享與權限',
-      description: `「成果操作」可${options.shared ? '建立唯讀分享、' : ''}設定具名的讀者、編輯者或唯讀群組，或移除成果文件與所有版本。`,
+      description: `「成果操作」可${options.shared ? '建立唯讀分享、' : ''}設定具名的讀者、編輯者或唯讀群組。\n也可移除成果文件與所有版本。`,
       side: 'bottom',
     },
   ];

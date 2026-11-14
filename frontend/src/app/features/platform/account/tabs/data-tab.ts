@@ -39,7 +39,7 @@ import { SettingsStore } from '../settings-store';
       <nx-setting-row
         class="data-clear"
         label="清除本機草稿"
-        description="移除這個瀏覽器中你所有未送出的草稿；已送出的對話不受影響。"
+        description="移除這個瀏覽器中你所有未送出的草稿。已送出的對話不受影響。"
       >
         <button type="button" class="danger-button" (click)="clearDrafts()">清除草稿</button>
       </nx-setting-row>

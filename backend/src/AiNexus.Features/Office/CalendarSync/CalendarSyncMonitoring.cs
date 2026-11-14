@@ -40,7 +40,7 @@ internal sealed class CalendarSyncMonitoring(AppDbContext db, ScheduledTasks tas
         var (status, summary) =
             check is { Status: SyncRunStatuses.Failed } ? (SubsystemStates.Failing, $"最近一輪同步無法完成（{check.ErrorCode}），請到日曆同步頁查看原因。")
             : check is { HeldCount: > 0 } ? (SubsystemStates.Degraded, $"{check.HeldCount} 個事件待移除，超過安全閥門檻，等待管理員確認。")
-            : failed > 0 ? (SubsystemStates.Degraded, $"{failed} 個事件推送失敗，會自動重試；詳見日曆同步頁。")
+            : failed > 0 ? (SubsystemStates.Degraded, $"{failed} 個事件推送失敗，會自動重試。詳見日曆同步頁。")
             : stale ? (SubsystemStates.Degraded, "有事件等待同步超過兩輪，請確認背景同步是否正常執行。")
             : check is null ? (SubsystemStates.Healthy, "等待第一輪同步。")
             : (SubsystemStates.Healthy, "Google 日曆同步正常。");

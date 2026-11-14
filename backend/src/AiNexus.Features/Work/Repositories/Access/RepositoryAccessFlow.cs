@@ -16,7 +16,7 @@ internal sealed class RepositoryAccessFlow(AppDbContext db, RepositoryAccess acc
     public const string Kind = "repository-access";
     public const string PermissionFact = "permission";
 
-    public static readonly FlowKindDefinition Definition = new(Kind, "儲存庫權限", "申請 Gitea 儲存庫的讀取或寫入權限；核准後自動加入協作者。")
+    public static readonly FlowKindDefinition Definition = new(Kind, "儲存庫權限", "申請 Gitea 儲存庫的讀取或寫入權限。核准後自動加入協作者。")
     {
         Facts = [new(PermissionFact, "申請的權限", [new(RepositoryPermissions.Read, "讀取"), new(RepositoryPermissions.Write, "寫入")])],
     };

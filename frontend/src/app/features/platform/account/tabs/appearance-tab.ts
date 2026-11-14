@@ -43,7 +43,7 @@ const pixels = (values: number[]) =>
       />
       <nx-setting-row
         label="內容寬度"
-        description="對話與輸入區同步調整；窄版適合專注閱讀，寬版適合表格。"
+        description="對話與輸入區同步調整。窄版適合專注閱讀，寬版適合表格。"
         [options]="widths"
         [value]="store.draft().readingWidth"
         (valueChange)="store.update('readingWidth', $event)"

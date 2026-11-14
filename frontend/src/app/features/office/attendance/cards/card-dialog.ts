@@ -91,7 +91,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                   <header class="form-section-head">
                     <h3 [id]="id + '-card'">卡號</h3>
                     <p class="form-note">
-                      刷過的卡號匯入時會自動出現；這裡用來先建立還沒刷過的新卡。
+                      刷過的卡號匯入時會自動出現。這裡用來先建立還沒刷過的新卡。
                     </p>
                   </header>
                   <div class="form-section-body">
@@ -131,7 +131,7 @@ const sameDraft = (a: CardDraft, b: CardDraft) =>
                   <div class="form-section-body">
                     <nx-checkbox
                       label="在出勤紀錄隱藏"
-                      description="例如訪客卡、公務卡；HR 看全公司出勤時不列出，本人與主管照常看得到。"
+                      description="例如訪客卡、公務卡。HR 看全公司出勤時不列出，本人與主管照常看得到。"
                       [checked]="e.draft.hidden"
                       [disabled]="store.busy()"
                       (checkedChange)="update('hidden', $event)"

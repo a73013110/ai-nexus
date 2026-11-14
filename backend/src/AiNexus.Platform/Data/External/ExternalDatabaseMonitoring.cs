@@ -36,8 +36,8 @@ internal sealed class ExternalDatabaseMonitoring<TDatabase>(ExternalDatabase<TDa
         var (status, summary) =
             !configured ? (SubsystemStates.Idle, $"未設定連線（{DatabasesOptions.Section}:{TDatabase.Name}），{dependents}無法使用。")
             : state.Outage is ExternalFailure.Timeout ? (SubsystemStates.Failing, $"回應逾時，{dependents}暫時無法使用。")
-            : state.Outage is not null ? (SubsystemStates.Failing, $"連不上，{dependents}暫時無法使用；請確認主機與帳號。")
-            : rejected ? (SubsystemStates.Degraded, $"1 小時內有查詢被拒（資料表、欄位或授權不符），部分{dependents}無法使用；請確認帳號的授權。")
+            : state.Outage is not null ? (SubsystemStates.Failing, $"連不上，{dependents}暫時無法使用。請確認主機與帳號。")
+            : rejected ? (SubsystemStates.Degraded, $"1 小時內有查詢被拒（資料表、欄位或授權不符），部分{dependents}無法使用。請確認帳號的授權。")
             : state.LastSuccessAt is null ? (SubsystemStates.Idle, "尚未查詢。")
             : (SubsystemStates.Healthy, "可正常查詢。");
 

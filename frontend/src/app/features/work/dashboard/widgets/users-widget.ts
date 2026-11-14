@@ -36,7 +36,7 @@ import { DashboardStore } from '../dashboard-store';
     }
   `,
   template: `<header>
-      <p>依目前選擇的幣別與費用類型；匯出涵蓋已套用的範圍與期間。</p>
+      <p>依目前選擇的幣別與費用類型。匯出涵蓋已套用的範圍與期間。</p>
       @if (store.appliedOwner()) {
         <button type="button" class="secondary-button" (click)="store.viewOwner('')">
           查看所有人

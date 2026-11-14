@@ -175,7 +175,7 @@
                           [pending]="running.pendingFor(task.key)"
                           [disabled]="task.cancelRequested"
                           [attr.aria-label]="'停止' + task.name"
-                          title="停止這一輪；已完成的部分會保留"
+                          title="停止這一輪。已完成的部分會保留"
                           (click)="act(task, 'cancel')"
                         >
                           <nx-icon name="stop" />
@@ -215,7 +215,7 @@
                           class="icon-button"
                           [disabled]="running.pendingFor(task.key) || phase === 'unavailable'"
                           [attr.aria-label]="'暫停排程：' + task.name"
-                          title="暫停依排程執行；仍可手動執行"
+                          title="暫停依排程執行。仍可手動執行"
                           (click)="act(task, 'pause')"
                         >
                           <nx-icon name="pause" />
@@ -296,7 +296,7 @@
             <div table-toolbar class="ui-table-toolbar"><h2>執行紀錄</h2></div>
             <table>
               <caption class="sr-only">
-                這個任務每一輪的開始時間、觸發方式與結果；欄位標題可排序與篩選。
+                這個任務每一輪的開始時間、觸發方式與結果。欄位標題可排序與篩選。
               </caption>
               <colgroup>
                 <col nxTableColumn="startedAt" class="scheduling-time-column" />
@@ -378,7 +378,7 @@
       <div table-toolbar class="ui-table-toolbar"><h2>佇列工作</h2></div>
       <table>
         <caption class="sr-only">
-          使用者送出的文件辨識、評測、程式碼 Review 等背景工作；欄位標題可排序與篩選。
+          使用者送出的文件辨識、評測、程式碼 Review 等背景工作。欄位標題可排序與篩選。
         </caption>
         <colgroup>
           <col nxTableColumn="createdAt" class="scheduling-time-column" />

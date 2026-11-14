@@ -50,8 +50,8 @@ internal sealed class PunchImportMonitoring(AppDbContext db, ScheduledTasks task
 
         var (status, summary) =
             !settings.Enabled ? (SubsystemStates.Idle, "刷卡匯入未啟用，不會自動掃描打卡檔。")
-            : sourceUnreadable ? (SubsystemStates.Failing, "讀不到打卡檔來源資料夾，匯入已暫停；請確認網路共用與 IIS 集區身分的讀取權限。")
-            : failedFiles > 0 ? (SubsystemStates.Degraded, $"{failedFiles} 個打卡檔最近一次匯入失敗，出勤資料可能不是最新；詳見匯入紀錄。")
+            : sourceUnreadable ? (SubsystemStates.Failing, "讀不到打卡檔來源資料夾，匯入已暫停。請確認網路共用與 IIS 集區身分的讀取權限。")
+            : failedFiles > 0 ? (SubsystemStates.Degraded, $"{failedFiles} 個打卡檔最近一次匯入失敗，出勤資料可能不是最新。詳見匯入紀錄。")
             : missed is { } missedDay ? (SubsystemStates.Degraded, $"{missedDay:yyyy-MM-dd} 是工作日卻沒有成功匯入，請確認 HAMS 的接收與轉出排程。")
             : lastSuccess is null ? (SubsystemStates.Idle, "尚未匯入任何打卡檔。")
             : (SubsystemStates.Healthy, "打卡檔匯入正常。");

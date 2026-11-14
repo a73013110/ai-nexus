@@ -19,14 +19,14 @@ export function usageTour(options: {
         target: 'nx-usage-page .feature-title',
         title: '看全平台的 AI 用量',
         description:
-          '彙整所有使用者的生成次數、tokens 與儲存空間，並檢查模型供應商與網路搜尋是否可用；只能讀取，不會變更設定。',
+          '彙整所有使用者的生成次數、tokens 與儲存空間。\n檢查模型供應商與網路搜尋是否可用。\n只能讀取，不會變更設定。',
         side: 'bottom',
       },
       {
         target: 'nx-usage-page .usage-period',
         title: '固定最近 30 天',
         description:
-          '含今天共 30 天，以 UTC 日界切分，涵蓋全平台、不分部門，不能自訂期間；右側按鈕重新讀取最新數字。',
+          '含今天共 30 天，以 UTC 日界切分，涵蓋全平台、不分部門，不能自訂期間。\n右側按鈕重新讀取最新數字。',
         side: 'bottom',
       },
       {
@@ -39,9 +39,9 @@ export function usageTour(options: {
       !options.empty && {
         target: 'nx-usage-page .usage-coverage',
         title: 'tokens 只計模型回報',
-        description: `tokens 只加總模型實際回報的數字，未完整回報的請求不估算、也不當成零，次數另列於此。${
+        description: `tokens 只加總模型實際回報的數字。\n未完整回報的請求不估算、也不當成零，次數另列於此。${
           options.dashboard
-            ? `此頁不算金額；費用依${prices}在呼叫當時的價格計算，到「${options.dashboard}」切換「整個平台」查看與匯出 CSV。`
+            ? `\n此頁不算金額，費用依${prices}在呼叫當時的價格計算，到「${options.dashboard}」切換「整個平台」查看與匯出 CSV。`
             : ''
         }`,
       },
@@ -49,20 +49,20 @@ export function usageTour(options: {
         target: 'nx-usage-page .usage-models',
         title: '各模型使用狀況',
         description: options.empty
-          ? '區間內還沒有模型使用紀錄；有生成後會依請求數列出每個模型的失敗率、tokens 與處理時間。'
-          : '依請求數由多到少排列，附失敗率、輸入與輸出 tokens、處理時間與未完整回報次數，用來找出常用或常失敗的模型。',
+          ? '區間內還沒有模型使用紀錄。\n有生成後會依請求數列出每個模型的失敗率、tokens 與處理時間。'
+          : '依請求數由多到少排列，找出常用或常失敗的模型。\n附失敗率、輸入與輸出 tokens、處理時間與未完整回報次數。',
       },
       !options.empty && {
         target: 'nx-usage-page .usage-kinds',
         title: '用量從哪裡來',
         description:
-          '把請求依對話、文字處理、評測、圖片辨識、知識向量與網路搜尋等來源分類，占比以請求數計算。',
+          '把請求依來源分類，占比以請求數計算。\n來源包括對話、文字處理、評測、圖片辨識、知識向量與網路搜尋。',
       },
       {
         target: 'nx-usage-page .usage-services',
         title: '服務狀態',
         description:
-          '模型供應商顯示能否讀取模型目錄，網路搜尋顯示是否已設定；無法連線時看說明欄的原因。',
+          '模型供應商顯示能否讀取模型目錄，網路搜尋顯示是否已設定。\n無法連線時看說明欄的原因。',
       },
     ],
   };

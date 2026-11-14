@@ -24,7 +24,7 @@ export function jobsTour(options: {
       target: 'nx-jobs-page nx-resource-gallery nx-view-switch',
       title: '依狀態篩選',
       description:
-        '「處理中」列出排隊與執行中的任務；「需要處理」集中失敗或已停止的任務，方便重試。',
+        '「處理中」列出排隊與執行中的任務。\n「需要處理」集中失敗或已停止的任務，方便重試。',
       side: 'bottom',
     },
     {

@@ -200,7 +200,7 @@ const commentLimit = 20_000;
         <nx-dialog-header [heading]="'貼到 Pull Request #' + detail()?.review?.pullRequest" />
         <div class="dialog-body">
           <p class="form-note">
-            會以你的 Gitea 帳號留言，所有能看到這個 PR 的人都看得到；每份 review 只能貼一次。
+            會以你的 Gitea 帳號留言，所有能看到這個 PR 的人都看得到。每份 review 只能貼一次。
           </p>
           <label
             >留言內容<textarea

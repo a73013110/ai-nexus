@@ -21,7 +21,7 @@ export function sharesTour(options: {
       {
         target: 'nx-shared-page .feature-title',
         title: '收到的分享集中閱讀',
-        description: `同事以具名唯讀方式分享給你的對話與成果文件都在這裡，只有指定帳號能開啟。${places.length ? `你也可以在${places.join('或')}建立分享。` : ''}`,
+        description: `同事以具名唯讀方式分享給你的對話與成果文件都在這裡，只有指定帳號能開啟。${places.length ? `\n你也可以在${places.join('或')}建立分享。` : ''}`,
         side: 'bottom',
       },
       {
@@ -76,7 +76,7 @@ export function shareTour(options: {
         : {
             target: 'nx-shared-page .share-content',
             title: '分享當下的對話',
-            description: `這是建立分享時的對話分支快照，之後的新訊息不會出現；知識引用只展開已分享的摘要${options.attachments ? '，附件可直接預覽或下載' : ''}。`,
+            description: `這是建立分享時的對話分支快照，之後的新訊息不會出現。\n知識引用只展開已分享的摘要${options.attachments ? '，附件可直接預覽或下載' : ''}。`,
           },
       {
         target: 'nx-shared-page .share-info',
@@ -87,7 +87,7 @@ export function shareTour(options: {
         target: 'nx-shared-page .share-menu',
         title: '撤銷分享',
         description:
-          '「分享操作」可撤銷分享；收件者會立即無法閱讀或下載附件。\n原始內容保留，但已下載或複製的內容無法收回。',
+          '「分享操作」可撤銷分享。\n收件者會立即無法閱讀或下載附件。\n原始內容保留，但已下載或複製的內容無法收回。',
         side: 'bottom',
       },
     ],

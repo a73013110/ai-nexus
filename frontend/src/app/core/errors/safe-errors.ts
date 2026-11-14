@@ -11,8 +11,8 @@ export const ISSUE_CODE = /^NX-[a-f\d]{32}$/i;
 export const TRACE_ID = /^[a-f\d]{32}$/i;
 const localIssues = new WeakMap<object, string>();
 const localValidationHints = {
-  storageLimit: '容量請輸入 0 至 1,000,000 GB，最多九位小數；留空可恢復群組或預設上限。',
-  tokenLimit: 'token 上限需為 0 至 1,000,000,000,000 的整數；留空繼承設定。',
+  storageLimit: '容量請輸入 0 至 1,000,000 GB，最多九位小數。留空可恢復群組或預設上限。',
+  tokenLimit: 'token 上限需為 0 至 1,000,000,000,000 的整數。留空繼承設定。',
   attachmentQuota: publicErrorHints['attachment_quota'],
   featureAccess: publicErrorHints['feature_forbidden'],
   evaluationFileSize: '題庫檔案最多 1.4 MB。',
@@ -53,7 +53,7 @@ export function systemProblem(issueCode?: string | null): string {
 /** 頁面本身的例外：沒有請求失敗，因此建議先重新整理，再聯絡管理員。 */
 export function pageProblem(issueCode: string): string {
   return validIssueCode(issueCode)
-    ? `頁面發生非預期錯誤，若畫面異常請重新整理；反覆發生再聯絡管理員。查證代碼：${issueCode}`
+    ? `頁面發生非預期錯誤，若畫面異常請重新整理。反覆發生再聯絡管理員。查證代碼：${issueCode}`
     : `頁面發生非預期錯誤，若畫面異常請重新整理。本機問題代碼：${localPattern.test(issueCode) ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
 }
 /** 沒有 HTTP 狀態的已記錄失敗（背景工作）：代碼有對應時，提供經過審閱的提示。 */

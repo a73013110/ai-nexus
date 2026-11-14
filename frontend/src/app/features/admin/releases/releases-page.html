@@ -25,7 +25,7 @@
       @if (status.value()?.compatibility === 'incompatible') {
         <nx-notice
           tone="danger"
-          message="資料庫低於這一版程式需要的版本，部分功能可能失敗；請先執行這一版的 update.sql。"
+          message="資料庫低於這一版程式需要的版本，部分功能可能失敗。請先執行這一版的 update.sql。"
         />
       }
       @if (status.value()?.hasSnapshot === false) {
@@ -111,7 +111,7 @@
         </button>
         <table class="releases-table">
           <caption class="sr-only">
-            與這一版應有結構不同的物件；選取後並排顯示差異。
+            與這一版應有結構不同的物件。選取後並排顯示差異。
           </caption>
           <thead>
             <tr>

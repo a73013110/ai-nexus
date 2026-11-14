@@ -75,7 +75,7 @@ export function cardDetailTour(options: WriteAccess): ProductTourDefinition {
         target: `${CARD_DRAWER} .cards-assign`,
         title: '指派或轉給其他人',
         description:
-          '搜尋平台使用者；新進員工還沒有帳號時，選「使用姓名」。\n卡片已有人持有時就是轉給其他人，前一段在新的開始時間結束。',
+          '搜尋平台使用者。\n新進員工還沒有帳號時，選「使用姓名」。\n卡片已有人持有時就是轉給其他人，前一段在新的開始時間結束。',
         side: 'bottom',
       },
       {
@@ -165,7 +165,7 @@ export function reimportTour(options: { mode: 'single' | 'range' }): ProductTour
         : {
             target: `${REIMPORT} .reimport-range`,
             title: '開始與結束',
-            description: `含頭尾，結束不能早於開始；超過 ${MAX_REIMPORT_DAYS} 天請分次。
+            description: `含頭尾，結束不能早於開始。\n超過 ${MAX_REIMPORT_DAYS} 天請分次。
 區間內找不到的檔會略過，完成後一起列出。`,
             side: 'bottom',
           },
@@ -173,7 +173,7 @@ export function reimportTour(options: { mode: 'single' | 'range' }): ProductTour
         target: `${REIMPORT} .reimport-note`,
         title: '檔名日期不是出勤日',
         description:
-          '檔內可能有前一天深夜的刷卡，出勤日依刷卡時間，不看檔名。\n成功的檔以通知回報；失敗的檔與原因留在頁面上方。',
+          '檔內可能有前一天深夜的刷卡，出勤日依刷卡時間，不看檔名。\n成功的檔以通知回報。\n失敗的檔與原因留在頁面上方。',
         side: 'top',
       },
     ],
@@ -208,15 +208,15 @@ export function attendanceCalendarTour(
         target: `${CALENDAR} .calendar-view-switch`,
         title: '月曆或清單',
         description:
-          '月曆一眼看出整月的放假。\n清單逐日列出上午、下午與備註；窄螢幕的月曆只留底色，要看細節請改用清單。',
+          '月曆一眼看出整月的放假。\n清單逐日列出上午、下午與備註。\n窄螢幕的月曆只留底色，要看細節請改用清單。',
         side: 'bottom',
       },
       calendar && {
         target: `${CALENDAR} nx-month-calendar`,
         title: editable ? '點日期修改' : '讀月曆',
         description: `一週從週日開始。
-放假的日子塗底色；半天放假只塗上半格（上午）或下半格（下午）。
-週末上班會標出來。${editable ? '\n點日期開啟編輯；方向鍵移動，Enter 開啟。' : ''}`,
+放假的日子塗底色。\n半天放假只塗上半格（上午）或下半格（下午）。
+週末上班會標出來。${editable ? '\n點日期開啟編輯。\n方向鍵移動，Enter 開啟。' : ''}`,
         side: 'top',
       },
       calendar && {
@@ -280,7 +280,7 @@ export function attendanceRecordsTour(options: {
       purposeStep(
         RECORDS,
         '每天的出勤判定',
-        '依刷卡、假日行事曆與假單，逐日判定。\n只列出期間內持有卡的人；看得到誰，依你的資料範圍而定。',
+        '依刷卡、假日行事曆與假單，逐日判定。\n只列出期間內持有卡的人。\n看得到誰，依你的資料範圍而定。',
       ),
       {
         target: `${RECORDS} .records-rules`,
@@ -295,21 +295,21 @@ export function attendanceRecordsTour(options: {
         target: `${RECORDS} .records-coverage`,
         title: '表單補足',
         description:
-          '表單只比時數，不比時段。\n核准的假單、出差單時數會從當天工時扣掉；實際上班補得滿剩下的，就是「已補足」，應下班下方會列出扣表單後幾點可走。\n・未補足：核准的表單不夠。\n・流程中：要等流程中的單才夠。\n補足欄寫出還差多少與缺口時段，緊鄰表單欄，方便對照假單起訖。\n切到「未補足」或「流程中」，只列要追的日子。',
+          '表單只比時數，不比時段。\n核准的假單、出差單時數會從當天工時扣掉。\n實際上班補得滿剩下的，就是「已補足」，應下班下方會列出扣表單後幾點可走。\n・未補足：核准的表單不夠。\n・流程中：要等流程中的單才夠。\n補足欄寫出還差多少與缺口時段，緊鄰表單欄，方便對照假單起訖。\n切到「未補足」或「流程中」，只列要追的日子。',
         side: 'bottom',
       },
       {
         target: `${RECORDS} .records-table .ui-table-toolbar`,
         title: '依人分組',
         description:
-          '每人一段、每天一列。\n最左的人員欄捲動時固定，並列出遲到、早退與異常天數；遲到的上班、早退的下班，直接在時間上標色。\n順序依使用者頁設定的排序，人多時分頁。\n只有姓名的持卡人標「尚未綁帳號」；有刷卡卻沒有持有人的卡號不列，請到卡號對應頁補指派。\n沒刷卡的放假日（含只有出差單或假單的）預設不列，勾「含放假日」可看行事曆備註。\n公文系統連不上時，改為無法判定，不算異常。',
+          '每人一段、每天一列。\n最左的人員欄捲動時固定，並列出遲到、早退與異常天數。\n遲到的上班、早退的下班，直接在時間上標色。\n順序依使用者頁設定的排序，人多時分頁。\n只有姓名的持卡人標「尚未綁帳號」。\n有刷卡卻沒有持有人的卡號不列，請到卡號對應頁補指派。\n沒刷卡的放假日（含只有出差單或假單的）預設不列，勾「含放假日」可看行事曆備註。\n公文系統連不上時，改為無法判定，不算異常。',
         side: 'bottom',
       },
       {
         target: `${RECORDS} .records-export`,
         title: '匯出 Excel',
         description:
-          '依已套用的條件，產生整段期間的 .xlsx，格式與舊系統的「出缺勤計算」相同。\n不分頁、包含所有人；「本月」等預設區間，以按下時重算。\n沒有人可列時停用。',
+          '依已套用的條件，產生整段期間的 .xlsx，格式與舊系統的「出缺勤計算」相同。\n不分頁、包含所有人。\n「本月」等預設區間，以按下時重算。\n沒有人可列時停用。',
         side: 'bottom',
       },
     ],

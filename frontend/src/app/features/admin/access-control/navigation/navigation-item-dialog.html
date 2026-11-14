@@ -26,7 +26,7 @@
               <p class="form-note">
                 @switch (e.draft.kind) {
                   @case ('group') {
-                    分群只整理側欄，不影響授權；沒有可見項目的分群不會出現。
+                    分群只整理側欄，不影響授權。沒有可見項目的分群不會出現。
                   }
                   @case ('page') {
                     頁面的名稱與圖示來自功能，只有授權的人看得到。
@@ -154,7 +154,7 @@
               <header class="form-section-head">
                 <h3 [id]="id + '-audience'">可見群組</h3>
                 <p class="form-note">
-                  不勾選＝所有登入者都看得到；勾選後只有屬於任一群組的人看得到。
+                  不勾選＝所有登入者都看得到。勾選後只有屬於任一群組的人看得到。
                 </p>
               </header>
               <div class="form-section-body">

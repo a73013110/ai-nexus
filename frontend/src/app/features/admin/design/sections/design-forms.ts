@@ -126,7 +126,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-fields"
       title="欄位"
       api="nxField · PasswordField"
-      description="收集值的控制項（nxField、Select、TreeSelect、日期、選人）共用一個外框：同高、6px 圓角，聚焦時外框成為 2px 焦點色，停用時整個淡化。驗證說明靠近欄位；手機輸入字級至少 16px，避免 iOS 自動放大。"
+      description="收集值的控制項（nxField、Select、TreeSelect、日期、選人）共用一個外框：同高、6px 圓角，聚焦時外框成為 2px 焦點色，停用時整個淡化。驗證說明靠近欄位。手機輸入字級至少 16px，避免 iOS 自動放大。"
     >
       <nx-design-example label="nxField">
         <label class="ui-field"
@@ -149,7 +149,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-person-picker"
       title="人員選擇器"
       api="PersonPicker · directorySearch · .form-chips"
-      description="表單欄位，外框同 nxField。輸入兩個字起搜尋，結果浮在欄位下方（↑↓ 移動、Enter 選取、Esc 收起）。查詢狀態由呼叫端的 directorySearch 管理，選取後要不要清空由呼叫端決定。可選多人時已選的排成膠囊；nameHint 讓沒有帳號的人只記姓名。試試輸入「林佳」或「lin」。"
+      description="表單欄位，外框同 nxField。輸入兩個字起搜尋，結果浮在欄位下方（↑↓ 移動、Enter 選取、Esc 收起）。查詢狀態由呼叫端的 directorySearch 管理，選取後要不要清空由呼叫端決定。可選多人時已選的排成膠囊。nameHint 讓沒有帳號的人只記姓名。試試輸入「林佳」或「lin」。"
     >
       <nx-design-example label="加入多人">
         <div class="design-picker">
@@ -179,7 +179,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-person-browser"
       title="從名單挑人"
       api="PersonBrowser · ChoiceGroups"
-      description="名單由呼叫端載入，依分組（例如主要所屬部門）列出全部的人，可用文字或分組篩選、勾選多人；篩選掉的人仍保持勾選。看到才認得出來時用它，已知道要找誰時用人員選擇器。"
+      description="名單由呼叫端載入，依分組（例如主要所屬部門）列出全部的人，可用文字或分組篩選、勾選多人。篩選掉的人仍保持勾選。看到才認得出來時用它，已知道要找誰時用人員選擇器。"
     >
       <nx-design-example label="勾選多人">
         <nx-person-browser
@@ -211,7 +211,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-tree-select"
       title="階層選擇器"
       api="TreeSelect · unitNodes()"
-      description="從階層挑一個（單位用 unitNodes() 轉換）。觸發鈕是「上層路徑 › 名稱」，放不下先截路徑；面板可展開收合，搜尋時改成平面清單並標出所屬路徑；allLabel 釘在最上方。可選的狀態由 status 指定、使用者不能改：any 都可選（停用的預設收起，底部可勾選列出）、active 只列啟用的、inactive 只能選停用的（啟用的上層只當路徑）。"
+      description="從階層挑一個（單位用 unitNodes() 轉換）。觸發鈕是「上層路徑 › 名稱」，放不下先截路徑。面板可展開收合，搜尋時改成平面清單並標出所屬路徑。allLabel 釘在最上方。可選的狀態由 status 指定、使用者不能改：any 都可選（停用的預設收起，底部可勾選列出）、active 只列啟用的、inactive 只能選停用的（啟用的上層只當路徑）。"
     >
       <nx-design-example label="status any（預設）">
         <nx-tree-select
@@ -258,7 +258,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-form-sections"
       title="表單段落"
       api=".form-sections · .form-choice · .form-row"
-      description="兩組以上欄位的表單（設定頁、md 表單對話框）依填的人怎麼想分段：段落標題加最多一句說明，細線分隔，間距只靠共用 gap。選定單一對象後換成一列加「更換」；成對欄位並排；選填寫在標籤裡。範本是卡號的指派持有人對話框。"
+      description="兩組以上欄位的表單（設定頁、md 表單對話框）依填的人怎麼想分段：段落標題加最多一句說明，細線分隔，間距只靠共用 gap。選定單一對象後換成一列加「更換」。成對欄位並排。選填寫在標籤裡。範本是卡號的指派持有人對話框。"
     >
       <form class="design-form" novalidate (submit)="$event.preventDefault()">
         <div class="form-sections">
@@ -294,7 +294,7 @@ const UNITS: TreeSelectNode[] = [
           <section class="form-section" role="group" aria-labelledby="design-form-period">
             <header class="form-section-head">
               <h3 id="design-form-period">期間</h3>
-              <p class="form-note">台北時間；開始時間之後的紀錄才算這位持有人。</p>
+              <p class="form-note">台北時間。開始時間之後的紀錄才算這位持有人。</p>
             </header>
             <div class="form-section-body">
               <div class="form-row">
@@ -321,7 +321,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-dates"
       title="日期與時間"
       api="DateTimePicker · TimeRangePicker"
-      description="以台北 wall-clock 輸入與顯示、送出時轉 UTC；民國曆只影響顯示。查詢的時間範圍用 TimeRangePicker：預設區間與自訂起訖在同一個浮層，時區只寫一次。"
+      description="以台北 wall-clock 輸入與顯示、送出時轉 UTC。民國曆只影響顯示。查詢的時間範圍用 TimeRangePicker：預設區間與自訂起訖在同一個浮層，時區只寫一次。"
     >
       <nx-design-example label="西元">
         <nx-date-time-picker
@@ -370,7 +370,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-inline"
       title="直接編輯"
       api="InlineTitle"
-      description="雙擊標題或按 F2／Enter 編輯；Enter 儲存、Esc 取消。"
+      description="雙擊標題或按 F2／Enter 編輯。Enter 儲存、Esc 取消。"
     >
       <nx-inline-title
         appearance="block"
@@ -383,7 +383,7 @@ const UNITS: TreeSelectNode[] = [
       id="design-settings"
       title="偏好設定列"
       api="SettingGroup · SettingRow · KeyCombo"
-      description="個人偏好一列一項：名稱與一句說明在左、控制項在右。給 options 是下拉選單、給 checked 是開關，其他控制項直接投影；窄卡片時控制項靠上對齊。按鍵用 KeyCombo，依平台顯示 ⌘ 或 Ctrl。"
+      description="個人偏好一列一項：名稱與一句說明在左、控制項在右。給 options 是下拉選單、給 checked 是開關，其他控制項直接投影。窄卡片時控制項靠上對齊。按鍵用 KeyCombo，依平台顯示 ⌘ 或 Ctrl。"
     >
       <nx-setting-group
         class="design-settings"

@@ -27,7 +27,7 @@
 
 ## 換行
 
-導覽說明（`.tour-description`）與說明面板的 `dd`（`.info-terms dd`）以 `white-space: pre-line` 顯示，字串裡的 `\n` 就是換行；其他元件要分行時自己加同樣的樣式。後端產生的說明文字（例如出勤判定規則）同樣用 `\n`，匯出的 Excel 儲存格會自動換行。
+導覽說明（`.tour-description`）與說明面板的 `dd`（`.info-terms dd`）以 `white-space: pre-line` 顯示，字串裡的 `\n` 就是換行；確認對話框的 `message` 也保留換行。其他元件要分行時自己加同樣的樣式，沒有換行的地方（toast、`.form-note`、頁面說明）用句號分成兩句。後端產生的說明文字（例如出勤判定規則）同樣用 `\n`，匯出的 Excel 儲存格會自動換行。
 
 ## 範例
 

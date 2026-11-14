@@ -158,7 +158,7 @@ export function attributeGroups(
         label: `群組（${detail.groups.length}${detail.moreGroups ? '+' : ''}）`,
         list: detail.groups,
         hint: detail.moreGroups
-          ? `只列出前 ${detail.groups.length} 個；主要群組（Domain Users）不在這個屬性裡`
+          ? `只列出前 ${detail.groups.length} 個。主要群組（Domain Users）不在這個屬性裡`
           : '主要群組（Domain Users）不在這個屬性裡',
       },
     ]),

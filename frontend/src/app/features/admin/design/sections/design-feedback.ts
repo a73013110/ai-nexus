@@ -67,11 +67,11 @@ function designAnswer(signal: AbortSignal) {
           { label: '查詢範圍', text: '2026/10/01–10/31，今天 10/22。' },
           {
             label: '陳雅婷（yating）',
-            text: '已結算 15 天：正常 13 天、早退 2 天；未補足 2 天（共差 3 小時 10 分）。',
+            text: '已結算 15 天：正常 13 天、早退 2 天。未補足 2 天（共差 3 小時 10 分）。',
           },
           {
             label: '林志明（chihming）',
-            text: '已結算 15 天：正常 14 天、遲到 1 天；流程中 1 天。',
+            text: '已結算 15 天：正常 14 天、遲到 1 天。流程中 1 天。',
           },
           {
             label: '林志明 10/14（二）',
@@ -162,7 +162,7 @@ export class DesignFeedback {
       tone: 'info',
       icon: 'globe',
       label: '網路搜尋',
-      message: '會將這次提問送往搜尋服務；附件與歷史對話不會送出。',
+      message: '會將這次提問送往搜尋服務。附件與歷史對話不會送出。',
       action: { label: '關閉', run: () => this.toggleIsland('info') },
     },
   };

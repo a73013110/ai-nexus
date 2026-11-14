@@ -16,7 +16,7 @@ const DELIVERY: Readonly<Record<string, string>> = {
   queued: '正在排入寄送…',
   sending: '正在寄送…',
   sent: '已寄出，請查看信箱（也請檢查垃圾郵件）。',
-  failed: '寄送失敗，請稍後重新寄送；持續失敗請聯絡管理員。',
+  failed: '寄送失敗，請稍後重新寄送。持續失敗請聯絡管理員。',
   cancelled: '這組驗證碼已被新的取代。',
 };
 /** 不會再變化的寄送狀態；到了就停止詢問。 */

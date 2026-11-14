@@ -70,7 +70,7 @@ interface Vital {
         </article>
       }
     </div>
-    <p class="vitals-note">數值為最近 1 分鐘；走勢為所選範圍，每點 10 秒。</p>`,
+    <p class="vitals-note">數值為最近 1 分鐘。走勢為所選範圍，每點 10 秒。</p>`,
 })
 export class MonitoringVitals {
   private readonly store = inject(MonitoringStore);

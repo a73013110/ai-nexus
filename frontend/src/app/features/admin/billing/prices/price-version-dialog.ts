@@ -93,8 +93,8 @@ export class PriceVersionDialog {
     const seed = this.editor.current()?.seed;
     if (seed?.from === 'history')
       return `已帶入此版本（${formatDate(seed.price.effectiveAt)} 生效）。儲存會建立新版本，歷史價格保持原樣。`;
-    if (seed?.from === 'current') return '以目前價格為起點；儲存會建立新版本，歷史價格保持原樣。';
-    return '價格只影響之後的呼叫；不同幣別分開統計。';
+    if (seed?.from === 'current') return '以目前價格為起點。儲存會建立新版本，歷史價格保持原樣。';
+    return '價格只影響之後的呼叫。不同幣別分開統計。';
   });
   readonly tour = computed(() => {
     const from = this.editor.current()?.seed.from;

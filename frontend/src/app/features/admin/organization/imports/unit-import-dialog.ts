@@ -101,7 +101,7 @@ import {
           </li>
         </ul>
         <p class="form-note import-rule">
-          來自公文系統的單位，名稱、上層、啟用、順序與主管以公文系統為準；手建的單位不受影響，公文系統已沒有的部門只停用、不刪除。
+          來自公文系統的單位，名稱、上層、啟用、順序與主管以公文系統為準。手建的單位不受影響，公文系統已沒有的部門只停用、不刪除。
         </p>
         @if (!changed()) {
           <p class="form-note" role="status">組織已與公文系統一致，沒有需要套用的變動。</p>
@@ -114,7 +114,7 @@ import {
               >
             </h3>
             <p class="form-note">
-              勾選這次要套用的部門；未勾選的維持原樣，下次匯入仍會列出。本地已停用、套用會重新啟用的部門預設不勾。
+              勾選這次要套用的部門。未勾選的維持原樣，下次匯入仍會列出。本地已停用、套用會重新啟用的部門預設不勾。
             </p>
             <nx-choice-groups
               label="要套用的部門"
@@ -142,7 +142,7 @@ import {
                     ><strong>{{ issue.name || '（沒有名稱）' }}</strong>
                     <small
                       >部門編號 {{ issue.gdDepNo
-                      }}{{ issue.gdUserId ? '；公文帳號 ' + issue.gdUserId : '' }}</small
+                      }}{{ issue.gdUserId ? '。公文帳號 ' + issue.gdUserId : '' }}</small
                     >
                   </span>
                 </li>

@@ -68,7 +68,7 @@ public static class AttendanceExplanation
         if (result.Status == AttendanceStatus.DayOff)
         {
             Facts(story, clockIn, clockOut, single);
-            story.Add(AttendanceExplanationStepKind.Note, null, "整天放假，不判定遲到、早退與異常；有刷卡照樣列出。", Titles.DayType);
+            story.Add(AttendanceExplanationStepKind.Note, null, "整天放假，不判定遲到、早退與異常。有刷卡照樣列出。", Titles.DayType);
             return "放假。";
         }
         if (result.Reason == AttendanceReason.DayTypeUnknown || rule is null)
@@ -142,7 +142,7 @@ public static class AttendanceExplanation
     {
         if (late)
         {
-            if (today) story.Add(AttendanceExplanationStepKind.Punch, clockIn, $"上班刷卡，晚於彈性終點 {Time(rule.FlexEnd)}；今天先不算遲到。", Titles.Late);
+            if (today) story.Add(AttendanceExplanationStepKind.Punch, clockIn, $"上班刷卡，晚於彈性終點 {Time(rule.FlexEnd)}。今天先不算遲到。", Titles.Late);
             else story.Add(AttendanceExplanationStepKind.Gap, clockIn, $"上班刷卡，晚於彈性終點 {Time(rule.FlexEnd)}，遲到 {Duration(Seconds(judged - shift.FlexEnd))}。", Titles.Late);
             return;
         }
@@ -156,7 +156,7 @@ public static class AttendanceExplanation
     {
         var (net, worked, required) = (shift.NetWorkSeconds, result.WorkedSeconds, result.RequiredSeconds);
         var text = noWork ? $"沒有上班時數，當天工時 {Duration(net)}都要有表單。"
-            : required > net - worked ? $"實際上班 {Duration(worked)}（扣午休），當天工時 {Duration(net)}；遲到的部分（{Duration(required)}）至少要有表單抵掉，晚走不抵遲到。"
+            : required > net - worked ? $"實際上班 {Duration(worked)}（扣午休），當天工時 {Duration(net)}。遲到的部分（{Duration(required)}）至少要有表單抵掉，晚走不抵遲到。"
             : $"實際上班 {Duration(worked)}（扣午休），當天工時 {Duration(net)}，差 {Duration(required)}。";
         story.Add(AttendanceExplanationStepKind.Rule, null, text, Titles.Coverage);
     }

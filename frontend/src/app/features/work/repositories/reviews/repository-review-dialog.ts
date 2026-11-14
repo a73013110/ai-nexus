@@ -112,7 +112,7 @@ const purposes = {
         }
       </div>
       <footer class="dialog-foot">
-        <p class="dialog-note">在背景執行並使用你的模型額度；完成時會通知你，可以先離開。</p>
+        <p class="dialog-note">在背景執行並使用你的模型額度。完成時會通知你，可以先離開。</p>
         <button
           type="button"
           class="secondary-button"

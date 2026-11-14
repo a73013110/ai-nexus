@@ -16,7 +16,7 @@ import { AdminRolesTab } from './roles/admin-roles-tab';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
       [title]="session.featureName('access-control.roles')"
-      description="以角色組合功能群組；使用者取得角色後才能使用其中的功能。"
+      description="以角色組合功能群組。使用者取得角色後才能使用其中的功能。"
       layoutMode="data"
       [tour]="tour()"
     >

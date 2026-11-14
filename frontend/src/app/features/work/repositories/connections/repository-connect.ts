@@ -28,7 +28,7 @@ import { RepositoriesApi } from '../repositories-api';
       <span class="mark" aria-hidden="true"><nx-icon name="git" /></span>
       <h2 id="connect-title">{{ reconnecting() ? '更新 Gitea 授權' : '連接你的 Gitea' }}</h2>
       <p>
-        以你自己的 Gitea 權限閱讀程式庫；看得到什麼，就只能讀到什麼。AI Nexus
+        以你自己的 Gitea 權限閱讀程式庫。看得到什麼，就只能讀到什麼。AI Nexus
         管理員不會因此取得你的私人程式庫。
       </p>
       <ul class="facts">

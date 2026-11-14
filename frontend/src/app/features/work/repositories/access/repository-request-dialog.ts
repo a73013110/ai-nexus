@@ -89,7 +89,7 @@ const same = (a: Draft, b: Draft) =>
                       e.current
                         ? '目前是「' +
                           permissionName(e.current) +
-                          '」；核准後以這次申請的內容取代。'
+                          '」。核准後以這次申請的內容取代。'
                         : '核准後自動加入 Gitea 的協作者。'
                     }}
                   </p>

@@ -60,7 +60,7 @@
             >
               <header class="form-section-head">
                 <h3 [id]="id + '-features'">功能授權</h3>
-                <p class="form-note">可複選；使用者取各有效群組的聯集，停用的功能不授予。</p>
+                <p class="form-note">可複選。使用者取各有效群組的聯集，停用的功能不授予。</p>
                 @if (scopedGrants().length) {
                   <p class="form-note">
                     其中 {{ scopedGrants().length }} 個功能有資料範圍，id 後顯示目前的設定。
@@ -96,7 +96,7 @@
                     <ul class="form-note-list">
                       <li>使用者屬於多個有效群組時，同一功能的範圍取聯集。</li>
                       <li>新勾選的功能預設最窄的範圍，主管不另外。</li>
-                      <li>所屬單位與主管在組織頁維護；停用的單位連同下層都不算。</li>
+                      <li>所屬單位與主管在組織頁維護。停用的單位連同下層都不算。</li>
                       @if (managerScoped()) {
                         <li>主管是組織頁勾選為主管的成員，不必另建主管群組。</li>
                       }
@@ -187,7 +187,7 @@
                 <h3 [id]="id + '-basics'">基本資料</h3>
                 @if (e.kind === 'feature') {
                   <p class="form-note">
-                    網址、圖示與授權來自功能目錄；名稱留白即使用預設名稱，側欄位置在選單頁調整。
+                    網址、圖示與授權來自功能目錄。名稱留白即使用預設名稱，側欄位置在選單頁調整。
                   </p>
                 } @else if (e.isNew) {
                   <p class="form-note">識別碼建立後不能修改。</p>
@@ -250,7 +250,7 @@
               >
                 <header class="form-section-head">
                   <h3 [id]="id + '-groups'">功能群組</h3>
-                  <p class="form-note">可複選；可用功能取各群組的聯集。</p>
+                  <p class="form-note">可複選。可用功能取各群組的聯集。</p>
                 </header>
                 <div class="form-section-body">
                   <nx-choice-groups
@@ -290,7 +290,7 @@
               >
                 <header class="form-section-head">
                   <h3 [id]="id + '-storage'">附件容量</h3>
-                  <p class="form-note">依每位使用者計算；個人設定優先於群組。</p>
+                  <p class="form-note">依每位使用者計算。個人設定優先於群組。</p>
                   <nx-info-popover label="計算方式" panelLabel="附件容量的計算方式" [width]="300">
                     <ul class="form-note-list">
                       <li>使用者屬於多個有效群組時取最低值。</li>
@@ -316,7 +316,7 @@
                       (input)="update('storage', $any($event.target).value)"
                   /></label>
                   <p class="form-note" [id]="id + '-storage-hint'">
-                    留空使用網站預設 5 GB，0 禁止新增上傳；降低上限只阻擋新的上傳，既有檔案仍保留。
+                    留空使用網站預設 5 GB，0 禁止新增上傳。降低上限只阻擋新的上傳，既有檔案仍保留。
                   </p>
                 </div>
               </section>

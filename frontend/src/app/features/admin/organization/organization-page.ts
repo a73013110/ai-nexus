@@ -152,7 +152,7 @@ export class OrganizationPage {
     if (
       await this.confirmation().ask({
         title: `刪除「${row.unit.name}」？`,
-        message: '刪除後無法復原；仍有下層單位或成員時無法刪除。不再使用的單位建議改為停用。',
+        message: '刪除後無法復原。仍有下層單位或成員時無法刪除。不再使用的單位建議改為停用。',
         confirm: '刪除',
         danger: true,
       })

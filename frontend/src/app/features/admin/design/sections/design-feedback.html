@@ -2,7 +2,7 @@
   id="design-notices"
   title="提示"
   api="Notice"
-  description="錯誤為 alert、其他為 status；錯誤附可複製的查證代碼。讀取失敗的重試用 retryable，其他動作放 notice-actions。"
+  description="錯誤為 alert、其他為 status。錯誤附可複製的查證代碼。讀取失敗的重試用 retryable，其他動作放 notice-actions。"
   [stacked]="true"
 >
   <nx-notice tone="info" message="可加入文件、圖片或知識庫來源，提供更多背景。" />
@@ -18,7 +18,7 @@
   id="design-toasts"
   title="通知"
   api="ToastService · Toaster · ToastHistory"
-  description="剛完成的操作在右下角回饋：多則疊成一落，滑過或聚焦時展開並暫停計時；新通知從膠囊形變為卡片。可按 Esc、關閉鈕或向右滑走。錯過的會留在通知中心的「本次工作階段」。失敗、風險與需要留著讀的內容仍用頁內提示。"
+  description="剛完成的操作在右下角回饋：多則疊成一落，滑過或聚焦時展開並暫停計時。新通知從膠囊形變為卡片。可按 Esc、關閉鈕或向右滑走。錯過的會留在通知中心的「本次工作階段」。失敗、風險與需要留著讀的內容仍用頁內提示。"
   [stacked]="true"
 >
   <div class="design-island-controls" role="group" aria-label="通知示範">
@@ -40,7 +40,7 @@
   id="design-island"
   title="動態島"
   api="Island · IslandService"
-  description="composer 的狀態與警告：一則是 pill、多則分出泡泡、點開展開全部；只有標籤的一則不能點開；緊急提示自動展開。跟隨淺色／深色主題。"
+  description="composer 的狀態與警告：一則是 pill、多則分出泡泡、點開展開全部。只有標籤的一則不能點開。緊急提示自動展開。跟隨淺色／深色主題。"
   [stacked]="true"
 >
   <div class="design-island-stage">
@@ -66,7 +66,7 @@
   id="design-badges"
   title="狀態與數量"
   api="StatusBadge · CountBadge · LiveDot"
-  description="文字或圓點與顏色並用；數量超過 99 顯示 99+，零值預設隱藏。即時狀態點只在連線中呼吸，暫停或警告時靜止，旁邊一定有文字。"
+  description="文字或圓點與顏色並用。數量超過 99 顯示 99+，零值預設隱藏。即時狀態點只在連線中呼吸，暫停或警告時靜止，旁邊一定有文字。"
 >
   <nx-design-example label="StatusBadge">
     <span class="design-row">
@@ -132,7 +132,7 @@
   id="design-progress"
   title="進度與生成"
   api="JobProgress · AiMark · GenerationIndicator"
-  description="進度只顯示伺服器的真實階段；未知總量用不定進度，不做假百分比。"
+  description="進度只顯示伺服器的真實階段。未知總量用不定進度，不做假百分比。"
   [stacked]="true"
 >
   <div class="design-progress-tools">
@@ -171,7 +171,7 @@
   id="design-assistant"
   title="浮動面板與助理"
   api="FloatingPanel · AssistantPanel · assistantConversation"
-  description="浮在頁面上：拖標題列移動、拉邊緣調整大小、全螢幕或縮成動態島，沒有關閉。助理常駐在頂端中央的島，點一下往下展開；依所在頁面的資料回答，以 [n] 標出依據。範例的回答是本機假資料。"
+  description="浮在頁面上：拖標題列移動、拉邊緣調整大小、全螢幕或縮成動態島，沒有關閉。助理常駐在頂端中央的島，點一下往下展開。依所在頁面的資料回答，以 [n] 標出依據。範例的回答是本機假資料。"
 >
   <nx-design-example label="FloatingPanel">
     <button type="button" class="secondary-button" (click)="floatingPanel.open()">
@@ -199,7 +199,7 @@
     storageKey="design-floating"
   >
     <p class="design-floating-copy">
-      拖標題列移動，靠近邊緣放開會吸附。<br />拉左、右、下緣調整大小；按 Esc 或「－」縮成動態島。
+      拖標題列移動，靠近邊緣放開會吸附。<br />拉左、右、下緣調整大小。按 Esc 或「－」縮成動態島。
     </p>
     <span floating-island class="design-floating-island">示範面板</span>
   </nx-floating-panel>
@@ -208,7 +208,7 @@
   id="design-popover"
   title="資訊浮層與空狀態"
   api="InfoPopover · EmptyState"
-  description="精簡指標的說明放 InfoPopover（top layer，不被捲動區裁切）；沒有內容時用 EmptyState。"
+  description="精簡指標的說明放 InfoPopover（top layer，不被捲動區裁切）。沒有內容時用 EmptyState。"
 >
   <nx-design-example label="InfoPopover">
     <nx-info-popover label="本次用量" icon="money" description="示範用量說明">

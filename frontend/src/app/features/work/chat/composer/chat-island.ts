@@ -132,7 +132,7 @@ export function chatIslandItems() {
         tone: 'info',
         icon: 'globe',
         label: '網路搜尋',
-        message: '會將這次提問送往搜尋服務；附件與歷史對話不會送出。',
+        message: '會將這次提問送往搜尋服務。附件與歷史對話不會送出。',
         urgent: true,
       });
     return items;

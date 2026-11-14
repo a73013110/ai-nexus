@@ -80,7 +80,7 @@ export function changeNote(change: UnitImportChangeDto) {
   if (change.previousPath?.length) parts.push(`原為 ${change.previousPath.join(' › ')}`);
   if (!change.enabled && change.action !== 'Disable') parts.push('公文系統已關閉此部門');
   if (change.action === 'Disable') parts.push('公文系統已沒有此部門，保留成員與歷史');
-  return parts.join('；');
+  return parts.join('。');
 }
 
 /** 匯入預覽裡的一個部門：單位變動與主管變動合成一個可勾選項目，`id` 是 `gdDepNo`。 */
@@ -119,7 +119,7 @@ export function importDepartments(preview: UnitImportPreviewDto): ImportDepartme
         ...(managers.get(change.gdDepNo) ?? []).map(managerNote),
       ]
         .filter(Boolean)
-        .join('；'),
+        .join('。'),
       reenables,
     };
   });
@@ -130,7 +130,7 @@ export function importDepartments(preview: UnitImportPreviewDto): ImportDepartme
       id: String(key),
       group: 'Managers',
       label: list[0].path.join(' › '),
-      description: list.map(managerNote).join('；'),
+      description: list.map(managerNote).join('。'),
       reenables: false,
     });
   }

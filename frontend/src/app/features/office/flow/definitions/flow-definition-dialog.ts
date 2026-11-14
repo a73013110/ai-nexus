@@ -241,7 +241,7 @@ interface Target {
         <form class="dialog-form" novalidate (submit)="save($event)">
           <nx-dialog-header
             [heading]="'編輯「' + e.kind.name + '」的流程'"
-            detail="只影響之後送出的申請；審核中的申請照送出時的流程走完。"
+            detail="只影響之後送出的申請。審核中的申請照送出時的流程走完。"
             closeLabel="關閉流程設定"
           />
           <div class="dialog-body">

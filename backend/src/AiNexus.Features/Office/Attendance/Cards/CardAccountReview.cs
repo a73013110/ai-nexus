@@ -42,7 +42,7 @@ internal sealed class CardAccountReview(AppDbContext db, IActiveUsers activeUser
                 string.Join("、", x.OrderBy(y => y.CardNumber, StringComparer.Ordinal).Select(Punched)) + "。結束時間請設在離職生效日。",
                 FeatureCatalog.AttendanceCards, Search(x.First().CardNumber))),
             .. last.Select(x => new AccountReviewItem(x.UserId!.Value, NoCard, "沒有持有中的出勤卡，出勤紀錄不會列出",
-                $"上次持有卡號 {x.CardNumber}，至 {Time(x.EndsAt!.Value)}；{Holder(x.CardId)}。", FeatureCatalog.AttendanceCards, Search(x.CardNumber))),
+                $"上次持有卡號 {x.CardNumber}，至 {Time(x.EndsAt!.Value)}。{Holder(x.CardId)}。", FeatureCatalog.AttendanceCards, Search(x.CardNumber))),
         ]);
 
         string Punched(CardAssignmentDto x) => lastPunches.TryGetValue(x.Id, out var at) ? $"卡號 {x.CardNumber}（最後刷卡 {Time(at)}）" : $"卡號 {x.CardNumber}（沒有刷卡紀錄）";

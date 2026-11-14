@@ -90,7 +90,7 @@ export class AdminUsersTab {
   /** 拖曳與方向鍵只在看得到鄰居時（沒有查詢條件）可用；寫入中不能再移動。位置編號有條件時也能用。 */
   readonly sortable = computed(() => this.store.reorderable() && !this.store.ordering());
   readonly lockedHint = computed(() =>
-    this.store.ordering() ? '正在儲存順序…' : '清除查詢條件後可拖曳；或按編號輸入位置',
+    this.store.ordering() ? '正在儲存順序…' : '清除查詢條件後可拖曳，或按編號輸入位置',
   );
   readonly nameOf = (id: string) =>
     this.store.users()?.users.find((user) => user.id === id)?.displayName ?? '';
@@ -191,7 +191,7 @@ export class AdminUsersTab {
     if (writesUser(item))
       this.store.toast.success(
         '已從 AD 更新：' + user.displayName,
-        item.changes.map(describeChange).join('；'),
+        item.changes.map(describeChange).join('。'),
       );
     else if (item.outcome === 'unchanged' && !outcomeNote(item))
       this.store.toast.info(user.displayName + ' 已與 AD 一致');

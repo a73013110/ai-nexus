@@ -87,7 +87,7 @@ export function recordsRange(
       if (!DAY.test(range.from) || !DAY.test(range.to)) return '請填寫起訖日期。';
       const days = dayNumber(range.to) - dayNumber(range.from) + 1;
       if (!Number.isFinite(days) || days < 1) return '結束日期不能早於開始日期。';
-      if (days > MAX_RANGE_DAYS) return '區間最長一年；更長的期間請分次匯出。';
+      if (days > MAX_RANGE_DAYS) return '區間最長一年。更長的期間請分次匯出。';
       return { from: range.from, to: range.to };
     }
     default:

@@ -123,7 +123,7 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
         if (!diff.IsSuccess) return diff.Error;
         var changes = "\n## 變更內容\n\n" + Fenced(diff.Value.Diff, "diff") + "\n";
         if (diff.Value.TooLarge || text.Length + changes.Length > gitea.Options.MaxChatCharacters)
-            text.Append("\n## 變更內容\n\n變更內容超過附件上限，未帶入；請在 Gitea 查看或改用 AI Review。\n");
+            text.Append("\n## 變更內容\n\n變更內容超過附件上限，未帶入。請在 Gitea 查看或改用 AI Review。\n");
         else text.Append(changes);
         return new Bundle($"PR #{pull.Number} {pull.Title}", "pull-" + pull.Number, text.ToString(),
             $"請說明附件中 {repo} Pull Request #{pull.Number} 的目的、主要變更與需要確認的地方。", []);

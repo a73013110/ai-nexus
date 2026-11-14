@@ -170,7 +170,7 @@ const SAMPLE_PHOTO =
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="QueryBar · DataTable · TableState · TablePagination · DetailDrawer · DrawerPager · CopyValue"
-      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip，欄位標上 nxQueryField 時 chip 依欄位順序排列。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁；首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈；詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。內容超出捲動區時「欄位」旁多一顆放大表格，外框從原位過渡成貼齊視窗，Esc 還原。"
+      description="查詢列分開草稿與已套用條件：改了沒按「查詢」會提示，已套用的條件成為可逐一移除的 chip，欄位標上 nxQueryField 時 chip 依欄位順序排列。表格獨立捲動、固定表頭，匯出放工具列「欄位」旁。首次載入、無資料與失敗由 TableState 呈現，已有列時重讀（busy）保留舊列、淡化並在上緣掃過細線，失敗的重試鈕在重讀中轉圈（retrying）。整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈。詳情在側欄開啟、可切換上下筆、識別碼可複製，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。內容超出捲動區時「欄位」旁多一顆放大表格，外框從原位過渡成貼齊視窗，Esc 還原。"
       [stacked]="true"
     >
       <nx-query-bar label="示範查詢條件" [state]="query">
@@ -256,7 +256,7 @@ const SAMPLE_PHOTO =
       class="ui-density-compact"
       title="欄位排序與篩選"
       api="localTable · endpointTable · cursorTable · th[nxHeader]"
-      description="欄位宣告一次（可排序、篩選型別、數字欄），表頭的排序鈕、篩選 popover、已套用的 chip、載入／空狀態與分頁列都由 [table] 產生，頁面只寫儲存格。資料已在前端用 localTable；後端列表用 endpointTable，資料量在門檻內時後端一次回傳全部，之後在本機排序與篩選；日誌、稽核等大表用 cursorTable。"
+      description="欄位宣告一次（可排序、篩選型別、數字欄），表頭的排序鈕、篩選 popover、已套用的 chip、載入／空狀態與分頁列都由 [table] 產生，頁面只寫儲存格。資料已在前端用 localTable。後端列表用 endpointTable，資料量在門檻內時後端一次回傳全部，之後在本機排序與篩選。日誌、稽核等大表用 cursorTable。"
     >
       <nx-data-table class="design-table-capped" label="欄位排序與篩選範例" [table]="people">
         <table>
@@ -320,7 +320,7 @@ const SAMPLE_PHOTO =
       class="design-resources ui-density-compact"
       title="資源集合"
       api="ResourceGallery · ResourceCard · Panel"
-      description="檔案庫、知識庫、專案與成果共用：列表是膠囊工具列與卡片格線，詳細頁由 Panel 組成。首次載入（loading）是卡片骨架；已有卡片時重讀（busy）保留舊卡片、淡化並在上緣掃過細線，搜尋欄同時轉圈。"
+      description="檔案庫、知識庫、專案與成果共用：列表是膠囊工具列與卡片格線，詳細頁由 Panel 組成。首次載入（loading）是卡片骨架。已有卡片時重讀（busy）保留舊卡片、淡化並在上緣掃過細線，搜尋欄同時轉圈。"
       [stacked]="true"
     >
       <nx-view-switch
@@ -359,7 +359,7 @@ const SAMPLE_PHOTO =
         <button panel-actions class="icon-button" aria-label="範例動作">
           <nx-icon name="plus" />
         </button>
-        <p class="form-note">Panel 的標題、數量與右側動作；內容由功能決定。</p>
+        <p class="form-note">Panel 的標題、數量與右側動作。內容由功能決定。</p>
       </nx-panel>
     </nx-design-section>
     <nx-design-section
@@ -383,7 +383,7 @@ const SAMPLE_PHOTO =
       id="design-sortable"
       title="手動排序"
       api="SortableRows、SortHandle、SortRank"
-      description="使用者、選單這類由管理者決定先後的列：直接在表格上拖曳把手、在把手上按方向鍵，或按編號輸入第幾位；值依 sortWrites（伺服器 ManualOrder）計算，通常只寫被移動的那一筆。未排序的在虛線之下、編號淡化。搜尋時只能輸入編號。"
+      description="使用者、選單這類由管理者決定先後的列：直接在表格上拖曳把手、在把手上按方向鍵，或按編號輸入第幾位。值依 sortWrites（伺服器 ManualOrder）計算，通常只寫被移動的那一筆。未排序的在虛線之下、編號淡化。搜尋時只能輸入編號。"
     >
       <nx-design-example label="已排序、未排序與搜尋">
         <nx-search-field
@@ -458,7 +458,7 @@ const SAMPLE_PHOTO =
       id="design-files"
       title="檔案清單"
       api="FileList"
-      description="附件、分享檔案與其他系統的檔案共用：點檔案在閱讀器預覽、另有下載原檔；呼叫端組好檔名下的說明，可編輯時多一個移除鈕。縮圖讀不到時改顯示檔案類型。滑過列或方塊才出現動作。"
+      description="附件、分享檔案與其他系統的檔案共用：點檔案在閱讀器預覽、另有下載原檔。呼叫端組好檔名下的說明，可編輯時多一個移除鈕。縮圖讀不到時改顯示檔案類型。滑過列或方塊才出現動作。"
     >
       <nx-design-example label="list · 草稿，可移除">
         <nx-file-list [files]="files" [editable]="true" />
@@ -474,7 +474,7 @@ const SAMPLE_PHOTO =
       id="design-approval"
       title="簽核流程"
       api="ApprovalTimeline"
-      description="直式時間軸，上方是進度（summary）：已完成實心打勾、目前關卡外圈光暈並寫已等候多久、未到的空心；每關一行寫處理人、單位、關卡與時間，狀態另有報讀文字。簽核意見放在該關之下。"
+      description="直式時間軸，上方是進度（summary）：已完成實心打勾、目前關卡外圈光暈並寫已等候多久、未到的空心。每關一行寫處理人、單位、關卡與時間，狀態另有報讀文字。簽核意見放在該關之下。"
     >
       <nx-design-example label="已送出、會簽中、待決行">
         <nx-approval-timeline [steps]="approvals" summary="第 2 關，共 3 關" />
@@ -484,7 +484,7 @@ const SAMPLE_PHOTO =
       id="design-properties"
       title="屬性清單"
       api="PropertyList"
-      description="屬性多的詳情（AD 屬性、原始紀錄）分組列出：名稱旁附來源名稱，可篩選名稱或值並標出相符處；沒有值的屬性預設收起，整組共用的說明只寫一次。"
+      description="屬性多的詳情（AD 屬性、原始紀錄）分組列出：名稱旁附來源名稱，可篩選名稱或值並標出相符處。沒有值的屬性預設收起，整組共用的說明只寫一次。"
     >
       <nx-design-example label="分組、旗標、多值與識別碼">
         <nx-property-list class="design-properties" label="示範屬性" [groups]="propertyGroups" />
@@ -495,7 +495,7 @@ const SAMPLE_PHOTO =
       class="design-markdown"
       title="內容閱讀"
       api="MarkdownView · CodeBlock"
-      description="聊天、文件與成果共用同一套閱讀元件；文字大小與行距跟隨個人設定。"
+      description="聊天、文件與成果共用同一套閱讀元件。文字大小與行距跟隨個人設定。"
       [stacked]="true"
     >
       <nx-markdown-view [content]="markdown" />
@@ -504,9 +504,9 @@ const SAMPLE_PHOTO =
       id="design-code-samples"
       title="程式碼範例"
       api="CodeSamples · CodeBlock"
-      description="給其他系統開發者的範例：一種語言一個分頁，每個檔案可複製並上色。範例原文以文字匯入，雙大括號佔位由 values 換成實際值；同一個 preferenceKey 記住選的語言。"
+      description="給其他系統開發者的範例：一種語言一個分頁，每個檔案可複製並上色。範例原文以文字匯入，雙大括號佔位由 values 換成實際值。同一個 preferenceKey 記住選的語言。"
     >
-      <nx-design-example label="兩種語言、多個檔案；沒給值的佔位保留原樣">
+      <nx-design-example label="兩種語言、多個檔案。沒給值的佔位保留原樣">
         <nx-code-samples label="範例語言" [samples]="codeSamples" [values]="codeValues" />
       </nx-design-example>
       <nx-design-example label="單一檔案：上色、可橫向捲動">
@@ -784,7 +784,7 @@ export class DesignData {
     {
       id: 'account',
       label: '帳號狀態',
-      note: '旗標由一個數值拆開；警示放前面。',
+      note: '旗標由一個數值拆開。警示放前面。',
       items: [
         {
           key: 'userAccountControl',

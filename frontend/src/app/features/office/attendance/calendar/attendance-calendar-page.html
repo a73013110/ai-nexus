@@ -1,6 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('attendance.calendar')"
-  description="公文系統的假日行事曆；出勤判定依這裡的上午、下午放假。"
+  description="公文系統的假日行事曆。出勤判定依這裡的上午、下午放假。"
   density="compact"
   layoutMode="data"
   [tour]="tour()"
@@ -9,7 +9,7 @@
     <nx-notice
       class="calendar-read-only"
       tone="warning"
-      message="公文系統的連線設為唯讀，假日目前只能查詢；要修改請聯絡管理員調整設定。"
+      message="公文系統的連線設為唯讀，假日目前只能查詢。要修改請聯絡管理員調整設定。"
     />
   }
   <div class="calendar-toolbar">
@@ -195,7 +195,7 @@
                 <td nxTableColumn="type" data-label="類型">
                   <nx-status-badge
                     tone="warning"
-                    title="公文系統沒有這一天，不能在這裡新增；出勤判定時週末當放假、平日無法判定。"
+                    title="公文系統沒有這一天，不能在這裡新增。出勤判定時週末當放假、平日無法判定。"
                     >未建立</nx-status-badge
                   >
                 </td>

@@ -31,7 +31,7 @@ internal sealed class FilesDashboard(ISqlDatabase<AppDbContext> sql, AttachmentQ
             var used = storage.LimitBytes > 0 ? 100.0 * storage.UsedBytes / storage.LimitBytes : (double?)null;
             section.Metric(new("quota", "容量使用", used, "", DashboardFormats.Percent,
                 used >= 90 ? DashboardTones.Danger : used >= 75 ? DashboardTones.Warning : DashboardTones.Neutral, false,
-                "含對話附件與草稿暫存；上限依個人、群組或預設設定"));
+                "含對話附件與草稿暫存。上限依個人、群組或預設設定"));
         }
         return section.Build();
     }

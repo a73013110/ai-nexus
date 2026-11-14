@@ -11,7 +11,7 @@ import { DashboardStore } from '../dashboard-store';
   styleUrl: './dashboard-edit-bar.scss',
   host: { role: 'region', 'aria-label': '自訂總覽版面' },
   template: `<p>
-      拖曳 <nx-icon name="grip" /> 或在其上按方向鍵調整順序；選擇大小、加高或隱藏卡片。
+      拖曳 <nx-icon name="grip" /> 或在其上按方向鍵調整順序。選擇大小、加高或隱藏卡片。
       版面只存在這個瀏覽器，「{{
         store.scope() === 'platform' ? '整個平台' : '我的工作'
       }}」各自保存。

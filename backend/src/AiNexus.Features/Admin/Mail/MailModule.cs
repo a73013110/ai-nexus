@@ -47,7 +47,7 @@ public sealed class MailModule : IFeatureModule
                 x.Text(nameof(TestMailModel.RequestedBy), "要求者顯示名稱", MailSampleContext.ExampleName),
                 x.Time(nameof(TestMailModel.RequestedAt), "要求時間（信內以 UTC 顯示）", x.Context.Now),
                 x.Text(nameof(TestMailModel.Transport), "傳輸名稱（只影響信內文字，不改變實際傳輸）", x.Context.Transport),
-                x.Text(nameof(TestMailModel.From), "寄件地址（預設為目前的 Mail:From 系統信箱；只影響信內文字，不改變實際寄件者）", x.Context.From)));
+                x.Text(nameof(TestMailModel.From), "寄件地址（預設為目前的 Mail:From 系統信箱，只影響信內文字，不改變實際寄件者）", x.Context.From)));
         services.AddRateLimiter(options => options.AddPerUserLimit(TestRateLimit, 3).AddPerUserLimit(DiagnosisRateLimit, 5));
     }
 

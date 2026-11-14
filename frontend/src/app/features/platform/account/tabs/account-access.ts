@@ -52,7 +52,7 @@ export function ownFeatureSections(
   `,
   template: `<nx-setting-group
     heading="角色與可用功能"
-    description="可用功能由角色決定，每次操作伺服器都會再次驗證；需要更多權限時請聯絡管理員。"
+    description="可用功能由角色決定，每次操作伺服器都會再次驗證。需要更多權限時請聯絡管理員。"
   >
     @if (session.me(); as me) {
       <div class="access-block">

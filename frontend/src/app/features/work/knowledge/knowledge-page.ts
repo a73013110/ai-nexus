@@ -317,7 +317,7 @@ export class KnowledgePage {
     if (
       !(await this.confirm().ask({
         title: collection ? '移除知識庫' : '移除文件',
-        message: `將移除「${name}」${collection ? '與其中所有文件' : ''}的來源與索引。原檔仍保留在檔案庫；已生成的對話文字會保留，來源引用連結將失效。`,
+        message: `將移除「${name}」${collection ? '與其中所有文件' : ''}的來源與索引。原檔仍保留在檔案庫。已生成的對話文字會保留，來源引用連結將失效。`,
         confirm: '移除來源',
         danger: true,
       }))

@@ -57,7 +57,7 @@
         } @else if (windowsFailed()) {
           <nx-notice tone="info">
             尚未取得 Windows
-            身分。請確認使用公司網域電腦登入；仍無法登入時請聯絡管理員，或改用其他登入方式。
+            身分。請確認使用公司網域電腦登入。仍無法登入時請聯絡管理員，或改用其他登入方式。
           </nx-notice>
         } @else if (spec().credentials && auth.session()?.configured === false) {
           <nx-notice tone="info">此登入方式尚未開放，請聯絡管理員。</nx-notice>

@@ -1,6 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('attendance.imports')"
-  description="打卡機每日檔案的匯入結果；失敗的檔案保留上次成功的刷卡。"
+  description="打卡機每日檔案的匯入結果。失敗的檔案保留上次成功的刷卡。"
   density="compact"
   layoutMode="data"
   [tour]="tour()"
@@ -77,7 +77,7 @@
     </div>
     <table>
       <caption class="sr-only">
-        打卡匯入紀錄；欄位標題可排序與篩選。
+        打卡匯入紀錄。欄位標題可排序與篩選。
       </caption>
       <colgroup>
         <col nxTableColumn="startedAt" class="imports-time-column" />
@@ -175,7 +175,7 @@
       <div class="ui-drawer-sections" [class.ui-table-fill]="item.row.isCurrent">
         @if (item.row.errorMessage) {
           <nx-notice tone="danger" [message]="item.row.errorMessage" />
-          <p class="form-note">這次沒有寫入刷卡；這個檔保留上次成功匯入的內容。</p>
+          <p class="form-note">這次沒有寫入刷卡。這個檔保留上次成功匯入的內容。</p>
         } @else if (!item.row.isCurrent) {
           <div class="imports-replaced">
             <p class="form-note">這個檔之後又成功匯入過，刷卡已換成最新一次的內容。</p>

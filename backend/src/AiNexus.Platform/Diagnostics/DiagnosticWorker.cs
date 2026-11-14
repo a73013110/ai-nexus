@@ -10,7 +10,7 @@ namespace AiNexus.Platform.Diagnostics;
 public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService, IResidentService
 {
     public static ResidentServiceDefinition Definition { get; } = new(
-        "diagnostics.pipeline", "日誌管線", "系統日誌", "把日誌寫進本機檔案、補送到資料庫，並清掉已補送且過期的本機檔。", "持續寫入與補送；本機檔每 5 分鐘清一次");
+        "diagnostics.pipeline", "日誌管線", "系統日誌", "把日誌寫進本機檔案、補送到資料庫，並清掉已補送且過期的本機檔。", "持續寫入與補送，本機檔每 5 分鐘清一次");
 
     /// <summary>多久清一次已補送且過期的本機日誌檔。</summary>
     private static readonly TimeSpan CleanupInterval = TimeSpan.FromMinutes(5);

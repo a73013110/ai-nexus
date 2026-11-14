@@ -279,7 +279,7 @@ export class AdminUserStore {
       'rebind',
       (id) => this.api.rebindDirectory(id, adAccount, this.profileVersion()),
       'AD 帳號已改綁',
-      '角色與歷史資料沿用；舊的工作階段已失效。',
+      '角色與歷史資料沿用。舊的工作階段已失效。',
     );
   }
   unbind() {
@@ -305,7 +305,7 @@ export class AdminUserStore {
           ),
         ),
       enabled ? '已啟用使用者' : '已停用使用者',
-      enabled ? '可以再次登入。' : '既有工作階段已失效；資料與稽核保留。',
+      enabled ? '可以再次登入。' : '既有工作階段已失效。資料與稽核保留。',
     );
   }
   /** 成功回傳 true，呼叫端據此清空輸入；失敗訊息放在帳號分頁。 */

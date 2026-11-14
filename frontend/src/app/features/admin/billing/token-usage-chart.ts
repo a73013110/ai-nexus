@@ -61,7 +61,7 @@ const metricOf = (value: string) => METRICS.find((metric) => metric.value === va
       </div>
       <p class="form-note">
         {{ totals().known }} / {{ totals().requests }} 次模型呼叫有完整用量回報。缺少的 Token
-        不視為零；合計納入已回報的數量。UTC{{ offsetLabel() }} · 包含聊天與背景模型處理。
+        不視為零。合計納入已回報的數量。UTC{{ offsetLabel() }} · 包含聊天與背景模型處理。
       </p>
       @if (models().length) {
         <details class="token-models">

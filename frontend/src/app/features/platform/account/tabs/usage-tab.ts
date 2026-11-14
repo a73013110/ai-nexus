@@ -98,12 +98,12 @@ import { SettingsStore } from '../settings-store';
       <nx-setting-group
         class="usage-storage"
         heading="原檔容量"
-        description="草稿計入；同一原檔被多處引用只計一次。"
+        description="草稿計入。同一原檔被多處引用只計一次。"
       >
         <nx-storage-usage [storage]="stats.storage" />
         @if (attachmentLimit() != null) {
           <p class="form-note">
-            群組給你的附件空間上限是 {{ bytes(attachmentLimit()!) }}；系統上限仍適用。
+            群組給你的附件空間上限是 {{ bytes(attachmentLimit()!) }}。系統上限仍適用。
           </p>
         }
       </nx-setting-group>
@@ -120,7 +120,7 @@ import { SettingsStore } from '../settings-store';
       <nx-setting-group
         class="usage-storage"
         heading="原檔容量"
-        description="草稿計入；同一原檔被多處引用只計一次。"
+        description="草稿計入。同一原檔被多處引用只計一次。"
       >
         <nx-storage-usage [loading]="true" />
       </nx-setting-group>

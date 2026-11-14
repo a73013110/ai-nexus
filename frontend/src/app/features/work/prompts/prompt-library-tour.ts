@@ -23,7 +23,7 @@ export function promptLibraryTour(options: {
       {
         target: 'nx-prompt-library .template-use',
         title: '套用到輸入框',
-        description: '點範本會關閉對話框，並以範本內容取代輸入框目前的草稿；送出前仍可修改。',
+        description: '點範本會關閉對話框，並以範本內容取代輸入框目前的草稿。\n送出前仍可修改。',
         side: 'right',
       },
       {
@@ -35,19 +35,19 @@ export function promptLibraryTour(options: {
       {
         target: 'nx-prompt-library .template-edit',
         title: '編輯範本',
-        description: '把範本載入右側編輯器；儲存會更新原範本，不會另存一份。',
+        description: '把範本載入右側編輯器。\n儲存會更新原範本，不會另存一份。',
       },
       {
         target: 'nx-prompt-library .template-delete',
         title: '刪除範本',
-        description: '按下立即刪除、不再確認，也無法復原；正在編輯的範本被刪除時編輯器回到新增。',
+        description: '按下立即刪除、不再確認，也無法復原。\n正在編輯的範本被刪除時編輯器回到新增。',
       },
       {
         target: 'nx-prompt-library .template-editor',
         title: options.editing ? '正在編輯' : '撰寫範本',
         description: options.editing
-          ? '儲存後覆寫列表中標示的範本；按「新增範本」可放棄這次編輯、改為新增。'
-          : '名稱最多 80 字、內容最多 12000 字，兩者都必填；儲存後出現在左側列表。',
+          ? '儲存後覆寫列表中標示的範本。\n按「新增範本」可放棄這次編輯、改為新增。'
+          : '名稱最多 80 字、內容最多 12000 字，兩者都必填。\n儲存後出現在左側列表。',
         side: 'left',
       },
     ],

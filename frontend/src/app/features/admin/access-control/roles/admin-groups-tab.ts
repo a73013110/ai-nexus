@@ -16,7 +16,7 @@ import { AccessStatus } from './access-status';
   template: `
     <div class="page-toolbar">
       <p class="form-note">
-        功能與模型授權取各群組聯集；模型 token 額度取授權群組最高值，無上限優先。個人政策另行套用。
+        功能與模型授權取各群組聯集。模型 token 額度取授權群組最高值，無上限優先。個人政策另行套用。
       </p>
       <button class="primary-button" [disabled]="!store.catalog()" (click)="edit.emit(undefined)">
         <nx-icon name="plus" />新增功能群組

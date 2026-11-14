@@ -21,7 +21,7 @@ type Permission = NotificationPermission | 'unsupported';
   template: `<nx-setting-group class="notification-completion" heading="回覆完成">
     <nx-setting-row
       label="回覆完成通知"
-      description="工作區在背景時提醒你回覆已完成；通知不含提問或回覆內容。"
+      description="工作區在背景時提醒你回覆已完成。通知不含提問或回覆內容。"
       [checked]="store.draft().notifyOnCompletion"
       [disabled]="permission() !== 'granted'"
       (checkedChange)="store.update('notifyOnCompletion', $event)"
@@ -36,7 +36,7 @@ type Permission = NotificationPermission | 'unsupported';
       }
       @if (permission() === 'unsupported') {
         <span setting-detail>
-          這個環境無法使用瀏覽器通知；需要支援通知的瀏覽器，並以 HTTPS 或 localhost 開啟。
+          這個環境無法使用瀏覽器通知。需要支援通知的瀏覽器，並以 HTTPS 或 localhost 開啟。
         </span>
       }
     </nx-setting-row>

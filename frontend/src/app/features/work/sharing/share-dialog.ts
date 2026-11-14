@@ -83,7 +83,7 @@ export function shareLink(id: string, base = document.baseURI) {
         <nx-notice tone="warning">
           {{
             kind() === 'artifact' ? '分享選取的已儲存成果版本' : '分享目前可見的對話分支'
-          }}。收件者只能閱讀，無法修改原始內容；需要更新時請建立新的分享。
+          }}。收件者只能閱讀，無法修改原始內容。需要更新時請建立新的分享。
         </nx-notice>
         <div class="form-sections">
           <section class="form-section" role="group" [attr.aria-labelledby]="id + '-recipients'">
@@ -134,7 +134,7 @@ export function shareLink(id: string, base = document.baseURI) {
               @if (kind() === 'conversation') {
                 <nx-checkbox
                   label="包含此分支的附件"
-                  description="收件者可下載；到期或撤銷後停止存取。"
+                  description="收件者可下載。到期或撤銷後停止存取。"
                   [checked]="includeAttachments()"
                   [disabled]="creating.pending()"
                   (checkedChange)="includeAttachments.set($event)"

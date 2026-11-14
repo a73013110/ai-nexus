@@ -70,7 +70,7 @@ public sealed class RepositoryAccess(AppDbContext db, AccessService access, Sche
         {
             var repository = await NameAsync(spec.RepositoryId, ct);
             await NotifyAsync(user, spec.RepositoryId, $"granted:{grant.Id}", "success", $"已取得儲存庫權限：{repository}",
-                $"你在 {repository} 有{PermissionName(spec.Permission)}權限了" + (spec.ExpiresAt is { } at ? $"，到期日 {ExpiryDate(at):yyyy-MM-dd}" : "") + "；Gitea 約幾分鐘內生效。", ct);
+                $"你在 {repository} 有{PermissionName(spec.Permission)}權限了" + (spec.ExpiresAt is { } at ? $"，到期日 {ExpiryDate(at):yyyy-MM-dd}" : "") + "。Gitea 約幾分鐘內生效。", ct);
         }
         return grant;
     }
@@ -105,7 +105,7 @@ public sealed class RepositoryAccess(AppDbContext db, AccessService access, Sche
         var stewards = await db.RepositoryStewards.Where(x => x.RepositoryId == grant.RepositoryId).Select(x => x.UserId).ToListAsync(ct);
         foreach (var owner in stewards.Append(grant.UserId ?? Guid.Empty).Where(x => x != Guid.Empty).Distinct())
             await NotifyAsync(owner, grant.RepositoryId, $"expiring:{grant.Id}", "info", $"儲存庫權限即將到期：{repository}",
-                (owner == grant.UserId ? "你" : holder) + $"在 {repository} 的{PermissionName(grant.Permission)}權限將於 {ExpiryDate(at):yyyy-MM-dd} 後到期；需要繼續使用請重新申請或由負責人延長。", ct);
+                (owner == grant.UserId ? "你" : holder) + $"在 {repository} 的{PermissionName(grant.Permission)}權限將於 {ExpiryDate(at):yyyy-MM-dd} 後到期。需要繼續使用請重新申請或由負責人延長。", ct);
     }
 
     /// <summary>

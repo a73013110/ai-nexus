@@ -166,7 +166,7 @@ export function laneSummary(task: ScheduledTaskDto, planned: readonly number[]) 
   const past = task.timelineRuns.length
     ? `區間內 ${task.timelineRuns.length} 輪：${[...counts].map(([label, count]) => `${label} ${count}`).join('、')}`
     : '區間內沒有執行紀錄';
-  return `${past}；${planned.length ? `下次 ${formatTimeOfDay(planned[0])}` : '區間內沒有預定'}`;
+  return `${past}。${planned.length ? `下次 ${formatTimeOfDay(planned[0])}` : '區間內沒有預定'}`;
 }
 
 /** 沒有預定的原因，寫在現在線右邊。 */
